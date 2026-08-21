@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 120" width="96" height="120">
+  <!--
+    gancho.svg — a roldana e o gancho do guindaste.
+
+    A corrente que sobe até o trilho é desenhada no canvas (o comprimento varia
+    com a altura do gancho); aqui está só a peça de tamanho fixo.
+  -->
+
+  <!-- suporte -->
+  <rect x="34" y="0" width="28" height="18" rx="6" fill="#475569"/>
+
+  <!-- roldana -->
+  <circle cx="48" cy="38" r="26" fill="#64748B" stroke="#334155" stroke-width="5"/>
+  <circle cx="48" cy="38" r="9" fill="#CBD5E1" stroke="#334155" stroke-width="4"/>
+  <g stroke="#334155" stroke-width="4" stroke-linecap="round">
+    <path d="M48 18v8"/>
+    <path d="M48 50v8"/>
+    <path d="M28 38h8"/>
+    <path d="M60 38h8"/>
+  </g>
+
+  <!-- haste -->
+  <rect x="42" y="62" width="12" height="24" rx="5" fill="#475569"/>
+
+  <!-- gancho -->
+  <path d="M48 84c0 16-22 12-22 24a14 14 0 0 0 28 0"
+        fill="none" stroke="#334155" stroke-width="9" stroke-linecap="round"/>
+</svg>

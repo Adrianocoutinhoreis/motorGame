@@ -1,0 +1,9 @@
+ESTA PASTA É UMA CÓPIA GERADA. NÃO EDITE NADA AQUI.
+
+Motor:   Motor Educandus v1.0.0
+Jogo:    jogo-dos-blocos
+
+Para alterar o motor, edite `engine/` na raiz do projeto e rode:
+    node tools/build.mjs jogo-dos-blocos
+
+Qualquer edição feita diretamente aqui será apagada na próxima build.

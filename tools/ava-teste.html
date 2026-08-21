@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Host de teste do AVA</title>
+<!--
+  ava-teste.html — simula a página do AVA que hospeda o jogo.
+
+  Serve para provar duas coisas que NÃO dá para verificar abrindo o jogo direto:
+
+  1. Que a mensagem JOGO_CONCLUIDO realmente SAI do <iframe>. Aberto fora de um
+     iframe, `window.parent === window` e o jogo (corretamente) não envia nada —
+     só registra no console. Aqui existe um pai de verdade escutando.
+  2. Que o jogo se comporta em iframes de tamanhos diferentes, porque o AVA pode
+     dar qualquer dimensão ao quadro.
+
+  O painel da direita valida cada mensagem recebida contra o contrato da Parte A
+  do METODO.md, item a item.
+-->
+<style>
+  :root {
+    --azul: #2563eb;
+    --verde: #16a34a;
+    --vermelho: #dc2626;
+    --tinta: #111827;
+    --suave: #6b7280;
+    --linha: #e5e7eb;
+    --fundo: #f3f4f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    color: var(--tinta);
+    background: var(--fundo);
+    display: grid;
+    grid-template-columns: 1fr 460px;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+  }
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 2px solid var(--linha);
+  }
+  header strong { font-size: 16px; }
+  input[type="text"] {
+    flex: 1 1 320px;
+    min-width: 240px;
+    padding: 9px 12px;
+    border: 2px solid var(--linha);
+    border-radius: 10px;
+    font: inherit;
+  }
+  button {
+    padding: 9px 14px;
+    border: 2px solid var(--linha);
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { border-color: var(--azul); color: var(--azul); }
+  button.primario { background: var(--azul); color: #fff; border-color: var(--azul); }
+  button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
+
+  #area {
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    overflow: auto;
+  }
+  #moldura {
+    background: #fff;
+    border: 3px solid var(--tinta);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    overflow: hidden;
+    resize: both;
+    width: 760px;
+    height: 500px;
+    max-width: 100%;
+  }
+  #moldura iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+  aside {
+    background: #fff;
+    border-left: 2px solid var(--linha);
+    padding: 16px;
+    overflow: auto;
+  }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .04em; color: var(--suave); margin-bottom: 10px; }
+  .msg {
+    border: 2px solid var(--linha);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .msg.valida { border-color: var(--verde); }
+  .msg.invalida { border-color: var(--vermelho); }
+  .msg h3 { font-size: 14px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  pre {
+    background: #0b1220;
+    color: #d1fae5;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    overflow-x: auto;
+  }
+  ul.regras { list-style: none; margin-top: 10px; font-size: 13px; }
+  ul.regras li { padding: 2px 0; }
+  ul.regras li::before { content: "OK  "; color: var(--verde); font-weight: 700; }
+  ul.regras li.falha::before { content: "X   "; color: var(--vermelho); }
+  ul.regras li.falha { color: var(--vermelho); }
+  .vazio { color: var(--suave); font-style: italic; }
+  .contagem { font-weight: 700; color: var(--azul); }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>Host de teste do AVA</strong>
+  <input type="text" id="caminho" value="../Games/jogo-dos-blocos/index.html">
+  <button class="primario" id="carregar">Carregar</button>
+  <button data-tam="400x700">Celular</button>
+  <button data-tam="640x480">Pequeno</button>
+  <button data-tam="760x500" aria-pressed="true">Médio</button>
+  <button data-tam="1280x720">Grande</button>
+  <button id="limpar">Limpar registro</button>
+</header>
+
+<div id="area">
+  <div id="moldura"><iframe id="quadro" title="Jogo em teste"></iframe></div>
+</div>
+
+<aside>
+  <h2>Mensagens recebidas (<span class="contagem" id="total">0</span>)</h2>
+  <div id="registro"><p class="vazio">Jogue uma partida até o fim. A mensagem aparece aqui.</p></div>
+</aside>
+
+<script>
+  const quadro = document.getElementById('quadro');
+  const moldura = document.getElementById('moldura');
+  const registro = document.getElementById('registro');
+  const total = document.getElementById('total');
+  const caminho = document.getElementById('caminho');
+
+  let recebidas = 0;
+
+  function carregar() {
+    quadro.src = caminho.value;
+  }
+
+  document.getElementById('carregar').addEventListener('click', carregar);
+  caminho.addEventListener('keydown', (e) => { if (e.key === 'Enter') carregar(); });
+
+  for (const botao of document.querySelectorAll('[data-tam]')) {
+    botao.addEventListener('click', () => {
+      const [l, a] = botao.dataset.tam.split('x');
+      moldura.style.width = l + 'px';
+      moldura.style.height = a + 'px';
+      for (const outro of document.querySelectorAll('[data-tam]')) {
+        outro.setAttribute('aria-pressed', String(outro === botao));
+      }
+    });
+  }
+
+  document.getElementById('limpar').addEventListener('click', () => {
+    recebidas = 0;
+    total.textContent = '0';
+    registro.innerHTML = '<p class="vazio">Registro limpo.</p>';
+  });
+
+  /**
+   * Valida a mensagem contra o contrato (METODO.md, Parte A, checklist A5).
+   * Cada item é uma regra que, se falhar, quebra o registro no AVA.
+   */
+  function validar(dados) {
+    const ehNumero = (v) => typeof v === 'number' && Number.isFinite(v);
+    const proibidos = ['lo_id', 'activity_id', 'aluno', 'aluno_id', 'turma', 'xp', 'nota'];
+
+    return [
+      { regra: 'type é exatamente "JOGO_CONCLUIDO"', ok: dados.type === 'JOGO_CONCLUIDO' },
+      { regra: 'acertos é number', ok: ehNumero(dados.acertos) },
+      { regra: 'erros é number', ok: ehNumero(dados.erros) },
+      { regra: 'totalPerguntas é number', ok: ehNumero(dados.totalPerguntas) },
+      { regra: 'nivel presente e não nulo', ok: dados.nivel !== null && dados.nivel !== undefined },
+      { regra: 'jogo tem slug estável', ok: typeof dados.jogo === 'string' && dados.jogo.length > 0 },
+      { regra: 'acertos <= totalPerguntas', ok: !ehNumero(dados.totalPerguntas) || dados.acertos <= dados.totalPerguntas },
+      { regra: 'não envia dado do aluno nem do AVA', ok: !proibidos.some((c) => c in dados) },
+    ];
+  }
+
+  window.addEventListener('message', (evento) => {
+    let dados = evento.data;
+    // O AVA tolera a mensagem serializada; aceitamos aqui para refletir isso.
+    if (typeof dados === 'string') {
+      try { dados = JSON.parse(dados); } catch { return; }
+    }
+    if (!dados || typeof dados !== 'object') return;
+    if (dados.type !== 'JOGO_CONCLUIDO') return;
+
+    recebidas++;
+    total.textContent = String(recebidas);
+
+    const regras = validar(dados);
+    const valida = regras.every((r) => r.ok);
+
+    if (recebidas === 1) registro.innerHTML = '';
+
+    const bloco = document.createElement('div');
+    bloco.className = 'msg ' + (valida ? 'valida' : 'invalida');
+    bloco.innerHTML = `
+      <h3><span>Partida #${recebidas}</span><span>${new Date().toLocaleTimeString('pt-BR')}</span></h3>
+      <pre>${JSON.stringify(dados, null, 2)}</pre>
+      <ul class="regras">
+        ${regras.map((r) => `<li class="${r.ok ? '' : 'falha'}">${r.regra}</li>`).join('')}
+      </ul>
+    `;
+    registro.prepend(bloco);
+
+    console.log('[host AVA] recebida:', dados, valida ? 'CONTRATO OK' : 'CONTRATO COM FALHA');
+  });
+
+  carregar();
+</script>
+</body>
+</html>

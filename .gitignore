@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------- gerado por teste
+# Capturas de tela produzidas por tools/teste-navegador.mjs. São artefato de
+# execução: refazem-se rodando o teste, e mudam a cada rodada.
+.capturas/
+
+# ------------------------------------------------------------------ lixo do sistema
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+
+# ------------------------------------------------------------------- editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# ------------------------------------------------------------------------- Node
+# O projeto é de dependência ZERO por princípio (ver docs/MOTOR.md). Isto é uma
+# rede de segurança: se algum dia alguém rodar `npm install`, o pacote não entra
+# no repositório sem uma decisão explícita.
+node_modules/
+npm-debug.log*
+.npm/
+
+# --------------------------------------------------------------------- temporário
+*.log
+*.tmp
+tmp/

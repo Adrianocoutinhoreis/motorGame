@@ -1,0 +1,33 @@
+# Normalização de fim de linha.
+#
+# Todo o projeto está em LF hoje. Travar isso importa aqui mais que no normal:
+# tools/build.mjs copia os arquivos do motor byte a byte para dentro de cada
+# jogo, e um clone que convertesse para CRLF produziria entregas diferentes das
+# testadas — sem nenhum aviso.
+* text=auto eol=lf
+
+# Fontes: texto, sempre LF.
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.svg   text eol=lf
+
+# Binários: o git não deve tentar diff nem conversão.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.mp3   binary
+*.wav   binary
+*.rar   binary
+*.db    binary
+
+# Os exports Flash de 2013 são ARQUIVO HISTÓRICO, guardados para consulta e
+# comparação. Preservar os bytes exatamente como foram entregues — CRLF e tudo.
+# Normalizá-los reescreveria a evidência do que o original de fato era.
+"Aulas para Refazer/**" -text

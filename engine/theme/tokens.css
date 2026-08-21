@@ -1,0 +1,131 @@
+/*
+ * tokens.css — a casca da página que hospeda o jogo.
+ *
+ * As variáveis (--cor-*, --espaco-*, …) NÃO são declaradas aqui: elas são
+ * publicadas em tempo de execução por `aplicarTokensNoCSS()` a partir de
+ * `tokens.js`, para que canvas e DOM nunca divirjam. Este arquivo cuida só do
+ * que é responsabilidade do CSS: o layout da página, o comportamento em
+ * <iframe> e os poucos elementos de HUD que vivem no DOM.
+ *
+ * Regras que existem por causa do AVA:
+ *  - a página ocupa 100% do <iframe>, sem barra de rolagem;
+ *  - nada de `position: fixed` com tamanho absoluto (o iframe pode ter qualquer
+ *    dimensão) — o Stage é quem escala;
+ *  - `overscroll-behavior: none` impede o "puxar para atualizar" do celular de
+ *    disparar quando o aluno arrasta uma peça para baixo.
+ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--cor-letterbox, #0b1220);
+  font-family: var(--fonte, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif);
+  color: var(--cor-tinta, #111827);
+  /* Evita o realce azul do toque no Android e a seleção acidental de texto
+     quando o aluno arrasta uma peça. */
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#palco {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#palco > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+/* Camada de HUD em DOM, por cima do canvas. Só recebe toque em quem pedir. */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#hud > * {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------- carregando */
+
+#carregando {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: var(--espaco-md, 20px);
+  justify-items: center;
+  background: var(--cor-fundo, #eff6ff);
+  transition: opacity var(--tempo-lento, 420ms) ease;
+}
+
+#carregando[hidden] {
+  display: none;
+}
+
+#carregando .titulo {
+  font-size: var(--texto-subtitulo, 34px);
+  font-weight: 800;
+  color: var(--cor-tinta, #111827);
+  text-align: center;
+}
+
+#carregando .barra {
+  width: min(60vw, 420px);
+  height: 20px;
+  border-radius: var(--raio-pilula, 999px);
+  background: var(--cor-linha, #e5e7eb);
+  overflow: hidden;
+}
+
+#carregando .barra > i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--cor-primaria, #2563eb);
+  transition: width var(--tempo-padrao, 240ms) ease;
+}
+
+/* ------------------------------------------------------------------- erro */
+
+#erro-fatal {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-content: center;
+  padding: var(--espaco-xl, 48px);
+  text-align: center;
+  background: var(--cor-superficie, #fff);
+  color: var(--cor-erro, #dc2626);
+  font-size: var(--texto-corpo, 28px);
+  font-weight: 700;
+}
+
+#erro-fatal[data-visivel='sim'] {
+  display: grid;
+}
+
+/* Respeita quem pediu menos animação no sistema operacional. */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

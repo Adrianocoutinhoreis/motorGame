@@ -1,0 +1,6 @@
+{
+	"fala":
+	[
+		{"personagem":"abc", "texto":"abc", "som":"nomedosom", "goTo":"animacaoposfala"}
+	]
+}

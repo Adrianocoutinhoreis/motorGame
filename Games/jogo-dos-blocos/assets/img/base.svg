@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 78" width="300" height="78">
+  <!--
+    base.svg — a plataforma de madeira onde a torre é construída.
+
+    É mais larga que um bloco de propósito: a primeira jogada precisa ser
+    generosa. Para uma criança de 4 anos, errar o primeiro bloco e já perder
+    uma vida ensina a desistir, não a acertar.
+  -->
+  <defs>
+    <linearGradient id="tabua" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A16207"/>
+      <stop offset="1" stop-color="#78350F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tampo -->
+  <rect x="4" y="4" width="292" height="34" rx="10" fill="url(#tabua)" stroke="#451A03" stroke-width="4"/>
+  <rect x="14" y="10" width="272" height="8" rx="4" fill="#C2831B" opacity="0.6"/>
+
+  <!-- pernas -->
+  <rect x="34" y="38" width="30" height="36" rx="8" fill="#78350F" stroke="#451A03" stroke-width="4"/>
+  <rect x="236" y="38" width="30" height="36" rx="8" fill="#78350F" stroke="#451A03" stroke-width="4"/>
+
+  <!-- grama na frente das pernas, para assentar a base no cenário -->
+  <path d="M4 62c26 8 56 10 146 10s120-2 146-10v16H4z" fill="#4ADE80"/>
+</svg>

@@ -1,0 +1,199 @@
+# STATES.md — estados do jogo e maturidade do motor
+
+Duas coisas neste documento:
+
+1. **A máquina de estados** que todo jogo do motor segue — e onde exatamente o registro
+   no AVA acontece.
+2. **O estado de maturidade do motor** — o que está pronto, o que é provisório e o que
+   ainda não existe. Serve para decidir o que construir antes do próximo jogo.
+
+---
+
+# Parte 1 — A máquina de estados do jogo
+
+Os nomes vivem em `engine/core/Estados.js` e são os mesmos usados como nome de cena, para
+que estado e tela nunca saiam de sincronia.
+
+```
+                    ┌──────────┐
+                    │   BOOT   │  index.html carregou
+                    └────┬─────┘
+                         ▼
+                  ┌──────────────┐
+                  │  CARREGANDO  │  assets baixando (tela HTML, não canvas)
+                  └──────┬───────┘
+                         ▼
+        ┌──────────────────────────────────┐
+        │               MENU               │◄──────────────┐
+        │        JOGAR · COMO JOGAR        │               │
+        └───┬───────────────┬──────────────┘               │
+            │               │                              │
+            ▼               ▼                              │
+     ┌─────────────┐  ┌──────────┐                         │
+     │  TUTORIAL   │─►│  NIVEIS  │  (só se houver >1)      │
+     │  passos     │  │ cartões  │                         │
+     └──────┬──────┘  └────┬─────┘                         │
+            │              │                               │
+            └──────┬───────┘                               │
+                   ▼                                       │
+            ┌─────────────┐   pausa    ┌──────────┐        │
+            │   JOGANDO   │◄──────────►│ PAUSADO  │────────┤
+            │  a partida  │  continuar └──────────┘        │
+            └──────┬──────┘                                │
+                   │ vitória OU derrota                    │
+                   ▼                                       │
+            ╔═══════════════╗                              │
+            ║   RESULTADO   ║  ◄── AQUI o AVA é acionado   │
+            ╚═══┬═══════┬═══╝                              │
+                │       └──────────────────────────────────┘
+                ▼  jogar de novo
+            (volta a JOGANDO)
+```
+
+## A regra que importa
+
+| Momento | O que o motor faz | Por quê |
+|---|---|---|
+| **Entra** em `RESULTADO` | `AvaBridge.concluir(dados.resultado)` | Fim de UMA partida → um registro |
+| **Sai** de `RESULTADO` | `AvaBridge.rearmar()` | A próxima partida poderá registrar |
+| Já registrou e chamam de novo | ignora, com aviso no console | Impede duplicar a MESMA partida |
+
+Isso é a borda de subida / descida do METODO.md (B3.5) aplicada a um motor com código-fonte.
+No caso do Construct 3 sem `.c3p`, a borda precisava ser inferida do estado das variáveis a
+cada quadro; aqui a transição de estado É a borda, então a garantia é estrutural.
+
+**Consequência prática:** um replay genuíno **deve** gerar um novo `JOGO_CONCLUIDO` — é
+uma nova tentativa, não dado repetido. O que nunca pode acontecer é a mesma partida contar
+duas vezes.
+
+## Transições permitidas
+
+Declaradas em `TRANSICOES` (`engine/core/Estados.js`) e conferidas em tempo de execução.
+Uma transição fora da tabela **não é bloqueada** (um jogo pode ter um fluxo legítimo
+diferente), mas gera aviso no console — porque quase sempre é bug de navegação.
+
+| De | Para |
+|---|---|
+| `BOOT` | `CARREGANDO` |
+| `CARREGANDO` | `MENU` |
+| `MENU` | `TUTORIAL`, `NIVEIS`, `JOGANDO` |
+| `TUTORIAL` | `MENU`, `NIVEIS`, `JOGANDO` |
+| `NIVEIS` | `MENU`, `JOGANDO`, `TUTORIAL` |
+| `JOGANDO` | `PAUSADO`, `RESULTADO`, `MENU` |
+| `PAUSADO` | `JOGANDO`, `MENU`, `NIVEIS` |
+| `RESULTADO` | `JOGANDO`, `MENU`, `NIVEIS` |
+
+## Por que `PAUSADO` não é uma cena
+
+Trocar de cena destrói a árvore visual — a torre montada, o tabuleiro, o placar. Se a pausa
+fosse cena, "pausar" seria "desistir". Por isso `PauseScreen` é um **Node sobreposto** que
+a cena de partida adiciona a si mesma: congela a lógica sem descartar nada.
+
+## Estados dentro da partida (interno de cada jogo)
+
+`JOGANDO` é um só estado para o motor, mas a cena tem seu próprio micro-ciclo. No Jogo dos
+Blocos, por exemplo:
+
+```
+aguardando toque  →  caindo (travado=true)  →  assentou | derrubou  →  aguardando toque
+```
+
+A trava durante a queda existe para o toque repetido não soltar dois blocos. Todo jogo
+precisa de uma trava equivalente: **enquanto uma jogada está sendo resolvida, o input não
+inicia outra.**
+
+---
+
+# Parte 2 — Maturidade do motor
+
+Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite conhecido) ·
+**Planejado** (não existe ainda).
+
+## Núcleo
+
+| Peça | Estado | Observação |
+|---|---|---|
+| `Emitter`, `Matrix2D`, `Node` | Pronto | Hit-test com matriz inversa validado em teste |
+| `Stage` (escala + letterbox) | Pronto | Validado em iframe de 400×700, 640×480 e 1280×720 |
+| `Input` (Pointer Events) | Pronto | `toque` só dispara se apertar e soltar no mesmo nó |
+| `Tween` | Pronto | Encadeamento, espera, laço e cancelamento por alvo |
+| `Loader` | Pronto | Falha de recurso não derruba o jogo |
+| `Storage` | Pronto | Cai para memória se o localStorage for bloqueado |
+| `Rand` | Pronto | Semente opcional para reproduzir partidas |
+| `Scene` / `Game` | Pronto | Limpeza automática de nós e ouvintes |
+| Multi-toque | **Planejado** | Hoje um ponteiro por vez; nenhum jogo atual precisa |
+
+## Tema e interface
+
+| Peça | Estado | Observação |
+|---|---|---|
+| `tokens.js` / `tokens.css` | Pronto | Fonte única compartilhada entre canvas e DOM |
+| `icons.js` | Pronto | 15 ícones; ampliar conforme necessidade |
+| `Button` / `IconButton` | Pronto | Alvo mínimo de 64px garantido no construtor |
+| `Panel`, `ScoreBar`, `TimerBar`, `Lives` | Pronto | `TimerBar` ainda sem uso real (será exercitada em Formas e Cores) |
+| `SoundToggle` | Pronto | Preferência persistida |
+| `Mascot` | Pronto | Dois modos: imagem do jogo (usado no piloto) ou coruja vetorial (padrão) |
+| Expressão facial por imagem | **Planejado** | `imagensPorExpressao` existe na API, sem arte que a exercite |
+| `Background` | Pronto | Céu, sol, nuvens e colinas configuráveis |
+| Tema por jogo (paleta alternativa) | **Planejado** | Hoje todos compartilham a mesma paleta |
+
+## Telas padrão
+
+| Tela | Estado | Observação |
+|---|---|---|
+| `LoadingScreen` | Pronto | HTML, aparece antes do motor existir |
+| `MenuScreen` | Pronto | JOGAR + COMO JOGAR + som |
+| `TutorialScreen` | Pronto | Passos narrados, ilustração animada, navegação |
+| `LevelSelectScreen` | Pronto | Aparece sozinha só quando há mais de um nível |
+| `PauseScreen` | Pronto | Camada sobreposta |
+| `ResultScreen` | Pronto | Vitória e derrota, com estrelas |
+| Tela de créditos / objetivo | **Planejado** | Útil ao professor; não pedida ainda |
+
+## Jogabilidade
+
+| Peça | Estado | Observação |
+|---|---|---|
+| `ScoreSystem` | Pronto | Fonte única dos números do AVA |
+| `CraneController` | Pronto | Modo oscilante validado no piloto; modo colunas testado só em unidade |
+| `GridBoard` | Parcial | Lógica coberta por teste, **sem uso real ainda** — estreia no Jogo das Formas |
+| Arrasto contínuo (drag path) | **Planejado** | Necessário para o Jogo das Cores (match-3 por arrasto) |
+
+## Áudio
+
+| Peça | Estado | Observação |
+|---|---|---|
+| Canais music / sfx / speech | Pronto | Fila de narração serializada |
+| Destravamento por gesto | Pronto | Chamado no primeiro toque |
+| Fallback por síntese de voz | Parcial | Ponte quando falta locução; qualidade inferior a gravação |
+| Legenda do áudio narrado | **Planejado** | Acessibilidade para surdos e para sala barulhenta |
+
+## AVA
+
+| Peça | Estado | Observação |
+|---|---|---|
+| `AvaBridge` | Pronto | 15 testes de unidade + verificação em navegador com iframe real |
+| Disparo por borda | Pronto | Sem duplicata; replay conta |
+| Registro de derrota | Pronto | Decisão do projeto: derrota também é tentativa |
+| Registro de abandono | **Planejado** | Hoje sair no meio não registra nada — igual ao original |
+
+## Ferramentas
+
+| Ferramenta | Estado |
+|---|---|
+| `tools/testes.mjs` (lógica) | Pronto — 47 testes |
+| `tools/teste-navegador.mjs` (ponta a ponta) | Pronto — 32 verificações |
+| `tools/teste-entrega-avulsa.mjs` (publicação) | Pronto — 10 verificações |
+| `tools/build.mjs` | Pronto |
+| `tools/new-game.mjs` | Pronto |
+| `tools/serve.mjs` | Pronto |
+| `tools/verificar-independencia.mjs` | Pronto |
+| `tools/ava-teste.html` | Pronto |
+
+---
+
+## O que construir antes de cada próximo jogo
+
+| Próximo jogo | O que o motor precisa ganhar antes |
+|---|---|
+| **Jogo das Formas** | Estrear o `GridBoard` em jogo real; exercitar `TimerBar`; modo colunas do `CraneController` |
+| **Jogo das Cores** | **Arrasto contínuo** no `Input` (selecionar vários blocos num gesto) — é o que hoje não existe |
