@@ -45,7 +45,16 @@ export class SoundToggle extends IconButton {
   _sincronizar() {
     const mudo = this.audioBus?.mudo ?? false;
     this.icone = mudo ? 'semSom' : 'som';
-    this.corTexto = mudo ? cores.tintaSuave : cores.tinta;
+
+    if (mudo) {
+      this.cor = '#EF4444';
+      this.corBorda = '#991B1B';
+      this.corTexto = '#FFFFFF';
+    } else {
+      this.cor = '#FFFFFF';
+      this.corBorda = '#1D4ED8';
+      this.corTexto = '#1D4ED8';
+    }
   }
 
   destruir() {

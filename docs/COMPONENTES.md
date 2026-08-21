@@ -267,8 +267,14 @@ audio.alternarMudo();
 > `createjs.Sound.play()` direto e as falas se atropelavam — num jogo cujo conteúdo
 > pedagógico É a palavra falada, isso destrói a aula.
 
-`texto` é o fallback por síntese de voz quando o MP3 não existe. É ponte, não destino:
-registre a pendência no `README.md` e no `CHECKLIST.md` do jogo.
+> **Todo som sai de arquivo.** O motor não sintetiza voz. Sem o arquivo, `falar()` resolve
+> `false`, a tela fica em **silêncio** e o console diz qual gravação falta e o que ela
+> deveria dizer — uma vez por lacuna. A lista da sessão fica em `audio.narracoesAusentes`.
+
+`texto` **não** é lido por voz sintética: é o que a locução diz, escrito. Serve a duas
+coisas — o evento `narracao` (`{ id, texto }`), base da legenda futura, e o aviso de
+console, que sem ele não saberia nomear a gravação ausente. Registre a pendência no
+`README.md` e no `CHECKLIST.md` do jogo.
 
 ---
 

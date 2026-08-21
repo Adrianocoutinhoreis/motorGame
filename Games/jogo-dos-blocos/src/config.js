@@ -83,10 +83,17 @@ export default {
   ],
 
   // --------------------------------------------------------------- tutorial
+  /**
+   * `fala` é o id de um áudio declarado em `assets`; o `texto` ao lado é o que
+   * a locução diz, e serve à legenda e ao aviso de console — nunca a voz
+   * sintética. Os três passos já têm gravação; se um `fala` for removido, o
+   * passo fica em silêncio e o motor denuncia no console.
+   */
   tutorial: [
     {
       titulo: 'O gancho vai e vem',
       texto: 'Um bloco fica pendurado no gancho, indo de um lado para o outro.',
+      fala: 'gancho_vai_vem',
       desenho: (ctx, l, a, t) => {
         const x = l / 2 + Math.sin(t * 1.6) * (l * 0.22);
         const y = a * 0.30;
@@ -98,7 +105,8 @@ export default {
     {
       titulo: 'Toque para soltar',
       texto: 'Toque na tela quando o bloco estiver bem em cima da torre.',
-      desenho: (ctx, l, a, t) => {
+      fala: 'toque_soltar',
+      desenho: (ctx, l, a, t, loader) => {
         const ciclo = (t % 2.2) / 2.2;
         const x = l / 2;
         const yTopo = a * 0.28;
@@ -110,26 +118,40 @@ export default {
         if (ciclo < 0.45) desenharCorrente(ctx, x, a * 0.16, yTopo);
         desenharBlocoSimples(ctx, x, y, '3');
 
-        // A mãozinha que toca: mostra o gesto, sem depender de texto.
-        if (ciclo > 0.32 && ciclo < 0.55) desenharMao(ctx, x + 90, a * 0.55);
+        // Animação de clique com 2 frames (mouse_off.png e mouse_on.png)
+        const pressionado = ciclo >= 0.42 && ciclo <= 0.54;
+        const mouseOffsetY = pressionado ? 6 : 0;
+        desenharMousePng(ctx, x + 115, a * 0.50 + mouseOffsetY, pressionado, loader);
       },
     },
     {
       titulo: 'Cinco blocos e você venceu',
       texto: 'Se o bloco cair fora, você perde um coração. São três corações.',
+      fala: 'cinblocos_venceu',
       desenho: (ctx, l, a) => {
-        const x = l / 2 - 30;
-        desenharBase(ctx, x, a * 0.86);
-        ['1', '2', '3'].forEach((s, i) => desenharBlocoSimples(ctx, x, a * 0.74 - i * 62, s));
+        // Torre de 5 blocos alinhada à esquerda
+        const xTorre = l * 0.36;
+        const baseY = a * 0.88;
+        desenharBase(ctx, xTorre, baseY);
 
-        ctx.save();
-        ctx.fillStyle = '#DC2626';
+        const simbolos = ['1', '2', '3', '4', '5'];
+        const larguraBloco = 88;
+        const alturaBloco = 42;
+
+        simbolos.forEach((s, i) => {
+          const cy = baseY - 20 - i * (alturaBloco + 2);
+          desenharBlocoSimples(ctx, xTorre, cy, s, larguraBloco, alturaBloco);
+        });
+
+        // 3 corações alinhados na HORIZONTAL no lado direito
+        const xCoracoes = l * 0.72;
+        const yCoracoes = a * 0.50;
+        const espacamentoX = 54;
+        const inicioX = xCoracoes - espacamentoX;
+
         for (let i = 0; i < 3; i++) {
-          ctx.beginPath();
-          ctx.arc(l * 0.80, a * 0.30 + i * 62, 22, 0, Math.PI * 2);
-          ctx.fill();
+          desenharCoracao(ctx, inicioX + i * espacamentoX, yCoracoes, 42);
         }
-        ctx.restore();
       },
     },
   ],
@@ -138,9 +160,11 @@ export default {
   /** Caminhos relativos ao index.html. Todos os arquivos vivem em ./assets/. */
   assets: [
     { id: 'bloco', src: './assets/img/bloco.svg' },
-    { id: 'mascote', src: './assets/img/worker.webp' },
+    { id: 'mascote', src: './assets/img/bob.webp' },
     { id: 'base', src: './assets/img/base.svg' },
     { id: 'gancho', src: './assets/img/gancho.svg' },
+    { id: 'mouse_off', src: './assets/img/mouse/mouse_off.png' },
+    { id: 'mouse_on', src: './assets/img/mouse/mouse_on.png' },
 
     // Narração dos símbolos — o conteúdo pedagógico do jogo.
     { id: 'um', src: './assets/audio/um.mp3' },
@@ -159,13 +183,19 @@ export default {
     { id: 'o', src: './assets/audio/o.mp3' },
     { id: 'u', src: './assets/audio/u.mp3' },
 
+    // Narração do tutorial — uma por passo. Lote novo (128 kbps, 44 100 Hz),
+    // diferente do lote de 2013 acima; ver CHECKLIST-AUDIO.md.
+    { id: 'gancho_vai_vem', src: './assets/audio/gancho_vai_vem.mp3' },
+    { id: 'toque_soltar', src: './assets/audio/toque_soltar.mp3' },
+    { id: 'cinblocos_venceu', src: './assets/audio/cinblocos_venceu.mp3' },
+
     // Ambiente e feedback
     { id: 'abertura', src: './assets/audio/abertura.mp3' },
     { id: 'somFundo', src: './assets/audio/somFundo.mp3' },
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     { id: 'erroSOS', src: './assets/audio/erroSOS.wav' },
     { id: 'sim', src: './assets/audio/sim.wav' },
-    { id: 'nao', src: './assets/audio/nao.wav' },
+    { id: 'nao', src: './assets/audio/nao.mp3' },
   ],
 
   /**
@@ -183,7 +213,14 @@ export default {
     vitoria: 'acertoSOS',
     derrota: 'erroSOS',
     abertura: 'abertura',
-    escolhaNivel: null,  // sem locução gravada — cai para síntese de voz (ver README)
+
+    // Narração sem gravação. Enquanto estiver `null`, a tela fica em SILÊNCIO e
+    // o motor avisa no console — ele não sintetiza voz para tapar o buraco.
+    // A lista do que gravar, com o texto de cada locução, está em
+    // assets/audio-transcricao/A-GRAVAR.md.
+    escolhaNivel: null,  // "Escolha um nível"
+    falaVitoria: null,   // "Muito bem! Você conseguiu!"
+    falaDerrota: null,   // "Quase! Vamos tentar de novo?"
   },
 
   // -------------------------------------------------------------------- AVA
@@ -222,27 +259,28 @@ function desenharCorrente(ctx, x, deY, ateY) {
   ctx.restore();
 }
 
-function desenharBlocoSimples(ctx, cx, cy, simbolo) {
-  const l = 104;
-  const a = 62;
+function desenharBlocoSimples(ctx, cx, cy, simbolo, l = 104, a = 62) {
   ctx.save();
   ctx.translate(cx - l / 2, cy - a / 2);
 
   ctx.fillStyle = '#D97706';
   ctx.strokeStyle = '#7C2D12';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = Math.max(2, Math.round(a * 0.065));
   ctx.beginPath();
-  ctx.roundRect(0, 0, l, a, 12);
+  ctx.roundRect(0, 0, l, a, 10);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = '#FEF3C7';
   ctx.beginPath();
-  ctx.roundRect(16, 12, l - 32, a - 24, 8);
+  const padX = Math.round(l * 0.15);
+  const padY = Math.round(a * 0.18);
+  ctx.roundRect(padX, padY, l - padX * 2, a - padY * 2, 6);
   ctx.fill();
 
   ctx.fillStyle = '#7C2D12';
-  ctx.font = '800 30px system-ui, sans-serif';
+  const fontSize = Math.round(a * 0.52);
+  ctx.font = `800 ${fontSize}px system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(simbolo, l / 2, a / 2 + 1);
@@ -261,18 +299,105 @@ function desenharBase(ctx, cx, cy) {
   ctx.restore();
 }
 
-function desenharMao(ctx, x, y) {
+function desenharMao(ctx, x, y, pressionado = false) {
   ctx.save();
+
+  // Frame 2: Anel de onda / clique (ripple effect) quando o toque ocorre
+  if (pressionado) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(234, 179, 8, 0.85)';
+    ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(x, y - 34, 24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(249, 115, 22, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, y - 34, 34, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Deslocamento de 6px para baixo no Frame 2 para simular o movimento de pressionar
+  const offsetY = pressionado ? 6 : 0;
+
   ctx.fillStyle = '#FDE68A';
   ctx.strokeStyle = '#92400E';
   ctx.lineWidth = 4;
+
+  // Palma da mão
   ctx.beginPath();
-  ctx.ellipse(x, y + 26, 26, 32, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y + 26 + offsetY, 26, 32, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+
+  // Dedo indicador
   ctx.beginPath();
-  ctx.roundRect(x - 9, y - 34, 18, 46, 9);
+  ctx.roundRect(x - 9, y - 34 + offsetY, 18, 46, 9);
   ctx.fill();
   ctx.stroke();
+
+  ctx.restore();
+}
+
+function desenharCoracao(ctx, x, y, tamanho = 40) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  const s = tamanho / 36;
+  ctx.scale(s, s);
+
+  ctx.fillStyle = '#EF4444';
+  ctx.strokeStyle = '#991B1B';
+  ctx.lineWidth = 3;
+
+  ctx.beginPath();
+  ctx.moveTo(0, 6);
+  ctx.bezierCurveTo(-12, -10, -26, 4, 0, 24);
+  ctx.bezierCurveTo(26, 4, 12, -10, 0, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Brilho suave
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+  ctx.beginPath();
+  ctx.arc(-6, -2, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function desenharMousePng(ctx, x, y, pressionado, loader) {
+  const imgId = pressionado ? 'mouse_on' : 'mouse_off';
+  const img = loader?.imagem(imgId);
+
+  ctx.save();
+  if (img && (img.naturalWidth > 0 || img.width > 0)) {
+    const nw = img.naturalWidth || img.width || 100;
+    const nh = img.naturalHeight || img.height || 100;
+    const largura = 76;
+    const altura = Math.round(largura * (nh / nw));
+    ctx.drawImage(img, x, y, largura, altura);
+  } else {
+    // Fallback vetorial de cursor de clique
+    ctx.fillStyle = pressionado ? '#F59E0B' : '#FFFFFF';
+    ctx.strokeStyle = '#0B1220';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 24, y + 36);
+    ctx.lineTo(x + 14, y + 36);
+    ctx.lineTo(x + 22, y + 52);
+    ctx.lineTo(x + 14, y + 54);
+    ctx.lineTo(x + 6, y + 38);
+    ctx.lineTo(x, y + 44);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
   ctx.restore();
 }

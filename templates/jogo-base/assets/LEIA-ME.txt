@@ -15,9 +15,12 @@ Regras (valem para a entrega unitária no AVA):
   2. Os caminhos em src/config.js são relativos ao index.html, começando com
      "./assets/…".
   3. Registre origem e licença de cada arquivo na tabela do README.md.
-  4. Áudio de narração é conteúdo pedagógico, não enfeite: se faltar um arquivo,
-     o motor cai para a síntese de voz do navegador e avisa no console. Isso é
-     uma ponte, não o destino — anote a pendência no README.md e no CHECKLIST.md.
+  4. Áudio de narração é conteúdo pedagógico, não enfeite. TODO som sai de
+     arquivo: o motor não sintetiza voz. Faltando a gravação, a tela fica em
+     SILÊNCIO e o console diz qual arquivo falta e o que ele deveria dizer.
+     O silêncio é de propósito — uma voz robótica esconderia a lacuna e
+     entregaria à criança uma pronúncia que ninguém revisou. Anote a pendência
+     no README.md e no CHECKLIST.md.
   5. TODO áudio precisa de ficha de transcrição em audio-transcricao/<nome>/.
      Sem ela, ninguém revisa o que a atividade ensina sem abrir os arquivos
      num player — e um áudio trocado (o bloco "3" dizendo "quatro") passa

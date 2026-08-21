@@ -15,6 +15,24 @@ import { Emitter } from './../core/Emitter.js';
  * Também resolve a política de autoplay: navegadores modernos bloqueiam áudio
  * antes de um gesto do usuário, e é por isso que os jogos originais hoje abrem
  * mudos. `destravar()` é chamado pelo Game no primeiro toque.
+ *
+ * **REGRA: todo som sai de arquivo.** O motor não sintetiza voz nem gera tom.
+ * Faltando a gravação, a tela fica em silêncio e o console diz qual arquivo
+ * falta — ver `_avisarNarracaoAusente`.
+ *
+ * A voz sintética do navegador chegou a cobrir essa lacuna e foi removida de
+ * propósito. O ponto NÃO é que voz sintetizada seja ruim — a locução dos jogos
+ * deste motor é sintética, e sempre foi. O ponto é QUANDO ela é sintetizada:
+ * um arquivo é fixo, revisável, transcrito numa ficha e idêntico em todo
+ * aparelho; a API de síntese do navegador decide o timbre no aparelho do aluno,
+ * em tempo de execução, e não existe em parte dos tablets escolares. (O nome da
+ * API não aparece escrito aqui de propósito: o teste que trava esta regra varre
+ * o motor por substring, e é bom que ele seja simples demais para ter exceção.)
+ * Numa atividade cujo
+ * conteúdo pedagógico É a palavra falada, ninguém pode revisar o que a criança
+ * vai ouvir se isso só se decide na hora.
+ *
+ * Silêncio é uma falha visível; fala que ninguém revisou é uma falha disfarçada.
  */
 export class AudioBus extends Emitter {
   constructor(opcoes = {}) {
@@ -40,6 +58,8 @@ export class AudioBus extends Emitter {
     this._falando = false;
     this._musicaAtual = null;
     this._destravado = false;
+    /** Lacunas de narração já denunciadas — para avisar uma vez, não a cada quadro. */
+    this._avisados = new Set();
 
     this._mudo = this.storage ? this.storage.ler('mudo', false) : false;
   }
@@ -191,10 +211,11 @@ export class AudioBus extends Emitter {
    * Enfileira uma narração. É a API que os jogos devem usar para TODO conteúdo
    * falado — nunca `tocar()` direto, senão volta a atropelar.
    *
-   * @param {string} id id do áudio registrado
+   * @param {string|null} id id de um áudio registrado. Sem arquivo não há fala.
    * @param {{texto?: string, aoTerminar?: Function}} opcoes
-   *   `texto` é o fallback lido por síntese de voz quando o MP3 não existe
-   *   (é assim que o nível "6 a 10" funciona antes de a narração ser gravada).
+   *   `texto` é o que a locução DIZ, escrito. Não é lido por voz sintética:
+   *   serve à legenda (evento `narracao`) e faz o aviso de console nomear
+   *   exatamente a gravação que falta.
    */
   falar(id, opcoes = {}) {
     return new Promise((resolve) => {
@@ -209,7 +230,6 @@ export class AudioBus extends Emitter {
       try { fonte.stop(); } catch { /* já parou */ }
     }
     this._tocando.speech.clear();
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     for (const item of this._filaFala) item.resolver(false);
     this._filaFala.length = 0;
     this._falando = false;
@@ -227,49 +247,44 @@ export class AudioBus extends Emitter {
       this._processarFala();
     };
 
-    if (this.temSom(item.id)) {
+    if (item.id && this.temSom(item.id)) {
+      // A legenda escuta aqui: o texto acompanha a fala que está começando.
+      this.emit('narracao', { id: item.id, texto: item.texto ?? null });
       const handle = await this.tocar(item.id, { canal: 'speech', aoTerminar: () => encerrar(true) });
       if (!handle) encerrar(false);
       return;
     }
 
-    if (item.texto) {
-      this._sintetizar(item.texto, () => encerrar(true));
-      return;
-    }
-
-    console.warn(`[motor] fala "${item.id}" sem áudio e sem texto de fallback.`);
+    this._avisarNarracaoAusente(item);
     encerrar(false);
   }
 
   /**
-   * Fallback de narração por síntese de voz do navegador.
-   * Qualidade inferior a uma locução gravada — é uma ponte até o MP3 existir,
-   * não o destino. Ver a pendência de áudio 6–10 no CHECKLIST do jogo.
+   * Denuncia uma narração que não tem arquivo, uma vez por lacuna.
+   *
+   * O motor não cobre esse buraco (ver a REGRA no topo da classe), então faz a
+   * única coisa honesta: cala a boca e diz no console qual gravação falta e o
+   * que ela deveria dizer. É esta mensagem que transforma "o jogo está meio
+   * mudo" em uma lista de trabalho.
+   *
+   * Avisa uma vez por lacuna porque a tela de tutorial renarra a cada ida e
+   * volta de passo, e um aviso repetido afoga o resto do console.
    */
-  _sintetizar(texto, aoTerminar) {
-    if (this._mudo || typeof speechSynthesis === 'undefined') {
-      aoTerminar();
-      return;
-    }
-    try {
-      const fala = new SpeechSynthesisUtterance(texto);
-      fala.lang = 'pt-BR';
-      fala.rate = 0.9;
-      fala.pitch = 1.1;
-      const vozPt = speechSynthesis.getVoices().find((v) => v.lang?.toLowerCase().startsWith('pt'));
-      if (vozPt) fala.voice = vozPt;
-      fala.onend = aoTerminar;
-      fala.onerror = aoTerminar;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(fala);
-      // Rede de segurança: alguns navegadores não disparam `onend` de forma
-      // confiável, e a fila de fala ficaria travada para sempre.
-      setTimeout(aoTerminar, Math.max(1500, texto.length * 120));
-    } catch (err) {
-      console.error('[motor] síntese de voz falhou:', err);
-      aoTerminar();
-    }
+  _avisarNarracaoAusente(item) {
+    const chave = item.id ?? `texto:${item.texto ?? ''}`;
+    if (this._avisados.has(chave)) return;
+    this._avisados.add(chave);
+
+    const alvo = item.id
+      ? `o áudio "${item.id}" não está registrado`
+      : 'nenhum áudio foi declarado no config para esta fala';
+    const diz = item.texto ? ` Deveria dizer: "${item.texto}".` : '';
+    console.warn(`[motor] narração ausente: ${alvo}; fica em silêncio.${diz}`);
+  }
+
+  /** Lacunas de narração encontradas nesta sessão. Útil ao revisar o jogo. */
+  get narracoesAusentes() {
+    return [...this._avisados];
   }
 
   // -------------------------------------------------------------- mudo/pausa
@@ -286,7 +301,6 @@ export class AudioBus extends Emitter {
         this._ganhos[canal].gain.value = this._mudo ? 0 : this.volumes[canal];
       }
     }
-    if (this._mudo && typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     this.emit('mudo', this._mudo);
   }
 
@@ -297,12 +311,10 @@ export class AudioBus extends Emitter {
 
   pausarTudo() {
     if (this.ctx?.state === 'running') this.ctx.suspend().catch(() => {});
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.pause?.();
   }
 
   retomarTudo() {
     if (this.ctx?.state === 'suspended' && this._destravado) this.ctx.resume().catch(() => {});
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.resume?.();
   }
 
   destruir() {

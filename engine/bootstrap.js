@@ -87,8 +87,9 @@ export async function iniciarJogo(opcoes = {}) {
 
   game.audio.registrarDoLoader(game.loader);
 
-  // Falhar em alguns assets não impede o jogo de abrir (o Loader já avisou no
-  // console e o AudioBus cai para a síntese de voz quando falta narração).
+  // Falhar em alguns assets não impede o jogo de abrir: o Loader já avisou no
+  // console e, onde faltar narração, a tela fica em silêncio com o AudioBus
+  // dizendo qual gravação falta. O motor não substitui arquivo por voz sintética.
   if (game.loader.falhas.length > 0) {
     console.warn(`[motor] ${game.loader.falhas.length} recurso(s) não carregaram; abrindo assim mesmo.`);
   }

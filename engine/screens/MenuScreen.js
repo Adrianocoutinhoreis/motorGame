@@ -97,38 +97,10 @@ class PlacaTituloMadeira extends Node {
       ctx.stroke();
 
       ctx.fillStyle = '#78350F';
-      ctx.font = `${tipografia.pesoForte} 17px ${tipografia.familia}`;
+      ctx.font = `${tipografia.pesoForte} 20px ${tipografia.familia}`;
       ctx.fillText(txtSub, l / 2, by + bh / 2 + 1);
     }
 
-    ctx.restore();
-  }
-}
-
-/**
- * BlocosDecorativos — Pilhas de brinquedos de madeira na entrada.
- */
-class BlocosDecorativos extends Node {
-  desenhar(ctx) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.15)';
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 2;
-
-    // Bloco 1 (Base Vermelha)
-    ctx.fillStyle = '#EF4444'; ctx.beginPath(); ctx.roundRect(10, 20, 46, 46, 6); ctx.fill();
-    ctx.strokeStyle = '#991B1B'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '800 24px system-ui'; ctx.textAlign = 'center'; ctx.fillText('1', 33, 50);
-
-    // Bloco 2 (Topo Amarelo)
-    ctx.fillStyle = '#FACC15'; ctx.beginPath(); ctx.roundRect(34, -22, 46, 46, 6); ctx.fill();
-    ctx.strokeStyle = '#854D0E'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = '#78350F'; ctx.fillText('2', 57, 8);
-
-    // Bloco 3 (Ao lado Azul)
-    ctx.fillStyle = '#3B82F6'; ctx.beginPath(); ctx.roundRect(60, 20, 46, 46, 6); ctx.fill();
-    ctx.strokeStyle = '#1E40AF'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = '#FFFFFF'; ctx.fillText('A', 83, 50);
     ctx.restore();
   }
 }
@@ -152,35 +124,67 @@ export class MenuScreen extends Scene {
     this.adicionar(this.placaTitulo);
 
     // --------------------------------------------------------------- mascote
-    // Mover mais para o centro junto com o grupo de botões
+    //
+    // O mascote é CRIADO aqui, junto do resto do layout, mas só entra na cena
+    // depois dos botões (ver o final deste método). O motor pinta na ordem em
+    // que os nós são adicionados, e a caixa do mascote invade 12 px a do botão
+    // JOGAR — adicionado antes, o botão cortava a mão dele.
+    // `tamanho` é a ALTURA; a largura sai da proporção da arte. `bob.webp` é
+    // 1760×2000 (proporção 0.88), então 550 de altura dá 484 de largura.
+    //
+    // Os números vêm de medir a arte, não de tentativa e erro. Dentro da imagem:
+    // a cabeça começa a 4,3% da altura, o corpo ocupa de 6% a 57% da largura e a
+    // mão estendida vai de 71% a 97%. Com altura 550 e centro em (233, 455):
+    //
+    //   · a borda esquerda cai em -9, e os 9 px que saem do palco são
+    //     transparentes (o corpo só começa em 6% da imagem, ou seja, em x ≈ 20);
+    //   · a cabeça começa em y ≈ 195, quase exatamente como na referência;
+    //   · o rodapé fica em 730, 10 px além do palco — a arte JÁ vem recortada na
+    //     coxa, então basta apoiá-la no fim da tela para ter o corte da referência;
+    //   · a mão cai em x 335–460 e y 436–540, invadindo o botão COMO JOGAR — que
+    //     é onde ela está na referência.
     this.mascote = new Mascot({
-      tamanho: 340,
-      x: L * 0.28,
-      y: A * 0.58,
+      tamanho: 550,
+      x: L * 0.182,
+      y: A * 0.632,
       expressao: 'feliz',
       imagem: this.loader.imagem(config.mascote?.asset),
     });
-    this.adicionar(this.mascote);
-
-    // Blocos decorativos no chão do canteiro
-    const blocosDeco = new BlocosDecorativos({ x: L * 0.12, y: A * 0.72 });
-    this.adicionar(blocosDeco);
 
     // ---------------------------------------------------------------- botões
-    // Movidos mais para o centro (xBotoes = L * 0.58) mantendo a proximidade com o mascote
-    const larguraBotao = 390;
-    const xBotoes = L * 0.58;
+    //
+    // Centralizados no eixo da tela, alinhados com a placa do título.
+    //
+    // O `- larguraBotao / 2` não é decoração: no CONSTRUTOR do Button, o `x` é a
+    // borda ESQUERDA, não o centro (`Button.js` põe `regX = largura / 2` e depois
+    // soma `largura / 2` ao `x`, e as duas coisas se cancelam). `TutorialScreen`
+    // e `ResultScreen` já compensavam assim; este menu era o único que não, e
+    // era por isso que os botões pareciam empurrados para a direita.
+    //
+    // Resultado: o grupo ocupa de 370 a 910 num palco de 1280, centro em 640.
+    //
+    // A largura foi de 390 para 540 (30% → 42% da tela) e a altura de 104 para
+    // 156, seguindo a referência. Os alvos ficam bem acima do mínimo de 64 px
+    // que o `Button` garante — e para uma criança de 4 anos, alvo grande é
+    // acerto na primeira tentativa, não desperdício de espaço.
+    //
+    // A mão do mascote (que termina em ~445) invade a borda esquerda dos botões.
+    // É intencional e é assim na referência: o mascote entra na cena por último,
+    // então a mão passa NA FRENTE, e o hit-test ignora nós não interativos, então
+    // o toque ali continua acionando o botão (há teste para isso).
+    const larguraBotao = 540;
+    const xBotoes = L / 2 - larguraBotao / 2;
 
     this.botaoJogar = new Button({
       rotulo: 'JOGAR',
       icone: 'jogar',
       largura: larguraBotao,
-      altura: 104,
-      tamanhoTexto: tipografia.subtitulo,
+      altura: 156,
+      tamanhoTexto: tipografia.gigante,
       variante: 'sucesso', // Verde Educativo Vibrante
       pulse: true,
       x: xBotoes,
-      y: A * 0.46,
+      y: A * 0.364,
       audio: this.audio,
       somToque: config.audio?.clique,
       aoTocar: () => this._jogar(),
@@ -190,17 +194,27 @@ export class MenuScreen extends Scene {
       rotulo: 'COMO JOGAR',
       icone: 'tutorial',
       largura: larguraBotao,
-      altura: 92,
-      tamanhoTexto: tipografia.corpo,
+      altura: 136,
+      tamanhoTexto: tipografia.titulo,
       variante: 'dourado', // Amarelo/Dourado Educativo
       x: xBotoes,
-      y: A * 0.46 + 132,
+      // 0.644 e não 0.618: o Button ocupa ~19 px ABAIXO da altura declarada (a
+      // aba 3D de relevo em +8 e a sombra em +5 com desfoque 12). Espaçar pela
+      // altura nominal fazia os dois botões se encostarem na tela, mesmo com a
+      // conta "certa" no papel.
+      y: A * 0.644,
       audio: this.audio,
       somToque: config.audio?.clique,
       aoTocar: () => this.irPara('tutorial', { voltarPara: 'menu' }),
     });
 
     this.adicionar(this.botaoJogar, this.botaoTutorial);
+
+    // O mascote entra por ÚLTIMO, então a mão dele passa NA FRENTE da borda do
+    // botão em vez de ser cortada por ela. O toque continua funcionando: o
+    // hit-test do Input percorre os nós de cima para baixo, e o mascote não é
+    // interativo, então ele não intercepta o toque no botão que está atrás.
+    this.adicionar(this.mascote);
 
     // Entrada animada
     for (const [i, botao] of [this.botaoJogar, this.botaoTutorial].entries()) {

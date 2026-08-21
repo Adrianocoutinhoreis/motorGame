@@ -432,8 +432,10 @@ export class GameScene extends Scene {
     this._criarParticulasEncaixe(bloco.x - BLOCO_L / 2, bloco.y + BLOCO_A / 2);
     this._criarParticulasEncaixe(bloco.x + BLOCO_L / 2, bloco.y + BLOCO_A / 2);
 
+    // `sons` do nível aponta para arquivos reais (um.mp3, dois.mp3…). O
+    // `texto` acompanha só como legenda; se o arquivo faltar, o motor avisa.
     const som = this.nivel.sons?.[this.indiceSimbolo];
-    this.audio.falar(som ?? '__simbolo', { texto: bloco.simbolo });
+    this.audio.falar(som ?? null, { texto: bloco.simbolo });
 
     this.indiceSimbolo++;
     this.placar.acertar();

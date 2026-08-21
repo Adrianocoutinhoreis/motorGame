@@ -18,20 +18,40 @@ import { cores, tipografia, espaco } from '../theme/tokens.js';
  * As estrelas são retorno imediato para a criança, não avaliação.
  */
 class Estrelas extends Node {
+  /**
+   * @param {number} quantidade estrelas preenchidas
+   * @param {{total?: number, tamanho?: number}} opcoes
+   *   `total` é quantas estrelas a fileira desenha (padrão 5).
+   */
   constructor(quantidade, opcoes = {}) {
+    const total = Math.max(1, Math.round(opcoes.total ?? 5));
     const tamanho = opcoes.tamanho ?? 76;
-    super({ largura: tamanho * 3 + 24, altura: tamanho, ...opcoes });
-    this.quantidade = quantidade;
+    super({ largura: Estrelas.larguraDe(total, tamanho), altura: tamanho, ...opcoes });
+    this.total = total;
     this.tamanho = tamanho;
-    this._escalas = [0, 0, 0];
+    // Recorta: preenchida a mais que o total desenharia fora da fileira.
+    this.quantidade = Math.max(0, Math.min(Math.round(quantidade) || 0, total));
+    this._escalas = new Array(total).fill(0);
+  }
+
+  /**
+   * Largura que a fileira vai ocupar. Existe porque quem centraliza precisa do
+   * número ANTES de instanciar (o Node só sabe sua largura depois de criado).
+   */
+  static larguraDe(total, tamanho = 76) {
+    return tamanho * total + 12 * (total - 1);
   }
 
   animar() {
-    for (let i = 0; i < 3; i++) {
+    // O atraso encolhe conforme a fileira cresce: com 220 ms fixos, cinco
+    // estrelas levariam 1,5 s para terminar de aparecer, e uma criança de 4 anos
+    // já teria tocado em algum botão antes do fim da comemoração.
+    const atraso = Math.min(220, 700 / this.total);
+    for (let i = 0; i < this.total; i++) {
       if (i < this.quantidade) {
         const alvo = { v: 0 };
         Tween.de(alvo)
-          .esperar(220 * i)
+          .esperar(atraso * i)
           .entao({ v: 1 }, 380, Easing.costasSaida);
         this._alvos ??= [];
         this._alvos.push({ i, alvo });
@@ -49,7 +69,7 @@ class Estrelas extends Node {
 
   desenhar(ctx) {
     const passo = this.tamanho + 12;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < this.total; i++) {
       const ganha = i < this.quantidade;
       ctx.save();
       ctx.translate(i * passo + this.tamanho / 2, this.tamanho / 2);
@@ -94,12 +114,22 @@ export class ResultScreen extends Scene {
     const venceu = !!resultado.vitoria;
     const estrelas = this.game.dados.estrelas ?? (venceu ? 1 : 0);
 
+    // Mesmo canteiro de obras do menu e da partida, em vez de um céu vazio.
+    // A tela de resultado é a última coisa que a criança vê da atividade; com
+    // céu limpo e nada mais, ela parecia pertencer a outro jogo. Com a cidade,
+    // o chão e os andaimes atrás, ela fecha o lugar onde a torre foi construída.
+    //
+    // O céu segue distinguindo vitória de derrota — na derrota fica encoberto,
+    // não cinza-morto: perder não pode parecer castigo (docs/DESIGN.md).
     this.adicionar(new Background({
       largura: L,
       altura: A,
-      corCeuTopo: venceu ? cores.ceuProfundo : '#CBD5E1',
-      corCeuBase: venceu ? cores.ceu : '#E2E8F0',
-      mostrarColinas: false,
+      tema: 'construcao',
+      corCeuTopo: venceu ? cores.ceuProfundo : '#94A3B8',
+      corCeuBase: venceu ? cores.ceu : '#CBD5E1',
+      // Sol só na vitória: sol a pino com glow amarelo sobre céu encoberto era
+      // uma contradição visual — o céu dizia uma coisa e a luz dizia outra.
+      mostrarSol: venceu,
     }));
 
     // O painel precisa deixar espaço para a fileira de botões ABAIXO dele sem
@@ -124,8 +154,25 @@ export class ResultScreen extends Scene {
       alinhamento: 'center',
     }));
 
-    const estrelasNode = new Estrelas(estrelas, {
-      x: (larguraPainel - (76 * 3 + 24)) / 2,
+    // Estrelas como CONQUISTA, não como nota de comportamento.
+    //
+    // Eram sempre TRÊS, e as três vinham de `ScoreSystem.estrelas`, que conta
+    // ERROS. Ou seja: a fileira de estrelas era o medidor de vidas perdidas com
+    // outra roupa — dava para ganhar "5 de 5" e ver uma estrela só. Agora é uma
+    // estrela por pergunta, preenchida por acerto: a criança vê o que construiu,
+    // não o que perdeu. Os erros continuam ditos, em texto, logo abaixo.
+    //
+    // Acima de 6 perguntas a fileira não caberia no painel nem se leria de
+    // relance, então aí a nota de 0 a 3 de `ScoreSystem` volta a ser a leitura
+    // honesta. É o único caso em que ela ainda é usada.
+    const totalPerguntas = Number(resultado.totalPerguntas) || 0;
+    const umaPorPergunta = totalPerguntas >= 1 && totalPerguntas <= 6;
+    const totalEstrelas = umaPorPergunta ? totalPerguntas : 3;
+    const estrelasCheias = umaPorPergunta ? (Number(resultado.acertos) || 0) : estrelas;
+
+    const estrelasNode = new Estrelas(estrelasCheias, {
+      total: totalEstrelas,
+      x: (larguraPainel - Estrelas.larguraDe(totalEstrelas)) / 2,
       y: espaco.lg + tipografia.titulo * 1.5,
     });
     painel.adicionar(estrelasNode.animar());
@@ -161,10 +208,16 @@ export class ResultScreen extends Scene {
     ));
 
     // ------------------------------------------------------------- mascote
+    // Agora que há chão atrás, o mascote se apoia nele: 0.82 é a linha do
+    // horizonte do `Background` no tema construção, e descontar meia altura põe
+    // os pés nela. Sem isso a arte (um busto recortado na coxa) ficava flutuando
+    // no céu. É o mesmo acoplamento manual já anotado para a base da torre em
+    // `GameScene`: se o horizonte mudar no motor, isto precisa acompanhar.
+    const tamanhoMascote = 230;
     this.mascote = new Mascot({
-      tamanho: 230,
+      tamanho: tamanhoMascote,
       x: L / 2 - larguraPainel / 2 - 24,
-      y: A / 2 + 66,
+      y: A * 0.82 - tamanhoMascote / 2,
       expressao: venceu ? 'comemorando' : 'triste',
       imagem: this.loader.imagem(config.mascote?.asset),
     });
@@ -227,7 +280,9 @@ export class ResultScreen extends Scene {
     const somFim = venceu ? config.audio?.vitoria : config.audio?.derrota;
     if (somFim) this.audio.efeito(somFim);
     const falaFim = venceu ? config.audio?.falaVitoria : config.audio?.falaDerrota;
-    this.audio.falar(falaFim ?? '__fim', {
+    // Sem `falaVitoria`/`falaDerrota` no config, a tela fica em silêncio: o
+    // efeito de vitória/derrota acima já toca, e o motor não sintetiza voz.
+    this.audio.falar(falaFim ?? null, {
       texto: venceu ? 'Muito bem! Você conseguiu!' : 'Quase! Vamos tentar de novo?',
     });
   }

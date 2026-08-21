@@ -75,7 +75,7 @@ export class Button extends Node {
     primario: { fundo: cores.primaria, texto: '#FFFFFF', borda: cores.primariaEscura },
     secundario: { fundo: '#7C3AED', texto: '#FFFFFF', borda: '#5B21B6' },
     dourado: { fundo: '#F59E0B', texto: '#FFFFFF', borda: '#B45309' },
-    suave: { fundo: cores.superficie, texto: cores.tinta, borda: cores.linha },
+    suave: { fundo: '#FFFFFF', texto: '#1E293B', borda: '#334155' },
     perigo: { fundo: cores.erro, texto: '#FFFFFF', borda: '#991B1B' },
     sucesso: { fundo: '#22C55E', texto: '#FFFFFF', borda: '#15803D' },
   };
@@ -207,27 +207,46 @@ export class IconButton extends Button {
 
   desenhar(ctx) {
     const lado = this.largura;
+    const r = lado / 2;
     ctx.save();
 
-    ctx.shadowColor = sombras.suave.cor;
-    ctx.shadowBlur = this._pressionado ? 4 : sombras.suave.desfoque;
-    ctx.shadowOffsetY = this._pressionado ? 1 : sombras.suave.y;
+    // 1. Base 3D de relevo no fundo para dar peso visual e destacar da nuvem
+    if (this.habilitado && !this._pressionado) {
+      ctx.fillStyle = this.corBorda || '#1E293B';
+      ctx.beginPath();
+      ctx.arc(r, r + 4, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Sombra projetada
+    ctx.shadowColor = sombras.suave?.cor ?? 'rgba(15, 23, 42, 0.25)';
+    ctx.shadowBlur = this._pressionado ? 3 : 6;
+    ctx.shadowOffsetY = this._pressionado ? 1 : 3;
     ctx.fillStyle = this.cor;
     ctx.beginPath();
-    ctx.arc(lado / 2, lado / 2, lado / 2, 0, Math.PI * 2);
+    ctx.arc(r, r, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowColor = 'transparent';
 
-    if (this.corBorda) {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = this.corBorda;
-      ctx.stroke();
+    // 3. Contorno forte de alto contraste (garante destaque absoluto contra nuvens)
+    const strokeCor = this.corBorda || '#334155';
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = strokeCor;
+    ctx.stroke();
+
+    // 4. Brilho biseado superior (Glossy top highlight)
+    if (this.habilitado && !this._pressionado) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.beginPath();
+      ctx.arc(r, r * 0.52, r * 0.74, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.fill();
     }
 
+    // 5. Ícone centralizado
     if (this.icone) {
       const t = this.tamanhoIcone;
       ctx.translate((lado - t) / 2, (lado - t) / 2);
-      desenharIcone(ctx, this.icone, t, this.corTexto, 2.4);
+      desenharIcone(ctx, this.icone, t, this.corTexto, 2.5);
     }
     ctx.restore();
   }

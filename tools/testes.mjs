@@ -18,7 +18,11 @@ import { GridBoard } from '../engine/gameplay/GridBoard.js';
 import { ScoreSystem } from '../engine/gameplay/ScoreSystem.js';
 import { CraneController } from '../engine/gameplay/CraneController.js';
 import { AvaBridge } from '../engine/ava/AvaBridge.js';
+import { AudioBus } from '../engine/audio/AudioBus.js';
 import { ESTADOS, transicaoValida } from '../engine/core/Estados.js';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let passaram = 0;
 let falharam = 0;
@@ -55,6 +59,35 @@ function perto(recebido, esperado, tolerancia = 0.001, mensagem = '') {
 function grupo(titulo, fn) {
   console.log(`\n${titulo}`);
   fn();
+}
+
+/**
+ * Versão assíncrona de `teste`. Existe porque `AudioBus.falar()` devolve
+ * Promise: sem o await, um teste que falhasse passaria calado.
+ */
+async function testeAsync(nome, fn) {
+  try {
+    await fn();
+    passaram++;
+    console.log(`  ok   ${nome}`);
+  } catch (err) {
+    falharam++;
+    falhas.push({ nome, err });
+    console.log(`  FALHOU  ${nome}\n         ${err.message}`);
+  }
+}
+
+/** Captura o que o código escreveu em console.warn durante `fn`. */
+async function capturarAvisos(fn) {
+  const original = console.warn;
+  const avisos = [];
+  console.warn = (...args) => avisos.push(args.join(' '));
+  try {
+    await fn();
+  } finally {
+    console.warn = original;
+  }
+  return avisos;
 }
 
 // ---------------------------------------------------------------- Matrix2D
@@ -491,6 +524,108 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
     }
   });
 });
+
+// ------------------------------------------------- áudio: todo som é arquivo
+grupo('Áudio — o motor não gera som, só toca arquivo', () => {
+  teste('nenhum arquivo do motor referencia API de síntese', () => {
+    // Esta é a trava da regra. A voz sintética do navegador cobria a falta de
+    // locução e foi removida: numa atividade cujo conteúdo pedagógico É a
+    // palavra falada, entregar à criança uma pronúncia que ninguém revisou é
+    // pior que o silêncio. Um teste guarda a decisão; um comentário, não.
+    const PROIBIDAS = [
+      'speechSynthesis',
+      'SpeechSynthesisUtterance',
+      'createOscillator',
+      'OscillatorNode',
+    ];
+    const raiz = fileURLToPath(new URL('../engine/', import.meta.url));
+    const arquivos = readdirSync(raiz, { recursive: true })
+      .filter((f) => typeof f === 'string' && f.endsWith('.js'));
+
+    ok(arquivos.length > 20, `esperava varrer o motor inteiro; achei ${arquivos.length} arquivos`);
+
+    const achados = [];
+    for (const rel of arquivos) {
+      const fonte = readFileSync(path.join(raiz, rel), 'utf8');
+      for (const api of PROIBIDAS) {
+        if (fonte.includes(api)) achados.push(`${rel.split(path.sep).join('/')} → ${api}`);
+      }
+    }
+    igual(achados, [], 'som gerado em código em vez de tocado de arquivo:');
+  });
+});
+
+await (async () => {
+  console.log('\nAudioBus — narração sem arquivo (silêncio, e o console denuncia)');
+
+  await testeAsync('falar() sem arquivo resolve false, sem lançar', async () => {
+    const audio = new AudioBus();
+    let r;
+    await capturarAvisos(async () => { r = await audio.falar('nao-existe', { texto: 'oi' }); });
+    igual(r, false, 'uma fala sem arquivo não pode se dizer bem-sucedida:');
+  });
+
+  await testeAsync('uma lacuna não trava a fila: a fala seguinte também resolve', async () => {
+    const audio = new AudioBus();
+    let a; let b;
+    await capturarAvisos(async () => {
+      [a, b] = await Promise.all([
+        audio.falar('sem-um', { texto: 'um' }),
+        audio.falar('sem-dois', { texto: 'dois' }),
+      ]);
+    });
+    igual([a, b], [false, false], 'as duas falas precisam resolver:');
+  });
+
+  await testeAsync('o aviso nomeia o id e o que a locução deveria dizer', async () => {
+    const audio = new AudioBus();
+    const avisos = await capturarAvisos(() => audio.falar('escolhaNivel', { texto: 'Escolha um nível' }));
+    igual(avisos.length, 1, 'esperava exatamente um aviso:');
+    ok(avisos[0].includes('escolhaNivel'), `o aviso precisa nomear o id: ${avisos[0]}`);
+    ok(avisos[0].includes('Escolha um nível'), `o aviso precisa trazer o texto: ${avisos[0]}`);
+    ok(avisos[0].includes('silêncio'), `o aviso precisa dizer que fica em silêncio: ${avisos[0]}`);
+  });
+
+  await testeAsync('avisa UMA vez por lacuna, não a cada repetição', async () => {
+    // O tutorial renarra a cada ida e volta de passo; um aviso por vez afogaria
+    // o console e esconderia as outras lacunas.
+    const audio = new AudioBus();
+    const avisos = await capturarAvisos(async () => {
+      await audio.falar('passo-1', { texto: 'primeiro passo' });
+      await audio.falar('passo-1', { texto: 'primeiro passo' });
+      await audio.falar('passo-2', { texto: 'segundo passo' });
+    });
+    igual(avisos.length, 2, 'duas lacunas distintas, dois avisos:');
+  });
+
+  await testeAsync('falar(null) também é lacuna, e aponta o config', async () => {
+    const audio = new AudioBus();
+    const avisos = await capturarAvisos(() => audio.falar(null, { texto: 'Muito bem!' }));
+    igual(avisos.length, 1, 'esperava um aviso:');
+    ok(avisos[0].includes('config'), `deveria apontar o config: ${avisos[0]}`);
+    ok(avisos[0].includes('Muito bem!'), `deveria trazer o texto: ${avisos[0]}`);
+  });
+
+  await testeAsync('as lacunas ficam listadas em narracoesAusentes', async () => {
+    const audio = new AudioBus();
+    await capturarAvisos(async () => {
+      await audio.falar('falaVitoria', { texto: 'Muito bem!' });
+      await audio.falar('falaDerrota', { texto: 'Quase!' });
+    });
+    igual(audio.narracoesAusentes, ['falaVitoria', 'falaDerrota'],
+      'a lista serve para revisar o jogo depois de uma sessão:');
+  });
+
+  await testeAsync('o texto da legenda não é caminho alternativo de áudio', async () => {
+    // Não há como "ouvir" num teste sem navegador. O que se prova aqui é que
+    // texto não substitui arquivo: com texto e sem gravação, o resultado é
+    // falso — silêncio. A ausência da API de síntese está no teste acima.
+    const audio = new AudioBus();
+    let r;
+    await capturarAvisos(async () => { r = await audio.falar(null, { texto: 'texto longo e bonito' }); });
+    igual(r, false, 'texto não substitui arquivo:');
+  });
+})();
 
 // ------------------------------------------------------------------ resumo
 console.log(`\n${'-'.repeat(56)}`);

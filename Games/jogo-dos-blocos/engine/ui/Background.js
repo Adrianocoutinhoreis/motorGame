@@ -152,9 +152,15 @@ export class Background extends Node {
     ctx.restore();
 
     // 4. Chão do Canteiro de Obras
-    ctx.fillStyle = '#F59E0B'; // terra/areia ensolarada
+    //
+    // Areia clara e dessaturada, não laranja. O tom anterior (#F59E0B) era o
+    // mesmo valor de `cores.atencao` — saturação de cor de alerta ocupando o
+    // maior bloco de cor da tela, competindo por atenção com os botões e com os
+    // blocos coloridos que o aluno precisa olhar. O chão é o fundo: ele sustenta
+    // a cena, não disputa com ela.
+    ctx.fillStyle = '#E8DDC7'; // areia clara
     ctx.fillRect(0, topoChao, l, a - topoChao);
-    ctx.fillStyle = '#D97706';
+    ctx.fillStyle = '#CDBE9F'; // um passo mais escura, só para a borda do piso ler
     ctx.fillRect(0, topoChao, l, 12); // faixa de destaque do piso
   }
 

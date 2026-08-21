@@ -18,20 +18,27 @@ precisa ser regravado.
 
 ---
 
+> **Locuções que ainda não existem:** as fichas abaixo cobrem os 23 arquivos que o jogo já
+> tem. As **6 locuções de tela que faltam gravar** (tutorial, escolha de nível, vitória,
+> derrota) estão em [`A-GRAVAR.md`](A-GRAVAR.md).
+
 ## Situação atual
 
 | Status | Quantos | O que significa |
 |---|---|---|
 | ✅ Confirmada | **0** | Alguém ouviu e conferiu |
-| 🟡 Inferida | **19** | Texto deduzido do nome do arquivo + código original + duração. Confiança alta, mas **não verificado** |
+| 🟡 Inferida | **22** | Texto deduzido do nome do arquivo + código original + duração. Confiança alta, mas **não verificado** |
 | 🔴 Não verificada | **3** | Conteúdo falado desconhecido. Precisa ser ouvido e preenchido |
 | ⚪ Sem fala | **1** | Música de fundo, nada a transcrever |
+
+Total: **26 fichas para 26 arquivos**. Conferido por `node tools/audio-info.mjs jogo-dos-blocos`,
+que também reprova se um arquivo mudar sem a ficha mudar.
 
 ### O que precisa ser ouvido primeiro
 
 | Arquivo | Duração | Por que é prioritário |
 |---|---|---|
-| [`abertura`](abertura/transcricao.md) | 11,15 s | É uma instrução falada inteira. Se descrever o jogo **antigo** (níveis "fácil/difícil", clique de mouse), está desatualizada e precisa ser regravada |
+| [`abertura`](abertura/transcricao.md) | 12,07 s | **O arquivo foi TROCADO** — não é mais o de 2013, e sim uma geração nova (ElevenLabs). É uma instrução falada inteira e a primeira coisa que a criança ouve. Se descrever o jogo **antigo** (níveis "fácil/difícil", clique de mouse), está ensinando o que não existe mais |
 | [`erroSOS`](erroSOS/transcricao.md) | 5,47 s | Se contiver fala repreensiva, contraria a diretriz "errar não pode humilhar" |
 | [`acertoSOS`](acertoSOS/transcricao.md) | 4,55 s | Se disser algo como "você acertou tudo", fica errado numa vitória com erros — que o jogo permite |
 | [`nao`](nao/transcricao.md) | 0,63 s | Está sendo usado como **som de erro**: se é uma voz dizendo "não", o jogo diz "não" à criança até 3 vezes por partida. Decisão a revisar |
@@ -73,6 +80,17 @@ precisa ser regravado.
 | [`o`](o/transcricao.md) | «o» | 0,52 s | 🟡 |
 | [`u`](u/transcricao.md) | «u» | 0,39 s | 🟡 |
 
+### Narração do tutorial — uma por passo (lote de 2026)
+
+| Pasta | Transcrição | Duração | Status |
+|---|---|---|---|
+| [`gancho_vai_vem`](gancho_vai_vem/transcricao.md) | «O gancho vai e vem. Um bloco fica pendurado no gancho, indo de um lado para o outro.» | 6,16 s | 🟡 |
+| [`toque_soltar`](toque_soltar/transcricao.md) | «Toque para soltar. Toque na tela quando o bloco estiver bem em cima da torre.» | 5,38 s | 🟡 |
+| [`cinblocos_venceu`](cinblocos_venceu/transcricao.md) | «Cinco blocos e você venceu. Se o bloco cair fora, você perde um coração. São três corações.» | 7,00 s | 🟡 |
+
+> Chegaram em 21/08/2026 e substituíram a voz sintetizada pelo navegador, que o motor usava
+> nessas três telas. Ver [`A-GRAVAR.md`](A-GRAVAR.md).
+
 ### Ambiente e feedback
 
 | Pasta | Transcrição | Duração | Status | Usado hoje? |
@@ -93,8 +111,16 @@ precisa ser regravado.
 Estes dados vieram da leitura dos **cabeçalhos dos arquivos** — cadeia de frames MP3 e chunks
 RIFF do WAV — e não de suposição:
 
-- **A locução é toda de um mesmo lote:** MP3 MPEG2 Layer III, 40 kbps, 22 050 Hz, **mono**.
-  Os 19 arquivos de fala compartilham exatamente esse formato.
+- **A locução vem de DOIS lotes, não de um.** 17 arquivos são MP3 MPEG2 Layer III, 40 kbps,
+  22 050 Hz, mono — o lote de 2014. Outros 4 (`abertura` e as três do tutorial) são MPEG1,
+  128 kbps, 44 100 Hz, mono — o lote de 2026. Uma versão anterior deste arquivo afirmava um
+  único lote de 19; estava errada, e `abertura` já havia sido trocada quando ela foi escrita.
+- **Nenhuma locução deste jogo é humana.** As tags ID3 dizem de onde cada voz vem:
+  o lote de 2014 traz `TENC: Lame MP3`, `TCON: Speech` e
+  `TPE1: TextAloud: ScanSoft Raquel22 (Brazilian Portuguese)`, com `TALB: Created: 09/01/2014` —
+  é TTS de 2014, não gravação de estúdio. O lote de 2026 traz um manifesto **C2PA** assinado,
+  com autor `Eleven Labs Inc.` e `digitalSourceType: trainedAlgorithmicMedia` — é voz de IA,
+  e o próprio arquivo declara isso de forma verificável.
 - **`somFundo` é de outro lote:** MPEG1, 56 kbps, 44 100 Hz, estéreo.
 - **Os efeitos são WAV PCM** 44 100 Hz, estéreo, 16 bits — sem compressão, daí os 783 KB e
   941 KB. Juntos são **1,7 MB dos 2,5 MB do jogo**.

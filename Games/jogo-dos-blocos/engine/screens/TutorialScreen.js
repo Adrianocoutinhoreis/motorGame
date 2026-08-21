@@ -22,6 +22,7 @@ class Ilustracao extends Node {
   constructor(opcoes = {}) {
     super(opcoes);
     this.desenhoPasso = opcoes.desenho ?? null;
+    this.loader = opcoes.loader ?? null;
     this._t = 0;
   }
 
@@ -40,7 +41,7 @@ class Ilustracao extends Node {
     if (!this.desenhoPasso) return;
     ctx.save();
     try {
-      this.desenhoPasso(ctx, this.largura, this.altura, this._t);
+      this.desenhoPasso(ctx, this.largura, this.altura, this._t, this.loader);
     } catch (err) {
       console.error('[motor] desenho do tutorial falhou:', err);
     }
@@ -67,7 +68,7 @@ export class TutorialScreen extends Scene {
     this.passos = config.tutorial ?? [];
     this.indice = 0;
 
-    this.adicionar(new Background({ largura: L, altura: A, mostrarColinas: false }));
+    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
 
     // ------------------------------------------------------------ cartão
     const larguraPainel = Math.min(980, L - espaco.xl * 2);
@@ -86,6 +87,7 @@ export class TutorialScreen extends Scene {
       y: 0,
       largura: larguraPainel,
       altura: alturaPainel * 0.6,
+      loader: this.loader,
     });
     this.painel.adicionar(this.ilustracao);
 
@@ -109,12 +111,21 @@ export class TutorialScreen extends Scene {
     this.painel.adicionar(this.titulo, this.texto);
 
     // ------------------------------------------------------------ mascote
+    // A arte do mascote é um BUSTO (recortado na coxa) com a mão estendida, não
+    // uma figura inteira: 280 de altura dão 246 de largura, e dentro da imagem a
+    // luva ocupa de 71% a 97% da largura.
+    //
+    // O deslocamento de 62 px existe para a luva NÃO invadir o texto. O texto do
+    // painel começa, no pior caso, na borda do painel + `espaco.xxl` (72), ou
+    // seja em 222; com este centro a luva termina em ~204. Em troca, uns 20 px do
+    // braço esquerdo dele saem pela borda da tela — o que lê como alguém entrando
+    // em cena para explicar, e é melhor que encolher a pessoa até caber.
     this.mascote = new Mascot({
-      tamanho: 210,
-      x: L * 0.5 - larguraPainel / 2 - 30,
+      tamanho: 280,
+      x: L * 0.5 - larguraPainel / 2 - 62,
       y: A * 0.62,
       expressao: 'pensando',
-      balanco: true,
+      balanco: false,
       imagem: this.loader.imagem(config.mascote?.asset),
     });
     this.adicionar(this.mascote);
@@ -215,9 +226,11 @@ export class TutorialScreen extends Scene {
     Tween.removerDe(this.painel);
     Tween.para(this.painel, { alpha: 1 }, 260, Easing.suaveSaida);
 
-    // Narração do passo — com o texto como fallback de síntese de voz.
+    // Narração do passo. O `texto` NÃO é lido por voz sintética — o motor só
+    // toca arquivo. Sem `passo.fala` declarado, o passo fica em silêncio e o
+    // AudioBus diz no console qual gravação falta.
     if (passo.fala || passo.texto) {
-      this.audio.falar(passo.fala ?? `__tutorial_${novo}`, {
+      this.audio.falar(passo.fala ?? null, {
         texto: [passo.titulo, passo.texto].filter(Boolean).join('. '),
       });
     }

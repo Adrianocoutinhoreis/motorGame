@@ -87,14 +87,21 @@ jogo-dos-blocos/
 
 ## Assets
 
+> **Nenhuma locução deste jogo é humana.** O áudio de 2013 é TTS da época
+> (`TextAloud: ScanSoft Raquel22`, criado em 09/01/2014) e o novo é IA (ElevenLabs). Isso está
+> registrado nas tags ID3 de cada arquivo e detalhado em
+> [`assets/audio-transcricao/LEIA-ME.md`](assets/audio-transcricao/LEIA-ME.md).
+
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
 | `img/bloco.svg`, `img/base.svg`, `img/gancho.svg` | Vetorial | **Criados para esta refação** — Educandus |
-| `img/worker.webp` | Raster (WebP) | Mascote do jogo: operário de obra. Convertido do PNG fornecido (868×1400, 936 KB) para 408×700 / **46 KB**. A fonte em alta está em `fontes/mascote/worker.png`, fora do pacote |
+| `img/bob.webp` | Raster (WebP) | **Mascote em uso**: operário de obra, busto com a mão estendida, 1760×2000 / 195 KB, com alfa. Enquadramento já recortado na coxa — é o que permite apoiá-lo no rodapé do palco sem parecer flutuando |
+| `img/worker.webp` | Raster (WebP) | Mascote **anterior**, hoje sem uso: figura inteira 408×700 / 46 KB, convertida do PNG em `fontes/mascote/worker.png`. Continua no pacote; pode sair (ver `CHECKLIST-AUDIO.md` §6 para o critério de peso) |
 | `audio/um…cinco.mp3` | Narração | Aula original 870294 — Educandus |
 | `audio/seis…dez.mp3` | Narração | Aula original 870294 (existiam, nunca usados) — Educandus |
 | `audio/a, e, i, o, u.mp3` | Narração | Aula original 870294 — Educandus |
-| `audio/abertura.mp3` | Narração | Aula original 870294 — Educandus |
+| `audio/abertura.mp3` | Narração | **Voz ElevenLabs (IA)** — substituiu o arquivo de 2013, que segue em `Aulas para Refazer/` |
+| `audio/gancho_vai_vem.mp3`, `toque_soltar.mp3`, `cinblocos_venceu.mp3` | Narração | **Voz ElevenLabs (IA)**, 2026 — narração dos 3 passos do tutorial. Content Credentials C2PA embutidos |
 | `audio/somFundo.mp3` | Música | Aula original 870294 — Educandus |
 | `audio/acertoSOS.wav`, `erroSOS.wav`, `sim.wav`, `nao.wav` | Efeito | Aula original 870294 — Educandus |
 | `audio/facil.mp3`, `dificil.mp3` | Narração | Aula original — **não usados** (os níveis foram renomeados) |
@@ -110,11 +117,15 @@ com o que é falado, o formato real do arquivo e onde ele é usado. Comece pelo
 
 ## Pendências conhecidas
 
-- **Locução da tela de seleção de nível.** Não existe gravação para "Escolha um nível" nem
-  para os nomes dos três níveis. Hoje o motor cai para a **síntese de voz do navegador**, que
-  é uma ponte, não o destino. Quando houver gravação, basta pôr os arquivos em
-  `assets/audio/`, declará-los em `config.js` e apontar `audio.escolhaNivel` — sem alterar
-  código.
+- **Três locuções de tela faltando** ("Escolha um nível", vitória e derrota). Eram seis; as
+  três do tutorial chegaram em 21/08/2026. Sem elas, a tela de níveis e o resultado ficam em
+  **silêncio** — o motor não sintetiza voz, por decisão travada em teste. O texto exato de cada
+  uma está em [`A-GRAVAR.md`](assets/audio-transcricao/A-GRAVAR.md); é só pôr o arquivo em
+  `assets/audio/`, declará-lo em `config.js` e apontar a chave — sem alterar uma linha de código.
+- **O áudio tem checklist próprio:** [`CHECKLIST-AUDIO.md`](CHECKLIST-AUDIO.md). Neste jogo o
+  áudio *é* o conteúdo pedagógico (2,9 MB dos 3,4 MB do pacote), e quase tudo o que pode dar
+  errado com ele não aparece na tela. Rode `node tools/audio-info.mjs jogo-dos-blocos` para o
+  inventário medido.
 - **Transcrições dos áudios a confirmar.** Nenhum dos 23 arquivos foi ouvido. Nas fichas de
   `assets/audio-transcricao/`, 19 trazem transcrição **inferida** (nome do arquivo + código da
   aula original + duração compatível) e 3 estão **em branco** por não ser possível deduzir:

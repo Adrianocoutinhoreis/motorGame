@@ -190,6 +190,24 @@ async function principal() {
     await cdp.enviar('Runtime.enable', {}, sessionId);
     await cdp.enviar('Network.enable', {}, sessionId);
 
+    // Trava de execução da regra "todo som sai de arquivo": grava qualquer
+    // chamada a `speechSynthesis.speak`, em toda página e todo iframe, desde
+    // antes do primeiro script rodar. O teste de `testes.mjs` prova que a API
+    // não aparece no código; este prova que ela não é usada em execução — nem
+    // por um jogo que resolvesse chamá-la por conta própria.
+    await cdp.enviar('Page.addScriptToEvaluateOnNewDocument', {
+      source: `
+        window.__falasSintetizadas = [];
+        if (window.speechSynthesis && window.speechSynthesis.speak) {
+          const original = window.speechSynthesis.speak.bind(window.speechSynthesis);
+          window.speechSynthesis.speak = function (u) {
+            window.__falasSintetizadas.push(u && u.text ? String(u.text) : '(sem texto)');
+            return original(u);
+          };
+        }
+      `,
+    }, sessionId);
+
     const avaliar = async (expressao) => {
       const r = await cdp.enviar('Runtime.evaluate', {
         expression: expressao,
@@ -254,6 +272,66 @@ async function principal() {
 
     await capturar('01-menu');
     checar('estado inicial é o menu', await avaliar(`${g}.estado`) === 'menu');
+
+    // ------------------------------------- o toque sob a mão do mascote
+    //
+    // No menu, o mascote é desenhado DEPOIS dos botões, para a mão dele não ser
+    // cortada pela borda do JOGAR. Isso cria 12 px em que a arte do mascote está
+    // por cima de um alvo tocável — e é justamente onde um aluno de 4 anos, que
+    // mira no personagem, vai tocar.
+    //
+    // Este teste bate nesses 12 px com um evento de ponteiro REAL (via CDP, não
+    // sintético: o caminho sintético morre no `setPointerCapture` do Input) e
+    // exige que o botão responda. Se alguém marcar o mascote como interativo, ou
+    // inverter a ordem de desenho sem pensar, este teste cai.
+    // Espera a animação de entrada TERMINAR antes de mirar. Os botões nascem
+    // 60 px abaixo e sobem em 420 ms; tocar no meio disso erra o alvo, e foi
+    // exatamente assim que este teste falhou na primeira execução. Esperar por
+    // condição, e não por um tempo escolhido a dedo, é o que o mantém honesto.
+    const botaoAssentou = await avaliar(`
+      (async () => {
+        const j = document.getElementById('quadro').contentWindow.jogo;
+        for (let i = 0; i < 80; i++) {
+          const b = j.cena && j.cena.botaoTutorial;   // o último a assentar (entra 120 ms depois)
+          if (b && b.alpha >= 1) return true;
+          await new Promise(r => setTimeout(r, 50));
+        }
+        return false;
+      })()
+    `);
+    checar('a animação de entrada dos botões termina', botaoAssentou === true);
+
+    const pontoSobMao = await avaliar(`
+      (() => {
+        const q = document.getElementById('quadro');
+        const rq = q.getBoundingClientRect();
+        const s = q.contentWindow.jogo.stage;
+        const rc = s.canvas.getBoundingClientRect();
+        const lx = 410, ly = 500;   // sobre a LUVA do mascote (x 335-460, y 436-540) E o botão COMO JOGAR
+        return {
+          x: rq.left + rc.left + lx * s.escala + s.deslocX,
+          y: rq.top + rc.top + ly * s.escala + s.deslocY,
+        };
+      })()
+    `);
+    for (const type of ['mousePressed', 'mouseReleased']) {
+      await cdp.enviar('Input.dispatchMouseEvent', {
+        type,
+        x: Math.round(pontoSobMao.x),
+        y: Math.round(pontoSobMao.y),
+        button: 'left',
+        clickCount: 1,
+        pointerType: 'mouse',
+      }, sessionId);
+    }
+    await esperar(800);
+    const estadoAposToque = await avaliar(`${g}.estado`);
+    checar('tocar onde a mão do mascote cobre o botão ainda aciona o botão',
+      estadoAposToque === 'tutorial', `estado após o toque: ${estadoAposToque}`);
+
+    // Volta ao menu para o resto do roteiro seguir do começo.
+    await avaliar(`${g}.irPara('menu')`);
+    await esperar(500);
 
     // ------------------------------------------------------------- tutorial
     await avaliar(`${g}.irPara('tutorial')`);
@@ -404,6 +482,26 @@ async function principal() {
     const avisos = consoleLogs.filter((l) => l.tipo === 'error');
     checar('nenhum console.error durante a sessão', avisos.length === 0,
       avisos.map((a) => a.texto).slice(0, 3).join(' | '));
+
+    // -------------------------------------------------- som só vindo de arquivo
+    const sintetizadas = await avaliar(`
+      (() => {
+        const q = document.getElementById('quadro');
+        const dentro = (q && q.contentWindow && q.contentWindow.__falasSintetizadas) || [];
+        return [...(window.__falasSintetizadas || []), ...dentro];
+      })()
+    `);
+    checar('nenhuma fala foi sintetizada pelo navegador — todo som saiu de arquivo',
+      sintetizadas.length === 0, `sintetizadas: ${JSON.stringify(sintetizadas)}`);
+
+    // Relato, não asserção: as lacunas de narração são uma pendência conhecida
+    // (ver A-GRAVAR.md do jogo) e vão desaparecer quando a locução for gravada.
+    // Transformar isto em teste faria o teste falhar justamente ao ser resolvido.
+    const lacunas = consoleLogs.filter((l) => l.texto.includes('narração ausente'));
+    console.log(`\n   Lacunas de narração relatadas pelo motor nesta sessão: ${lacunas.length}`);
+    for (const l of lacunas) {
+      console.log(`     · ${l.texto.replace(/^"|"$/g, '')}`);
+    }
 
     cdp.fechar();
   } finally {

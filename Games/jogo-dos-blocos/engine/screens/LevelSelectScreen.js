@@ -73,9 +73,15 @@ class NivelCard extends Node {
     ctx.restore();
 
     // Emblema com o número do nível.
+    //
+    // 0.21 e não 0.26: com o emblema em 0.26 num cartão de 330, o círculo (raio
+    // 45) terminava em y ≈ 131 e a amostra logo abaixo começa em ≈ 131 — os dois
+    // se encostavam, e no nível 3 o "3" chegava a tocar o "A E I O U". Em 0.21 o
+    // círculo termina em ≈ 114 e sobra folga de ~17 px, sem apertar a margem de
+    // cima (que fica em ~24) nem sair da faixa colorida (que vai até 0.52).
     const cx = l / 2;
-    const cy = a * 0.28;
-    const rr = Math.min(l, a) * 0.16;
+    const cy = a * 0.21;
+    const rr = Math.min(l, a) * 0.15;
     ctx.fillStyle = 'rgba(255,255,255,0.95)';
     ctx.beginPath();
     ctx.arc(cx, cy, rr, 0, Math.PI * 2);
@@ -87,22 +93,27 @@ class NivelCard extends Node {
     ctx.textBaseline = 'middle';
     ctx.fillText(String(this.nivel.id ?? this.indice + 1), cx, cy + 2);
 
-    // Amostra do conteúdo (ex.: "1 2 3 4 5", "A E I O U") — mostra o que se
-    // aprende ali sem precisar de explicação escrita.
+    // Amostra do conteúdo (ex.: "1 2 3 4 5", "A E I O U") — mostra o conteúdo de forma clara
     if (this.nivel.amostra) {
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
       ctx.font = `${tipografia.pesoForte} ${tipografia.corpo}px ${tipografia.familia}`;
-      ctx.fillText(aplicarCaixa(this.nivel.amostra), cx, a * 0.46);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(aplicarCaixa(this.nivel.amostra), cx, a * 0.44);
     }
 
     // Nome do nível
     ctx.fillStyle = cores.tinta;
     ctx.font = `${tipografia.pesoForte} ${tipografia.corpo}px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText(aplicarCaixa(this.nivel.nome ?? `Nível ${this.indice + 1}`), cx, a * 0.68);
 
     if (this.nivel.descricao) {
       ctx.fillStyle = cores.tintaSuave;
       ctx.font = `${tipografia.pesoNormal} ${tipografia.apoio}px ${tipografia.familia}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(aplicarCaixa(this.nivel.descricao), cx, a * 0.80);
     }
 
@@ -116,14 +127,6 @@ class NivelCard extends Node {
 
 /**
  * LevelSelectScreen — escolha do nível.
- *
- * O motor só chega aqui quando o jogo declara mais de um nível em
- * `config.niveis`; com um nível só, JOGAR vai direto à partida. Isso evita a
- * tela vazia de uma escolha que não existe.
- *
- * Nos originais a escolha era um par de botões "fácil"/"difícil" colado à tela
- * de instrução, sem indicar o que mudava. Aqui cada nível mostra o conteúdo
- * que ele treina — o que é a informação que a criança (e o professor) precisa.
  */
 export class LevelSelectScreen extends Scene {
   aoEntrar() {
@@ -131,7 +134,7 @@ export class LevelSelectScreen extends Scene {
     const { largura: L, altura: A, config } = this;
     const niveis = config.niveis ?? [];
 
-    this.adicionar(new Background({ largura: L, altura: A }));
+    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
 
     this.adicionar(new TextNode('Escolha um nível', {
       x: L / 2,
@@ -186,9 +189,11 @@ export class LevelSelectScreen extends Scene {
       somToque: config.audio?.clique,
     }));
 
-    if (config.audio?.escolhaNivel) {
-      this.audio.falar(config.audio.escolhaNivel, { texto: 'Escolha um nível' });
-    }
+    // Sem `if`: a chamada vai mesmo com o id ausente, para o motor DENUNCIAR a
+    // lacuna no console como faz nas outras telas. Envolvê-la num guarda deixava
+    // esta tela calada em silêncio — e uma falta que não avisa é uma falta que
+    // ninguém grava.
+    this.audio.falar(config.audio?.escolhaNivel ?? null, { texto: 'Escolha um nível' });
   }
 
   aoSair() {

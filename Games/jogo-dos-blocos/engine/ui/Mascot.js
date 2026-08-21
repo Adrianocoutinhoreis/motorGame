@@ -53,9 +53,9 @@ export class Mascot extends Node {
     this.corPupila = opcoes.corPupila ?? cores.tinta;
     this.corBico = opcoes.corBico ?? cores.atencao;
 
-    /** Balanço suave de "respiração": presença sem disputar atenção. */
+    /** Balanço suave de "respiração": desativado por padrão para personagens estáticos/humanos. */
     this._t = Math.random() * Math.PI * 2;
-    this.balanco = opcoes.balanco ?? true;
+    this.balanco = opcoes.balanco ?? false;
     this._baseY = this.y;
     this._piscar = 0;
     this._tempoAtePiscar = 2 + Math.random() * 3;

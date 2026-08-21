@@ -146,7 +146,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | `TutorialScreen` | Pronto | Passos narrados, ilustração animada, navegação |
 | `LevelSelectScreen` | Pronto | Aparece sozinha só quando há mais de um nível |
 | `PauseScreen` | Pronto | Camada sobreposta |
-| `ResultScreen` | Pronto | Vitória e derrota, com estrelas |
+| `ResultScreen` | Pronto | Vitória e derrota; uma estrela por pergunta (até 6), cenário do canteiro de obras |
 | Tela de créditos / objetivo | **Planejado** | Útil ao professor; não pedida ainda |
 
 ## Jogabilidade
@@ -164,8 +164,8 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 |---|---|---|
 | Canais music / sfx / speech | Pronto | Fila de narração serializada |
 | Destravamento por gesto | Pronto | Chamado no primeiro toque |
-| Fallback por síntese de voz | Parcial | Ponte quando falta locução; qualidade inferior a gravação |
-| Legenda do áudio narrado | **Planejado** | Acessibilidade para surdos e para sala barulhenta |
+| Todo som vindo de arquivo | Pronto | **Regra travada por teste.** O motor não sintetiza voz nem gera tom: faltando a gravação, a tela fica em silêncio e o console nomeia o arquivo que falta |
+| Legenda do áudio narrado | **Planejado** | O evento `narracao` já entrega `{ id, texto }` a cada fala; falta só a camada visual |
 
 ## AVA
 

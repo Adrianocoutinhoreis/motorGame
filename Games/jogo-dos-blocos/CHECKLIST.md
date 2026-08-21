@@ -31,7 +31,13 @@ e a validação jogando (seção 7.2).
 ## 2. Assets
 
 - [x] Arte produzida — `bloco.svg`, `base.svg`, `gancho.svg` (vetorial) e `worker.webp` (mascote, 46 KB); cenário desenhado pelo motor
-- [x] Áudio de narração presente para **todo** conteúdo falado — os 15 símbolos dos 3 níveis
+- [x] Áudio de narração presente para o conteúdo **do exercício** — os 15 símbolos dos 3 níveis
+- [ ] Áudio de narração presente para **as telas** — faltam 3 locuções (escolha de nível,
+      vitória, derrota). Sem elas essas telas ficam em silêncio: o motor não sintetiza voz.
+      Lista em `assets/audio-transcricao/A-GRAVAR.md`
+- [ ] **Áudio conferido em detalhe** — inventário, transcrições, consistência entre lotes,
+      peso e proveniência: ver [`CHECKLIST-AUDIO.md`](CHECKLIST-AUDIO.md), que existe porque
+      neste jogo o áudio é o conteúdo, não o enfeite
 - [x] Efeitos de acerto, erro e feedback presentes — `acertoSOS`, `erroSOS`, `nao`
 - [x] Todo asset está dentro de `assets/`, com caminho relativo
 - [x] Nenhuma fonte, imagem ou som vindo da internet — *verificado por `verificar-independencia.mjs`*
@@ -39,12 +45,13 @@ e a validação jogando (seção 7.2).
 - [x] Ficha de transcrição criada para **cada** áudio (`assets/audio-transcricao/`) — 23 de 23
 - [ ] **Transcrições confirmadas ouvindo** — 0 de 23 (19 inferidas, 3 em branco). Prioridade:
       `abertura`, `erroSOS`, `acertoSOS`, `nao` (ver `assets/audio-transcricao/LEIA-ME.md`)
-- [x] Pendências de áudio listadas no `README.md` — *locução da tela de níveis*
+- [x] Pendências de áudio listadas no `README.md` e em `assets/audio-transcricao/A-GRAVAR.md`
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR
-- [x] **Tutorial** com 3 passos narrados, ilustrados e puláveis
+- [x] **Tutorial** com 3 passos narrados, ilustrados e puláveis — narração ligada em
+      21/08/2026; a transcrição ainda não foi confirmada ouvindo (`CHECKLIST-AUDIO.md`, §3)
 - [x] **Seleção de nível** com os 3 níveis
 - [x] **Partida** com HUD legível (progresso, vidas, nome do nível, pausa)
 - [x] **Pausa** com continuar / começar de novo / sair
@@ -92,7 +99,9 @@ Mapeamento semântico **deste** jogo:
 - [x] Espaço suficiente entre alvos
 - [x] Contraste de texto e elementos essenciais em nível AA — *texto sobre cenário usa contorno*
 - [x] Cor nunca é o único portador de significado — nível tem número e amostra; vida tem ícone
-- [x] Nenhuma ação exige saber ler — ícone + narração em tudo
+- [ ] Nenhuma ação exige saber ler — os ícones cobrem toda a navegação e o tutorial já é
+      narrado; falta a **tela de resultado**, que hoje depende do texto escrito. Aos 4 anos
+      isso significa depender de um adulto para ler. Fecha com as 3 locuções de `A-GRAVAR.md`
 - [x] Som pode ser desligado e a preferência é lembrada
 - [x] Nada pisca de forma rápida ou repetitiva
 - [ ] **Conferido com uma criança da faixa etária** — *pendente; nenhum teste substitui isso*

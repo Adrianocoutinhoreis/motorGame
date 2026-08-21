@@ -1,6 +1,6 @@
 {
   "nome": "Motor Educandus",
-  "versao": "1.0.0",
-  "data": "2026-08-19",
-  "notas": "Primeira versão: núcleo, tema, telas padrão, jogabilidade (grade e guindaste) e ponte com o AVA."
+  "versao": "1.1.0",
+  "data": "2026-08-21",
+  "notas": "Todo som passa a sair de arquivo: a síntese de voz do navegador foi removida do AudioBus. Faltando locução, a tela fica em silêncio e o console nomeia a gravação ausente (evento `narracao` fica como base de legenda). Regra travada por teste."
 }

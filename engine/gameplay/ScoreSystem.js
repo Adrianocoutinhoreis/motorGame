@@ -104,7 +104,14 @@ export class ScoreSystem extends Emitter {
   }
 
   /**
-   * Nota de 0 a 3 estrelas para a tela de resultado.
+   * Nota de 0 a 3 estrelas, derivada dos ERROS.
+   *
+   * Hoje é a SAÍDA DE RESERVA, não o padrão: a `ResultScreen` desenha uma
+   * estrela por pergunta (preenchida por acerto) quando o total é de 1 a 6, e
+   * só cai nesta nota quando a fileira não caberia no painel. O motivo da troca
+   * está comentado lá: com estrelas vindas de erro, dava para acertar "5 de 5" e
+   * ver uma estrela só — a fileira era o medidor de vidas com outra roupa.
+   *
    * Só é exibida — não vai para o AVA (quanto vale a partida é do servidor).
    */
   get estrelas() {
