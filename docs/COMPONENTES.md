@@ -72,6 +72,42 @@ e nos nós também `entrar` / `sair`.
 > `toque` só dispara se apertar e soltar **no mesmo nó**. É o clique acessível: a criança
 > pode desistir arrastando o dedo para fora.
 
+#### A armadilha: sem nó interativo, não existe toque
+
+`toque` exige um **nó interativo** sob o dedo. Se o ponto não cai em nenhum,
+`noSobPonto` devolve `null`, e aí nem o nó nem o `Input` emitem `toque` —
+o toque simplesmente não acontece. Blocos, tabuleiros e cenário nascem com
+`interativo: false`, então uma cena que espera "tocar em qualquer lugar" precisa
+dizer isso explicitamente:
+
+```js
+// Área de toque: cobre a tela e fica ATRÁS de tudo. O HUD, os botões e os
+// painéis estão à frente, então ganham o toque; o resto da tela cai aqui.
+this.areaToque = new Node({ largura: L, altura: A, interativo: true });
+this.areaToque.on('toque', (ponto) => this.jogar(ponto));
+this.adicionar(this.areaToque);   // logo depois do Background
+```
+
+**E não troque isso por `ouvirEntrada('toque', …)`.** Parece atalho e é pior: o
+`Input` emite **primeiro no nó e depois em si mesmo**, então um ouvinte global
+recebe o toque de **qualquer** botão da tela, já depois de o botão ter agido.
+
+Os dois jogos existentes pagaram essa conta:
+
+- **sem `areaToque`**, o Jogo das Formas não respondia a toque nenhum;
+- **com ouvinte global**, o toque no CONTINUAR da pausa fechava a pausa (zerando
+  `pausada`) e em seguida chegava à cena como jogada, no meio da tela — o único
+  toque que "funcionava" era o de sair da pausa.
+
+Pendurar no nó resolve os dois de uma vez. Para arrasto, também prefira o nó: o
+motor emite `arrastar` no nó que foi **apertado**, então um gesto que começou na
+área de jogo continua valendo se o dedo sair dela, e um que começou no painel
+nunca mexe no jogo.
+
+Coberto por `tools/teste-jogabilidade-formas.mjs`, que só usa ponteiro de verdade
+— nenhum método da cena é chamado por dentro, porque foi assim que o bug passou
+da primeira vez.
+
 ---
 
 ### `Stage`

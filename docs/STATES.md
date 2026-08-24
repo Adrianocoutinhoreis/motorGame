@@ -120,7 +120,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | Área visível adaptativa | **Planejado** | Sobram ~20% de barra num celular 20:9 e ~25% num iPad deitado, porque o jogo é 16:9 fixo. Exige o `Stage` expor um retângulo visível maior que a caixa segura e o `Background` pintar até a borda dele |
 | `Input` (Pointer Events) | Pronto | `toque` só dispara se apertar e soltar no mesmo nó |
 | `Tween` | Pronto | Encadeamento, espera, laço e cancelamento por alvo |
-| `Loader` | Pronto | Falha de recurso não derruba o jogo |
+| `Loader` | Pronto | Falha de recurso não derruba o jogo. `imagem(null)` devolve null em silêncio — pedir sem id é o jogo dizendo "não tenho arte para isto", e avisar ali enchia o console de toda partida |
 | `Storage` | Pronto | Cai para memória se o localStorage for bloqueado |
 | `Rand` | Pronto | Semente opcional para reproduzir partidas |
 | `Scene` / `Game` | Pronto | Limpeza automática de nós e ouvintes |
@@ -133,7 +133,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | `tokens.js` / `tokens.css` | Pronto | Fonte única compartilhada entre canvas e DOM |
 | `icons.js` | Pronto | 15 ícones; ampliar conforme necessidade |
 | `Button` / `IconButton` | Pronto | Alvo mínimo de 64px garantido no construtor |
-| `Panel`, `ScoreBar`, `TimerBar`, `Lives` | Pronto | `TimerBar` ainda sem uso real (será exercitada em Formas e Cores) |
+| `Panel`, `ScoreBar`, `TimerBar`, `Lives` | Pronto | `TimerBar` estreou no Jogo das Formas: 120 s por delta, cor mudando a 35% e a 15% e pulso no trecho crítico |
 | `SoundToggle` | Pronto | Preferência persistida |
 | `Mascot` | Pronto | Dois modos: imagem do jogo (usado no piloto) ou coruja vetorial (padrão) |
 | Expressão facial por imagem | **Planejado** | `imagensPorExpressao` existe na API, sem arte que a exercite |
@@ -158,9 +158,26 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | Peça | Estado | Observação |
 |---|---|---|
 | `ScoreSystem` | Pronto | Fonte única dos números do AVA |
-| `CraneController` | Pronto | Modo oscilante validado no piloto; modo colunas testado só em unidade |
-| `GridBoard` | Parcial | Lógica coberta por teste, **sem uso real ainda** — estreia no Jogo das Formas |
+| `CraneController` | Pronto | Modo oscilante validado no piloto; **modo colunas estreou** no Jogo das Formas. O ciclo vertical (descer, pegar, subir) NÃO é dele: é `Tween` na cena, e vale saber disso antes de planejar o próximo jogo de guindaste |
+| `GridBoard` | Pronto | **Estreou** no Jogo das Formas: conectividade de 4, gravidade `cima`, cascata. Dois limites conhecidos: não tem operação de deslocar a grade inteira uma linha (a linha nova mora na cena), e `desfazerCombosIniciais` resolve num passe só sem reconferir as peças já vistas — ver abaixo |
 | Arrasto contínuo (drag path) | **Planejado** | Necessário para o Jogo das Cores (match-3 por arrasto) |
+| `GridBoard.desfazerCombosIniciais` sem reconferência | **A corrigir** | Ver abaixo |
+
+### O limite do `desfazerCombosIniciais`, medido
+
+O método percorre `todas()` e, para cada peça em grupo de 3, resorteia o tipo dela até sair do
+grupo. Nunca reconfere as peças já visitadas — então **consertar a 12ª peça pode criar um grupo
+com a 3ª**, e esse grupo sobrevive calado.
+
+Não é teórico: no Nível 1 do Jogo das Formas (5 colunas, 3 linhas, 3 formas — 15 blocos densos)
+ele esgotava as 40 tentativas e imprimia `não consegui desfazer um combo inicial`. O jogo
+resolveu na cena, com passes que **reconferem o conjunto inteiro** a cada rodada
+(`GameScene._evitarComboDeGraca`), e isso também evita o segundo problema: `todas()` mexeria em
+peças que já estão na tela, trocando a forma de um bloco debaixo do olhar da criança.
+
+**O Jogo das Cores vai precisar do mesmo**, com vizinhança de 8 — que é um tabuleiro ainda mais
+propenso a grupos. Vale promover a versão da cena ao `GridBoard` **antes** de começar Cores, e
+não depois: é a mesma correção feita uma vez em vez de duas.
 
 ## Áudio
 
@@ -199,5 +216,5 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 
 | Próximo jogo | O que o motor precisa ganhar antes |
 |---|---|
-| **Jogo das Formas** | Estrear o `GridBoard` em jogo real; exercitar `TimerBar`; modo colunas do `CraneController` |
+| ~~**Jogo das Formas**~~ | **Feito.** Estreou `GridBoard`, `TimerBar` e o modo colunas do `CraneController` |
 | **Jogo das Cores** | **Arrasto contínuo** no `Input` (selecionar vários blocos num gesto) — é o que hoje não existe |

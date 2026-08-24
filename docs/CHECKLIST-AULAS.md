@@ -12,7 +12,7 @@ Legenda: ✅ concluído · 🚧 em andamento · 📋 planejado
 | # | Aula | ID | Novo slug | Status |
 |---|---|---|---|---|
 | 1 | Jogo dos Blocos | `870294` | `jogo-dos-blocos` | ✅ **refeito** (piloto) |
-| 2 | Jogo das Formas | `870298` | `jogo-das-formas` | 📋 planejado |
+| 2 | Jogo das Formas | `870298` | `jogo-das-formas` | 🚧 **jogável**, com pendências declaradas |
 | 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 📋 planejado |
 
 ---
@@ -64,27 +64,60 @@ descrita no `CHECKLIST.md` do jogo — jogar com o som ligado, em toque, e confe
 
 ---
 
-## 2. Jogo das Formas — `870298` 📋
+## 2. Jogo das Formas — `870298` 🚧
 
-**Original:** `js/JogoFormas.js` (+ `animacao.js`). Corrente por coluna pega e solta pilhas
-de blocos; a cada 15 s sobe uma linha nova (estilo *Tetris Attack*); junte 3 formas iguais.
+**Original:** `js/JogoFormas.js` (+ `animacao.js`). Garra por coluna pega e solta pilhas de
+blocos; a cada 15 s sobe uma linha nova (estilo *Tetris Attack*); junte 3 formas iguais.
 Meta 20 pontos em 120 s; perde se a pilha alcançar o topo. Áudio nomeia a forma
-(quadrado, retângulo, círculo, triângulo). Nível único.
+(quadrado, retângulo, círculo, triângulo). **Nível único.**
 
-**Assets aproveitáveis:** PNGs dos blocos e do cenário existem; a locução das formas existe.
+**Refeito em:** `Games/jogo-das-formas/` — jogável de ponta a ponta em 24/08/2026.
 
-**Contrato proposto:** `totalPerguntas: 20` (meta de pontos) · `acertos` = pontos feitos ·
-`erros` = soltas inválidas · `nivel: 1`.
+| O que mudou | Por quê |
+|---|---|
+| **3 níveis** em vez de nenhum, e o **Nível 3 é o jogo de 2013** número por número | O original entregava tudo de uma vez a quem nunca o viu: 4 formas, grade cheia, linha nova a cada 15 s. Para 4 anos é uma parede |
+| Toque em vez de `mousemove` | Em tablet não existe hover: a coluna destacada só aparecia com cursor, e o original é injogável no toque |
+| Tempo por delta | `setInterval` deixava a partida correr com a aba em segundo plano |
+| Painel "AS FORMAS" na tela durante a partida | A criança que esqueceu qual é o triângulo olha para o lado; tocar na linha narra o nome |
+| Bloco-estrela é o **último depositado**, não um sorteado | O sorteio do original fazia a recompensa parecer sem relação com a jogada |
+| Cascata elimina **todos** os grupos por passe | O original só olhava o grupo do bloco depositado e os dos que caíram, e podia deixar grupo válido de pé — o `console.log('ERRO')` do `VALIDA()` era sintoma disso |
+| **Registro no AVA** | Não existia |
 
-**O motor precisa ganhar antes:**
-- estrear o `GridBoard` em jogo real (hoje só coberto por teste de unidade);
-- exercitar a `TimerBar` (pronta, sem uso real);
-- exercitar o modo `colunas` do `CraneController`.
+**Contrato:** `totalPerguntas` = a meta em pontos (12 \| 16 \| 20) · `acertos` = a pontuação,
+descontando as falhas na vitória (RE-02) · `erros` = **ciclos de linha nova fechados sem
+nenhum combo** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-formas"` · derrota também registra.
+Detalhes em [`REGRAS-JOGO-DAS-FORMAS.md`](REGRAS-JOGO-DAS-FORMAS.md), seção 7.
 
-**Pontos a confirmar com o humano:**
-- "Solta inválida" é a definição certa de erro aqui, ou o erro é a linha que sobe?
-- 120 s e 20 pontos continuam adequados, ou a dificuldade deve baixar para a faixa etária?
-- Um bloco com estrela valia 2 pontos no original — manter?
+**Correções de rumo na especificação** — a versão anterior deste documento e do de regras
+descrevia um jogo diferente do que existiu:
+- combo é **conectividade de 4 vizinhos**, não "três em linha": a `sequencia()` do original é
+  flood-fill, e o `GridBoard` é a extração fiel dela;
+- grade **6×7**, não 5 colunas; **4 formas**, não 5;
+- a **linha nova a cada N segundos** voltou. É a pressão do jogo: sem ela mover peças é ação
+  neutra, não há vidas, e a partida não tem risco nenhum;
+- `erros: 0` deixaria a RE-02 inerte neste jogo, com toda vitória valendo 100%.
+
+**O que o motor ganhou com este jogo:**
+- `GridBoard` estreou em jogo real (era só teste de unidade);
+- `TimerBar` estreou;
+- modo `colunas` do `CraneController` estreou;
+- `Loader.imagem(null)` parou de avisar sobre nada — todo jogo com `mascote: null` (o padrão
+  de um jogo novo) imprimia `imagem "undefined" não foi carregada` em toda partida. Travado
+  por teste.
+
+**Pendências declaradas** — lista completa no `README.md` do jogo:
+- a arte dos blocos é **andaime**: os PNG de 50×50 de 2013, que num notebook retina são
+  ampliados 3,00×. A peça vetorial está especificada e a costura para trocá-la é um método só;
+- **nenhuma das 8 transcrições de áudio foi confirmada ouvindo**;
+- quatro locuções não existem (abertura e os três passos do tutorial) e ficam em silêncio, com
+  o console nomeando cada uma;
+- o losango ficou fora: não tem locução, e o `Blocolosango.png` do original é o retângulo
+  repintado — visualmente indistinguível dele;
+- sem suíte de ponta a ponta própria: validado por checagem de fumaça em Chrome headless.
+
+**Decisão pedagógica registrada:** mover blocos sem formar combo **não** é erro; é
+planejamento, e punir isso ensinaria a criança a não pensar. A falha do jogo é deixar a pilha
+crescer, e é isso que `erros` conta.
 
 ---
 
@@ -119,7 +152,21 @@ feitos · `erros` = tentativas de combo com menos de 3 · `nivel` = 1 \| 2.
 
 ## Ordem sugerida
 
-1. **Formas** antes de **Cores**: ele estreia o `GridBoard` e a `TimerBar` com uma mecânica
-   mais simples, e reaproveita PNGs existentes.
+1. ~~**Formas** antes de **Cores**~~ — **feito.** Estreou o `GridBoard`, a `TimerBar` e o modo
+   `colunas` do `CraneController`, e reaproveitou os PNG existentes como andaime.
 2. **Cores** por último: exige recurso novo no motor (arrasto contínuo), arte 100% nova e
    uma decisão de acessibilidade que muda o design das peças.
+
+O que a experiência de Formas adianta para Cores:
+
+- **A regra de combo já está provada em jogo real.** `GridBoard.grupoConectado` roda numa
+  partida de verdade, agora com vizinhança de 4; Cores usa a de 8, que é a mesma função com
+  outra tabela de deltas.
+- **`GridBoard.desfazerCombosIniciais` tem um limite conhecido:** resolve peça por peça num
+  passe só e nunca reconfere as que já passaram, então consertar uma peça pode criar um grupo
+  com outra anterior — e no nível 1 de Formas (5 colunas, 3 formas) ele esgotava as 40
+  tentativas. Formas resolveu na cena, com passes que reconferem o conjunto. Cores vai precisar
+  do mesmo: vale promover essa versão ao `GridBoard` antes, e não depois.
+- **Cores tem o mesmo problema de "o que conta como erro"** que Formas teve, e a saída de
+  Formas (contar as janelas de tempo sem progresso) é um precedente a considerar antes de
+  aceitar "erro = combo com menos de 3".

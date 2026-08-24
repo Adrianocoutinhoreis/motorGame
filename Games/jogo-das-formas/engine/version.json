@@ -1,0 +1,6 @@
+{
+  "nome": "Motor Educandus",
+  "versao": "1.3.1",
+  "data": "2026-08-24",
+  "notas": "Loader.imagem(null) devolve null em silencio em vez de avisar. As telas padrao chamam loader.imagem(config.mascote?.asset), e todo jogo que usa a coruja vetorial - o padrao de um jogo novo - tem mascote null: a chamada chegava com undefined e imprimia 'imagem \"undefined\" nao foi carregada' em toda partida. Um aviso sobre nada ensina a ignorar o console, e ai o aviso que importa passa batido. Id ausente segue avisando alto. Travado por tres testes. Descoberto ao estrear o Jogo das Formas, que e o primeiro jogo do motor a usar o mascote vetorial. Na 1.3.0: a nota da partida passou a descontar a falha na vitoria (regra RE-02)."
+}

@@ -60,6 +60,13 @@ motorGame/
 | [`docs/CHECKLIST-JOGO.md`](docs/CHECKLIST-JOGO.md) | O modelo de checklist que cada jogo recebe |
 | [`docs/CHECKLIST-AULAS.md`](docs/CHECKLIST-AULAS.md) | Inventário e status das aulas a refazer |
 
+Especificação por jogo (mecânica e layout, com o porquê de cada número):
+
+| Documento | Jogo |
+|---|---|
+| [`docs/REGRAS-JOGO-DAS-FORMAS.md`](docs/REGRAS-JOGO-DAS-FORMAS.md) | Jogo das Formas — mecânica, níveis, pontuação, contrato |
+| [`docs/PLANO-VISUAL-JOGO-DAS-FORMAS.md`](docs/PLANO-VISUAL-JOGO-DAS-FORMAS.md) | Jogo das Formas — layout, tamanhos, movimento |
+
 ---
 
 ## Jogos
@@ -67,7 +74,7 @@ motorGame/
 | Jogo | Aula | Status |
 |---|---|---|
 | [Jogo dos Blocos](Games/jogo-dos-blocos/) | `870294` | ✅ refeito (piloto) |
-| Jogo das Formas | `870298` | 📋 planejado |
+| [Jogo das Formas](Games/jogo-das-formas/) | `870298` | 🚧 jogável, [pendências declaradas](Games/jogo-das-formas/README.md#pendências-conhecidas) |
 | Jogo das Cores | `870296` | 📋 planejado |
 
 ---
@@ -82,7 +89,8 @@ motorGame/
 | `node tools/verificar-independencia.mjs [slug]` | **Portão de entrega**: falha se o jogo depender de algo externo ou se a cópia do motor estiver desatualizada |
 | `node tools/audio-info.mjs [slug]` | Inventário de áudio medido: formato, duração, hash, lote, e reprova ficha ausente ou desatualizada |
 | `node tools/testes.mjs` | Testes de lógica, sem navegador — a suíte imprime o total ao terminar |
-| `node tools/teste-navegador.mjs [porta]` | Verificações ponta a ponta em navegador headless |
+| `node tools/teste-navegador.mjs [porta]` | Verificações ponta a ponta em navegador headless (piloto) |
+| `node tools/teste-jogabilidade-formas.mjs [porta]` | A jogada do Jogo das Formas com **toque real** — pegar, arrastar, depositar, e a pausa não virar jogada |
 | `node tools/teste-entrega-avulsa.mjs <slug>` | Copia o jogo para fora do projeto, serve de uma subpasta e abre — simula a publicação |
 | `tools/ava-teste.html` | Host que simula o AVA e valida o contrato ao vivo |
 
