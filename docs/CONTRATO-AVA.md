@@ -59,14 +59,38 @@ this.irPara('resultado', {
 Os três jogos das aulas são de **habilidade contínua** — não têm "perguntas". A decisão
 tomada (e registrada no plano) foi:
 
-> `totalPerguntas` = a **meta** da partida · `acertos` = o **progresso** · `erros` = as **falhas**
+> `totalPerguntas` = a **meta** da partida · `acertos` = a **pontuação** · `erros` = as **falhas**
 
 Assim `score_percent` calculado pelo servidor (`acertos ÷ totalPerguntas`) significa
-"quanto da meta o aluno cumpriu" — uma leitura honesta, e não um número inventado.
+"quão bem o aluno cumpriu a meta" — não apenas se cumpriu.
+
+### `acertos` é a pontuação, não o acerto bruto
+
+**Numa vitória, `acertos` desconta as falhas.** Vencer o Jogo dos Blocos exige encaixar os 5
+blocos, então o acerto bruto de toda vitória é 5 — e enquanto `acertos` era o bruto, toda
+vitória valia 100%, com duas quedas pelo caminho ou nenhuma. O relatório não distinguia a
+partida limpa da atropelada, e a fileira de estrelas enchia sempre.
+
+| Partida (meta 5, 3 vidas) | Bruto | Falhas | `acertos` enviado | `score_percent` |
+|---|---|---|---|---|
+| Vitória sem cair nenhum | 5 | 0 | **5** | 100% |
+| Vitória com 1 queda | 5 | 1 | **4** | 80% |
+| Vitória com 2 quedas | 5 | 2 | **3** | 60% |
+| Derrota com 4 blocos de pé | 4 | 3 | **4** | 80% |
+| Derrota com 2 blocos de pé | 2 | 3 | **2** | 40% |
+
+**Na derrota não desconta**: o erro já cobrou o preço, que foi a partida acabar. Descontar de
+novo zeraria o progresso de quem encaixou dois blocos, e [`DESIGN.md`](DESIGN.md) é explícito —
+a derrota mostra o quanto o aluno avançou, não o quanto falhou.
+
+Quem calcula é `ScoreSystem.pontuacao`, e é **o mesmo número que a tela de resultado mostra**:
+mostrar um na tela e reportar outro é o defeito que aquela classe existe para impedir. O acerto
+bruto não se perde — o Jogo dos Blocos o manda em `blocosEmpilhados`, nos campos extras.
+Regra RE-02 de [`REGRAS-EDUCACIONAIS.md`](REGRAS-EDUCACIONAIS.md).
 
 | Jogo | `totalPerguntas` | `acertos` | `erros` | `nivel` |
 |---|---|---|---|---|
-| **Jogo dos Blocos** | 5 (blocos da torre) | blocos encaixados | blocos derrubados | 1 = 1–5 · 2 = 6–10 · 3 = vogais |
+| **Jogo dos Blocos** | 5 (blocos da torre) | encaixados − derrubados (na vitória) | blocos derrubados | 1 = 1–5 · 2 = 6–10 · 3 = vogais |
 | **Jogo das Formas** *(planejado)* | 20 (meta de pontos) | pontos feitos | soltas inválidas | 1 (nível único) |
 | **Jogo das Cores** *(planejado)* | 30 (fácil) / 45 (difícil) | pontos feitos | tentativas de combo com menos de 3 | 1 = fácil · 2 = difícil |
 

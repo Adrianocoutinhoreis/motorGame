@@ -1,6 +1,6 @@
 {
   "nome": "Motor Educandus",
-  "versao": "1.2.0",
+  "versao": "1.3.0",
   "data": "2026-08-24",
-  "notas": "Em aparelho de pé o jogo gira sozinho para a horizontal: o CSS gira `#palco` um quarto de volta e o Stage inverte o mapa tela→lógico. Medido num celular de 360x800: o desperdicio de tela cai de 75% para 20% e a escala sobe de 0,28 para 0,50. Travar a orientação não era possível (`lock()` exige tela cheia, negada dentro do iframe do AVA), e girar o conteudo tambem resolve o tablet com rotação bloqueada pelo sistema. O aviso de orientação deixou de bloquear a tela e virou dica que não intercepta toque."
+  "notas": "A nota da partida passa a descontar a falha na vitória (regra RE-02): ScoreSystem.pontuacao é o progresso menos os erros quando se vence, e o progresso puro quando se perde. É o número que as estrelas mostram E o que vai no campo acertos do AVA — o score_percent de uma vitória com 2 quedas em 5 cai de 100% para 60%. A barra de progresso durante a partida segue no acerto bruto, porque espelha a torre de pé. Na 1.2.0, do mesmo dia: em aparelho de pé o jogo gira sozinho para a horizontal, com o CSS girando #palco e o Stage invertendo o mapa tela-logico; desperdicio de tela medido caindo de 75% para 20%."
 }

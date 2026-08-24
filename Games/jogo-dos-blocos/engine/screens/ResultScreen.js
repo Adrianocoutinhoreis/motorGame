@@ -154,17 +154,25 @@ export class ResultScreen extends Scene {
       alinhamento: 'center',
     }));
 
-    // Estrelas como CONQUISTA, não como nota de comportamento.
+    // Uma estrela por pergunta, preenchidas pela PONTUAÇÃO da partida.
     //
-    // Eram sempre TRÊS, e as três vinham de `ScoreSystem.estrelas`, que conta
-    // ERROS. Ou seja: a fileira de estrelas era o medidor de vidas perdidas com
-    // outra roupa — dava para ganhar "5 de 5" e ver uma estrela só. Agora é uma
-    // estrela por pergunta, preenchida por acerto: a criança vê o que construiu,
-    // não o que perdeu. Os erros continuam ditos, em texto, logo abaixo.
+    // Duas correções sucessivas moram aqui, e vale registrar as duas para a
+    // terceira não repetir nenhuma:
+    //
+    //  1. Eram sempre TRÊS estrelas, vindas de `ScoreSystem.estrelas`, que
+    //     deriva dos erros. A fileira era o medidor de vidas com outra roupa:
+    //     dava para completar a meta e ver uma estrela só.
+    //  2. Passaram a ser uma por pergunta preenchida pelo ACERTO BRUTO — e aí
+    //     encheram sempre. Como vencer exige acertar a meta inteira, toda
+    //     vitória virava nota máxima: "5 de 5" com duas quedas pelo caminho.
+    //
+    // Agora vêm de `resultado.acertos`, que é a `pontuacao` do `ScoreSystem`:
+    // desconta as falhas na vitória e preserva o progresso na derrota. O mesmo
+    // número vai para o AVA, então tela e relatório não podem divergir.
     //
     // Acima de 6 perguntas a fileira não caberia no painel nem se leria de
-    // relance, então aí a nota de 0 a 3 de `ScoreSystem` volta a ser a leitura
-    // honesta. É o único caso em que ela ainda é usada.
+    // relance, então aí a nota de 0 a 3 volta a ser a leitura honesta. É o único
+    // caso em que ela ainda é usada.
     const totalPerguntas = Number(resultado.totalPerguntas) || 0;
     const umaPorPergunta = totalPerguntas >= 1 && totalPerguntas <= 6;
     const totalEstrelas = umaPorPergunta ? totalPerguntas : 3;

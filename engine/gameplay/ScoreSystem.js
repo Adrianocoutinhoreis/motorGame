@@ -12,11 +12,19 @@ import { Emitter } from '../core/Emitter.js';
  * `docs/CONTRATO-AVA.md`), para jogos de habilidade que não têm "perguntas":
  *
  *   totalPerguntas = a META da partida (blocos a empilhar, pontos a atingir)
- *   acertos        = o PROGRESSO alcançado
+ *   acertos        = a PONTUAÇÃO da partida (ver `pontuacao`)
  *   erros          = as FALHAS cometidas
  *
  * Assim `score_percent` (acertos ÷ totalPerguntas) calculado pelo servidor
- * significa "quanto da meta o aluno cumpriu" — que é uma leitura honesta.
+ * significa "quão bem o aluno cumpriu a meta" — não apenas se cumpriu.
+ *
+ * **Cuidado com dois números parecidos e diferentes**, que é o ponto mais fácil
+ * de errar nesta classe:
+ *
+ *   `this.acertos`   progresso BRUTO. É o que a barra mostra durante a partida
+ *                    e o que decide a vitória. Nunca desconta.
+ *   `this.pontuacao` o que vai para a TELA e para o AVA. Numa vitória, desconta
+ *                    as falhas.
  *
  * Eventos: 'acerto', 'erro', 'mudou', 'vitoria', 'derrota'.
  */
@@ -92,25 +100,63 @@ export class ScoreSystem extends Emitter {
     return this.vidasIniciais > 0 && this.vidas <= 0;
   }
 
-  /** 0..1 — alimenta a barra de progresso. */
+  /**
+   * A PONTUAÇÃO da partida: o progresso alcançado, descontando as falhas numa
+   * vitória. É o número que a tela de resultado mostra e o que vai no campo
+   * `acertos` da mensagem do AVA.
+   *
+   * **Por que descontar.** Com a pontuação igual ao acerto bruto, toda vitória
+   * dava o máximo: no Jogo dos Blocos a meta é 5 e vencer exige exatamente 5
+   * blocos encaixados, então a fileira de estrelas enchia SEMPRE e a nota
+   * deixava de existir — dava "5 de 5" com duas quedas pelo caminho.
+   *
+   * **Por que só na vitória.** Na derrota o erro já cobrou o preço: a partida
+   * acabou. Descontar de novo transformaria em zero o progresso de uma criança
+   * que encaixou dois blocos, e `docs/DESIGN.md` é explícito: a derrota mostra
+   * o quanto o aluno avançou, não o quanto falhou. Então na derrota este número
+   * é o progresso puro.
+   *
+   * **Por que não descontar na barra durante a partida.** A barra acompanha a
+   * torre que está de pé, e a torre não encurta quando um bloco cai fora.
+   * Descontar ali faria a barra andar para trás enquanto a torre cresce — a
+   * tela diria o contrário do que a criança está vendo. Ver `progresso`.
+   *
+   * Regra RE-02 de `docs/REGRAS-EDUCACIONAIS.md`.
+   */
+  get pontuacao() {
+    if (!this.venceu) return this.acertos;
+    return Math.max(0, this.acertos - this.erros);
+  }
+
+  /**
+   * 0..1 — alimenta a barra de progresso DURANTE a partida.
+   *
+   * Usa o acerto bruto de propósito: a barra espelha a torre construída, e
+   * descontar aqui faria a barra recuar enquanto a torre sobe. Para o número do
+   * fim da partida, ver `pontuacao`.
+   */
   get progresso() {
     if (this.total <= 0) return 0;
     return Math.max(0, Math.min(1, this.acertos / this.total));
   }
 
-  /** 0..100 — o mesmo cálculo que o servidor do AVA faz. */
+  /**
+   * 0..100 — o mesmo cálculo que o servidor do AVA faz, e por isso sobre a
+   * `pontuacao`: é ela que viaja no campo `acertos`. Difere de `progresso`
+   * numa vitória com falhas, e essa diferença é intencional.
+   */
   get aproveitamento() {
-    return Math.round(this.progresso * 100);
+    if (this.total <= 0) return 0;
+    return Math.round(Math.max(0, Math.min(1, this.pontuacao / this.total)) * 100);
   }
 
   /**
    * Nota de 0 a 3 estrelas, derivada dos ERROS.
    *
-   * Hoje é a SAÍDA DE RESERVA, não o padrão: a `ResultScreen` desenha uma
-   * estrela por pergunta (preenchida por acerto) quando o total é de 1 a 6, e
-   * só cai nesta nota quando a fileira não caberia no painel. O motivo da troca
-   * está comentado lá: com estrelas vindas de erro, dava para acertar "5 de 5" e
-   * ver uma estrela só — a fileira era o medidor de vidas com outra roupa.
+   * É a SAÍDA DE RESERVA, não o padrão: a `ResultScreen` desenha uma estrela
+   * por pergunta, preenchida pela `pontuacao`, quando o total é de 1 a 6, e só
+   * cai nesta nota de 0 a 3 quando a fileira não caberia no painel nem se leria
+   * de relance.
    *
    * Só é exibida — não vai para o AVA (quanto vale a partida é do servidor).
    */
@@ -128,7 +174,11 @@ export class ScoreSystem extends Emitter {
    */
   paraAva(vitoria = this.venceu, extras = undefined) {
     return {
-      acertos: this.acertos,
+      // A pontuação, e não o acerto bruto: é exatamente o número que a tela de
+      // resultado mostra. Mostrar um na tela e reportar outro é o defeito que
+      // esta classe existe para impedir. Quem quiser o bruto no payload manda em
+      // `extras` — o Jogo dos Blocos já manda, como `blocosEmpilhados`.
+      acertos: this.pontuacao,
       erros: this.erros,
       totalPerguntas: this.total,
       nivel: this.nivel,

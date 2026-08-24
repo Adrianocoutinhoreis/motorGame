@@ -431,7 +431,11 @@ async function principal() {
     checar('type é exatamente "JOGO_CONCLUIDO"', m1.type === 'JOGO_CONCLUIDO');
     checar('jogo traz o slug', m1.jogo === 'jogo-dos-blocos', JSON.stringify(m1.jogo));
     checar('totalPerguntas = 5', m1.totalPerguntas === 5, JSON.stringify(m1.totalPerguntas));
-    checar('acertos = 5 na vitória', m1.acertos === 5, JSON.stringify(m1));
+    // Esta vitória é LIMPA (`jogarBem` só solta sobre o centro do topo), então a
+    // pontuação é a meta inteira. A vitória COM quedas tem seção própria abaixo:
+    // é lá que a regra RE-02 aparece.
+    checar('acertos = 5 na vitória limpa', m1.acertos === 5, JSON.stringify(m1));
+    checar('vitória limpa não registra erro', m1.erros === 0, JSON.stringify(m1));
     checar('nivel = 1', m1.nivel === 1, JSON.stringify(m1.nivel));
     checar('números vão como number', ['acertos', 'erros', 'totalPerguntas', 'nivel']
       .every((c) => typeof m1[c] === 'number'), JSON.stringify(m1));
@@ -482,6 +486,98 @@ async function principal() {
     checar('a derrota também é registrada', m2.acertos < 5, JSON.stringify(m2));
     checar('a derrota registra 3 erros', m2.erros === 3, JSON.stringify(m2));
     checar('o nível da segunda partida é 3', m2.nivel === 3, JSON.stringify(m2.nivel));
+
+    // --------------------------------- 3b. vitória COM quedas: a nota desconta
+    //
+    // Regra RE-02 (docs/REGRAS-EDUCACIONAIS.md). O defeito que esta seção trava:
+    // vencer exige encaixar a meta inteira, então o acerto BRUTO de toda vitória
+    // é 5 — e enquanto a nota era o bruto, a fileira de estrelas enchia sempre.
+    // Dava "5 de 5" com dois blocos derrubados pelo caminho.
+    //
+    // Aqui a partida é vencida DE PROPÓSITO com duas quedas, e a verificação é
+    // dupla: o que a mensagem do AVA leva e o que a tela desenha. Os dois têm de
+    // dizer o mesmo número.
+    console.log('\n3b. Vitória com quedas: a nota desconta o erro (RE-02)');
+
+    await avaliar(`${g}.irPara('menu')`);
+    await esperar(400);
+    await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
+    await esperar(900);
+
+    // Derruba exatamente 2 (o terceiro erro encerraria por derrota) e depois
+    // completa a torre. Mesmo caminho de código do toque do aluno.
+    const vencerComQuedas = `
+      (async () => {
+        const jogo = ${g};
+        const soltarQuando = async (condicao) => {
+          let tentativas = 0;
+          while (tentativas++ < 400) {
+            const cena = jogo.cena;
+            if (!cena || jogo.estado !== 'jogando') return false;
+            if (!cena.blocoNoGancho || cena.travado) { await new Promise(r => setTimeout(r, 25)); continue; }
+            if (condicao(cena)) { cena.soltar(); await new Promise(r => setTimeout(r, 900)); return true; }
+            await new Promise(r => setTimeout(r, 16));
+          }
+          return false;
+        };
+
+        const longe = (cena) => Math.abs(cena.controle.x - cena.centroDoTopo) > 300;
+        const emCima = (cena) => Math.abs(cena.controle.x - cena.centroDoTopo) < 12;
+
+        await soltarQuando(longe);
+        await soltarQuando(longe);
+        const errosDepoisDasQuedas = jogo.cena?.placar?.erros ?? -1;
+
+        for (let i = 0; i < 12 && jogo.estado === 'jogando'; i++) await soltarQuando(emCima);
+
+        return { estado: jogo.estado, errosDepoisDasQuedas };
+      })()
+    `;
+    const comQuedas = await avaliar(vencerComQuedas);
+    await esperar(1000);
+    await capturar('10-resultado-vitoria-com-quedas');
+
+    checar('a partida com quedas chega ao resultado',
+      comQuedas.estado === 'resultado', JSON.stringify(comQuedas));
+    checar('as duas quedas foram registradas como erro',
+      comQuedas.errosDepoisDasQuedas === 2, JSON.stringify(comQuedas));
+
+    recebidas = await avaliar('window.__recebidas');
+    const m3 = recebidas[recebidas.length - 1] ?? {};
+
+    checar('a vitória com 2 quedas envia acertos = 3, não 5',
+      m3.acertos === 3, JSON.stringify(m3));
+    checar('os 2 erros seguem indo crus no campo erros',
+      m3.erros === 2, JSON.stringify(m3));
+    checar('a meta continua sendo 5', m3.totalPerguntas === 5, JSON.stringify(m3));
+    checar('o acerto bruto não se perde: vai em blocosEmpilhados',
+      m3.blocosEmpilhados === 5, JSON.stringify(m3.blocosEmpilhados));
+
+    // O que a criança vê tem de ser o mesmo número que foi para o relatório.
+    const telaComQuedas = await avaliar(`
+      (() => {
+        const q = document.getElementById('quadro');
+        const w = q.contentWindow;
+        let estrelas = null;
+        const textos = [];
+        (function andar(no) {
+          if (no.constructor.name === 'Estrelas') estrelas = { cheias: no.quantidade, total: no.total };
+          if (no.texto) textos.push(String(no.texto));
+          for (const f of no.filhos) andar(f);
+        })(w.jogo.stage.raiz);
+        return { estrelas, textos };
+      })()
+    `);
+
+    checar('a tela mostra 3 estrelas de 5, não 5 de 5',
+      telaComQuedas.estrelas?.cheias === 3 && telaComQuedas.estrelas?.total === 5,
+      JSON.stringify(telaComQuedas.estrelas));
+    checar('o número da tela é o MESMO que foi para o AVA',
+      telaComQuedas.textos.some((x) => x.includes(`${m3.acertos} de 5`)),
+      JSON.stringify(telaComQuedas.textos));
+    checar('a tela continua dizendo quantas tentativas se perderam',
+      telaComQuedas.textos.some((x) => x.includes('2 tentativas')),
+      JSON.stringify(telaComQuedas.textos));
 
     // ---------------------------------------------------- tamanhos de iframe
     console.log('\n4. Comportamento em iframes de tamanhos diferentes');

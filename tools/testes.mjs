@@ -354,6 +354,83 @@ grupo('ScoreSystem', () => {
     });
   });
 
+  /*
+   * Regra RE-02 (docs/REGRAS-EDUCACIONAIS.md): a nota desconta o erro na
+   * vitória e nunca na derrota.
+   *
+   * O defeito que estes testes travam: enquanto a nota era o acerto BRUTO,
+   * toda vitória valia o máximo. Vencer é atingir a meta, então o bruto de
+   * qualquer vitória é igual à meta — a fileira de estrelas enchia sempre e
+   * "5 de 5" com duas quedas era indistinguível de uma partida limpa.
+   *
+   * `jogar()` intercala acertos e erros como numa partida de verdade: a ordem
+   * importa, porque três erros encerram a partida e nada conta depois disso.
+   */
+  const jogar = (sequencia, opcoes = { total: 5, vidas: 3 }) => {
+    const placar = new ScoreSystem(opcoes);
+    for (const passo of sequencia) (passo === 'a' ? placar.acertar() : placar.errar());
+    return placar;
+  };
+
+  teste('vitória limpa vale a nota máxima', () => {
+    const placar = jogar('aaaaa');
+    ok(placar.venceu, 'precisa ter vencido');
+    igual(placar.pontuacao, 5);
+    igual(placar.paraAva().acertos, 5);
+  });
+
+  teste('vitória com 2 quedas vale 3 de 5, não 5 de 5', () => {
+    // O caso relatado: a torre fica completa, dois blocos caíram no caminho.
+    const placar = jogar('aeaaeaa');
+    igual([placar.acertos, placar.erros], [5, 2], 'bruto e falhas:');
+    ok(placar.venceu, 'a torre completa vence, mesmo com quedas');
+    igual(placar.pontuacao, 3, 'pontuação:');
+    igual(placar.aproveitamento, 60, 'aproveitamento:');
+  });
+
+  teste('cada queda custa exatamente uma estrela', () => {
+    igual(jogar('aaaaa').pontuacao, 5, 'nenhuma queda:');
+    igual(jogar('aeaaaa').pontuacao, 4, 'uma queda:');
+    igual(jogar('aeaaeaa').pontuacao, 3, 'duas quedas:');
+  });
+
+  teste('a derrota preserva o progresso em vez de zerar', () => {
+    // "Errar não pode humilhar" (docs/DESIGN.md): quem encaixou dois blocos
+    // avançou dois, e a derrota já é a consequência do erro. Descontar aqui
+    // seria castigo duplo, e reportaria 0 progresso para quem construiu algo.
+    const placar = jogar('aeaee');
+    ok(!placar.venceu, 'precisa ter perdido');
+    igual([placar.acertos, placar.erros], [2, 3], 'bruto e falhas:');
+    igual(placar.pontuacao, 2, 'pontuação na derrota:');
+    igual(placar.paraAva(false).acertos, 2);
+  });
+
+  teste('a tela e o AVA recebem sempre o MESMO número', () => {
+    // É a razão de existir desta classe: mostrar um número e reportar outro é
+    // o defeito clássico de instrumentação.
+    for (const sequencia of ['aaaaa', 'aeaaeaa', 'aeaee', 'eee', 'aeaeaae']) {
+      const placar = jogar(sequencia);
+      igual(placar.paraAva().acertos, placar.pontuacao, `sequência ${sequencia}:`);
+    }
+  });
+
+  teste('a pontuação nunca fica negativa', () => {
+    // Um jogo com muitas vidas pode acumular mais falhas do que acertos.
+    const placar = jogar('aeeeeee', { total: 5, vidas: 99 });
+    ok(placar.pontuacao >= 0, `pontuação: ${placar.pontuacao}`);
+  });
+
+  teste('a barra da partida NÃO anda para trás quando um bloco cai', () => {
+    // A barra espelha a torre de pé, e a torre não encurta. Por isso
+    // `progresso` usa o acerto bruto, e só o número do FIM desconta.
+    const placar = new ScoreSystem({ total: 5, vidas: 3 });
+    placar.acertar().acertar();
+    const antes = placar.progresso;
+    placar.errar();
+    igual(placar.progresso, antes, 'progresso depois de uma queda:');
+    perto(placar.progresso, 0.4);
+  });
+
   teste('estrelas: 3 sem erro, menos com erros', () => {
     const perfeito = new ScoreSystem({ total: 4 });
     perfeito.acertar(4);
