@@ -18,6 +18,7 @@ import { GridBoard } from '../engine/gameplay/GridBoard.js';
 import { ScoreSystem } from '../engine/gameplay/ScoreSystem.js';
 import { CraneController } from '../engine/gameplay/CraneController.js';
 import { Stage } from '../engine/core/Stage.js';
+import { Loader } from '../engine/core/Loader.js';
 import { AvaBridge } from '../engine/ava/AvaBridge.js';
 import { AudioBus } from '../engine/audio/AudioBus.js';
 import { ESTADOS, transicaoValida } from '../engine/core/Estados.js';
@@ -487,6 +488,49 @@ grupo('CraneController', () => {
     igual(g.x, 200);
   });
 });
+
+// ------------------------------------------------------------------- Loader
+/*
+ * As telas padrão chamam `loader.imagem(config.mascote?.asset)`. Todo jogo que
+ * usa a coruja vetorial — o PADRÃO de um jogo novo — tem `mascote: null`, e a
+ * chamada chega com `undefined`. Avisar ali imprimia
+ * `imagem "undefined" não foi carregada` em toda partida.
+ *
+ * Um aviso sobre nada é pior que nenhum aviso: ensina a ignorar o console, e aí
+ * o aviso que importa passa batido. Estes testes travam as DUAS metades da
+ * regra — silêncio para id ausente, aviso alto para arquivo que falta.
+ */
+await (async () => {
+  console.log('\nLoader — pedir imagem sem id não é erro');
+
+  await testeAsync('imagem(null) e imagem(undefined) devolvem null EM SILÊNCIO', async () => {
+    const loader = new Loader();
+    const avisos = await capturarAvisos(() => {
+      igual(loader.imagem(null), null, 'null:');
+      igual(loader.imagem(undefined), null, 'undefined:');
+    });
+    igual(avisos, [], 'nenhum aviso esperado, veio:');
+  });
+
+  await testeAsync('imagem("naoExiste") devolve null E avisa, nomeando o id', async () => {
+    const loader = new Loader();
+    const avisos = await capturarAvisos(() => {
+      igual(loader.imagem('mascoteDoJogo'), null);
+    });
+    igual(avisos.length, 1, 'um aviso esperado:');
+    ok(avisos[0].includes('mascoteDoJogo'), `o aviso precisa nomear o id: ${avisos[0]}`);
+  });
+
+  await testeAsync('imagem(id) devolve o que foi registrado, sem avisar', async () => {
+    const loader = new Loader();
+    const falsa = { largura: 1 };
+    loader.imagens.set('bloco', falsa);
+    const avisos = await capturarAvisos(() => {
+      ok(loader.imagem('bloco') === falsa, 'devolveu outra coisa');
+    });
+    igual(avisos, [], 'imagem existente não avisa:');
+  });
+})();
 
 // -------------------------------------------------- Stage: giro do contêiner
 grupo('Stage — giro do contêiner em aparelho de pé', () => {

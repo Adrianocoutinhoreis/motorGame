@@ -68,7 +68,19 @@ export class Loader extends Emitter {
     return this;
   }
 
+  /**
+   * Devolve uma imagem já carregada, ou null.
+   *
+   * Pedir sem id (`null`/`undefined`) NÃO é erro: é o jogo dizendo "não tenho
+   * arte para isto". As telas padrão fazem exatamente isso com
+   * `loader.imagem(config.mascote?.asset)` quando o jogo usa a coruja vetorial —
+   * que é o padrão de todo jogo novo. Avisar ali imprimia
+   * `imagem "undefined" não foi carregada` em toda partida, e um aviso sobre
+   * nada é pior que nenhum aviso: ensina a ignorar o console. Id AUSENTE segue
+   * avisando alto, porque aí falta um arquivo de verdade.
+   */
   imagem(id) {
+    if (id == null) return null;
     const img = this.imagens.get(id);
     if (!img) console.warn(`[motor] imagem "${id}" não foi carregada.`);
     return img ?? null;
