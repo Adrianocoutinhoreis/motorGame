@@ -131,13 +131,27 @@ export class TutorialScreen extends Scene {
     this.adicionar(this.mascote);
 
     // ------------------------------------------------------------ navegação
+    //
+    // Três botões dividem esta faixa, e nunca os três ao mesmo tempo: nos passos
+    // do meio aparecem as duas setas; no último, a seta de voltar e o JOGAR.
+    //
+    // As posições saem da largura do JOGAR, não de números escolhidos a olho.
+    // Antes as setas ficavam a 126 px do centro e o JOGAR tem 130 de meia
+    // largura — os dois se SOBREPUNHAM em 4 px no último passo, com a seta de
+    // voltar por baixo da borda do botão verde.
     const yNav = A * 0.82;
+    const tamanhoSeta = 84;
+    const larguraJogar = 260;
+    const folgaNav = 40; // respiro entre o JOGAR e as setas, dos dois lados
+    // Aresta interna das setas, medida a partir do centro da tela.
+    const arestaSeta = larguraJogar / 2 + folgaNav;
 
     this.botaoAnterior = new IconButton({
       icone: 'setaEsquerda',
-      x: L * 0.5 - 210,
+      // No construtor do Button o `x` é a borda ESQUERDA, daí descontar o lado.
+      x: L * 0.5 - arestaSeta - tamanhoSeta,
       y: yNav,
-      tamanho: 84,
+      tamanho: tamanhoSeta,
       audio: this.audio,
       somToque: config.audio?.clique,
       aoTocar: () => this.mostrarPasso(this.indice - 1),
@@ -146,9 +160,9 @@ export class TutorialScreen extends Scene {
     this.botaoProximo = new IconButton({
       icone: 'setaDireita',
       variante: 'primario',
-      x: L * 0.5 + 126,
+      x: L * 0.5 + arestaSeta,
       y: yNav,
-      tamanho: 84,
+      tamanho: tamanhoSeta,
       audio: this.audio,
       somToque: config.audio?.clique,
       aoTocar: () => this.mostrarPasso(this.indice + 1),
@@ -157,9 +171,9 @@ export class TutorialScreen extends Scene {
     this.botaoJogar = new Button({
       rotulo: 'JOGAR',
       icone: 'jogar',
-      largura: 260,
+      largura: larguraJogar,
       altura: 88,
-      x: L * 0.5 - 130,
+      x: L * 0.5 - larguraJogar / 2,
       y: yNav - 2,
       variante: 'sucesso',
       audio: this.audio,

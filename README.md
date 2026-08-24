@@ -79,10 +79,10 @@ motorGame/
 | `node tools/serve.mjs [porta]` | Servidor estático local |
 | `node tools/new-game.mjs <slug> "Nome"` | Cria um jogo a partir do template |
 | `node tools/build.mjs [slug]` | Copia o motor para dentro dos jogos |
-| `node tools/verificar-independencia.mjs [slug]` | **Portão de entrega**: falha se o jogo depender de algo externo |
+| `node tools/verificar-independencia.mjs [slug]` | **Portão de entrega**: falha se o jogo depender de algo externo ou se a cópia do motor estiver desatualizada |
 | `node tools/audio-info.mjs [slug]` | Inventário de áudio medido: formato, duração, hash, lote, e reprova ficha ausente ou desatualizada |
-| `node tools/testes.mjs` | 55 testes de lógica, sem navegador |
-| `node tools/teste-navegador.mjs [porta]` | 33 verificações ponta a ponta em navegador headless |
+| `node tools/testes.mjs` | Testes de lógica, sem navegador — a suíte imprime o total ao terminar |
+| `node tools/teste-navegador.mjs [porta]` | Verificações ponta a ponta em navegador headless |
 | `node tools/teste-entrega-avulsa.mjs <slug>` | Copia o jogo para fora do projeto, serve de uma subpasta e abre — simula a publicação |
 | `tools/ava-teste.html` | Host que simula o AVA e valida o contrato ao vivo |
 

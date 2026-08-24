@@ -58,7 +58,7 @@ empilhar 5 na ordem; 3 vidas. Nível "fácil" = números 1–5, "difícil" = vog
 **Contrato:** `totalPerguntas: 5` · `acertos` = blocos encaixados · `erros` = blocos
 derrubados · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-dos-blocos"` · derrota também registra.
 
-**Validação:** 47 testes de lógica + 32 verificações em navegador headless (inclusive o
+**Validação:** a suíte de lógica e a de navegador headless passam inteiras (inclusive o
 `postMessage` cruzando um `<iframe>` real, em três tamanhos). Falta a validação humana
 descrita no `CHECKLIST.md` do jogo — jogar com o som ligado, em toque, e conferir os números.
 

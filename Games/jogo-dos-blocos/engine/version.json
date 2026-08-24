@@ -1,6 +1,6 @@
 {
   "nome": "Motor Educandus",
-  "versao": "1.1.0",
-  "data": "2026-08-21",
-  "notas": "Todo som passa a sair de arquivo: a síntese de voz do navegador foi removida do AudioBus. Faltando locução, a tela fica em silêncio e o console nomeia a gravação ausente (evento `narracao` fica como base de legenda). Regra travada por teste."
+  "versao": "1.2.0",
+  "data": "2026-08-24",
+  "notas": "Em aparelho de pé o jogo gira sozinho para a horizontal: o CSS gira `#palco` um quarto de volta e o Stage inverte o mapa tela→lógico. Medido num celular de 360x800: o desperdicio de tela cai de 75% para 20% e a escala sobe de 0,28 para 0,50. Travar a orientação não era possível (`lock()` exige tela cheia, negada dentro do iframe do AVA), e girar o conteudo tambem resolve o tablet com rotação bloqueada pelo sistema. O aviso de orientação deixou de bloquear a tela e virou dica que não intercepta toque."
 }

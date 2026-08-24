@@ -20,18 +20,26 @@
  *   4. `window.close()` ou `window.top` — não funcionam dentro do iframe do AVA.
  *   5. Referência a arquivo local que não existe.
  *   6. Ausência de arquivos obrigatórios (index.html, engine/, config).
+ *   7. Cópia do motor DESATUALIZADA em relação a `engine/` na raiz.
+ *      — o modelo de entrega inteiro repousa nessa cópia. Se alguém edita o
+ *        motor e esquece de rodar a build, o jogo publicado leva em silêncio a
+ *        versão velha, e a correção que "já foi feita" nunca chegou ao aluno.
+ *        Era o único requisito do projeto sustentado por disciplina em vez de
+ *        verificação.
  *
  * Uso:
  *   node tools/verificar-independencia.mjs jogo-dos-blocos
  *   node tools/verificar-independencia.mjs            # verifica todos
  */
 import { readdir, readFile, stat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PASTA_JOGOS = path.join(RAIZ, 'Games');
+const ORIGEM_MOTOR = path.join(RAIZ, 'engine');
 
 const EXTENSOES_TEXTO = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.md', '.txt']);
 
@@ -92,6 +100,52 @@ function semComentarios(conteudo, ext) {
   }
   limpo = limpo.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '));
   return limpo;
+}
+
+/**
+ * Compara, arquivo por arquivo e por hash, a cópia do motor dentro do jogo com
+ * `engine/` na raiz.
+ *
+ * O carimbo em `MOTOR-COPIA.txt` diz de qual versão a cópia SAIU — não se ela
+ * ainda corresponde ao motor de hoje. Só a comparação diz isso, e é ela que
+ * transforma "lembrar de rodar a build" em erro detectado.
+ *
+ * O próprio carimbo fica fora da comparação: é gerado pela build e não existe
+ * na origem.
+ */
+async function verificarCopiaDoMotor(slug, pasta, rel) {
+  const copia = path.join(pasta, 'engine');
+  if (!existsSync(ORIGEM_MOTOR) || !existsSync(copia)) return;
+
+  const hashear = async (raiz) => {
+    const mapa = new Map();
+    for (const arquivo of await listarArquivos(raiz)) {
+      if (arquivo.relativo === 'MOTOR-COPIA.txt') continue;
+      const bytes = await readFile(arquivo.completo);
+      mapa.set(arquivo.relativo, createHash('sha256').update(bytes).digest('hex'));
+    }
+    return mapa;
+  };
+
+  const origem = await hashear(ORIGEM_MOTOR);
+  const destino = await hashear(copia);
+  const corrigir = `rode: node tools/build.mjs ${slug}`;
+
+  for (const [relativo, hash] of origem) {
+    if (!destino.has(relativo)) {
+      rel.erro(`engine/${relativo}`, 0, `está no motor da raiz e falta na cópia — ${corrigir}`);
+    } else if (destino.get(relativo) !== hash) {
+      rel.erro(`engine/${relativo}`, 0, `a cópia divergiu do motor da raiz — ${corrigir}`);
+    }
+  }
+
+  // Sobra é tão grave quanto falta: um arquivo removido do motor continuaria a
+  // ser publicado, e é exatamente o que o `rm` da build existe para evitar.
+  for (const relativo of destino.keys()) {
+    if (!origem.has(relativo)) {
+      rel.erro(`engine/${relativo}`, 0, `sobrou na cópia: não existe mais no motor da raiz — ${corrigir}`);
+    }
+  }
 }
 
 async function verificarJogo(slug) {
@@ -182,6 +236,9 @@ async function verificarJogo(slug) {
     }
   }
 
+  // 7 ------------------------------------------- cópia do motor desatualizada
+  await verificarCopiaDoMotor(slug, pasta, rel);
+
   return rel;
 }
 
@@ -196,7 +253,8 @@ function imprimir(rel) {
     console.log(`   aviso  ${item.arquivo}${item.linha ? `:${item.linha}` : ''} — ${item.mensagem}`);
   }
   if (rel.ok && rel.avisos.length === 0) {
-    console.log('   nenhuma dependência externa; a pasta pode ser publicada sozinha.');
+    console.log('   nenhuma dependência externa e a cópia do motor está em dia com a raiz;');
+    console.log('   a pasta pode ser publicada sozinha.');
   }
 }
 

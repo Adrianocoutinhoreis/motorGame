@@ -34,6 +34,7 @@ export async function iniciarJogo(opcoes = {}) {
   const config = opcoes.config ?? {};
 
   aplicarTokensNoCSS();
+  garantirAvisoOrientacao();
 
   // Regra RE-01 (docs/REGRAS-EDUCACIONAIS.md): em jogos para 4–7 anos, todo
   // texto exibido vai em caixa alta, porque nessa faixa a criança lê letra
@@ -108,3 +109,41 @@ export async function iniciarJogo(opcoes = {}) {
 }
 
 export { Game, Scene };
+
+/**
+ * Injeta a dica "gire o aparelho", uma vez por página.
+ *
+ * Quem decide QUANDO ela aparece é o CSS (`tokens.css`, mesma condição que gira
+ * o `#palco`), não este código: manter a condição num só lugar evita a dica e o
+ * giro discordarem. O texto diz "aparelho", e não "celular", porque a mesma
+ * regra vale para tablet.
+ *
+ * **Vai no `<body>`, FORA do `#palco`, e isso é o ponto todo.** O `#palco` é o
+ * que gira; um filho dele giraria também, e a dica ficaria legível só depois de
+ * o aparelho ser virado — pediria o que já foi feito. Fora do palco ela fica em
+ * pé em relação à mão que segura o aparelho, que é a única orientação em que
+ * "gire" quer dizer alguma coisa.
+ *
+ * Pendência conhecida: a dica não é narrada, e o público não lê. Hoje quem
+ * comunica é o ícone girando. Narrar exige gravação — o motor não sintetiza voz
+ * (ver o A-GRAVAR.md do jogo).
+ */
+function garantirAvisoOrientacao() {
+  if (typeof document === 'undefined' || document.querySelector('#aviso-orientacao')) return;
+  const casa = document.body;
+  if (!casa) return;
+
+  const div = document.createElement('div');
+  div.id = 'aviso-orientacao';
+  // É um recado de estado, não um alerta: `status` é anunciado sem interromper.
+  div.setAttribute('role', 'status');
+  div.innerHTML = `
+    <svg class="icone-celular" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+      <path d="M12 18h.01"></path>
+    </svg>
+    <p class="texto">GIRE O APARELHO</p>
+  `;
+  casa.appendChild(div);
+}
+

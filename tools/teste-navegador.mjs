@@ -345,6 +345,37 @@ async function principal() {
     await capturar('03-tutorial-passo2');
     checar('tutorial avança de passo', await avaliar(`${g}.cena.indice`) === 1);
 
+    // Último passo: é o único em que o JOGAR aparece, e por isso o único em que
+    // ele divide a faixa de navegação com a seta de voltar. Estas duas caixas
+    // chegaram a se sobrepor em 4 px sem ninguém ver, porque o roteiro nunca
+    // vinha até aqui. Agora vem, e mede a folga em vez de confiar no olho.
+    await avaliar(`${g}.cena.mostrarPasso(${await avaliar(`${g}.cena.passos.length`) - 1})`);
+    await esperar(500);
+    await capturar('03b-tutorial-ultimo');
+    const navUltimo = await avaliar(`
+      (() => {
+        const c = document.getElementById('quadro').contentWindow.jogo.cena;
+        const caixa = (n) => ({ e: n.x - n.regX, d: n.x - n.regX + n.largura });
+        const voltar = caixa(c.botaoAnterior);
+        const jogar = caixa(c.botaoJogar);
+        return {
+          jogarVisivel: c.botaoJogar.visible === true,
+          proximoOculto: c.botaoProximo.visible === false,
+          folga: Math.round(jogar.e - voltar.d),
+          jogarCentrado: Math.abs((jogar.e + jogar.d) / 2 - 640) <= 1,
+        };
+      })()
+    `);
+    checar('no último passo aparece o JOGAR e a seta de avançar sai',
+      navUltimo.jogarVisivel && navUltimo.proximoOculto, JSON.stringify(navUltimo));
+    checar('o JOGAR não encosta na seta de voltar',
+      navUltimo.folga >= 24, `folga medida: ${navUltimo.folga} px`);
+    checar('o JOGAR fica centrado na tela', navUltimo.jogarCentrado === true,
+      JSON.stringify(navUltimo));
+
+    await avaliar(`${g}.cena.mostrarPasso(0)`);
+    await esperar(300);
+
     // --------------------------------------------------------------- níveis
     await avaliar(`${g}.irPara('niveis')`);
     await esperar(800);
@@ -473,6 +504,169 @@ async function principal() {
       checar(`iframe ${nome} (${l}×${a}): o canvas se ajusta sem deformar`,
         medidas.escala > 0 && medidas.lc > 0 && medidas.ac > 0, JSON.stringify(medidas));
     }
+
+    // ------------------------------------------- 5. celular de pé: gira o jogo
+    //
+    // A seção que faltava. As de cima provam que o canvas não deforma em iframe
+    // de qualquer tamanho; nenhuma provava que o jogo é JOGÁVEL num aparelho de
+    // pé — e não era: 75% da tela virava barra preta e o jogo ficava numa tira
+    // de 203 px de altura.
+    //
+    // Agora o CSS gira `#palco` um quarto de volta e o Stage inverte o mapa
+    // tela→lógico. A verificação que importa é a última: um toque de verdade, no
+    // pixel de verdade, com o palco girado. Sem a inversão do mapa esse toque
+    // caía em OUTRO botão, e nada aqui teria acusado.
+    //
+    // Roda numa aba própria, com o jogo aberto direto: o giro depende só da
+    // viewport do jogo e do tipo de ponteiro, e dentro do AVA a viewport do jogo
+    // É o iframe — `100vh` ali já mede o quadro, não a janela. O tamanho
+    // arbitrário do quadro é assunto da seção 4. Aba separada também garante que
+    // a emulação de celular não contamine as verificações seguintes.
+    console.log('\n5. Celular de pé: o jogo gira sozinho para a horizontal');
+
+    const alvoGiro = await cdp.enviar('Target.createTarget', { url: 'about:blank' });
+    const sessaoGiro = (await cdp.enviar('Target.attachToTarget', {
+      targetId: alvoGiro.targetId, flatten: true,
+    })).sessionId;
+    await cdp.enviar('Page.enable', {}, sessaoGiro);
+    await cdp.enviar('Runtime.enable', {}, sessaoGiro);
+
+    const avaliarGiro = async (expressao) => {
+      const r = await cdp.enviar('Runtime.evaluate', {
+        expression: expressao, awaitPromise: true, returnByValue: true, userGesture: true,
+      }, sessaoGiro);
+      if (r.exceptionDetails) {
+        throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
+      }
+      return r.result.value;
+    };
+
+    // Um celular comum de pé. `mobile: true` é o que faz `pointer: coarse` casar
+    // — a condição que separa aparelho de toque de janela estreita de desktop.
+    await cdp.enviar('Emulation.setDeviceMetricsOverride', {
+      width: 360, height: 800, deviceScaleFactor: 2, mobile: true,
+      screenWidth: 360, screenHeight: 800,
+      screenOrientation: { type: 'portraitPrimary', angle: 0 },
+    }, sessaoGiro);
+    await cdp.enviar('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 }, sessaoGiro);
+
+    await cdp.enviar('Page.navigate', {
+      url: `http://127.0.0.1:${PORTA_SITE}/Games/jogo-dos-blocos/`,
+    }, sessaoGiro);
+
+    for (let i = 0; i < 80; i++) {
+      await esperar(250);
+      if (await avaliarGiro('!!(window.jogo && window.jogo.stage)').catch(() => false)) break;
+    }
+    await esperar(1400); // a animação de entrada dos botões do menu
+
+    const dePe = await avaliarGiro(`
+      (() => {
+        const s = window.jogo.stage;
+        const palco = document.querySelector('#palco');
+        const dica = document.querySelector('#aviso-orientacao');
+        return {
+          ponteiroGrosso: matchMedia('(pointer: coarse)').matches,
+          orientacao: matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape',
+          giroDoStage: s.giro,
+          caixaDeLayout: palco.clientWidth + 'x' + palco.clientHeight,
+          escala: Number(s.escala.toFixed(4)),
+          areaDoJogo: Math.round(s.larguraLogica * s.escala) + 'x' + Math.round(s.alturaLogica * s.escala),
+          desperdicio: Math.round(100 * (1 - (s.larguraLogica * s.escala * s.alturaLogica * s.escala)
+            / (innerWidth * innerHeight))),
+          dicaBloqueiaToque: dica ? getComputedStyle(dica).pointerEvents !== 'none' : 'sem dica',
+          dicaEmPe: dica ? dica.getBoundingClientRect().width > dica.getBoundingClientRect().height : 'sem dica',
+          dicaCaixa: dica ? Math.round(dica.getBoundingClientRect().width) + 'x' + Math.round(dica.getBoundingClientRect().height) : 'sem dica',
+          dicaDentroDoPalco: !!(dica && palco.contains(dica)),
+          cena: window.jogo.nomeCena,
+        };
+      })()
+    `);
+
+    const { data: pngGiro } = await cdp.enviar('Page.captureScreenshot', { format: 'png' }, sessaoGiro);
+    await writeFile(path.join(PASTA_CAPTURAS, '09-celular-de-pe-girado.png'), Buffer.from(pngGiro, 'base64'));
+
+    checar('num celular de pé o motor detecta o giro que o CSS aplicou',
+      dePe.orientacao === 'portrait' && dePe.ponteiroGrosso === true && dePe.giroDoStage === 90,
+      JSON.stringify(dePe));
+    checar('a caixa do palco fica na horizontal, e não de pé',
+      dePe.caixaDeLayout === '800x360', `caixa: ${dePe.caixaDeLayout}`);
+    checar('girar recupera a tela em vez de deixar o jogo numa tira',
+      dePe.escala >= 0.5 && dePe.desperdicio <= 25,
+      `escala ${dePe.escala}, área ${dePe.areaDoJogo}, desperdício ${dePe.desperdicio}%`);
+    checar('a dica de girar não bloqueia o toque do jogo',
+      dePe.dicaBloqueiaToque === false, JSON.stringify(dePe.dicaBloqueiaToque));
+    // A dica NÃO pode girar com o jogo: girada, ela só seria legível depois de o
+    // aparelho ser virado — pediria o que já foi feito. Em pé a pílula é mais
+    // larga que alta; girada seria mais alta que larga.
+    checar('a dica fica em pé para quem segura o aparelho, não girada com o jogo',
+      dePe.dicaEmPe === true, JSON.stringify(dePe.dicaCaixa));
+
+    // ---- o toque de verdade, no pixel de verdade, com o palco girado --------
+    const pontoJogar = await avaliarGiro(`
+      (() => {
+        const s = window.jogo.stage;
+        const r = s.canvas.getBoundingClientRect();
+
+        let botao = null;
+        (function andar(no) {
+          if (botao || !no.visible) return;
+          if (no.rotulo && String(no.rotulo).includes('JOGAR')) { botao = no; return; }
+          for (const f of no.filhos) andar(f);
+        })(s.raiz);
+        if (!botao) return { erro: 'não achei o botão JOGAR no menu' };
+
+        // A IDA do mapa, para 90 graus: o x lógico vira o y da tela, e o y lógico
+        // corre no sentido inverso do x da tela. É o espelho exato da conta que
+        // Stage.desfazerGiro desfaz — se as duas discordarem, o toque erra.
+        return {
+          logico: { x: Math.round(botao.x), y: Math.round(botao.y) },
+          x: r.left + (r.width - (s.deslocY + botao.y * s.escala)),
+          y: r.top + (s.deslocX + botao.x * s.escala),
+        };
+      })()
+    `);
+
+    checar('achou o botão JOGAR no menu para tocar', !pontoJogar.erro,
+      pontoJogar.erro ?? `cena: ${dePe.cena}`);
+
+    if (!pontoJogar.erro) {
+      const toque = [{ x: Math.round(pontoJogar.x), y: Math.round(pontoJogar.y), id: 1 }];
+      await cdp.enviar('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: toque }, sessaoGiro);
+      await cdp.enviar('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }, sessaoGiro);
+      await esperar(1000);
+
+      const estado = await avaliarGiro('window.jogo.estado');
+      checar('com o palco girado, o toque em JOGAR abre a seleção de nível',
+        estado === 'niveis',
+        `tocou em (${Math.round(pontoJogar.x)}, ${Math.round(pontoJogar.y)}) da tela,`
+        + ` botão em ${JSON.stringify(pontoJogar.logico)} lógico, estado virou "${estado}"`);
+    }
+
+    // Deitar o mesmo aparelho: o giro tem de se desfazer sozinho, sem recarregar.
+    await cdp.enviar('Emulation.setDeviceMetricsOverride', {
+      width: 800, height: 360, deviceScaleFactor: 2, mobile: true,
+      screenWidth: 800, screenHeight: 360,
+      screenOrientation: { type: 'landscapePrimary', angle: 90 },
+    }, sessaoGiro);
+    await esperar(900);
+    const deitado = await avaliarGiro(`
+      (() => {
+        const s = window.jogo.stage;
+        const dica = document.querySelector('#aviso-orientacao');
+        return {
+          giro: s.giro,
+          escala: Number(s.escala.toFixed(4)),
+          dicaVisivel: dica ? getComputedStyle(dica).display !== 'none' : 'sem dica',
+        };
+      })()
+    `);
+    checar('ao deitar o aparelho o giro se desfaz sozinho, sem recarregar',
+      deitado.giro === 0 && deitado.escala >= 0.5, JSON.stringify(deitado));
+    checar('deitado, a dica de girar sai da tela',
+      deitado.dicaVisivel === false, JSON.stringify(deitado));
+
+    await cdp.enviar('Target.closeTarget', { targetId: alvoGiro.targetId });
 
     // ------------------------------------------------------------ console AVA
     const logsAva = consoleLogs.filter((l) => l.texto.includes('JOGO_CONCLUIDO'));

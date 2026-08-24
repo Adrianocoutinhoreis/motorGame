@@ -107,9 +107,9 @@ this.placar.paraAva(venceu, { conteudo: 'Números 1 a 5', blocosEmpilhados: 5 })
 ## 5. Como validar (e o que cada teste prova de verdade)
 
 ```bash
-node tools/testes.mjs                        # 47 testes de lógica, sem navegador
+node tools/testes.mjs                        # lógica, sem navegador
 node tools/serve.mjs 8099                    # servidor local
-node tools/teste-navegador.mjs 8099          # 32 verificações ponta a ponta, com iframe real
+node tools/teste-navegador.mjs 8099          # ponta a ponta, com iframe real
 ```
 
 | Ferramenta | Prova | **Não** prova |

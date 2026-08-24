@@ -3,7 +3,7 @@
 > Passos para este jogo ser considerado **concluído**.
 > Um item que não se aplica é **riscado com a justificativa**, nunca marcado por engano.
 >
-> Slug: `jogo-dos-blocos` · Refação da aula `870294` · Motor: v1.0.0
+> Slug: `jogo-dos-blocos` · Refação da aula `870294` · Motor: o carimbado em `engine/MOTOR-COPIA.txt`
 
 **Situação:** tudo que dá para verificar sem uma pessoa está fechado.
 **Falta o que exige ouvidos e mãos humanas:** confirmar as transcrições dos áudios (seção 2)
@@ -54,6 +54,9 @@ e a validação jogando (seção 7.2).
       21/08/2026; a transcrição ainda não foi confirmada ouvindo (`CHECKLIST-AUDIO.md`, §3)
 - [x] **Seleção de nível** com os 3 níveis
 - [x] **Partida** com HUD legível (progresso, vidas, nome do nível, pausa)
+- [x] **Aparelho de pé**: o jogo gira sozinho para a horizontal em vez de virar uma tira —
+      desperdício de tela medido caindo de 75% para 20%, e o toque conferido no pixel real
+      com o palco girado. Continua pendente o alvo físico de 32–36 px em celular (`docs/STATES.md`)
 - [x] **Pausa** com continuar / começar de novo / sair
 - [x] **Resultado** para vitória **e** para derrota
 - [x] Nenhum beco sem saída: de toda tela dá para voltar ao menu
@@ -141,6 +144,6 @@ Mapeamento semântico **deste** jogo:
 
 - [x] `README.md` do jogo atualizado
 - [x] `node tools/build.mjs jogo-dos-blocos` rodado
-- [x] Versão do motor conferida em `engine/version.json` dentro da pasta — v1.0.0
+- [x] Versão do motor conferida dentro da pasta — o carimbo de `engine/MOTOR-COPIA.txt`, e `verificar-independencia.mjs` reprova se a cópia divergir da raiz
 - [x] Pasta copiada para **fora** do projeto, servida de uma subpasta e testada — *automatizado em `tools/teste-entrega-avulsa.mjs`*
 - [ ] Zip gerado só com a pasta do jogo e aberto uma última vez antes de enviar

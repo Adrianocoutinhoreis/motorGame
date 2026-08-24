@@ -122,10 +122,119 @@ body {
   display: grid;
 }
 
+/* ------------------------------------------- aparelho de pé: gira o conteúdo */
+/*
+ * Num celular de pé, um jogo 16:9 vira uma tira. Medido num 360×800: 75% da
+ * tela virava barra preta, a escala ficava em 0,28 e o alvo de 64 px lógicos
+ * caía a 18 px. Girando, a escala vai a 0,50 e o desperdício cai a 20%.
+ *
+ * Por que girar o CONTEÚDO e não travar a tela: `screen.orientation.lock()`
+ * exige tela cheia, e tela cheia dentro do <iframe> do AVA depende de o pai
+ * conceder `allow="fullscreen"` — que o jogo não controla. Em iOS a API nem
+ * existe. Sondado, não suposto: fora de tela cheia o `lock()` responde
+ * `NotSupportedError`.
+ *
+ * E há um caso que só o giro resolve: em tablet escolar com a rotação bloqueada
+ * pelo sistema, virar o aparelho não faz nada — a página continua de pé. Antes,
+ * a criança recebia uma ordem que não tinha como obedecer.
+ *
+ * Gira-se `#palco`, não o canvas, para a tela de carregamento e a de erro
+ * (que são DOM) virarem junto de graça.
+ *
+ * `pointer: coarse` é o que separa "aparelho de pé" de "janela estreita de
+ * desktop": sem ele, um Chromebook em janela alta giraria também.
+ *
+ * O `Stage` DETECTA este giro e inverte o mapa tela→lógico (ver `Stage.js`).
+ * Sem essa inversão o toque troca de eixo — medido: JOGAR caindo em COMO JOGAR.
+ */
+@media (orientation: portrait) and (pointer: coarse) {
+  #palco {
+    width: 100vh;
+    height: 100vw;
+    transform: rotate(90deg) translateY(-100%);
+    transform-origin: top left;
+  }
+}
+
+/* ------------------------------------------------ dica de girar o aparelho */
+/*
+ * Com o giro acima o jogo já está jogável de lado, então isto é DICA, não
+ * porta: `pointer-events: none` deixa o toque passar para o jogo, e a dica se
+ * apaga sozinha. Antes era um painel opaco cobrindo a tela inteira.
+ *
+ * Fica FORA de `#palco` (o `bootstrap` a pendura no `<body>`), de propósito:
+ * dentro dele ela giraria com o jogo, e só seria legível depois de o aparelho
+ * ser virado — pediria o que já foi feito. Fora, fica em pé para a mão que
+ * segura o aparelho.
+ *
+ * Embaixo, e não no topo: no topo ela cobria o painel do título do jogo.
+ */
+#aviso-orientacao {
+  position: absolute;
+  bottom: var(--espaco-md, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  gap: var(--espaco-sm, 12px);
+  padding: var(--espaco-sm, 12px) var(--espaco-lg, 24px);
+  border-radius: var(--raio-pilula, 999px);
+  background: rgba(11, 18, 32, 0.86);
+  color: #ffffff;
+  text-align: center;
+  pointer-events: none;
+}
+
+#aviso-orientacao .icone-celular {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  animation: girarCelular 2.5s infinite ease-in-out;
+}
+
+#aviso-orientacao .texto {
+  font-size: var(--texto-apoio, 20px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+@keyframes girarCelular {
+  0%, 10% { transform: rotate(0deg); }
+  45%, 65% { transform: rotate(-90deg); }
+  90%, 100% { transform: rotate(0deg); }
+}
+
+@keyframes sumirDica {
+  0%, 72% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+
+/* Mesma condição do giro, de propósito: a dica existe porque o jogo girou. */
+@media (orientation: portrait) and (pointer: coarse) {
+  #aviso-orientacao {
+    display: flex;
+    animation: sumirDica 6s ease-out forwards;
+  }
+}
+
 /* Respeita quem pediu menos animação no sistema operacional. */
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* Exceção necessária: com a regra acima, `sumirDica` terminaria em 0,01ms e
+     a dica desapareceria antes de ser lida. Sem animação ela simplesmente
+     fica — o que é aceitável, porque não bloqueia o toque. */
+  #aviso-orientacao {
+    animation: none !important;
+    opacity: 1;
+    visibility: visible;
+  }
 }
+

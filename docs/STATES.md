@@ -115,6 +115,9 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 |---|---|---|
 | `Emitter`, `Matrix2D`, `Node` | Pronto | Hit-test com matriz inversa validado em teste |
 | `Stage` (escala + letterbox) | Pronto | Validado em iframe de 400×700, 640×480 e 1280×720 |
+| Giro em aparelho de pé | Pronto | O CSS gira `#palco`, o `Stage` detecta e inverte o mapa tela→lógico. Medido: desperdício de tela cai de 75% para 20% num celular de 360×720. Coberto por teste de unidade e por um toque real, no pixel real, com o palco girado |
+| Alvo tocável em celular | **Parcial** | O alvo mínimo de 64 px é garantido em espaço LÓGICO; a escala do Stage o reduz a 32–36 px físicos em celular, abaixo do piso de 44 px do WCAG 2.5.5. Girar ajudou (era 18 px de pé) e não resolveu. Falta escala de interface |
+| Área visível adaptativa | **Planejado** | Sobram ~20% de barra num celular 20:9 e ~25% num iPad deitado, porque o jogo é 16:9 fixo. Exige o `Stage` expor um retângulo visível maior que a caixa segura e o `Background` pintar até a borda dele |
 | `Input` (Pointer Events) | Pronto | `toque` só dispara se apertar e soltar no mesmo nó |
 | `Tween` | Pronto | Encadeamento, espera, laço e cancelamento por alvo |
 | `Loader` | Pronto | Falha de recurso não derruba o jogo |
@@ -136,6 +139,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | Expressão facial por imagem | **Planejado** | `imagensPorExpressao` existe na API, sem arte que a exercite |
 | `Background` | Pronto | Céu, sol, nuvens e colinas configuráveis |
 | Tema por jogo (paleta alternativa) | **Planejado** | Hoje todos compartilham a mesma paleta |
+| Dica "gire o aparelho" | Pronto | Fora do `#palco` de propósito: dentro dele giraria com o jogo e só seria legível depois de o aparelho ser virado. Não intercepta toque e se apaga sozinha. **Não é narrada** — falta gravação |
 
 ## Telas padrão
 
@@ -171,7 +175,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 
 | Peça | Estado | Observação |
 |---|---|---|
-| `AvaBridge` | Pronto | 15 testes de unidade + verificação em navegador com iframe real |
+| `AvaBridge` | Pronto | Coberto por teste de unidade e por verificação em navegador com iframe real |
 | Disparo por borda | Pronto | Sem duplicata; replay conta |
 | Registro de derrota | Pronto | Decisão do projeto: derrota também é tentativa |
 | Registro de abandono | **Planejado** | Hoje sair no meio não registra nada — igual ao original |
@@ -180,9 +184,9 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 
 | Ferramenta | Estado |
 |---|---|
-| `tools/testes.mjs` (lógica) | Pronto — 47 testes |
-| `tools/teste-navegador.mjs` (ponta a ponta) | Pronto — 32 verificações |
-| `tools/teste-entrega-avulsa.mjs` (publicação) | Pronto — 10 verificações |
+| `tools/testes.mjs` (lógica) | Pronto — núcleo, contrato do AVA e a regra de "todo som sai de arquivo" |
+| `tools/teste-navegador.mjs` (ponta a ponta) | Pronto — todas as telas, partida vencida e perdida, iframe real em três tamanhos |
+| `tools/teste-entrega-avulsa.mjs` (publicação) | Pronto — o jogo servido de fora do projeto, numa subpasta profunda |
 | `tools/build.mjs` | Pronto |
 | `tools/new-game.mjs` | Pronto |
 | `tools/serve.mjs` | Pronto |

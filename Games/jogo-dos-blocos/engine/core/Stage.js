@@ -11,6 +11,17 @@ import { Node } from './Node.js';
  * Stage escala para o espaço disponível preservando a proporção (letterbox).
  * Isso é o que permite publicar um jogo sozinho no AVA sem saber de antemão o
  * tamanho do `<iframe>` que vai recebê-lo.
+ *
+ * **Giro em celular de pé.** Num aparelho de pé, um jogo 16:9 vira uma tira:
+ * medido num 360×800, 75% da tela virava barra preta e o alvo de 64 px lógicos
+ * caía a 18 px. Quem resolve é o CSS (`tokens.css`), girando `#palco` um quarto
+ * de volta — não o motor, porque assim a tela de carregamento e a de erro, que
+ * são DOM, giram junto de graça.
+ *
+ * O Stage não gira nada; ele precisa apenas SABER que está girado, porque o mapa
+ * tela→lógico depende disso: `getBoundingClientRect()` de um elemento girado
+ * devolve a caixa alinhada aos eixos, e usá-la sem corrigir troca os eixos do
+ * toque. Não é hipótese — foi medido: o toque em JOGAR caía em COMO JOGAR.
  */
 export class Stage {
   /**
@@ -32,6 +43,12 @@ export class Stage {
     this.escala = 1;
     this.deslocX = 0;
     this.deslocY = 0;
+
+    /**
+     * Quarto de volta aplicado ao contêiner pelo CSS: 0, 90 ou -90 graus.
+     * Detectado, nunca definido pelo motor. Ver `_detectarGiro()`.
+     */
+    this.giro = 0;
 
     this._aoRedimensionar = () => this.redimensionar();
     window.addEventListener('resize', this._aoRedimensionar);
@@ -75,16 +92,75 @@ export class Stage {
     this.canvas.style.height = `${alturaDisp}px`;
     this._dpr = dpr;
 
+    // Depois de fixar o tamanho, e não antes: o giro é lido do CSS já aplicado.
+    // A escala acima não precisa de nenhum ajuste — `clientWidth/clientHeight`
+    // de um elemento girado devolvem a caixa de layout DELE (800×360 num celular
+    // de pé de 360×800), que é exatamente a caixa em que o jogo cabe.
+    this.giro = this._detectarGiro();
+
     this.raiz.emit('redimensionado', this);
   }
 
   /** Converte um ponto de tela (clientX/clientY) para coordenada lógica. */
   telaParaLogico(clientX, clientY) {
     const r = this.canvas.getBoundingClientRect();
+    const p = Stage.desfazerGiro(clientX - r.left, clientY - r.top, r.width, r.height, this.giro);
     return {
-      x: (clientX - r.left - this.deslocX) / this.escala,
-      y: (clientY - r.top - this.deslocY) / this.escala,
+      x: (p.x - this.deslocX) / this.escala,
+      y: (p.y - this.deslocY) / this.escala,
     };
+  }
+
+  /**
+   * Desfaz o giro do contêiner. Recebe um ponto em px de tela, relativo ao canto
+   * da caixa envolvente do canvas, e devolve o ponto em px DENTRO do canvas, no
+   * eixo em que o jogo é desenhado.
+   *
+   * Estático e puro de propósito: é a conta que, errada, faz a criança tocar em
+   * JOGAR e cair no tutorial, e assim ela é testável sem navegador.
+   *
+   * Com `rotate(90deg)` e origem no canto superior esquerdo, o eixo x do canvas
+   * corre pelo y da tela, e o y do canvas corre no sentido INVERSO do x da tela.
+   */
+  static desfazerGiro(px, py, larguraCaixa, alturaCaixa, giro) {
+    if (giro === 90) return { x: py, y: larguraCaixa - px };
+    if (giro === -90) return { x: alturaCaixa - py, y: px };
+    return { x: px, y: py };
+  }
+
+  /**
+   * Lê um quarto de volta de uma matriz de transformação CSS.
+   *
+   * Em `matrix(a, b, c, d, e, f)`, um quarto de volta deixa a≈0 e |b|≈1 — o
+   * sinal de b diz o sentido. Qualquer outra transformação (escala, translação
+   * pura, giro que não seja de 90°) devolve 0: o motor só sabe corrigir o quarto
+   * de volta que o próprio `tokens.css` aplica.
+   */
+  static giroDaMatriz(transformacao) {
+    if (!transformacao || transformacao === 'none') return 0;
+    const numeros = transformacao.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
+    if (!numeros || numeros.length < 4) return 0;
+    const a = Number(numeros[0]);
+    const b = Number(numeros[1]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+    if (Math.abs(a) > 0.5 || Math.abs(b) < 0.5) return 0;
+    return b > 0 ? 90 : -90;
+  }
+
+  /**
+   * Procura o giro nos ancestrais do canvas. Sobe a árvore em vez de olhar só o
+   * pai porque quem gira é uma regra de CSS por seletor (`#palco`), e um jogo
+   * pode aninhar o canvas mais fundo do que o template faz.
+   */
+  _detectarGiro() {
+    if (typeof getComputedStyle !== 'function') return 0;
+    let no = this.canvas.parentElement;
+    while (no && no !== document.documentElement) {
+      const giro = Stage.giroDaMatriz(getComputedStyle(no).transform);
+      if (giro !== 0) return giro;
+      no = no.parentElement;
+    }
+    return 0;
   }
 
   /** O ponto lógico está dentro da área do jogo (fora do letterbox)? */

@@ -17,6 +17,7 @@ import { Rand } from '../engine/core/Rand.js';
 import { GridBoard } from '../engine/gameplay/GridBoard.js';
 import { ScoreSystem } from '../engine/gameplay/ScoreSystem.js';
 import { CraneController } from '../engine/gameplay/CraneController.js';
+import { Stage } from '../engine/core/Stage.js';
 import { AvaBridge } from '../engine/ava/AvaBridge.js';
 import { AudioBus } from '../engine/audio/AudioBus.js';
 import { ESTADOS, transicaoValida } from '../engine/core/Estados.js';
@@ -407,6 +408,87 @@ grupo('CraneController', () => {
     g.seguirX(180);
     igual(g.indiceColuna, 2);
     igual(g.x, 200);
+  });
+});
+
+// -------------------------------------------------- Stage: giro do contêiner
+grupo('Stage — giro do contêiner em aparelho de pé', () => {
+  /*
+   * Em celular de pé o CSS gira `#palco` um quarto de volta, para o jogo 16:9
+   * usar a tela toda em vez de virar uma tira. O Stage não gira nada: ele lê o
+   * giro e inverte o mapa tela→lógico.
+   *
+   * Os números abaixo são MEDIDOS, num celular emulado de 360×800 com dpr 3:
+   * caixa de layout girada 800×360, escala 0,5, letterbox de 80 px em x, e o
+   * centro do botão JOGAR em (640, 340) lógicos caindo no pixel (190, 400) da
+   * tela. A caixa envolvente do canvas girado mede 360×800 — trocada em relação
+   * à caixa de layout, e é justamente essa troca que quebra o toque.
+   */
+  const CAIXA = { largura: 360, altura: 800, escala: 0.5, deslocX: 80, deslocY: 0 };
+  const JOGAR_LOGICO = { x: 640, y: 340 };
+  const JOGAR_NA_TELA = { x: 190, y: 400 };
+
+  /** A conta inteira de `telaParaLogico`, sem precisar de DOM. */
+  const paraLogico = (sx, sy, giro) => {
+    const p = Stage.desfazerGiro(sx, sy, CAIXA.largura, CAIXA.altura, giro);
+    return {
+      x: (p.x - CAIXA.deslocX) / CAIXA.escala,
+      y: (p.y - CAIXA.deslocY) / CAIXA.escala,
+    };
+  };
+
+  teste('sem giro, desfazerGiro devolve o ponto intacto', () => {
+    igual(Stage.desfazerGiro(190, 400, 360, 800, 0), { x: 190, y: 400 });
+  });
+
+  teste('com 90°, o toque cai no centro do botão que a criança viu', () => {
+    const p = paraLogico(JOGAR_NA_TELA.x, JOGAR_NA_TELA.y, 90);
+    perto(p.x, JOGAR_LOGICO.x, 0.5, 'x lógico:');
+    perto(p.y, JOGAR_LOGICO.y, 0.5, 'y lógico:');
+  });
+
+  teste('IGNORAR o giro é o defeito que este código existe para evitar', () => {
+    // Este era o comportamento anterior: usar a caixa envolvente como se nada
+    // tivesse girado. Medido num iPad, levava o toque em JOGAR para COMO JOGAR.
+    const errado = paraLogico(JOGAR_NA_TELA.x, JOGAR_NA_TELA.y, 0);
+    ok(Math.abs(errado.x - JOGAR_LOGICO.x) > 100,
+      `esperava erro grande em x, deu ${errado.x}`);
+    ok(Math.abs(errado.y - JOGAR_LOGICO.y) > 100,
+      `esperava erro grande em y, deu ${errado.y}`);
+  });
+
+  teste('ida e volta fecha: lógico → tela → lógico', () => {
+    for (const alvo of [{ x: 0, y: 0 }, { x: 1280, y: 720 }, { x: 640, y: 360 }, { x: 17, y: 703 }]) {
+      // A ida é a conta que o teste de navegador usa para saber onde tocar.
+      const tela = {
+        x: CAIXA.largura - (CAIXA.deslocY + alvo.y * CAIXA.escala),
+        y: CAIXA.deslocX + alvo.x * CAIXA.escala,
+      };
+      const volta = paraLogico(tela.x, tela.y, 90);
+      perto(volta.x, alvo.x, 0.01, `x de ${JSON.stringify(alvo)}:`);
+      perto(volta.y, alvo.y, 0.01, `y de ${JSON.stringify(alvo)}:`);
+    }
+  });
+
+  teste('-90° é o espelho de 90°', () => {
+    igual(Stage.desfazerGiro(190, 400, 360, 800, -90), { x: 400, y: 190 });
+  });
+
+  teste('giroDaMatriz reconhece o quarto de volta, nos dois sentidos', () => {
+    igual(Stage.giroDaMatriz('matrix(0, 1, -1, 0, 360, 0)'), 90);
+    igual(Stage.giroDaMatriz('matrix(0, -1, 1, 0, 0, 800)'), -90);
+  });
+
+  teste('giroDaMatriz não confunde escala, translação ou giro torto com giro', () => {
+    igual(Stage.giroDaMatriz('none'), 0);
+    igual(Stage.giroDaMatriz(''), 0);
+    igual(Stage.giroDaMatriz(null), 0);
+    igual(Stage.giroDaMatriz('matrix(1, 0, 0, 1, 0, 0)'), 0, 'identidade:');
+    igual(Stage.giroDaMatriz('matrix(1, 0, 0, 1, 40, 90)'), 0, 'só translação:');
+    igual(Stage.giroDaMatriz('matrix(2, 0, 0, 2, 0, 0)'), 0, 'só escala:');
+    // 45°: não é um quarto de volta, e o motor não sabe corrigir — melhor
+    // devolver 0 e deixar o toque cru do que aplicar a correção errada.
+    igual(Stage.giroDaMatriz('matrix(0.7071, 0.7071, -0.7071, 0.7071, 0, 0)'), 0, '45 graus:');
   });
 });
 

@@ -6,7 +6,7 @@ Esta pasta é **autossuficiente**: pode ser enviada sozinha para o AVA.
 - **Slug (campo `jogo` do AVA):** `jogo-dos-blocos`
 - **Faixa etária:** 4 a 7 anos (Educação Infantil / 1º ano)
 - **Aula original:** `Aulas para Refazer/Jogo dos Blocos/` (CreateJS/Flash, 2013)
-- **Motor:** v1.0.0
+- **Motor:** a versão publicada nesta pasta está carimbada em `engine/MOTOR-COPIA.txt` (gerado pela build)
 
 ## O que é
 

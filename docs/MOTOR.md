@@ -3,7 +3,7 @@
 Documento de referência do motor. Se algo aqui conflitar com o código, **o código
 está errado ou este documento está desatualizado** — nunca "depende".
 
-Motor: **Motor Educandus v1.0.0** (`engine/version.json`)
+Motor: **Motor Educandus** — a versão corrente está em `engine/version.json` (não se repete o número aqui: número copiado à mão envelhece).
 Tecnologia: **HTML + CSS + JavaScript puro (módulos ES)**. Sem framework, sem build, sem dependência.
 
 ---
@@ -146,10 +146,16 @@ Detalhes e checklist completo: [`CONTRATO-AVA.md`](CONTRATO-AVA.md).
   carimbo `MOTOR-COPIA.txt`.
 - A cópia dentro do jogo **nunca** é editada. Se for, a próxima build apaga a alteração —
   de propósito.
+- **Esquecer a build é erro detectado, não esperança.** `verificar-independencia.mjs`
+  compara a cópia com `engine/` da raiz arquivo por arquivo, por hash, e reprova se
+  divergirem em qualquer direção: arquivo diferente, arquivo faltando, ou arquivo sobrando
+  de uma versão anterior do motor.
 - Para saber qual motor um jogo publicado leva, leia o `version.json` de dentro dele.
 
 Ao mexer no motor: rode `node tools/testes.mjs`, depois `node tools/build.mjs` (todos os
-jogos), depois `node tools/teste-navegador.mjs` para o piloto. Só então publique.
+jogos), depois `node tools/teste-navegador.mjs` para o piloto, e por fim
+`node tools/verificar-independencia.mjs` — é ele que reprova a cópia esquecida. Só então
+publique.
 
 ---
 
@@ -165,3 +171,9 @@ Saber os limites vale tanto quanto saber os recursos.
 - **Não renderiza WebGL.** É Canvas 2D. Para a arte plana destes jogos, sobra desempenho.
 - **Não faz internacionalização.** Os jogos são em português. Traduzir exigiria extrair
   textos e narração — trabalho real, não uma opção de configuração.
+- **Não trava a orientação da tela.** Não por escolha: `screen.orientation.lock()` exige
+  tela cheia, e tela cheia dentro do `<iframe>` do AVA depende de o pai conceder
+  `allow="fullscreen"` — que o jogo não controla. Em iOS a API não existe. O motor faz o
+  que está ao seu alcance: em aparelho de pé, **gira o conteúdo** um quarto de volta
+  (`tokens.css` + `Stage`), o que também cobre o tablet com a rotação bloqueada pelo
+  sistema, onde virar o aparelho não faz nada.
