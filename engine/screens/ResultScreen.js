@@ -6,7 +6,7 @@ import { ESTADOS } from '../core/Estados.js';
 import { Background } from '../ui/Background.js';
 import { Panel } from '../ui/Panel.js';
 import { Button } from '../ui/Button.js';
-import { Mascot } from '../ui/Mascot.js';
+import { Mascot, mascoteVisivel } from '../ui/Mascot.js';
 import { desenharIcone } from '../theme/icons.js';
 import { cores, tipografia, espaco } from '../theme/tokens.js';
 
@@ -246,14 +246,14 @@ export class ResultScreen extends Scene {
     // no céu. É o mesmo acoplamento manual já anotado para a base da torre em
     // `GameScene`: se o horizonte mudar no motor, isto precisa acompanhar.
     const tamanhoMascote = 230;
-    this.mascote = new Mascot({
+    this.mascote = mascoteVisivel(config, 'resultado') ? new Mascot({
       tamanho: tamanhoMascote,
       x: L / 2 - larguraPainel / 2 - 24,
       y: A * 0.82 - tamanhoMascote / 2,
       expressao: venceu ? 'comemorando' : 'triste',
       imagem: this.loader.imagem(config.mascote?.asset),
-    });
-    this.adicionar(this.mascote);
+    }) : null;
+    if (this.mascote) this.adicionar(this.mascote);
 
     // ------------------------------------------------------------- botões
     const niveis = config.niveis ?? [];

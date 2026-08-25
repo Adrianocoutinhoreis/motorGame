@@ -158,7 +158,7 @@ export default {
     {
       titulo: 'Toque em uma coluna',
       texto: 'Toque numa coluna para a garra descer e pegar os blocos de cima.',
-      fala: 'tutorial_pegar',
+      fala: 'TOQUE_EM_UMA_COLUNA',
       /**
        * A garra desce até o topo da pilha, fecha, e SOBE COM A PEÇA.
        *
@@ -211,7 +211,7 @@ export default {
     {
       titulo: 'Junte três formas iguais',
       texto: 'Três ou mais formas iguais que se toquem desaparecem. Não precisa ser em fila!',
-      fala: 'tutorial_combo',
+      fala: 'JUNTE_TRES_FORMAS_IGUAIS',
       desenho: (ctx, l, a, t) => {
         // Um L de três círculos: é o que ensina que combo não é fila.
         const ciclo = (t % 2.8) / 2.8;
@@ -236,7 +236,7 @@ export default {
     {
       titulo: 'Cuidado: a pilha sobe!',
       texto: 'De vez em quando nasce uma linha nova por baixo. Se a pilha chegar no teto, acabou.',
-      fala: 'tutorial_pilha',
+      fala: 'CUIDADO_A_PILHA_SOBE',
       desenho: (ctx, l, a, t) => {
         const ciclo = (t % 2.4) / 2.4;
         const subida = ciclo < 0.5 ? 0 : (ciclo - 0.5) / 0.5;
@@ -279,15 +279,6 @@ export default {
     { id: 'blocoTriangulo', src: './assets/img/bloco-triangulo.png' },
     { id: 'blocoRetangulo', src: './assets/img/bloco-retangulo.png' },
 
-    // Mascote: o MESMO operário do Jogo dos Blocos, o mesmo arquivo. Duas razões,
-    // e nenhuma é economia de trabalho: as duas aulas passam a ser a mesma
-    // coleção aos olhos da criança, e as telas do motor escalam o mascote pela
-    // ALTURA — a coruja vetorial é quadrada e no menu nascia com 550 px de lado,
-    // transbordando por cima do botão JOGAR.
-    //
-    // É arte de MEIO CORPO (1760×2000, cortada na altura das coxas). Ela não tem
-    // pé: a base é um corte, e precisa ficar na borda inferior da tela para o
-    // corte não aparecer. É o que o `MenuScreen` já faz com ela.
     { id: 'mascote', src: './assets/img/bob.webp' },
 
     // Narração das formas — o conteúdo pedagógico do jogo
@@ -301,6 +292,11 @@ export default {
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     { id: 'erroSOS', src: './assets/audio/erroSOS.wav' },
     { id: 'nao', src: './assets/audio/nao.wav' },
+
+    // Narração do tutorial
+    { id: 'TOQUE_EM_UMA_COLUNA', src: './assets/audio/TOQUE_EM_UMA_COLUNA.mp3' },
+    { id: 'JUNTE_TRES_FORMAS_IGUAIS', src: './assets/audio/JUNTE_TRES_FORMAS_IGUAIS.mp3' },
+    { id: 'CUIDADO_A_PILHA_SOBE', src: './assets/audio/CUIDADO_A_PILHA_SOBE.mp3' },
   ],
 
   /**
@@ -312,7 +308,26 @@ export default {
    * expressão facial de verdade seria preciso uma imagem por estado
    * (`imagensPorExpressao`).
    */
-  mascote: { asset: 'mascote' },
+  mascote: {
+    asset: 'mascote',
+    /**
+     * Onde o mascote aparece. Fora desta lista, a tela não o cria.
+     *
+     * **Não está na PARTIDA nem no TUTORIAL**, e as razões são diferentes:
+     *
+     *  - Na partida ele ocupava a tira à esquerda do pórtico e não tinha função:
+     *    o retorno da jogada já vem pelo som, pelo placar e pelo próprio bloco
+     *    desaparecendo. A grade é centrada na tela (`gradeX` sai de `L / 2`), então
+     *    tirá-lo não move nada de lugar — só devolve o espaço.
+     *  - No tutorial ele disputava a atenção com a ILUSTRAÇÃO, que é justamente o
+     *    que ensina o gesto. Duas figuras animadas na mesma tela, e a criança
+     *    olha a errada.
+     *
+     * Fica no menu (é quem recebe) e no resultado (é quem comemora), que é onde
+     * um personagem faz trabalho de verdade.
+     */
+    telas: ['menu', 'resultado'],
+  },
 
   /**
    * `abertura` e as três falas do tutorial NÃO EXISTEM — não havia locução

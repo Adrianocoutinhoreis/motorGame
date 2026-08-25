@@ -21,17 +21,17 @@ moram os erros que chegam ao aluno.
 
 ## 1. Inventário e integridade — *`audio-info.mjs`*
 
-- [x] Todo arquivo de áudio está em `assets/audio/`, com caminho relativo — **8 arquivos**
+- [x] Todo arquivo de áudio está em `assets/audio/`, com caminho relativo — **11 arquivos**
 - [x] Toda referência é local; nada vem de CDN ou de outro servidor
-- [x] Nenhum arquivo ilegível ou corrompido — os 8 têm cabeçalho válido
-- [x] Nenhum arquivo duplicado — os 8 SHA-256 são distintos
-- [x] **Toda locução tem ficha de transcrição** — 8 fichas para 8 arquivos
+- [x] Nenhum arquivo ilegível ou corrompido — os 11 têm cabeçalho válido
+- [x] Nenhum arquivo duplicado — os 11 SHA-256 são distintos
+- [x] **Toda locução tem ficha de transcrição** — 11 fichas para 11 arquivos
 - [x] Toda ficha registra o SHA-256 do arquivo que descreve
 - [x] Nenhum hash divergente
-- [x] Todo áudio declarado no `config.js` existe no disco — 8 de 8
-- [x] Nenhum áudio no disco fica sem declaração — 8 de 8 declarados
+- [x] Todo áudio declarado no `config.js` existe no disco — 11 de 11
+- [x] Nenhum áudio no disco fica sem declaração — 11 de 11 declarados
 
-> `node tools/audio-info.mjs jogo-das-formas` fecha **APROVADO** em 24/08/2026.
+> `node tools/audio-info.mjs jogo-das-formas` fecha **APROVADO** em 25/08/2026.
 
 ## 2. Ligação no jogo — *lê-se no `config.js`*
 
@@ -42,10 +42,7 @@ moram os erros que chegam ao aluno.
 - [x] Som de erro ligado (`audio.erro` → `nao`) — usado no ciclo sem combo
 - [x] Sons de fim ligados (`audio.vitoria` → `acertoSOS`, `audio.derrota` → `erroSOS`)
 - [ ] **Abertura do menu** (`audio.abertura`) — `null`, gravação não existe
-- [ ] **Narração dos 3 passos do tutorial** (`tutorial[].fala`) — os três ids estão
-      declarados (`tutorial_pegar`, `tutorial_combo`, `tutorial_pilha`) e **nenhum tem
-      arquivo**: a tela fica em silêncio e o console nomeia cada um. É o comportamento
-      correto do motor, não um bug — mas é pendência de entrega
+- [x] **Narração dos 3 passos do tutorial** (`tutorial[].fala`) — os 3 arquivos (`TOQUE_EM_UMA_COLUNA.mp3`, `JUNTE_TRES_FORMAS_IGUAIS.mp3`, `CUIDADO_A_PILHA_SOBE.mp3`) integrados e com fichas de transcrição.
 
 ## 3. O que só o ouvido verifica
 

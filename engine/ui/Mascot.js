@@ -24,6 +24,27 @@ import { cores, movimento } from '../theme/tokens.js';
  * feição. Para expressões faciais de verdade seriam necessárias várias imagens
  * (uma por estado), e aí `imagensPorExpressao` é o caminho.
  */
+/**
+ * Em quais telas o mascote aparece.
+ *
+ * `config.mascote.telas` é uma lista de nomes de cena (`'menu'`, `'tutorial'`,
+ * `'niveis'`, `'jogando'`, `'resultado'`). **Ausente significa "em todas"** — é o
+ * que mantém intacto o jogo que não declara nada, como o piloto.
+ *
+ * Existe porque "não quero mascote aqui" não tinha como ser dito: `mascote: null`
+ * não apaga o mascote, faz o motor cair na coruja vetorial. O pedido real —
+ * tirá-lo da partida e do tutorial de UM jogo, mantendo no menu e no resultado —
+ * é por tela, então a chave é por tela.
+ *
+ * @param {object} config o config do jogo
+ * @param {string} tela nome da cena
+ */
+export function mascoteVisivel(config, tela) {
+  const telas = config?.mascote?.telas;
+  if (!Array.isArray(telas)) return true;
+  return telas.includes(tela);
+}
+
 export class Mascot extends Node {
   constructor(opcoes = {}) {
     const tamanho = opcoes.tamanho ?? 180;

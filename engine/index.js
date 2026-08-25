@@ -39,7 +39,7 @@ export { Button, IconButton } from './ui/Button.js';
 export { ScoreBar, TimerBar } from './ui/ScoreBar.js';
 export { Lives } from './ui/Lives.js';
 export { SoundToggle } from './ui/SoundToggle.js';
-export { Mascot } from './ui/Mascot.js';
+export { Mascot, mascoteVisivel } from './ui/Mascot.js';
 export { Background } from './ui/Background.js';
 
 // ----------------------------------------------------------------------- telas

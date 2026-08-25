@@ -2,7 +2,7 @@ import {
   Scene, Node, TextNode, ScoreSystem, ScoreBar, TimerBar, IconButton, SoundToggle,
   PauseScreen, Panel, Background, Mascot, GridBoard, CraneController,
   Tween, Easing, ESTADOS, desenharIcone, cores, tipografia, espaco, raio,
-  sombras, movimento, rand,
+  sombras, movimento, rand, mascoteVisivel,
 } from '../../engine/index.js';
 
 /**
@@ -712,6 +712,14 @@ export class GameScene extends Scene {
    * visível na borda.
    */
   _montarMascote() {
+    // A lista de telas vive no config (`mascote.telas`), e não uma decisão local:
+    // é o MESMO interruptor que o menu, o tutorial e o resultado consultam. Duas
+    // fontes para "onde o mascote aparece" divergiriam na primeira mudança.
+    if (!mascoteVisivel(this.config, 'jogando')) {
+      this.mascote = null;
+      return;
+    }
+
     const tamanho = 300;
     this.mascote = new Mascot({
       tamanho,
@@ -938,7 +946,7 @@ export class GameScene extends Scene {
       // erro. Recusar é mais honesto que empilhar fora da grade, que é o que o
       // original fazia (`arrayBlocos[lin] = [null,null,null,null]`, linha 286).
       this._apontarColuna(this.controle.x);
-      this.mascote.definirExpressao('pensando');
+      this.mascote?.definirExpressao('pensando');
       return;
     }
 
@@ -1038,7 +1046,7 @@ export class GameScene extends Scene {
 
     if (pontos > 0) {
       this.placar.acertar(pontos);
-      this.mascote.comemorar();
+      this.mascote?.comemorar();
     }
     if (this.placar.encerrado) return;
 
@@ -1084,7 +1092,7 @@ export class GameScene extends Scene {
     // Um ciclo fechado sem nenhum combo é a falha deste jogo (REGRAS, seção 7).
     if (!this.comboNesteCiclo) {
       this.placar.errar();
-      this.mascote.lamentar();
+      this.mascote?.lamentar();
       if (this.config.audio?.erro) this.audio.efeito(this.config.audio.erro);
     }
     this.comboNesteCiclo = false;
@@ -1118,9 +1126,16 @@ export class GameScene extends Scene {
       Tween.para(bloco, { y: this._yDaLinha(bloco.lin) }, movimento.lento, Easing.suave);
     }
 
-    // A pilha alta é aviso: a coruja se inclina antes de a partida acabar.
+    // A pilha alta é aviso: o mascote se inclina antes de a partida acabar.
+    //
+    // **Este jogo não mostra mascote na partida** (`config.mascote.telas`), então
+    // hoje o aviso não aparece em tela nenhuma — e ele era o ÚNICO dos retornos da
+    // partida sem som próprio (combo narra a forma, ciclo sem combo toca o efeito
+    // de erro). Fica registrado como lacuna deliberada, não como esquecimento: se
+    // o aviso de pilha alta tiver de voltar, precisa de um portador que não seja o
+    // personagem — piscar a linha do teto, por exemplo.
     const maisAlta = Math.max(...this.xColunas.map((_, col) => this._primeiraLivre(col)));
-    if (maisAlta >= this.linhas - 2) this.mascote.definirExpressao('triste');
+    if (maisAlta >= this.linhas - 2) this.mascote?.definirExpressao('triste');
 
     // Um combo pode nascer da linha nova encostando na pilha? Não: o sorteio
     // anticombo acima garante que não. Mas a subida pode ter juntado peças que
@@ -1166,7 +1181,7 @@ export class GameScene extends Scene {
   _terminar(venceu) {
     this.tempo.pausar();
     this.fase = 'movendo';
-    if (venceu) this.mascote.comemorar(); else this.mascote.lamentar();
+    if (venceu) this.mascote?.comemorar(); else this.mascote?.lamentar();
 
     this.irPara('resultado', {
       nivel: this.nivel,

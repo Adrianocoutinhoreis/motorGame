@@ -104,7 +104,6 @@ export class AudioBus extends Emitter {
     return this.ctx;
   }
 
-  /** Chamado no primeiro gesto do usuário. Sem isto, nada toca. */
   async destravar() {
     const ctx = this._garantirContexto();
     if (!ctx) return false;
@@ -112,7 +111,10 @@ export class AudioBus extends Emitter {
       try { await ctx.resume(); } catch { /* ignora */ }
     }
     this._destravado = ctx.state === 'running';
-    if (this._destravado) this.emit('destravado');
+    if (this._destravado) {
+      this.emit('destravado');
+      this.decodificarTodos().catch(() => {});
+    }
     return this._destravado;
   }
 
@@ -134,6 +136,11 @@ export class AudioBus extends Emitter {
     }
   }
 
+  async decodificarTodos() {
+    const ids = Array.from(this._brutos.keys());
+    await Promise.all(ids.map((id) => this._decodificar(id)));
+  }
+
   // ------------------------------------------------------------- reprodução
 
   /**
@@ -144,6 +151,9 @@ export class AudioBus extends Emitter {
     const canal = opcoes.canal ?? 'sfx';
     const ctx = this._garantirContexto();
     if (!ctx) return null;
+    if (ctx.state === 'suspended') {
+      await this.destravar();
+    }
     if (!this.temSom(id)) {
       console.warn(`[motor] som "${id}" não registrado.`);
       return null;

@@ -9,7 +9,7 @@
 | Tipo | Narração — nome de forma geométrica |
 | Formato | MP3 MPEG2 Layer III, 40 kbps, 22 050 Hz, mono |
 | Duração | **0,81 s (31 frames)** |
-| SHA-256 (16 primeiros) | `80007383ad748b6f` |
+| SHA-256 (16 primeiros) | `f4eae5dc217b` |
 | Origem | Aula original 870298 — Educandus |
 
 ## Transcrição

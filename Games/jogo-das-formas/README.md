@@ -146,6 +146,18 @@ Duas decisões dentro dessa, e as duas são pela mesma razão:
    para ser encontrado. Ficam só as formas brancas gigantes, que não nomeiam
    nada.
 
+**O personagem não aparece na partida nem no tutorial** (`mascote.telas` no
+config). Na partida ele ocupava a tira à esquerda do pórtico sem ter função — o
+retorno da jogada vem do som, do placar e do bloco desaparecendo — e a grade é
+centrada na tela, então tirá-lo não moveu nada. No tutorial ele disputava a
+atenção com a ilustração, que é justamente o que ensina o gesto. Fica no menu (é
+quem recebe) e no resultado (é quem comemora).
+
+Consequência registrada: o aviso de **pilha alta** era carregado pela expressão
+do mascote, e era o único retorno da partida sem som próprio. Hoje esse aviso não
+aparece em lugar nenhum. Se tiver de voltar, precisa de outro portador — piscar a
+linha do teto, por exemplo.
+
 O que **continua igual** ao piloto, e é escolha declarada: botões, tipografia,
 cartões de nível, painéis e movimento — o chassi é o mesmo para as aulas
 seguirem sendo uma coleção. Ver `docs/STATES.md`, "Tema por jogo".

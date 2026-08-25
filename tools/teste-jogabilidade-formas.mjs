@@ -243,12 +243,12 @@ try {
 
   console.log('\n4. Toque fora da faixa de jogo NÃO é jogada');
   const antesDeFora = await estado();
-  await tocar(150, 500);                    // sobre o mascote
+  await tocar(150, 500);                    // faixa vazia à esquerda do pórtico
   await esperar(500);
   await tocar(geo.xColunas[2], 40);         // sobre o HUD
   await esperar(500);
   const depoisDeFora = await estado();
-  checar('tocar no mascote e no HUD não pega bloco',
+  checar('tocar fora da faixa de jogo e no HUD não pega bloco',
     depoisDeFora.carga === 0 && depoisDeFora.naGrade === antesDeFora.naGrade,
     `carga=${depoisDeFora.carga} grade=${depoisDeFora.naGrade}`);
 

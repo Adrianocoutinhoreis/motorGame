@@ -6,7 +6,7 @@ import { ESTADOS } from '../core/Estados.js';
 import { Background } from '../ui/Background.js';
 import { Panel } from '../ui/Panel.js';
 import { Button, IconButton } from '../ui/Button.js';
-import { Mascot } from '../ui/Mascot.js';
+import { Mascot, mascoteVisivel } from '../ui/Mascot.js';
 import { SoundToggle } from '../ui/SoundToggle.js';
 import { cores, tipografia, espaco, raio } from '../theme/tokens.js';
 
@@ -120,15 +120,15 @@ export class TutorialScreen extends Scene {
     // seja em 222; com este centro a luva termina em ~204. Em troca, uns 20 px do
     // braço esquerdo dele saem pela borda da tela — o que lê como alguém entrando
     // em cena para explicar, e é melhor que encolher a pessoa até caber.
-    this.mascote = new Mascot({
+    this.mascote = mascoteVisivel(config, 'tutorial') ? new Mascot({
       tamanho: 280,
       x: L * 0.5 - larguraPainel / 2 - 62,
       y: A * 0.62,
       expressao: 'pensando',
       balanco: false,
       imagem: this.loader.imagem(config.mascote?.asset),
-    });
-    this.adicionar(this.mascote);
+    }) : null;
+    if (this.mascote) this.adicionar(this.mascote);
 
     // ------------------------------------------------------------ navegação
     //

@@ -222,6 +222,21 @@ Uma figura estática não troca de rosto: no modo imagem os estados aparecem com
 corporal (pulo, inclinação, encolher). Para expressão facial, forneça `imagensPorExpressao`
 com uma arte por estado.
 
+### `Mascot` — em quais telas aparece
+`config.mascote.telas` é a lista de cenas em que o mascote é criado
+(`'menu'`, `'tutorial'`, `'niveis'`, `'jogando'`, `'resultado'`). **Ausente
+significa "em todas"**, então um jogo que não declara nada não muda.
+
+Existe porque "não quero mascote aqui" não tinha como ser dito: `mascote: null`
+não apaga o mascote — faz o motor cair na coruja vetorial. O Jogo das Formas usa
+`telas: ['menu', 'resultado']`.
+
+O helper `mascoteVisivel(config, tela)` é exportado pelo `index.js`, e é ele que
+a cena de partida de um jogo consulta — para "onde o mascote aparece" ter uma
+fonte só.
+
+---
+
 ### `Background`
 O cenário das telas, todo vetorial. Três temas, escolhidos por `config.tema`:
 

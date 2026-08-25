@@ -68,7 +68,7 @@ export class Game extends Emitter {
     // O áudio só pode começar depois de um gesto do usuário (política dos
     // navegadores). Sem isto, a narração dos jogos originais simplesmente não
     // toca em Chrome/Safari modernos.
-    this.input.once('apertar', () => this.audio.destravar());
+    this.input.on('apertar', () => this.audio.destravar());
   }
 
   /** Registra ou substitui uma cena. */

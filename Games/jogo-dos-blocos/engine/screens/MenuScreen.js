@@ -6,7 +6,7 @@ import { ESTADOS } from '../core/Estados.js';
 import { Background } from '../ui/Background.js';
 import { Button } from '../ui/Button.js';
 import { SoundToggle } from '../ui/SoundToggle.js';
-import { Mascot } from '../ui/Mascot.js';
+import { Mascot, mascoteVisivel } from '../ui/Mascot.js';
 import { cores, tipografia, espaco, raio } from '../theme/tokens.js';
 import { texto as aplicarCaixa } from '../theme/texto.js';
 
@@ -229,13 +229,13 @@ export class MenuScreen extends Scene {
     //     coxa, então basta apoiá-la no fim da tela para ter o corte da referência;
     //   · a mão cai em x 335–460 e y 436–540, invadindo o botão COMO JOGAR — que
     //     é onde ela está na referência.
-    this.mascote = new Mascot({
+    this.mascote = mascoteVisivel(config, 'menu') ? new Mascot({
       tamanho: 550,
       x: L * 0.182,
       y: A * 0.632,
       expressao: 'feliz',
       imagem: this.loader.imagem(config.mascote?.asset),
-    });
+    }) : null;
 
     // ---------------------------------------------------------------- botões
     //
@@ -300,7 +300,7 @@ export class MenuScreen extends Scene {
     // botão em vez de ser cortada por ela. O toque continua funcionando: o
     // hit-test do Input percorre os nós de cima para baixo, e o mascote não é
     // interativo, então ele não intercepta o toque no botão que está atrás.
-    this.adicionar(this.mascote);
+    if (this.mascote) this.adicionar(this.mascote);
 
     // Entrada animada
     for (const [i, botao] of [this.botaoJogar, this.botaoTutorial].entries()) {
