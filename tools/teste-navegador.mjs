@@ -572,12 +572,25 @@ async function principal() {
     checar('a tela mostra 3 estrelas de 5, não 5 de 5',
       telaComQuedas.estrelas?.cheias === 3 && telaComQuedas.estrelas?.total === 5,
       JSON.stringify(telaComQuedas.estrelas));
+    // O placar da tela diz a UNIDADE, não uma fração: "3 pontos", não "3 de 5".
+    // O "de N" saiu porque a pontuação pode passar da meta (um combo do Jogo das
+    // Formas fechava a partida anunciando "13 de 12"). A verificação que importa
+    // é a mesma de antes e continua aqui: o número que a criança lê tem de ser o
+    // número que foi para o relatório.
     checar('o número da tela é o MESMO que foi para o AVA',
-      telaComQuedas.textos.some((x) => x.includes(`${m3.acertos} de 5`)),
+      telaComQuedas.textos.some((x) => x.includes(`${m3.acertos} pontos`)),
       JSON.stringify(telaComQuedas.textos));
-    checar('a tela continua dizendo quantas tentativas se perderam',
-      telaComQuedas.textos.some((x) => x.includes('2 tentativas')),
+    checar('a tela NÃO promete um total que a pontuação pode passar',
+      !telaComQuedas.textos.some((x) => /d+ de d+/.test(x)),
       JSON.stringify(telaComQuedas.textos));
+
+    // A linha "2 tentativas perdidas" saiu da tela de resultado (o fim de partida
+    // comemora o avanço, não enumera falha — docs/DESIGN.md). Os erros seguem
+    // sendo verificados onde o professor de fato os lê: a mensagem do AVA, no
+    // `checar` de `m3.erros` algumas linhas acima.
+    checar('a tela não enumera as falhas, mas o AVA recebe as duas',
+      !telaComQuedas.textos.some((x) => x.includes('tentativa')) && m3.erros === 2,
+      JSON.stringify({ textos: telaComQuedas.textos, erros: m3.erros }));
 
     // ---------------------------------------------------- tamanhos de iframe
     console.log('\n4. Comportamento em iframes de tamanhos diferentes');

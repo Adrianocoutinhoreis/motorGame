@@ -137,8 +137,8 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | `SoundToggle` | Pronto | Preferência persistida |
 | `Mascot` | Pronto | Dois modos: imagem do jogo (usado no piloto) ou coruja vetorial (padrão) |
 | Expressão facial por imagem | **Planejado** | `imagensPorExpressao` existe na API, sem arte que a exercite |
-| `Background` | Pronto | Céu, sol, nuvens e colinas configuráveis |
-| Tema por jogo (paleta alternativa) | **Planejado** | Hoje todos compartilham a mesma paleta |
+| `Background` | Pronto | Três temas: `campo`, `construcao` e `formas` (degradê indigo→ciano com formas em camadas). O tema vem de `config.tema` |
+| Tema por jogo | **Parcial** | O CENÁRIO e a PLACA do título já variam por jogo (`config.tema`), e o Jogo das Formas estreou o tema `formas`. A PALETA continua uma só: botão, cartão de nível e painel são iguais nos dois jogos — de propósito, para as aulas seguirem sendo a mesma coleção. Falta variar mascote e maquinário, que hoje são o mesmo arquivo e o mesmo desenho nos dois |
 | Dica "gire o aparelho" | Pronto | Fora do `#palco` de propósito: dentro dele giraria com o jogo e só seria legível depois de o aparelho ser virado. Não intercepta toque e se apaga sozinha. **Não é narrada** — falta gravação |
 
 ## Telas padrão

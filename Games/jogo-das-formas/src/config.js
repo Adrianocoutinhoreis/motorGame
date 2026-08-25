@@ -36,7 +36,16 @@ export default {
   largura: 1280,
   altura: 720,
   corLetterbox: cores.letterbox,
-  tema: 'construcao',
+  /**
+   * Cenário próprio: céu geométrico, e não o canteiro de obras.
+   *
+   * Estava 'construcao' porque este jogo nasceu do template do piloto, não por
+   * escolha — o Jogo dos Blocos É um canteiro (o original dele tinha guindaste e
+   * caixotes), e as duas aulas refeitas acabavam sendo a mesma tela. O tema
+   * também escolhe a placa do título: 'formas' usa a placa limpa, sem enfeite de
+   * forma geométrica, para a interface não competir com o conteúdo da lição.
+   */
+  tema: 'formas',
 
   /**
    * Regra RE-01: todo texto exibido vai em CAIXA ALTA.
@@ -147,23 +156,56 @@ export default {
    */
   tutorial: [
     {
-      titulo: 'Toque numa coluna',
+      titulo: 'Toque em uma coluna',
       texto: 'Toque numa coluna para a garra descer e pegar os blocos de cima.',
       fala: 'tutorial_pegar',
+      /**
+       * A garra desce até o topo da pilha, fecha, e SOBE COM A PEÇA.
+       *
+       * Três coisas aqui não são estilo: são o que torna o gesto legível, e cada
+       * uma corrige um defeito que a ilustração tinha.
+       *
+       * 1. **A coluna do meio tem DOIS azulejos, não três.** A ilustração mede
+       *    268 px de altura; com três azulejos o topo da pilha ficava a 26 px do
+       *    trilho e a garra não cabia no vão — ela descia POR DENTRO da pilha.
+       * 2. **A pilha é desenhada ANTES da garra e da carga.** Era o contrário: os
+       *    azulejos pintavam por cima, e da metade do ciclo em diante não se via
+       *    nem a garra nem o que ela levava — só um fiapo do triângulo entre dois
+       *    azulejos.
+       * 3. **A peça sai da pilha quando a garra a pega.** A pilha era sempre
+       *    desenhada inteira, então o triângulo aparecia em dois lugares ao mesmo
+       *    tempo e nada dizia qual peça havia sido pega.
+       *
+       * A troca de mão é em `ciclo 0.60`, com a garra PARADA e o azulejo no mesmo
+       * ponto nos dois desenhos (`yPilhaTuto(a, 1)` === `y + OFFSET_CARGA_TUTO`).
+       * Por isso a peça não dá salto ao mudar de dono: ela sai de onde estava,
+       * pendurada na garra que a criança está olhando.
+       */
       desenho: (ctx, l, a, t) => {
         const ciclo = (t % 2.6) / 2.6;
-        const x = l * (ciclo < 0.35 ? 0.32 + (ciclo / 0.35) * 0.18 : 0.50);
+
         const yTopo = a * 0.16;
-        const yBaixo = a * 0.52;
-        const y = ciclo < 0.35 ? yTopo
-          : ciclo < 0.6 ? yTopo + (yBaixo - yTopo) * ((ciclo - 0.35) / 0.25)
-            : ciclo < 0.8 ? yBaixo
-              : yBaixo - (yBaixo - yTopo) * ((ciclo - 0.8) / 0.2);
+        /** Onde a garra pega: o azulejo de cima da coluna do meio. */
+        const yPega = yPilhaTuto(a, 1) - OFFSET_CARGA_TUTO;
+
+        // desliza → desce → segura → sobe → espera no alto
+        const x = l * (ciclo < 0.30 ? 0.32 + (ciclo / 0.30) * 0.18 : 0.50);
+        const y = ciclo < 0.30 ? yTopo
+          : ciclo < 0.55 ? yTopo + (yPega - yTopo) * ((ciclo - 0.30) / 0.25)
+            : ciclo < 0.68 ? yPega
+              : ciclo < 0.92 ? yPega - (yPega - yTopo) * ((ciclo - 0.68) / 0.24)
+                : yTopo;
+
+        const pegou = ciclo >= 0.60;
+        // Chega aberta e fecha no instante em que pega — é o que dá causa visível
+        // ao gesto, como a `Garra` da partida faz com `abertura`.
+        const abertura = pegou ? 0 : 1;
+
         desenharTrilho(ctx, l, yTopo);
+        desenharPilha(ctx, l, a, pegou ? ['circulo'] : ['circulo', 'triangulo']);
         desenharCorrente(ctx, x, yTopo, y);
-        desenharGarra(ctx, x, y);
-        if (ciclo > 0.6) desenharAzulejo(ctx, x, y + 46, 'triangulo');
-        desenharPilha(ctx, l, a, ['circulo', 'quadrado', 'triangulo']);
+        if (pegou) desenharAzulejo(ctx, x, y + OFFSET_CARGA_TUTO, 'triangulo');
+        desenharGarra(ctx, x, y, abertura);
       },
     },
     {
@@ -237,6 +279,17 @@ export default {
     { id: 'blocoTriangulo', src: './assets/img/bloco-triangulo.png' },
     { id: 'blocoRetangulo', src: './assets/img/bloco-retangulo.png' },
 
+    // Mascote: o MESMO operário do Jogo dos Blocos, o mesmo arquivo. Duas razões,
+    // e nenhuma é economia de trabalho: as duas aulas passam a ser a mesma
+    // coleção aos olhos da criança, e as telas do motor escalam o mascote pela
+    // ALTURA — a coruja vetorial é quadrada e no menu nascia com 550 px de lado,
+    // transbordando por cima do botão JOGAR.
+    //
+    // É arte de MEIO CORPO (1760×2000, cortada na altura das coxas). Ela não tem
+    // pé: a base é um corte, e precisa ficar na borda inferior da tela para o
+    // corte não aparecer. É o que o `MenuScreen` já faz com ela.
+    { id: 'mascote', src: './assets/img/bob.webp' },
+
     // Narração das formas — o conteúdo pedagógico do jogo
     { id: 'circulo', src: './assets/audio/circulo.mp3' },
     { id: 'quadrado', src: './assets/audio/quadrado.mp3' },
@@ -250,8 +303,16 @@ export default {
     { id: 'nao', src: './assets/audio/nao.wav' },
   ],
 
-  /** Coruja vetorial: este jogo não tem arte de mascote própria. */
-  mascote: null,
+  /**
+   * O operário. Escalado pela ALTURA, com a largura saindo da proporção da arte.
+   *
+   * Limite honesto do modo imagem: uma figura estática não troca de rosto. As
+   * expressões continuam funcionando como linguagem corporal — pular ao acertar,
+   * inclinar ao comemorar, encolher ao lamentar — mas a feição não muda. Para
+   * expressão facial de verdade seria preciso uma imagem por estado
+   * (`imagensPorExpressao`).
+   */
+  mascote: { asset: 'mascote' },
 
   /**
    * `abertura` e as três falas do tutorial NÃO EXISTEM — não havia locução
@@ -284,6 +345,28 @@ export default {
 // ---------------------------------------------------------------------------
 
 const LADO_TUTO = 48;
+
+/** Passo vertical entre dois azulejos empilhados. */
+const PASSO_TUTO = LADO_TUTO + 8;
+
+/**
+ * Distância do vértice da garra ao CENTRO do azulejo carregado.
+ *
+ * Vale 40 porque a garra tem 16 px de mandíbula (`desenharGarra`) e o azulejo
+ * tem 24 px de meia-altura: com 40 as pontas param exatamente na aresta de cima
+ * da peça, e a garra parece segurá-la em vez de atravessá-la. É o mesmo papel do
+ * `OFFSET_CARGA` da partida (`src/scenes/GameScene.js`).
+ */
+const OFFSET_CARGA_TUTO = 40;
+
+/**
+ * Centro vertical do azulejo de índice `i` da pilha do tutorial — 0 é o de baixo.
+ *
+ * Existe para que a ilustração do passo 1 saiba PARAR a garra em cima da pilha em
+ * vez de dentro dela. Repetir a conta nos dois lugares era o que deixava os dois
+ * fora de sincronia sem nada acusar.
+ */
+const yPilhaTuto = (altura, i) => altura * 0.80 - i * PASSO_TUTO;
 
 function desenharAzulejo(ctx, cx, cy, tipo) {
   const m = LADO_TUTO / 2;
@@ -346,25 +429,38 @@ function desenharCorrente(ctx, x, deY, ateY) {
   ctx.restore();
 }
 
-function desenharGarra(ctx, x, y) {
+/**
+ * A garra. `abertura` vai de 0 (fechada, segurando) a 1 (aberta, chegando) e só
+ * afasta as mandíbulas — o mesmo vocabulário da `Garra` da partida, para o gesto
+ * do tutorial e o gesto do jogo serem o mesmo gesto.
+ */
+function desenharGarra(ctx, x, y, abertura = 1) {
+  const braco = 13 + abertura * 7;
   ctx.save();
   ctx.strokeStyle = cores.tinta;
   ctx.lineWidth = 6;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(x - 18, y + 16);
+  ctx.moveTo(x - braco, y + 16);
   ctx.lineTo(x, y);
-  ctx.lineTo(x + 18, y + 16);
+  ctx.lineTo(x + braco, y + 16);
   ctx.stroke();
   ctx.restore();
 }
 
+/**
+ * A pilha do tutorial: a coluna do meio vem de `formas` (de baixo para cima) e as
+ * duas vizinhas são fixas, só para a coluna do meio ser visivelmente UMA coluna
+ * entre outras.
+ *
+ * Passar a coluna do meio como parâmetro é o que permite ao passo 1 desenhar a
+ * pilha JÁ SEM a peça que a garra pegou.
+ */
 function desenharPilha(ctx, largura, altura, formas) {
-  const passo = LADO_TUTO + 8;
-  const chao = altura * 0.80;
+  const chao = yPilhaTuto(altura, 0);
   formas.forEach((tipo, i) => {
-    desenharAzulejo(ctx, largura * 0.50, chao - i * passo, tipo);
+    desenharAzulejo(ctx, largura * 0.50, yPilhaTuto(altura, i), tipo);
   });
-  desenharAzulejo(ctx, largura * 0.50 - passo, chao, 'quadrado');
-  desenharAzulejo(ctx, largura * 0.50 + passo, chao, 'circulo');
+  desenharAzulejo(ctx, largura * 0.50 - PASSO_TUTO, chao, 'quadrado');
+  desenharAzulejo(ctx, largura * 0.50 + PASSO_TUTO, chao, 'circulo');
 }

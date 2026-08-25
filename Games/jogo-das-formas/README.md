@@ -93,7 +93,7 @@ jogo-das-formas/
 │   └── scenes/
 │       └── GameScene.js  a partida: garra, cascata, linha nova
 ├── assets/
-│   ├── img/              os quatro azulejos (andaime de 2013)
+│   ├── img/              os quatro azulejos (andaime de 2013) e o mascote
 │   ├── audio/            narração das formas, música e efeitos
 │   └── audio-transcricao/  uma ficha por áudio, com hash
 ├── CHECKLIST.md          passos para o jogo ser considerado concluído
@@ -103,7 +103,8 @@ jogo-das-formas/
 
 ## Assets
 
-Todos vêm da aula original 870298 — Educandus. Nenhum arquivo novo foi produzido ainda.
+Nenhum arquivo novo foi produzido para este jogo: os áudios e os azulejos vêm da aula original
+870298, e o mascote vem do Jogo dos Blocos. Tudo Educandus.
 
 | Arquivo | Tipo | Origem | Observação |
 |---|---|---|---|
@@ -111,6 +112,7 @@ Todos vêm da aula original 870298 — Educandus. Nenhum arquivo novo foi produz
 | `img/bloco-quadrado.png` | imagem 50×50 | 870298 `blocoQuadrado.png` | **andaime** |
 | `img/bloco-triangulo.png` | imagem 50×50 | 870298 `blocoTriangulo.png` | **andaime** |
 | `img/bloco-retangulo.png` | imagem 50×50 | 870298 `BlocoRetangulo.png` | **andaime** |
+| `img/bob.webp` | mascote, 195 KB | Jogo dos Blocos (`bob.webp`) | o mesmo operário das duas aulas; meio corpo, 1760×2000 |
 | `audio/circulo.mp3` | narração | 870298 | transcrição inferida, não ouvida |
 | `audio/quadrado.mp3` | narração | 870298 | transcrição inferida, não ouvida |
 | `audio/triangulo.mp3` | narração | 870298 | transcrição inferida, não ouvida |
@@ -124,6 +126,30 @@ Os nomes das imagens foram passados para kebab-case. Os do original misturavam m
 minúscula de forma inconsistente (`BlocoCirculo` × `blocoQuadrado`), o que é armadilha em
 servidor sensível a caixa — e o AVA roda em Linux.
 
+## Identidade visual
+
+Este jogo NÃO usa o canteiro de obras do Jogo dos Blocos. Ele declara
+`tema: 'formas'` no `config.js`, e isso escolhe duas coisas no motor:
+
+- **o cenário** — degradê indigo → ciano, halo de luz, formas geométricas
+  flutuando em camadas de paralaxe (`engine/ui/Background.js`);
+- **a placa do título** — a variante limpa, sem enfeite de forma geométrica
+  (`PlacaTituloLimpa`, em `engine/screens/MenuScreen.js`).
+
+Duas decisões dentro dessa, e as duas são pela mesma razão:
+
+1. **A placa não decora com formas geométricas.** As quatro formas são o
+   CONTEÚDO do exercício; espalhá-las pela interface ensina a criança a
+   ignorá-las justamente onde ela precisa repará-las.
+2. **A partida não mostra as peças coloridas no céu** (`mostrarPecas: false`).
+   Atrás da grade, um círculo azul no fundo compete com o círculo azul que é
+   para ser encontrado. Ficam só as formas brancas gigantes, que não nomeiam
+   nada.
+
+O que **continua igual** ao piloto, e é escolha declarada: botões, tipografia,
+cartões de nível, painéis e movimento — o chassi é o mesmo para as aulas
+seguirem sendo uma coleção. Ver `docs/STATES.md`, "Tema por jogo".
+
 ## Pendências conhecidas
 
 Declaradas de propósito: melhor uma entrega com pendência escrita do que uma que aparenta
@@ -131,9 +157,16 @@ estar pronta.
 
 1. **A arte dos blocos é andaime.** Os quatro PNG são os de 2013, com 50×50 px, sombra e
    degradê assados no arquivo e cores fora dos tokens. Num notebook retina a ampliação chega
-   a **3,00×**. A troca pela peça vetorial está especificada na seção 3.1 do plano visual, e a
-   costura para trocá-la é um método só: `Bloco.desenhar()` em `src/scenes/GameScene.js`.
-   Enquanto isso não acontecer, **conferir num notebook retina antes de publicar**.
+   a **3,00×**. Enquanto isso não for trocado, **conferir num notebook retina antes de
+   publicar**.
+
+   A troca está especificada na seção 3.1 do plano visual, e a costura é um método só:
+   `Bloco.desenhar()` em `src/scenes/GameScene.js`. **A spec foi reescrita em 25/08 para
+   descrever o volume que os PNG já têm** — azulejo colorido com a forma vazada, e não azulejo
+   branco com a forma dentro, como dizia antes. Consequência: a troca passa a mudar só a
+   **nitidez** e a origem das cores, não a aparência. A versão antiga da spec era um risco real:
+   um plano de melhoria visual a leu e propôs implementá-la, o que teria deixado a tela mais
+   plana do que está.
 2. **Nenhuma transcrição de áudio foi confirmada ouvindo.** As oito fichas estão preenchidas
    por inferência. Ver `CHECKLIST-AUDIO.md`.
 3. **`nao.wav` pode ser a palavra "não".** Se for, dizer "não" a uma criança que só deixou um
@@ -144,7 +177,11 @@ estar pronta.
 5. **O losango ficou fora.** Não existe `losango.mp3`, e o `Blocolosango.png` do original é o
    retângulo repintado — visualmente indistinguível dele. Para entrar como quinta forma
    faltam as duas coisas, locução e peça.
-6. **As telas padrão não têm cobertura própria aqui.** O `tools/teste-navegador.mjs` percorre
+6. **O mascote e o maquinário ainda são os do piloto.** O `bob.webp` é o MESMO
+   arquivo do Jogo dos Blocos, e a garra/pórtico é o guindaste do piloto com a
+   paleta `METAL` copiada. O cenário e a placa já diferenciam as duas aulas; estes
+   dois não. Decisão adiada de propósito, não esquecida.
+7. **As telas padrão não têm cobertura própria aqui.** O `tools/teste-navegador.mjs` percorre
    menu, tutorial, níveis, pausa e resultado — mas está amarrado ao slug do piloto. Deste jogo,
    o que tem teste automático é a **jogada** (`tools/teste-jogabilidade-formas.mjs`, 17
    verificações com toque real) e a **entrega avulsa**. O passeio pelas telas ainda é manual.

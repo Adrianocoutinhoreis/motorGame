@@ -25,7 +25,7 @@ class Estrelas extends Node {
    */
   constructor(quantidade, opcoes = {}) {
     const total = Math.max(1, Math.round(opcoes.total ?? 5));
-    const tamanho = opcoes.tamanho ?? 76;
+    const tamanho = opcoes.tamanho ?? Estrelas.ALTURA_PADRAO;
     super({ largura: Estrelas.larguraDe(total, tamanho), altura: tamanho, ...opcoes });
     this.total = total;
     this.tamanho = tamanho;
@@ -38,9 +38,15 @@ class Estrelas extends Node {
    * Largura que a fileira vai ocupar. Existe porque quem centraliza precisa do
    * número ANTES de instanciar (o Node só sabe sua largura depois de criado).
    */
-  static larguraDe(total, tamanho = 76) {
+  static larguraDe(total, tamanho = Estrelas.ALTURA_PADRAO) {
     return tamanho * total + 12 * (total - 1);
   }
+
+  /**
+   * Lado da estrela, e portanto a altura da fileira. Público porque quem
+   * centraliza o bloco "título + estrelas" precisa do número antes de instanciar.
+   */
+  static ALTURA_PADRAO = 76;
 
   animar() {
     // O atraso encolhe conforme a fileira cresce: com 220 ms fixos, cinco
@@ -124,7 +130,9 @@ export class ResultScreen extends Scene {
     this.adicionar(new Background({
       largura: L,
       altura: A,
-      tema: 'construcao',
+      // Também estava cravado: a última tela da atividade voltava ao canteiro
+      // de obras mesmo num jogo de outro tema.
+      tema: config.tema ?? 'construcao',
       corCeuTopo: venceu ? cores.ceuProfundo : '#94A3B8',
       corCeuBase: venceu ? cores.ceu : '#CBD5E1',
       // Sol só na vitória: sol a pino com glow amarelo sobre céu encoberto era
@@ -144,10 +152,20 @@ export class ResultScreen extends Scene {
     });
     this.adicionar(painel);
 
-    // ------------------------------------------------------------- cabeçalho
+    // ----------------------------------------------------- cabeçalho + nota
+    //
+    // Título, estrelas e placar são UM bloco, centrado no painel. Antes o título
+    // nascia colado no topo (`espaco.lg`) e o placar era ancorado em
+    // `alturaPainel * 0.55` — dois pontos independentes, então mexer em um
+    // desequilibrava o outro. Agora as três alturas saem de um cálculo só.
+    const PASSO_TITULO = tipografia.titulo * 1.5;
+    const PASSO_ESTRELAS = Estrelas.ALTURA_PADRAO + espaco.md;
+    const ALTURA_BLOCO = PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 1.3;
+    const yTitulo = (alturaPainel - ALTURA_BLOCO) / 2;
+
     painel.adicionar(new TextNode(venceu ? 'Muito bem!' : 'Quase lá!', {
       x: larguraPainel / 2,
-      y: espaco.lg,
+      y: yTitulo,
       tamanho: tipografia.titulo,
       peso: tipografia.pesoForte,
       cor: venceu ? cores.acerto : cores.primaria,
@@ -181,36 +199,42 @@ export class ResultScreen extends Scene {
     const estrelasNode = new Estrelas(estrelasCheias, {
       total: totalEstrelas,
       x: (larguraPainel - Estrelas.larguraDe(totalEstrelas)) / 2,
-      y: espaco.lg + tipografia.titulo * 1.5,
+      y: yTitulo + PASSO_TITULO,
     });
     painel.adicionar(estrelasNode.animar());
 
-    // ------------------------------------------------------------- números
-    // Mostrados como conquista, não como boletim: "3 de 5" é progresso.
-    const yNumeros = alturaPainel * 0.55;
-    const total = resultado.totalPerguntas ?? 0;
+    // -------------------------------------------------------------- placar
+    //
+    // **O placar diz a UNIDADE, não uma fração.** Esta linha dizia
+    // "${acertos} de ${totalPerguntas}", e no Jogo das Formas isso produzia
+    // **"13 de 12"** — uma fração impossível, anunciada como conquista.
+    //
+    // Não era erro de conta: a pontuação pode PASSAR da meta, porque um combo
+    // resolve vários blocos de uma vez e o bloco-estrela vale 2 (REGRAS do jogo,
+    // seção 4.4). Vencer é *atingir* a meta, não *empatar* com ela.
+    //
+    // O defeito era o "de N": ele promete que N é o máximo. Onde o total é o teto
+    // exato — o Jogo dos Blocos, meta 5, cinco blocos e nada mais — a fração
+    // fechava; onde não é, ela mente. Dizer "13 PONTOS" é verdade nos dois casos,
+    // e é o que uma criança de 4 a 7 anos entende sem precisar comparar dois
+    // números.
+    //
+    // A meta não desaparece da vida da criança: ela é anunciada na escolha de
+    // nível ("3 formas · 12 pontos") e acompanhada pela barra durante a partida.
+    // No fim, o que a tela precisa fazer é comemorar o que foi feito.
+    //
+    // Para o AVA nada muda: `acertos`, `erros` e `totalPerguntas` seguem indo
+    // inteiros e crus na mensagem. Quanto a partida vale é do servidor (METODO A3).
+    const pontos = Number(resultado.acertos) || 0;
 
     painel.adicionar(new TextNode(
-      total > 0 ? `${resultado.acertos} de ${total}` : `${resultado.acertos}`,
+      `${pontos} ${pontos === 1 ? 'ponto' : 'pontos'}`,
       {
         x: larguraPainel / 2,
-        y: yNumeros,
+        y: yTitulo + PASSO_TITULO + PASSO_ESTRELAS,
         tamanho: tipografia.subtitulo,
         peso: tipografia.pesoForte,
         cor: cores.tinta,
-        alinhamento: 'center',
-      },
-    ));
-
-    painel.adicionar(new TextNode(
-      resultado.erros > 0
-        ? `${resultado.erros} ${resultado.erros === 1 ? 'tentativa perdida' : 'tentativas perdidas'}`
-        : 'sem nenhum erro!',
-      {
-        x: larguraPainel / 2,
-        y: yNumeros + tipografia.subtitulo * 1.35,
-        tamanho: tipografia.apoio,
-        cor: resultado.erros > 0 ? cores.tintaSuave : cores.acerto,
         alinhamento: 'center',
       },
     ));

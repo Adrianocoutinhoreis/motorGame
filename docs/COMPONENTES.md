@@ -223,7 +223,19 @@ corporal (pulo, inclinação, encolher). Para expressão facial, forneça `image
 com uma arte por estado.
 
 ### `Background`
-Céu, sol, nuvens em movimento e colinas — tudo vetorial.
+O cenário das telas, todo vetorial. Três temas, escolhidos por `config.tema`:
+
+| `tema` | O que desenha | Quem usa |
+|---|---|---|
+| `'campo'` | céu claro, sol, nuvens, colinas | o padrão |
+| `'construcao'` | o mesmo céu + silhueta de prédios e andaimes | Jogo dos Blocos |
+| `'formas'` | degradê indigo → ciano, halo, formas geométricas em camadas | Jogo das Formas |
+
+O tema `'formas'` aceita **`mostrarPecas`**. Com `true` (padrão) as quatro peças do
+jogo flutuam no céu nas cores delas; a cena de partida passa **`false`**, porque
+atrás da grade elas competiriam com as peças que a criança precisa distinguir —
+o cenário não pode ensaiar o exercício.
+
 **Sucede:** `fundo.jpg`, `BG.jpg`, `fd.jpg` (um JPEG de fundo por jogo).
 
 ---

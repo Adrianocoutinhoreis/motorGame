@@ -15,7 +15,7 @@
  *   node tools/serve.mjs 3000
  */
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,10 +42,61 @@ const TIPOS = {
   '.md': 'text/markdown; charset=utf-8',
 };
 
+/**
+ * Os jogos que existem: cada subpasta de `Games/` que tenha um `index.html`.
+ *
+ * **Medida a cada chamada, nunca mantida à mão.** Um jogo criado por
+ * `new-game.mjs` aparece sem ninguém precisar lembrar de registrá-lo em lugar
+ * nenhum — é a mesma escolha de `verificar-independencia.mjs`: verificado por
+ * script, não por disciplina. Uma lista fixa aqui envelheceria calada, e o
+ * sintoma seria "criei o jogo e ele não aparece na aba".
+ *
+ * O nome de exibição sai do `<title>` do próprio `index.html` do jogo, que é
+ * onde ele já está escrito. Sem `<title>`, cai para o slug.
+ */
+async function listarJogos() {
+  const pasta = path.join(RAIZ, 'Games');
+  let entradas;
+  try {
+    entradas = await readdir(pasta, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const jogos = [];
+  for (const entrada of entradas) {
+    if (!entrada.isDirectory()) continue;
+    let html;
+    try {
+      html = await readFile(path.join(pasta, entrada.name, 'index.html'), 'utf8');
+    } catch {
+      continue; // pasta sem index.html não é um jogo publicável
+    }
+    jogos.push({
+      slug: entrada.name,
+      titulo: html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim() || entrada.name,
+      url: `/Games/${entrada.name}/index.html`,
+    });
+  }
+  return jogos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
+}
+
 const servidor = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://localhost:${PORTA}`);
     let caminho = decodeURIComponent(url.pathname);
+
+    // A lista dos jogos, para o host de teste montar as abas sem que ninguém
+    // precise digitar caminho. Não é arquivo em disco, então responde antes
+    // da resolução de caminho.
+    if (caminho === '/__jogos.json') {
+      res.writeHead(200, {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      res.end(JSON.stringify(await listarJogos()));
+      return;
+    }
 
     // Impede sair da raiz por "../" na URL.
     const destino = path.normalize(path.join(RAIZ, caminho));
@@ -57,7 +108,13 @@ const servidor = createServer(async (req, res) => {
     let arquivo = destino;
     try {
       const info = await stat(arquivo);
-      if (info.isDirectory()) arquivo = path.join(arquivo, 'index.html');
+      if (info.isDirectory()) {
+        arquivo = path.join(arquivo, 'index.html');
+        // Pasta sem index.html é 404, não 500. Antes o `readFile` estourava
+        // ENOENT e caía no catch geral: `/Games/` respondia "500 — ENOENT",
+        // que culpa o servidor por uma pasta que só não tem índice.
+        await stat(arquivo);
+      }
     } catch {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
         .end(`404 — não encontrado: ${caminho}`);
@@ -80,9 +137,23 @@ const servidor = createServer(async (req, res) => {
   }
 });
 
-servidor.listen(PORTA, () => {
+servidor.listen(PORTA, async () => {
   console.log(`\nServindo ${RAIZ}`);
-  console.log(`\n  Jogos:          http://localhost:${PORTA}/Games/`);
+  // Os endereços dos jogos, um por um. A linha anterior apontava para
+  // `/Games/`, que não tem `index.html` e portanto respondia 500 — o
+  // próprio servidor imprimia um link quebrado.
+  const jogos = await listarJogos();
+  if (jogos.length) {
+    console.log('');
+    console.log('  Jogos:');
+    for (const jogo of jogos) {
+      console.log(`    ${jogo.titulo.padEnd(18)} http://localhost:${PORTA}/Games/${jogo.slug}/`);
+    }
+  } else {
+    console.log('');
+    console.log('  Nenhum jogo em Games/ (nenhuma subpasta com index.html).');
+  }
+  console.log('');
   console.log(`  Host do AVA:    http://localhost:${PORTA}/tools/ava-teste.html`);
   console.log('\nCtrl+C para parar.\n');
 });

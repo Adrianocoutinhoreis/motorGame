@@ -7,8 +7,87 @@ import { Background } from '../ui/Background.js';
 import { Button } from '../ui/Button.js';
 import { SoundToggle } from '../ui/SoundToggle.js';
 import { Mascot } from '../ui/Mascot.js';
-import { cores, tipografia, espaco } from '../theme/tokens.js';
+import { cores, tipografia, espaco, raio } from '../theme/tokens.js';
 import { texto as aplicarCaixa } from '../theme/texto.js';
+
+/**
+ * PlacaTituloLimpa — a placa de título sem tema de cenário.
+ *
+ * Nasceu para o Jogo das Formas, e o que ela NÃO tem é a decisão de projeto:
+ * **nenhum círculo, quadrado, triângulo ou retângulo como enfeite.** As quatro
+ * formas são o CONTEÚDO do exercício; espalhá-las pela interface ensina a
+ * criança a ignorá-las justamente onde ela precisa repará-las. Uma placa que
+ * decora com o conteúdo da lição compete com a lição.
+ *
+ * Sobra então o que uma placa deve fazer: um painel claro, texto escuro e
+ * grande, e o subtítulo numa faixa de contraste menor. Legível sobre céu claro
+ * ou escuro, porque o painel é opaco e traz a própria sombra.
+ */
+class PlacaTituloLimpa extends Node {
+  constructor(titulo, subtitulo, opcoes = {}) {
+    super({ largura: 740, altura: 170, ...opcoes });
+    this.titulo = titulo;
+    this.subtitulo = subtitulo;
+    this.regX = 370;
+    this.regY = 85;
+  }
+
+  desenhar(ctx) {
+    const l = this.largura;
+    const a = this.altura;
+    const alturaPainel = a * 0.78;
+
+    ctx.save();
+
+    // Painel: branco quente, canto generoso, sombra de cartão.
+    ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.28)';
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = cores.superficie;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, l, alturaPainel, raio.lg);
+    ctx.fill();
+    ctx.restore();
+
+    // Fio de luz no topo: dá espessura ao painel sem virar moldura.
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(raio.lg, 2);
+    ctx.lineTo(l - raio.lg, 2);
+    ctx.stroke();
+
+    // Título
+    const txtTitulo = aplicarCaixa(this.titulo);
+    ctx.font = `${tipografia.pesoForte} 50px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = cores.tinta;
+    ctx.fillText(txtTitulo, l / 2, alturaPainel * 0.40);
+
+    // Subtítulo, numa faixa discreta
+    if (this.subtitulo) {
+      const txtSub = aplicarCaixa(this.subtitulo);
+      const bh = 40;
+      const by = alturaPainel * 0.62;
+
+      ctx.font = `${tipografia.pesoForte} 20px ${tipografia.familia}`;
+      const bw = Math.min(l * 0.86, ctx.measureText(txtSub).width + espaco.xl);
+      const bx = (l - bw) / 2;
+
+      ctx.fillStyle = cores.superficieSuave;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, raio.sm);
+      ctx.fill();
+
+      ctx.fillStyle = cores.tintaSuave;
+      ctx.fillText(txtSub, l / 2, by + bh / 2 + 1);
+    }
+
+    ctx.restore();
+  }
+}
 
 /**
  * PlacaTituloMadeira — Placa estilizada de madeira 3D para a capa do jogo.
@@ -113,10 +192,17 @@ export class MenuScreen extends Scene {
     this.estado = ESTADOS.MENU;
     const { largura: L, altura: A, config } = this;
 
-    this.adicionar(new Background({ largura: L, altura: A, tema: 'construcao' }));
+    // O tema vem do jogo. Estava cravado em 'construcao' aqui, então o
+    // `config.tema` — que o Tutorial e a Seleção de Níveis já respeitavam — era
+    // silenciosamente ignorado no menu: uma opção documentada que não funcionava.
+    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
 
     // ---------------------------------------------------------------- título
-    this.placaTitulo = new PlacaTituloMadeira(
+    // A placa segue o tema, e não uma chave própria: tema É a linguagem visual
+    // do jogo, e placa de madeira com parafusos é vocabulário de canteiro de
+    // obras. Quem não declara tema continua com a de madeira, como o piloto.
+    const Placa = (config.tema === 'formas') ? PlacaTituloLimpa : PlacaTituloMadeira;
+    this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',
       config.subtitulo ?? 'EMPILHE OS BLOCOS NA ORDEM CERTA!',
       { x: L / 2, y: A * 0.16 },

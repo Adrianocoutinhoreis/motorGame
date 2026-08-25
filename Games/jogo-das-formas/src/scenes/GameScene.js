@@ -23,6 +23,44 @@ import {
  * `VALIDA()` do original existia para denunciar.
  */
 
+/**
+ * A paleta do maquinário, copiada do `Guindaste` do Jogo dos Blocos
+ * (`Games/jogo-dos-blocos/src/scenes/GameScene.js`).
+ *
+ * São valores crus, e de propósito: eles são crus lá também. Criar tokens só
+ * para estes dois jogos seria inventar design system a partir de um caso; e
+ * mudar os valores aqui faria os dois jogos parecerem de coleções diferentes,
+ * que é exatamente o problema que este arquivo está resolvendo. Se um dia um
+ * terceiro jogo tiver maquinário, aí vale promover ao `tokens.js`.
+ */
+const METAL = {
+  vigaClara: '#EAB308',
+  vigaEscura: '#CA8A04',
+  trelica: '#78350F',
+  trelicaLanca: '#A16207',
+  advertencia: '#1E293B',
+  aco: '#334155',
+  acoClaro: '#94A3B8',
+  carrinho: '#0F172A',
+};
+
+/** Passos da treliça — os mesmos do piloto, para o padrão bater entre os jogos. */
+const PASSO_TRELICA_PERNA = 42;
+const PASSO_TRELICA_LANCA = 36;
+
+/** Largura das pernas do pórtico e folga entre elas e a borda da grade. */
+const PERNA_L = 44;
+const FOLGA_PERNA = 14;
+
+/**
+ * Distância do topo do gancho até o centro do primeiro bloco carregado.
+ *
+ * Estava repetida à mão em `_pegar`, `_depositar` e `_yDaCarga` — mexer na
+ * altura do gancho exigia acertar três números em sincronia, e errar um deles
+ * fazia a carga flutuar longe da garra sem nada acusar.
+ */
+const OFFSET_CARGA = 40;
+
 // ---------------------------------------------------------------------------
 // Bloco
 // ---------------------------------------------------------------------------
@@ -92,39 +130,211 @@ class Bloco extends Node {
 // ---------------------------------------------------------------------------
 
 /**
- * Garra — a corrente e o gancho. A carga é desenhada pela cena, não por aqui:
- * os blocos carregados continuam sendo filhos do tabuleiro, e é a cena que os
- * mantém pendurados. Reparentar peça a cada jogada só criaria oportunidade de
+ * Garra — o cabo e as duas mandíbulas. A carga é desenhada pela cena, não por
+ * aqui: os blocos carregados continuam sendo filhos do tabuleiro, e é a cena que
+ * os mantém pendurados. Reparentar peça a cada jogada só criaria oportunidade de
  * perder uma.
+ *
+ * `abertura` vai de 0 (fechada, segurando) a 1 (aberta, pronta para pegar ou
+ * acabando de soltar). A cena a tweena no ciclo da jogada — é o que faz o gesto
+ * ter causa visível: a garra abre para chegar, fecha no bloco, abre para largar.
  */
 class Garra extends Node {
   constructor({ trilhoY }) {
-    super({ largura: 64, altura: 48 });
+    super({ largura: 76, altura: 52 });
     this.trilhoY = trilhoY;
-    this.regX = 32;
+    this.regX = this.largura / 2;
+    /** 0 = fechada · 1 = aberta. Começa aberta: a garra chega vazia. */
+    this.abertura = 1;
   }
 
   desenhar(ctx) {
-    // Corrente: do trilho até o gancho. `y` local é 0, então o trilho fica em
+    const cx = this.largura / 2;
+
+    // ------------------------------------------------------------- o cabo
+    // Do trilho até o topo do gancho. `y` local é 0, então o trilho fica em
     // coordenada negativa relativa.
-    const alturaCorrente = this.y - this.trilhoY;
-    ctx.strokeStyle = cores.tintaSuave;
-    ctx.lineWidth = 6;
+    const alturaCabo = Math.max(0, this.y - this.trilhoY);
+
+    ctx.strokeStyle = METAL.aco;
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.moveTo(32, -alturaCorrente);
-    ctx.lineTo(32, 0);
+    ctx.moveTo(cx, -alturaCabo);
+    ctx.lineTo(cx, 0);
     ctx.stroke();
 
-    // Gancho: dois braços em V invertido.
+    // Elos: travessas curtas em passo fixo ao longo do cabo. Existem para a
+    // subida e a descida terem leitura de movimento — um cabo liso de cor
+    // sólida sobe e desce sem que nada na tela diga que ele se mexeu.
+    ctx.strokeStyle = METAL.acoClaro;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let d = 8; d < alturaCabo; d += 14) {
+      ctx.moveTo(cx - 4, -d);
+      ctx.lineTo(cx + 4, -d);
+    }
+    ctx.stroke();
+
+    // ------------------------------------------------------- o bloco do gancho
+    // A peça que une o cabo às mandíbulas. Sem ela as duas garras nascem do ar.
+    ctx.fillStyle = METAL.carrinho;
+    ctx.beginPath();
+    ctx.roundRect(cx - 13, 0, 26, 14, 4);
+    ctx.fill();
+
+    // ------------------------------------------------------- as mandíbulas
+    // Fechada abraça o azulejo de 50 (é onde ela lê como pinça); aberta passa por
+    // fora dele com pouca folga. O vão aberto é curto de propósito: com 38 de
+    // meia-abertura a garra vazia virava o objeto mais largo da tela e puxava a
+    // atenção para o nada, em vez de para o tabuleiro.
+    const vao = 26 + this.abertura * 6;   // meia-abertura: 26 → 32
+    const inclina = this.abertura * 5;    // a ponta abre para fora ao abrir
+
     ctx.strokeStyle = cores.tinta;
     ctx.lineWidth = 7;
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(10, 24);
-    ctx.lineTo(32, 2);
-    ctx.lineTo(54, 24);
-    ctx.stroke();
+    ctx.lineJoin = 'round';
+
+    for (const lado of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + lado * 8, 12);
+      // Curva para fora e desce: dedo de garra, não traço reto.
+      ctx.quadraticCurveTo(
+        cx + lado * vao, 16,
+        cx + lado * (vao + inclina), 34,
+      );
+      ctx.stroke();
+    }
+
     ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pórtico
+// ---------------------------------------------------------------------------
+
+/**
+ * Portico — a estrutura que sustenta a garra.
+ *
+ * **Por que pórtico e não a torre lateral do piloto.** A torre do Jogo dos
+ * Blocos fica em `x ≈ 102`. Aqui isso não caberia: a coruja ocupa `x 50..240` e
+ * o painel das formas `x 848..1232`, então não há margem livre para plantar uma
+ * torre de um lado só. Duas pernas, uma de cada lado da grade, resolvem — e são
+ * a máquina mecanicamente correta para o gesto do jogo, que é um carrinho
+ * correndo sobre uma pilha. De quebra o pórtico ENQUADRA a área de jogo, o que
+ * tira a grade da sensação de flutuar num vazio azul.
+ *
+ * A paleta, os passos de treliça, o carrinho e a roldana são os do piloto, de
+ * propósito: é o que faz os dois jogos parecerem a mesma coleção.
+ *
+ * Um único campo animado: `posX`, alimentado pela cena a cada quadro com a
+ * posição da garra.
+ */
+class Portico extends Node {
+  constructor({ largura, altura, trilhoY, xEsquerda, xDireita, chaoY }) {
+    super({ largura, altura });
+    this.trilhoY = trilhoY;
+    this.xEsquerda = xEsquerda;
+    this.xDireita = xDireita;
+    this.chaoY = chaoY;
+    this.posX = (xEsquerda + xDireita) / 2;
+  }
+
+  desenhar(ctx) {
+    const topoLanca = this.trilhoY - 18;
+
+    ctx.save();
+
+    // ------------------------------------------------------------ as pernas
+    for (const px of [this.xEsquerda, this.xDireita]) {
+      const x0 = px - PERNA_L / 2;
+
+      ctx.fillStyle = METAL.vigaClara;
+      ctx.strokeStyle = METAL.vigaEscura;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.rect(x0, topoLanca, PERNA_L, this.chaoY - topoLanca);
+      ctx.fill();
+      ctx.stroke();
+
+      // Treliça em X, no passo do piloto.
+      ctx.strokeStyle = METAL.trelica;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let y = this.chaoY; y > topoLanca + PASSO_TRELICA_PERNA; y -= PASSO_TRELICA_PERNA) {
+        const yProximo = y - PASSO_TRELICA_PERNA;
+        ctx.moveTo(x0, y);
+        ctx.lineTo(x0 + PERNA_L, yProximo);
+        ctx.moveTo(x0 + PERNA_L, y);
+        ctx.lineTo(x0, yProximo);
+        ctx.moveTo(x0, yProximo);
+        ctx.lineTo(x0 + PERNA_L, yProximo);
+      }
+      ctx.stroke();
+
+      // Pé alargado: a perna precisa apoiar em algo, não terminar no ar.
+      ctx.fillStyle = METAL.vigaEscura;
+      ctx.beginPath();
+      ctx.roundRect(x0 - 10, this.chaoY - 12, PERNA_L + 20, 16, 4);
+      ctx.fill();
+    }
+
+    // ------------------------------------------------------------- a lança
+    const lancaX = this.xEsquerda - PERNA_L / 2 - 12;
+    const lancaL = (this.xDireita - this.xEsquerda) + PERNA_L + 24;
+
+    ctx.fillStyle = METAL.vigaClara;
+    ctx.strokeStyle = METAL.vigaEscura;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(lancaX, topoLanca, lancaL, 24, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Treliça interna da lança.
+    ctx.strokeStyle = METAL.trelicaLanca;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = lancaX + 12; x < lancaX + lancaL - PASSO_TRELICA_LANCA; x += PASSO_TRELICA_LANCA) {
+      ctx.moveTo(x, topoLanca);
+      ctx.lineTo(x + PASSO_TRELICA_LANCA / 2, topoLanca + 24);
+      ctx.lineTo(x + PASSO_TRELICA_LANCA, topoLanca);
+    }
+    ctx.stroke();
+
+    // Faixas de advertência nas pontas.
+    ctx.fillStyle = METAL.advertencia;
+    ctx.beginPath();
+    ctx.roundRect(lancaX, topoLanca, 20, 24, [6, 0, 0, 6]);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.roundRect(lancaX + lancaL - 20, topoLanca, 20, 24, [0, 6, 6, 0]);
+    ctx.fill();
+
+    // Trilho de aço por onde o carrinho corre.
+    ctx.fillStyle = METAL.aco;
+    ctx.fillRect(lancaX, this.trilhoY + 6, lancaL, 6);
+
+    // ----------------------------------------------------------- o carrinho
+    const tx = this.posX;
+    ctx.fillStyle = METAL.carrinho;
+    ctx.beginPath();
+    ctx.roundRect(tx - 26, this.trilhoY - 4, 52, 20, 6);
+    ctx.fill();
+
+    // Roldana.
+    ctx.fillStyle = METAL.acoClaro;
+    ctx.beginPath();
+    ctx.arc(tx, this.trilhoY + 12, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = METAL.aco;
+    ctx.beginPath();
+    ctx.arc(tx, this.trilhoY + 12, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
   }
 }
 
@@ -164,14 +374,37 @@ export class GameScene extends Scene {
     this.linhas = this.nivel.linhas;
     const gradeLargura = this.colunas * this.geo.celula;
     this.gradeX = Math.round((L - gradeLargura) / 2);
+    this.gradeDireita = this.gradeX + gradeLargura;
     this.xColunas = Array.from(
       { length: this.colunas },
       (_, col) => this.gradeX + col * this.geo.celula + this.geo.celula / 2,
     );
 
+    /**
+     * Os eixos das pernas do pórtico, calculados UMA vez porque três coisas
+     * dependem deles: o pórtico, a largura da plataforma (que precisa passar por
+     * baixo das pernas, ou elas se apoiam em nada) e o recuo do painel das formas
+     * (que a perna direita atravessaria).
+     *
+     * Derivados da grade, nunca escritos à mão: ela muda de 5 para 6 colunas
+     * entre o nível 1 e os níveis 2 e 3.
+     */
+    this.xPernas = {
+      esquerda: this.gradeX - espaco.md - FOLGA_PERNA,
+      direita: this.gradeDireita + espaco.md + FOLGA_PERNA,
+    };
+    /** Borda externa do maquinário — é o que o painel tem de respeitar. */
+    this.direitaDoPortico = this.xPernas.direita + PERNA_L / 2;
+
     // --------------------------------------------------------------- fundo
-    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema }));
-    this._montarCenario();
+    // `mostrarPecas: false` — o mesmo céu do menu, sem as quatro peças
+    // coloridas flutuando. Atrás da grade elas competiriam com as peças que a
+    // criança precisa distinguir de verdade: o cenário não pode ensaiar o
+    // exercício. Ficam só as formas brancas gigantes, que não nomeiam nada.
+    this.adicionar(new Background({
+      largura: L, altura: A, tema: config.tema, mostrarPecas: false,
+    }));
+    this._montarPlataforma();
 
     /**
      * Área de toque: cobre a tela inteira e fica ATRÁS de tudo.
@@ -199,6 +432,9 @@ export class GameScene extends Scene {
     this.areaToque.on('toque', (ponto) => this._aoTocar(ponto));
     this.areaToque.on('arrastar', (ponto) => this._aoArrastar(ponto));
     this.adicionar(this.areaToque);
+
+    // O pórtico fica ATRÁS do tabuleiro: os blocos passam na frente das pernas.
+    this._montarPortico();
 
     // ----------------------------------------------------------- tabuleiro
     this.grade = new GridBoard({
@@ -254,43 +490,92 @@ export class GameScene extends Scene {
 
   // -------------------------------------------------------------- montagem
 
-  _montarCenario() {
-    const { largura: L, altura: A } = this;
+  /**
+   * A plataforma de obra sobre a qual a pilha cresce.
+   *
+   * **Por que não é mais uma faixa de largura total.** O `Background` do tema
+   * `construcao` JÁ pinta o chão: areia de `altura*0.82` (590) até a base, com
+   * uma faixa de borda de 12 px no topo. A faixa de madeira de largura total
+   * cobria só 657..720, então sobrava uma tira de areia de 67 px entre o skyline
+   * e a madeira, com a faixa escura da areia exposta no meio — três chãos
+   * disputando o mesmo lugar. E o marrom saturado brigava com a areia, que foi
+   * dessaturada de propósito (há comentário no `Background`) justamente para não
+   * competir por atenção com o conteúdo.
+   *
+   * Virando um objeto do tamanho do maquinário, a areia volta a ser o chão e a
+   * madeira passa a ser o que deveria ser desde o começo: a base de onde a pilha
+   * nasce E onde o pórtico se apoia. O piloto tem um pedestal de madeira
+   * (`base.svg`) exatamente para isso.
+   *
+   * O topo encosta na BASE DO AZULEJO, não na base da célula: o azulejo tem 50 px
+   * numa célula de 64, e alinhar pela célula deixava 7 px de ar sob a pilha.
+   */
+  _montarPlataforma() {
+    const topo = this.geo.baseY - (this.geo.celula - this.geo.azulejo) / 2;
+    // A plataforma passa POR BAIXO das pernas do pórtico, com sobra. Derivar a
+    // largura da grade em vez das pernas deixava os pés apoiados no ar, a poucos
+    // pixels da borda — o defeito que este método existe para não repetir.
+    const x = this.xPernas.esquerda - PERNA_L / 2 - espaco.sm;
+    const largura = (this.xPernas.direita - this.xPernas.esquerda) + PERNA_L + espaco.sm * 2;
+    const altura = this.altura - topo;
 
-    // Chão de madeira. O topo dele encosta na BASE DO AZULEJO, não na base da
-    // célula: o azulejo tem 50 px numa célula de 64, então alinhar pela célula
-    // deixava 7 px de ar embaixo da pilha e a madeira lia como rodapé, não como
-    // piso. Ver PLANO-VISUAL, seção 3.2 (o azulejo no tamanho nativo).
-    const topoDoChao = this.geo.baseY - (this.geo.celula - this.geo.azulejo) / 2;
-    const chao = new Node({ largura: L, altura: A - topoDoChao });
-    chao.y = topoDoChao;
-    chao.desenhar = (ctx) => {
-      ctx.fillStyle = cores.madeira;
-      ctx.fillRect(0, 0, L, A - topoDoChao);
+    this.chaoY = topo;
+
+    // Coordenadas locais das pernas e da primeira coluna, para o desenho não
+    // recalcular nada por quadro.
+    const pernasLocal = [this.xPernas.esquerda - x, this.xPernas.direita - x];
+    const primeiraColunaLocal = this.gradeX - x;
+
+    const plataforma = new Node({ largura, altura, x, y: topo });
+    plataforma.desenhar = (ctx) => {
+      // Travessas de apoio, uma sob cada perna: é o que faz a carga do pórtico
+      // ter para onde descer, em vez de a plataforma parecer pairar.
       ctx.fillStyle = cores.madeiraEscura;
-      ctx.fillRect(0, 0, L, 8);
-    };
-    this.adicionar(chao);
-
-    // Trilho da garra.
-    const trilho = new Node({ largura: L, altura: 18 });
-    trilho.y = this.geo.trilhoY - 9;
-    trilho.desenhar = (ctx) => {
-      const x0 = this.gradeX - espaco.md;
-      const larg = this.colunas * this.geo.celula + espaco.md * 2;
-      ctx.fillStyle = cores.tintaSuave;
-      ctx.beginPath();
-      ctx.roundRect(x0, 0, larg, 18, 9);
-      ctx.fill();
-      // Rebites: dizem "isto é uma estrutura", sem custo de arte.
-      ctx.fillStyle = cores.linha;
-      for (let x = x0 + 16; x < x0 + larg - 8; x += 32) {
+      for (const px of pernasLocal) {
         ctx.beginPath();
-        ctx.arc(x, 9, 2.5, 0, Math.PI * 2);
+        ctx.roundRect(px - 11, 18, 22, altura - 18, [0, 0, 4, 4]);
         ctx.fill();
       }
+
+      // O tabuleiro da plataforma.
+      ctx.fillStyle = cores.madeira;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, largura, 26, [raio.sm, raio.sm, 0, 0]);
+      ctx.fill();
+
+      // Aresta de topo: dá espessura à tábua sem gradiente.
+      ctx.fillStyle = cores.madeiraEscura;
+      ctx.fillRect(0, 0, largura, 5);
+
+      // Juntas entre tábuas, uma por coluna: o passo da grade aparece no chão, o
+      // que ajuda a criança a ver onde cada coluna cai.
+      ctx.strokeStyle = cores.madeiraEscura;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let col = 1; col < this.colunas; col++) {
+        const jx = primeiraColunaLocal + col * this.geo.celula;
+        ctx.moveTo(jx, 6);
+        ctx.lineTo(jx, 26);
+      }
+      ctx.stroke();
     };
-    this.adicionar(trilho);
+    this.adicionar(plataforma);
+  }
+
+  /**
+   * O pórtico. Entra DEPOIS da plataforma e ANTES do tabuleiro, para os blocos
+   * passarem na frente das pernas — invertido, o metal esconderia a pilha.
+   */
+  _montarPortico() {
+    this.portico = new Portico({
+      largura: this.largura,
+      altura: this.altura,
+      trilhoY: this.geo.trilhoY,
+      xEsquerda: this.xPernas.esquerda,
+      xDireita: this.xPernas.direita,
+      chaoY: this.chaoY,
+    });
+    this.adicionar(this.portico);
   }
 
   _montarHud() {
@@ -346,10 +631,11 @@ export class GameScene extends Scene {
    * lado, e tocar na linha narra o nome.
    */
   _montarPainelFormas() {
-    // Derivado da grade, não escrito à mão: com 5 colunas a faixa livre é mais
-    // larga, e o painel acompanha em vez de ficar torto.
-    const direitaDaGrade = this.gradeX + this.colunas * this.geo.celula;
-    const x = direitaDaGrade + espaco.xl;
+    // Derivado do PÓRTICO, não da grade. A perna direita vai do trilho até o
+    // chão, atravessando toda a faixa de altura deste painel — medido, ela
+    // invadia 8 px quando o recuo saía da borda da grade. Partir da borda externa
+    // do maquinário faz a folga ser real em 5 e em 6 colunas.
+    const x = this.direitaDoPortico + espaco.md;
     const largura = this.largura - x - espaco.xl;
     const formas = this.nivel.formas;
     const alturaLinha = 72;
@@ -408,12 +694,35 @@ export class GameScene extends Scene {
     this.adicionar(painel);
   }
 
+  /**
+   * O operário, na faixa livre à esquerda do pórtico.
+   *
+   * **`tamanho` é a ALTURA**, e a largura sai da proporção da arte — forçá-la num
+   * quadrado a deformaria. 300 contra os 550 do menu: aqui ele acompanha a
+   * partida, não a apresenta, e não pode competir com o tabuleiro pela atenção.
+   *
+   * **A arte é de meio corpo, cortada na altura das coxas.** Ela não tem pé — a
+   * base é um corte —, então "apoiar no chão" não se aplica: o que se faz é levar
+   * o corte para a borda inferior da tela, onde ele não aparece. É o mesmo padrão
+   * que o `MenuScreen` usa com esta imagem. Alinhar pelo chão da plataforma, como
+   * se houvesse sola, deixaria um torso terminando no ar em cima da areia.
+   *
+   * A âncora do `Mascot` é o CENTRO (`regX = regY = tamanho/2`), daí o `y` sair
+   * de `altura - tamanho/2`, com alguns pixels de sobra para não arriscar costura
+   * visível na borda.
+   */
   _montarMascote() {
-    const tamanho = 190;
-    this.mascote = new Mascot({ tamanho });
-    // Centrada na faixa livre à esquerda da grade, apoiada no chão.
-    this.mascote.x = Math.round(this.gradeX / 2 - tamanho / 2);
-    this.mascote.y = this.geo.baseY - tamanho;
+    const tamanho = 300;
+    this.mascote = new Mascot({
+      tamanho,
+      imagem: this.loader.imagem(this.config.mascote?.asset),
+      expressao: 'feliz',
+    });
+
+    // Centrado na faixa entre a borda da tela e a perna esquerda do pórtico.
+    const faixaLivre = this.xPernas.esquerda - PERNA_L / 2;
+    this.mascote.x = Math.round(faixaLivre / 2);
+    this.mascote.y = Math.round(this.altura + 8 - tamanho / 2);
     this.adicionar(this.mascote);
   }
 
@@ -579,7 +888,21 @@ export class GameScene extends Scene {
 
   /** Onde fica, na vertical, o i-ésimo bloco da carga (0 = o mais alto). */
   _yDaCarga(i) {
-    return this.garra.y + 40 + i * this.geo.celula;
+    return this.garra.y + OFFSET_CARGA + i * this.geo.celula;
+  }
+
+  /**
+   * Abre ou fecha as mandíbulas. `movimento.rapido` é o token do gesto curto.
+   *
+   * **Sem `Tween.removerDe` aqui, de propósito.** Ele cancela por ALVO, e o alvo
+   * é `this.garra` — a mesma cadeia de `x`/`y` que está em curso e que chamou
+   * esta função. Cancelar mataria o próprio movimento. Dois tweens no mesmo
+   * objeto animando propriedades diferentes convivem sem se atropelar, e as
+   * chamadas de abertura ficam a 350 ms uma da outra no ciclo, então não há
+   * sobreposição a resolver.
+   */
+  _abrirGarra(aberta) {
+    Tween.para(this.garra, { abertura: aberta ? 1 : 0 }, movimento.rapido, Easing.suaveSaida);
   }
 
   _pegar(col) {
@@ -587,17 +910,21 @@ export class GameScene extends Scene {
     if (grupo.length === 0) return; // coluna vazia: nada a fazer, e nenhum erro
 
     this.fase = 'movendo';
-    const alvoY = this._yDaLinha(this._linhaDoTopo(col)) - 40;
+    const alvoY = this._yDaLinha(this._linhaDoTopo(col)) - OFFSET_CARGA;
 
     Tween.removerDe(this.garra);
+    this.garra.abertura = 1; // desce aberta
     Tween.para(this.garra, { x: this.controle.x }, movimento.padrao, Easing.suaveSaida)
       .entao({ y: alvoY }, 350, Easing.suaveEntrada)
       .chamar(() => {
-        // Sai da grade e passa a pender do gancho.
+        // Fecha NO bloco, e só então ele passa a pender do gancho: a ordem é o
+        // que faz o gesto ter causa visível em vez de a peça saltar para a garra.
+        this._abrirGarra(false);
         for (const b of grupo) this.grade.remover(b.lin, b.col);
         this.carga = grupo;
         for (const b of this.carga) b.paraFrente();
       })
+      .esperar(movimento.rapido)
       .entao({ y: this.geo.trilhoY + 30 }, 350, Easing.suaveSaida)
       .chamar(() => { this.fase = 'livre'; });
   }
@@ -617,12 +944,14 @@ export class GameScene extends Scene {
 
     this.fase = 'movendo';
     // Desce até o bloco MAIS BAIXO da carga encostar na linha de destino.
-    const alvoY = this._yDaLinha(livre) - 40 - (n - 1) * this.geo.celula;
+    const alvoY = this._yDaLinha(livre) - OFFSET_CARGA - (n - 1) * this.geo.celula;
 
     Tween.removerDe(this.garra);
     Tween.para(this.garra, { x: this.controle.x }, movimento.padrao, Easing.suaveSaida)
       .entao({ y: alvoY }, 350, Easing.suaveEntrada)
       .chamar(() => {
+        // Abre para largar, e só então a carga assenta.
+        this._abrirGarra(true);
         // A carga é toda do mesmo tipo, então a ordem interna não importa:
         // o mais baixo da carga vai para a linha livre mais baixa.
         for (let i = 0; i < n; i++) {
@@ -634,6 +963,7 @@ export class GameScene extends Scene {
         this.ultimoDepositado = this.carga[0];
         this.carga = [];
       })
+      .esperar(movimento.rapido)
       .entao({ y: this.geo.trilhoY + 30 }, 350, Easing.suaveSaida)
       .chamar(() => this._resolver());
   }
@@ -855,6 +1185,10 @@ export class GameScene extends Scene {
       return;
     }
     super.atualizar(dt);
+
+    // O carrinho do pórtico segue a garra. É o mesmo padrão do piloto: a
+    // estrutura tem um só campo animado, e quem manda nele é a cena.
+    this.portico.posX = this.garra.x;
 
     // A carga acompanha o gancho. Feito aqui, e não por reparentar os blocos na
     // garra, para que uma peça carregada nunca saia da árvore do tabuleiro.

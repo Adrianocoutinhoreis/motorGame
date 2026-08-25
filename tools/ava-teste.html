@@ -35,20 +35,11 @@
     background: var(--fundo);
     display: grid;
     grid-template-columns: 1fr 460px;
-    grid-template-rows: auto 1fr;
+    /* Três faixas: as abas dos jogos, a barra de controles, e o resto. */
+    grid-template-rows: auto auto 1fr;
     height: 100vh;
   }
-  header {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    padding: 12px 16px;
-    background: #fff;
-    border-bottom: 2px solid var(--linha);
-  }
-  header strong { font-size: 16px; }
+  #controles strong { font-size: 16px; white-space: nowrap; }
   input[type="text"] {
     flex: 1 1 320px;
     min-width: 240px;
@@ -69,6 +60,65 @@
   button:hover { border-color: var(--azul); color: var(--azul); }
   button.primario { background: var(--azul); color: #fff; border-color: var(--azul); }
   button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
+
+  /* -------------------------------------------------------------- abas */
+  #abas {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 10px 16px 0;
+    background: #fff;
+    border-bottom: 2px solid var(--linha);
+  }
+  #abas .rotulo {
+    align-self: center;
+    margin-right: 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--suave);
+    font-weight: 700;
+  }
+  /* Aba de verdade: encostada na borda de baixo, sem raio embaixo, e a
+     selecionada emenda com a faixa de controles logo abaixo. */
+  #abas button {
+    border-radius: 10px 10px 0 0;
+    border-bottom-width: 0;
+    margin-bottom: -2px;
+    padding: 9px 16px;
+    /* A aba parada é acinzentada. Com fundo branco ela emendava com a faixa de
+       baixo igual à selecionada, e as duas disputavam o papel de ativa. */
+    background: var(--fundo);
+    color: var(--suave);
+  }
+  #abas button[aria-selected="true"] {
+    background: var(--azul);
+    color: #fff;
+    border-color: var(--azul);
+  }
+  #abas .aviso {
+    align-self: center;
+    font-size: 13px;
+    color: var(--vermelho);
+  }
+
+  #controles {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 2px solid var(--linha);
+  }
+  #controles .separador {
+    width: 2px;
+    align-self: stretch;
+    background: var(--linha);
+  }
 
   #area {
     display: grid;
@@ -124,16 +174,29 @@
 </head>
 <body>
 
-<header>
+<!--
+  As abas dos jogos são montadas em tempo de execução, a partir de
+  `/__jogos.json` (ver tools/serve.mjs). Não há lista de jogos escrita aqui de
+  propósito: uma lista fixa envelheceria em silêncio e o sintoma seria "criei o
+  jogo com new-game.mjs e ele não aparece".
+-->
+<nav id="abas" role="tablist" aria-label="Jogos">
+  <span class="rotulo">Jogo</span>
+</nav>
+
+<div id="controles">
   <strong>Host de teste do AVA</strong>
-  <input type="text" id="caminho" value="../Games/jogo-dos-blocos/index.html">
+  <input type="text" id="caminho" value="../Games/jogo-dos-blocos/index.html"
+         aria-label="Caminho do jogo em teste">
   <button class="primario" id="carregar">Carregar</button>
+  <span class="separador"></span>
   <button data-tam="400x700">Celular</button>
   <button data-tam="640x480">Pequeno</button>
   <button data-tam="760x500" aria-pressed="true">Médio</button>
   <button data-tam="1280x720">Grande</button>
+  <span class="separador"></span>
   <button id="limpar">Limpar registro</button>
-</header>
+</div>
 
 <div id="area">
   <div id="moldura"><iframe id="quadro" title="Jogo em teste"></iframe></div>
@@ -155,10 +218,139 @@
 
   function carregar() {
     quadro.src = caminho.value;
+    marcarAbaDoCaminho();
   }
 
   document.getElementById('carregar').addEventListener('click', carregar);
   caminho.addEventListener('keydown', (e) => { if (e.key === 'Enter') carregar(); });
+
+  /* ------------------------------------------------------------- as abas */
+
+  const abas = document.getElementById('abas');
+
+  /**
+   * Deixa selecionada a aba que corresponde ao caminho no campo — e NENHUMA se
+   * o caminho for outro.
+   *
+   * Isso importa mais do que parece: o campo continua aceitando qualquer
+   * endereço (uma build em `dist/`, uma pasta copiada para fora do projeto pelo
+   * teste-entrega-avulsa), e uma aba que ficasse acesa mostrando um jogo que não
+   * é o carregado faria a tela MENTIR sobre o que está sendo testado.
+   */
+  function marcarAbaDoCaminho() {
+    const atual = quadro.getAttribute('src') ?? '';
+    for (const botao of abas.querySelectorAll('button[data-url]')) {
+      botao.setAttribute('aria-selected', String(botao.dataset.url === atual));
+    }
+  }
+
+  function montarAba(jogo) {
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.setAttribute('role', 'tab');
+    botao.setAttribute('aria-selected', 'false');
+    botao.textContent = jogo.titulo;
+    botao.title = jogo.slug; // o slug é o que vai no campo `jogo` do AVA
+    // Relativo à página (que está em /tools/), como o valor inicial do campo:
+    // assim o host funciona igual se o projeto for servido sob um prefixo.
+    botao.dataset.url = `../Games/${jogo.slug}/index.html`;
+    botao.addEventListener('click', () => {
+      caminho.value = botao.dataset.url;
+      carregar();
+    });
+    return botao;
+  }
+
+  function avisar(texto) {
+    const aviso = document.createElement('span');
+    aviso.className = 'aviso';
+    aviso.textContent = texto;
+    abas.append(aviso);
+  }
+
+  /**
+   * Descobre os jogos por DUAS vias independentes, e é de propósito.
+   *
+   * A primeira versão só conhecia `/__jogos.json` (a rota do `tools/serve.mjs`).
+   * Isso deixava as abas mortas para quem abre a página pela **Live Server da
+   * IDE**, que é um estático puro: ela serve o jogo perfeitamente e não tem rota
+   * nenhuma. O host respondia com um aviso mandando reiniciar um servidor que
+   * nem estava em uso — conselho errado, dado com convicção.
+   *
+   *  1. **`/__jogos.json`** — quando é o `serve.mjs`. Traz slug e título prontos.
+   *  2. **A listagem de `../Games/`** — qualquer estático que liste diretório
+   *     (Live Server, `http-server`, nginx com autoindex). Os slugs saem dos
+   *     links, e o título de cada um sai do `<title>` do próprio `index.html`.
+   *
+   * A regra do que É um jogo é a MESMA das duas vias, e a mesma do servidor:
+   * subpasta de `Games/` **que tenha um `index.html`**. Na via 2 isso é
+   * verificado buscando o arquivo — pasta sem ele não vira aba.
+   */
+  async function descobrirJogos() {
+    // 1ª via: a rota do serve.mjs.
+    try {
+      const resposta = await fetch('../__jogos.json');
+      if (resposta.ok) return { jogos: await resposta.json(), via: '/__jogos.json' };
+    } catch {
+      // Sem rota aqui: a listagem ainda pode existir. Segue para a 2ª via.
+    }
+
+    // 2ª via: a listagem de diretório.
+    const listagem = await fetch('../Games/');
+    if (!listagem.ok) {
+      throw new Error(`sem /__jogos.json e sem listagem de ../Games/ (HTTP ${listagem.status})`);
+    }
+
+    const doc = new DOMParser().parseFromString(await listagem.text(), 'text/html');
+    const rotaDeJogo = new RegExp('(?:^|/)Games/([^/?#]+)/?$');
+    const slugs = [...new Set(
+      [...doc.querySelectorAll('a[href]')]
+        .map((a) => a.getAttribute('href').match(rotaDeJogo)?.[1])
+        // Sem ponto no nome: link para ARQUIVO dentro de Games/ não é jogo.
+        .filter((slug) => slug && !slug.includes('.')),
+    )];
+
+    const jogos = [];
+    for (const slug of slugs) {
+      let html;
+      try {
+        const indice = await fetch(`../Games/${slug}/index.html`);
+        if (!indice.ok) continue; // pasta sem index.html não é jogo publicável
+        html = await indice.text();
+      } catch {
+        continue;
+      }
+      const titulo = html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim();
+      jogos.push({ slug, titulo: titulo || slug });
+    }
+    jogos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
+    return { jogos, via: 'listagem de ../Games/' };
+  }
+
+  /**
+   * Monta as abas. Falhar aqui não pode derrubar o host: o campo de caminho
+   * continua funcionando, então o aviso é discreto e nomeia **o que foi
+   * tentado** — não um palpite sobre a causa.
+   */
+  async function montarAbas() {
+    let achado;
+    try {
+      achado = await descobrirJogos();
+    } catch (err) {
+      avisar(`não deu para descobrir os jogos: ${err.message} — use o campo de caminho`);
+      console.warn('[host AVA] descoberta de jogos falhou:', err);
+      return;
+    }
+
+    if (!achado.jogos.length) {
+      avisar('nenhum jogo em Games/ (nenhuma subpasta com index.html)');
+      return;
+    }
+
+    for (const jogo of achado.jogos) abas.append(montarAba(jogo));
+    marcarAbaDoCaminho();
+    console.log(`[host AVA] ${achado.jogos.length} jogo(s) via ${achado.via}`);
+  }
 
   for (const botao of document.querySelectorAll('[data-tam]')) {
     botao.addEventListener('click', () => {
@@ -229,6 +421,7 @@
   });
 
   carregar();
+  montarAbas();
 </script>
 </body>
 </html>

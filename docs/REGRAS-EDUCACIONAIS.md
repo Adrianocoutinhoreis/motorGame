@@ -33,6 +33,7 @@ Público de referência: **Educação Infantil e 1º ano (4 a 7 anos)**.
 |---|---|---|---|
 | [RE-01](#re-01--todo-texto-exibido-em-caixa-alta) | Todo texto exibido em CAIXA ALTA | **Vigente** | Todo jogo para 4–7 anos |
 | [RE-02](#re-02--a-nota-da-partida-desconta-o-erro-na-vitória-nunca-na-derrota) | A nota da partida desconta o erro na vitória, nunca na derrota | **Vigente** | Todo jogo do motor |
+| [RE-03](#re-03--o-placar-do-fim-de-partida-diz-a-unidade-não-uma-fração-da-meta) | O placar do fim de partida diz a unidade, não uma fração da meta | **Vigente** | Todo jogo do motor |
 
 ---
 
@@ -200,6 +201,78 @@ precisa ver (o Jogo dos Blocos manda como `blocosEmpilhados`).
 
 ---
 
+## RE-03 — O placar do fim de partida diz a unidade, não uma fração da meta
+
+**Status:** Vigente · **Desde:** 2026-08-25 · **Aplica-se a:** todo jogo do motor
+
+### A regra
+
+A tela de resultado enuncia o placar **na unidade do jogo** — "13 PONTOS" — e **nunca como
+fração da meta** — "13 de 12". A meta é anunciada antes da partida e acompanhada durante ela;
+no fim, a tela comemora o que foi feito.
+
+### Por quê
+
+**A pontuação pode passar da meta.** No Jogo das Formas um combo resolve vários blocos de uma
+vez e o bloco-estrela vale 2, então a partida fecha em 13 numa meta de 12 — vencer é *atingir*
+a meta, não *empatar* com ela. A tela anunciava **"13 DE 12"**: uma fração impossível,
+apresentada como conquista.
+
+O defeito não é o número, é o **"de N"**: ele promete que N é o teto. Onde o total é o teto
+exato — o Jogo dos Blocos, meta 5, cinco blocos e nada mais — a fração fechava e ninguém notou.
+Onde não é, ela mente, e a criança que jogou melhor que o previsto recebe algo que **parece erro
+de conta**. Uma tela que parece quebrada não comemora nada.
+
+Há um segundo motivo, e ele vale mesmo onde a fração fecharia: aos 4–7 anos ler **um** número é
+mais fácil que comparar **dois**. "13 pontos" é uma quantidade; "13 de 12" é uma operação.
+
+A meta não desaparece da vida da criança — ela é dita na escolha de nível ("3 formas · 12
+pontos") e mostrada pela barra durante toda a partida, que é onde a informação "quanto falta"
+serve para algo.
+
+### Escopo — e o que a regra NÃO diz
+
+| Onde | Vale? | Motivo |
+|---|---|---|
+| Linha de placar da tela de resultado | **Sim** | É o caso que a regra existe para corrigir |
+| Fileira de estrelas da mesma tela | Não se aplica | Ela continua sendo a leitura de "quanto da meta" — em forma que se lê sem saber ler. É complementar, não concorrente |
+| Barra de progresso **durante** a partida | **Não** | Ali a fração É a informação certa: a criança precisa saber quanto falta enquanto ainda pode agir |
+| Cartão de nível | **Não** | "12 pontos" ali é a meta sendo anunciada, e é para isso que serve |
+| Campos da mensagem do AVA | **Não** | `acertos`, `erros` e `totalPerguntas` seguem indo inteiros e crus. Como o servidor combina os três é decisão dele (METODO A3) |
+
+A regra **não** muda nenhum número: muda como um número é dito.
+
+**Companheira desta mudança, na mesma tela:** saiu a linha que enumerava as falhas ("sem nenhum
+erro!" / "2 tentativas perdidas"). O fim de partida diz o quanto a criança avançou, não o que
+ela errou — é a diretriz 5 de [`DESIGN.md`](DESIGN.md) levada até o fim. Os erros seguem
+inteiros na mensagem do AVA, que é onde o professor os lê.
+
+### Como aplicar
+
+Nada a fazer num jogo novo: está no motor, em `engine/screens/ResultScreen.js`. O jogo só
+declara a meta em `niveis[].meta`, como já fazia.
+
+### Onde já está aplicado
+
+- **Jogo das Formas** — o caso que originou a regra (13 de 12 → 13 PONTOS).
+- **Jogo dos Blocos** — conferido na vitória limpa, na vitória com quedas (3 de 5 estrelas +
+  "3 PONTOS") e na derrota.
+- Travado por teste em `tools/teste-navegador.mjs`: uma verificação exige que o número da tela
+  seja o mesmo do AVA, e outra **reprova qualquer texto na forma "N de N"** na tela de resultado.
+
+### Casos ainda não decididos
+
+- **A unidade é sempre "ponto"?** Hoje sim, e cobre os dois jogos. Um jogo que conte outra coisa
+  (letras formadas, palavras lidas) pode querer a própria palavra — aí a unidade passa a ser
+  declarada no config, e não antes disso.
+- **O AVA ainda recebe `acertos` acima de `totalPerguntas`** (13 e 12), então o
+  `score_percent` do servidor passa de 100%. A tela deixou de exibir a incongruência, mas ela
+  segue existindo no relatório do professor. Decidir qual das duas é a correção: a meta virar
+  teto da pontuação, ou o servidor tolerar mais de 100%. **Não decidido de propósito** — mexer
+  no número muda o que já foi registrado.
+
+---
+
 ## Modelo para uma regra nova
 
 Copie o bloco abaixo, troque o `RE-nn` pelo próximo número livre e preencha. Campo que não se
@@ -238,3 +311,4 @@ aplica é preenchido com "não se aplica" e o motivo — nunca apagado.
 | 2026-08-19 | RE-01 | Criada, restrita às **letras que são conteúdo**; frases ficavam em caixa normal | Não — o Jogo dos Blocos já cumpria |
 | 2026-08-19 | RE-01 | **Ampliada para todo texto exibido.** A versão anterior preservava caixa normal nas frases alegando velocidade de leitura — argumento válido para leitor fluente, mas não para quem tem 4–7 anos e lê apenas letra bastão. Passou a ser opção por jogo (`textoEmCaixaAlta`), ligada por padrão | Sim — Jogo dos Blocos atualizado e reverificado no mesmo dia |
 | 2026-08-24 | RE-02 | Criada. A fileira de estrelas vinha do acerto bruto e enchia em toda vitória, porque vencer exige acertar a meta inteira: "5 de 5" com duas quedas era indistinguível de uma partida limpa. A nota passou a descontar a falha na vitória, e o mesmo número passou a ir para o AVA | **Sim** — muda o `score_percent` de vitórias com falha (100% → 60% no caso de 2 quedas em 5). Jogo dos Blocos atualizado e reverificado |
+| 2026-08-25 | RE-03 | Criada. A tela de resultado dizia "${acertos} de ${totalPerguntas}", e no Jogo das Formas isso produzia "13 de 12" — a pontuação passa da meta porque um combo resolve vários blocos e o bloco-estrela vale 2. O placar passou a ser dito na unidade ("13 PONTOS") e a linha que enumerava as falhas saiu da tela | Não — nenhum número mudou, só a forma de enunciá-lo. Os dois jogos atualizados e reverificados |

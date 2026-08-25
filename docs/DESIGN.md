@@ -22,7 +22,8 @@ Elas vêm da faixa etária, não de gosto:
 4. **Movimento curto e previsível.** Nada pisca. Nada se move sem motivo. Animação existe
    para dizer "isto mudou" ou "é a sua vez".
 5. **Errar não pode humilhar.** A derrota mostra o quanto o aluno avançou, não o quanto
-   falhou. "Quase lá!" e "3 de 5", nunca "você perdeu".
+   falhou. "Quase lá!" e "7 pontos", nunca "você perdeu" — e nunca a conta do que faltou.
+   O placar do fim de partida diz a unidade, não uma fração da meta (regra RE-03).
 
 ---
 

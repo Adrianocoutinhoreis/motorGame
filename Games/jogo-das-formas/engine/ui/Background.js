@@ -16,13 +16,68 @@ export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas'
     this.corCeuTopo = opcoes.corCeuTopo ?? (this.tema === 'construcao' ? '#38BDF8' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase ?? (this.tema === 'construcao' ? '#BAE6FD' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     this.mostrarSol = opcoes.mostrarSol ?? true;
     this.mostrarColinas = opcoes.mostrarColinas ?? true;
+
+    /**
+     * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
+     *
+     * Na partida isto vem `false`, e não é economia de desenho: atrás da grade,
+     * círculos e triângulos coloridos no céu competem com as peças que a criança
+     * precisa distinguir de verdade. O cenário não pode ensaiar o exercício.
+     */
+    this.mostrarPecas = opcoes.mostrarPecas ?? true;
+
+    /**
+     * Camada distante: formas enormes, brancas, quase invisíveis. Dão volume ao
+     * céu sem nomear forma nenhuma, então ficam mesmo na partida.
+     */
+    this.pecasDistantes = [
+      { tipo: 'circulo', x: 0.16, y: 0.26, lado: 330, alfa: 0.10, giro: 0, velocidade: 0.004 },
+      { tipo: 'triangulo', x: 0.79, y: 0.35, lado: 300, alfa: 0.09, giro: 18, velocidade: 0.003 },
+      { tipo: 'quadrado', x: 0.50, y: 0.72, lado: 260, alfa: 0.07, giro: -12, velocidade: 0.005 },
+    ];
+
+    /**
+     * As quatro peças do jogo, nas cores delas.
+     *
+     * **As posições saem do vão que a interface do menu deixa, medido — não de
+     * "esquerda e direita".** A primeira tentativa punha duas peças em x 0,11 e
+     * 0,23 por essa intuição, e renderizar mostrou as duas sumidas: a PLACA tem
+     * 740 px e ocupa de 0,21 a 0,79 (bem mais que os botões, que vão de 0,29 a
+     * 0,71), e o MASCOTE cobre de 0,015 a 0,31 abaixo de y 0,29.
+     *
+     * O que de fato sobra:
+     *   coluna direita   x 0,72 a 1,00  ·  y 0,28 a 0,82   (menos o botão de som)
+     *   canto alto-esq.  x 0,04 a 0,19  ·  y 0,10 a 0,26   (acima do mascote)
+     *
+     * O alfa é 0,90, e não 0,58: sobre o halo claro, meia opacidade transformava
+     * o laranja em marrom desbotado. Peça que não se reconhece pela cor não está
+     * cumprindo o papel de ser a peça do jogo.
+     */
+    /**
+     * **As peças FLUTUAM no lugar; não derivam.** É a diferença entre um móbile e
+     * um desfile, e aqui ela é funcional: a 0,008 por segundo uma peça caminha
+     * 0,24 da tela em meio minuto, ou seja, o posicionamento medido acima se
+     * desfaz enquanto a criança ainda está no menu — a peça vai parar atrás da
+     * placa. Balanço vertical mantém a composição de pé para sempre.
+     *
+     * `periodo` em segundos e `balanco` em pixels; `fase` desencontra as peças
+     * para não subirem e descerem em bloco.
+     */
+    this.pecas = [
+      { tipo: 'circulo', x: 0.10, y: 0.19, lado: 110, alfa: 0.90, giro: 0, cor: 'azul', periodo: 6.5, balanco: 11, fase: 0.0 },
+      { tipo: 'retangulo', x: 0.855, y: 0.32, lado: 140, alfa: 0.90, giro: -6, cor: 'roxo', periodo: 7.5, balanco: 13, fase: 1.7 },
+      { tipo: 'quadrado', x: 0.775, y: 0.50, lado: 96, alfa: 0.90, giro: 14, cor: 'laranja', periodo: 5.5, balanco: 10, fase: 3.1 },
+      { tipo: 'triangulo', x: 0.895, y: 0.65, lado: 112, alfa: 0.90, giro: -8, cor: 'verde', periodo: 8.0, balanco: 12, fase: 4.6 },
+      { tipo: 'circulo', x: 0.845, y: 0.19, lado: 46, alfa: 0.40, giro: 0, periodo: 4.5, balanco: 8, fase: 2.2 },
+      { tipo: 'triangulo', x: 0.965, y: 0.44, lado: 58, alfa: 0.30, giro: 25, periodo: 6.0, balanco: 9, fase: 5.3 },
+    ];
 
     this._t = 0;
     this.nuvens = [
@@ -39,11 +94,26 @@ export class Background extends Node {
       nuvem.x += nuvem.velocidade * dt;
       if (nuvem.x > 1.25) nuvem.x = -0.25;
     }
+    // Só as DISTANTES derivam. Elas são enormes e sem forma reconhecível, então
+    // atravessar a tela não desarruma nada — é o que dá a paralaxe. As peças da
+    // frente flutuam no lugar (ver `this.pecas`), e por isso não aparecem aqui.
+    for (const peca of this.pecasDistantes) {
+      peca.x += peca.velocidade * dt;
+      if (peca.x > 1.35) peca.x = -0.35;
+    }
   }
 
   desenhar(ctx) {
     const l = this.largura;
     const a = this.altura;
+
+    // O tema 'formas' desenha o céu INTEIRO por conta própria — degradê, halo e
+    // camadas — em vez de herdar o céu claro com sol e nuvens fofas. Sai daqui
+    // logo, para não pagar um desenho que seria coberto em seguida.
+    if (this.tema === 'formas') {
+      this._desenharCeuGeometrico(ctx, l, a);
+      return;
+    }
 
     // Céu em degradê
     const ceu = ctx.createLinearGradient(0, 0, 0, a * 0.85);
@@ -85,6 +155,113 @@ export class Background extends Node {
       ctx.fillStyle = this.corColina;
       ctx.fillRect(0, a * 0.92, l, a * 0.08);
     }
+  }
+
+  /**
+   * Tema 'formas' — o céu geométrico do Jogo das Formas.
+   *
+   * Existe para as duas aulas refeitas pararem de ser a mesma tela. O Jogo dos
+   * Blocos **é** um canteiro de obras: o original dele tinha guindaste, caixotes
+   * e `cenario.jpg`. O Jogo das Formas herdou o canteiro por acidente, só porque
+   * nasceu do template do piloto — o original DELE se passava numa clareira.
+   *
+   * De trás para frente: degradê diagonal indigo → ciano, um halo de luz no
+   * lugar do sol vetorial, formas brancas gigantes quase invisíveis, as quatro
+   * peças do jogo nas cores delas, e uma faixa de base escura com friso miúdo.
+   *
+   * **Nada de nuvem.** Nuvem fofa é o vocabulário do céu claro dos outros temas;
+   * aqui ela empurraria a tela de volta para a aparência que este tema existe
+   * para abandonar.
+   */
+  _desenharCeuGeometrico(ctx, l, a) {
+    const ceu = ctx.createLinearGradient(0, 0, l * 0.4, a);
+    ceu.addColorStop(0, '#4338CA');
+    ceu.addColorStop(0.55, '#6366F1');
+    ceu.addColorStop(1, '#22D3EE');
+    ctx.fillStyle = ceu;
+    ctx.fillRect(0, 0, l, a);
+
+    if (this.mostrarSol) {
+      const hx = l * 0.84;
+      const hy = a * 0.18;
+      const halo = ctx.createRadialGradient(hx, hy, 20, hx, hy, a * 0.55);
+      halo.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
+      halo.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, l, a);
+    }
+
+    for (const peca of this.pecasDistantes) this._peca(ctx, l, a, peca, '#FFFFFF');
+
+    if (this.mostrarPecas) {
+      for (const peca of this.pecas) {
+        this._peca(ctx, l, a, peca, peca.cor ? cores.ludica[peca.cor] : '#FFFFFF');
+      }
+    }
+
+    // Faixa de base: silhueta, para o chão existir sem virar colina.
+    ctx.save();
+    ctx.fillStyle = 'rgba(30, 27, 75, 0.55)';
+    ctx.beginPath();
+    ctx.moveTo(0, a);
+    ctx.lineTo(0, a * 0.84);
+    for (let x = 0; x <= l; x += 60) {
+      ctx.quadraticCurveTo(x + 30, a * 0.84 - 18 * Math.sin(x / 150), x + 60, a * 0.84);
+    }
+    ctx.lineTo(l, a);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    if (this.mostrarPecas) {
+      const friso = ['circulo', 'quadrado', 'triangulo', 'retangulo'];
+      for (let i = 0; i < 14; i++) {
+        this._peca(ctx, l, a, {
+          tipo: friso[i % 4],
+          x: (60 + i * 92) / l,
+          y: 0.935,
+          lado: 34,
+          alfa: 0.16,
+          giro: i * 13,
+        }, '#FFFFFF');
+      }
+    }
+  }
+
+  /**
+   * Uma forma solta no céu. `x`/`y` são fração da caixa e `giro` é em graus.
+   *
+   * Quando a peça traz `periodo`, ela sobe e desce `balanco` pixels em torno do
+   * próprio lugar, com um giro de meio grau acompanhando — o bastante para a tela
+   * parecer viva e pouco o bastante para não puxar o olho da criança para longe
+   * do botão JOGAR.
+   */
+  _peca(ctx, l, a, peca, cor) {
+    const s = peca.lado;
+    const bal = peca.periodo
+      ? Math.sin((this._t / peca.periodo) * Math.PI * 2 + (peca.fase ?? 0)) * (peca.balanco ?? 10)
+      : 0;
+    ctx.save();
+    ctx.globalAlpha = peca.alfa;
+    ctx.fillStyle = cor;
+    ctx.translate(peca.x * l, peca.y * a + bal);
+    const giro = (peca.giro ?? 0) + (peca.periodo ? bal * 0.05 : 0);
+    if (giro) ctx.rotate((giro * Math.PI) / 180);
+    ctx.beginPath();
+    if (peca.tipo === 'circulo') {
+      ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
+    } else if (peca.tipo === 'quadrado') {
+      ctx.roundRect(-s / 2, -s / 2, s, s, s * 0.18);
+    } else if (peca.tipo === 'triangulo') {
+      ctx.moveTo(0, -s * 0.45);
+      ctx.lineTo(s / 2, s * 0.45);
+      ctx.lineTo(-s / 2, s * 0.45);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-s / 2, -s / 4, s, s / 2, s * 0.1);
+    }
+    ctx.fill();
+    ctx.restore();
   }
 
   _desenharCanteiroConstrucao(ctx, l, a) {

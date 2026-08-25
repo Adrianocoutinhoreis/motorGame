@@ -83,7 +83,7 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 
 | Comando | O que faz |
 |---|---|
-| `node tools/serve.mjs [porta]` | Servidor estático local |
+| `node tools/serve.mjs [porta]` | Servidor estático local. Imprime o endereço de cada jogo e serve `/__jogos.json`, que alimenta as abas do host do AVA. **Depois de editá-lo, reinicie** — Node não recarrega o próprio código |
 | `node tools/new-game.mjs <slug> "Nome"` | Cria um jogo a partir do template |
 | `node tools/build.mjs [slug]` | Copia o motor para dentro dos jogos |
 | `node tools/verificar-independencia.mjs [slug]` | **Portão de entrega**: falha se o jogo depender de algo externo ou se a cópia do motor estiver desatualizada |
@@ -92,7 +92,7 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 | `node tools/teste-navegador.mjs [porta]` | Verificações ponta a ponta em navegador headless (piloto) |
 | `node tools/teste-jogabilidade-formas.mjs [porta]` | A jogada do Jogo das Formas com **toque real** — pegar, arrastar, depositar, e a pausa não virar jogada |
 | `node tools/teste-entrega-avulsa.mjs <slug>` | Copia o jogo para fora do projeto, serve de uma subpasta e abre — simula a publicação |
-| `tools/ava-teste.html` | Host que simula o AVA e valida o contrato ao vivo |
+| `tools/ava-teste.html` | Host que simula o AVA e valida o contrato ao vivo. Traz uma **aba por jogo**, descoberta em tempo de execução (por `/__jogos.json` no `serve.mjs`, ou pela listagem de `Games/` em qualquer estático — Live Server da IDE incluída). Jogo novo aparece sozinho |
 
 ---
 

@@ -38,17 +38,18 @@ graph LR
 ## 2. Quase zero arquivo de imagem
 
 O original 870298 carrega **34 imagens** — `BG.jpg`, `tronco.png`, `relogio.png`,
-`BlocoCirculo.png` e companhia. Esta refação carrega **quatro**, e são emprestadas: os
-azulejos das formas, reaproveitados do original como andaime até a arte definitiva
-(seção 3.2). Todo o resto é vetorial, desenhado a cada quadro:
+`BlocoCirculo.png` e companhia. Esta refação carrega **cinco**, e nenhuma foi produzida para
+ela: os quatro azulejos das formas, emprestados do original como andaime até a arte definitiva
+(seção 3.2), e o mascote, emprestado do Jogo dos Blocos (seção 4.4). Todo o resto é vetorial,
+desenhado a cada quadro:
 
 | Elemento | Como |
 |---|---|
-| Céu, sol, nuvens, colinas | `Background` (`tema: 'construcao'`) |
+| Céu, sol, nuvens, prédios, andaime, areia | `Background` (`tema: 'construcao'`) |
 | Azulejos e as quatro formas | `Sprite` **hoje** (andaime), `Shape` **no alvo** — ver 3.1 e 3.2 |
-| Trilho, garra, corrente, chão | `Shape` com `desenharPersonalizado` |
+| Pórtico, garra, corrente, plataforma | `Node` com `desenhar` próprio — ver 4.3 |
 | Painéis, cartões, botões, barras | `Panel`, `Button`, `IconButton`, `ScoreBar`, `TimerBar` |
-| Mascote | `Mascot` no modo **coruja vetorial** (o padrão) |
+| Mascote | `Mascot` no modo **imagem** (`bob.webp`, o mesmo do piloto) |
 | Ícones | `icons.js` — `jogar`, `pausa`, `som`, `casa`, `estrela`, `setaEsquerda`, `setaDireita`, `reiniciar` |
 
 Consequências práticas, não estéticas: a pasta do jogo fica pequena, a arte é nítida em
@@ -66,22 +67,42 @@ ele está certo — a refação o mantém.
 **A célula da grade é 64 px** em qualquer fase (é o alvo tocável, seção 4.2). O que muda entre
 o andaime e o alvo é só o que se desenha dentro dela.
 
-### 3.1 Alvo — azulejo vetorial
+### 3.1 Alvo — azulejo vetorial com o volume do PNG
 
-**Azulejo:** 60×60 px lógicos, centrado na célula de 64 (a folga de 4 px separa um bloco do
-vizinho sem precisar de linha divisória). Canto `raio.sm`, preenchimento `superficie`, contorno
-`linha`, sombra `suave`.
+**Esta seção foi reescrita em 2026-08-25, e o motivo importa.** A versão anterior especificava
+azulejo branco (`superficie`) com a forma colorida dentro — mais **plano** que a arte que ele
+substituiria. Os PNG de 2013 fazem o oposto: o azulejo é colorido e a forma aparece vazada em
+tom escuro da mesma matiz, com chanfro e volume. É também o que o `Bloco` do Jogo dos Blocos
+faz, em cinco passes.
 
-**A forma dentro**, centrada, ocupando cerca de 40 px:
+Deixar a spec descrevendo algo pior que o existente não é neutro: garante que alguém a
+implemente. Foi o que aconteceu — um plano de melhoria visual leu esta seção e propôs trocar os
+PNG pela peça branca, o que teria **piorado** a tela.
 
-| Forma | `Shape` | Tamanho | Cor (token) |
+Então o alvo passa a ser: mesma aparência, mais nitidez, cores dentro dos tokens.
+
+**O azulejo:** 60×60 px lógicos, centrado na célula de 64. Canto `raio.sm`. Cinco passes, na
+ordem do piloto:
+
+1. sombra própria (`sombras.suave`);
+2. corpo com **gradiente vertical de três paradas** na matiz da forma — claro no topo, base
+   escura;
+3. contorno escuro de 3 px na mesma matiz;
+4. **miolo chanfrado** — retângulo interno com gradiente mais claro e contorno tênue, que é o
+   que dá o volume "de brinquedo" sem imagem;
+5. a forma vazada no centro, em tom escuro da matiz, ocupando cerca de 40 px.
+
+| Forma | `Shape` da forma interna | Tamanho | Matiz do azulejo |
 |---|---|---|---|
-| Círculo | `forma: 'circulo'` | raio 20 | `ludica.azul` |
-| Quadrado | `forma: 'retangulo'`, raio 6 | 36 × 36 | `ludica.laranja` |
-| Triângulo | `forma: 'poligono'`, `lados: 3` | raio 22 | `ludica.verde` |
-| Retângulo | `forma: 'retangulo'`, raio 5 | 44 × 24 | `ludica.roxo` |
+| Círculo | `forma: 'circulo'` | raio 20 | `ludica.amarelo` |
+| Quadrado | `forma: 'retangulo'`, raio 6 | 36 × 36 | `ludica.azul` |
+| Triângulo | `forma: 'poligono'`, `lados: 3` | raio 22 | `ludica.vermelho` |
+| Retângulo | `forma: 'retangulo'`, raio 5 | 44 × 24 | `ludica.verde` |
 
-O triângulo nasce com a ponta para cima sem nenhum ajuste: o `Shape` gira o polígono −90° de
+As matizes acompanham as dos PNG de 2013 (amarelo, azul, vermelho, verde), e não uma paleta
+nova: a troca não deve mudar a cor que a criança já associou à forma.
+
+O triângulo nasce com a ponta para cima sem nenhum ajuste — o `Shape` gira o polígono −90° de
 propósito.
 
 ### 3.2 Andaime — os azulejos de 2013
@@ -158,20 +179,21 @@ quase 2:1) e cor bem separada (`laranja` contra `roxo`).
  ┌──────────────────────────────────────────────────────────────────────────┐ 0
  │ [★ PONTOS 12/16 ]        [⟳ tempo ▓▓▓▓▓▓░░░ ]           [⏸]  [🔊]      │
  ├──────────────────────────────────────────────────────────────────────────┤ 88
- │  ╔══════════════════ trilho da garra ══════════════════╗                 │ 104
- │                          ║                                               │
- │                        [garra]                            ┌────────────┐ │
- │                                                           │ AS FORMAS  │ │ 216
- │                    ┌──────────────────┐                   │            │ │
- │                    │                  │                   │  ● CÍRCULO │ │
- │                    │   grade 6×7      │                   │  ■ QUADRADO│ │
- │       (coruja)     │   64 px/célula   │                   │  ▲ TRIÂNGULO│ │
- │         ◕‿◕        │                  │                   │  ▬ RETÂNGULO│ │
- │                    │                  │                   └────────────┘ │
- │                    └──────────────────┘                                  │ 664
- │ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ chão de madeira ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │
+ │            ▓█══════════ lança + carrinho ══════════█▓                    │ 104
+ │            ▓█              [garra]            █▓                         │
+ │            ▓█                                 █▓          ┌───────────┐  │
+ │            ▓█                                 █▓          │ AS FORMAS │  │ 216
+ │            ▓█                                 █▓          │           │  │
+ │            ▓█      ┌──────────────────┐       █▓          │ ● CÍRCULO │  │
+ │            ▓█      │                  │       █▓          │ ■ QUADRADO│  │
+ │  (operário)▓█      │   grade 6×7      │       █▓          │ ▲ TRIÂNGULO│ │
+ │      /|\   ▓█      │   64 px/célula   │       █▓          │ ▬ RETÂNGULO│ │
+ │      / \   ▓█      │                  │       █▓          └───────────┘  │
+ │ ~~~~~~~~~~~▓█══════└══════════════════┘═══════█▓~~~~~~~~~~~~~~~~~~~~~~~~ │ 657
+ │ ░░░░ areia do Background ░░░░ ║ plataforma ║ ░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
  └──────────────────────────────────────────────────────────────────────────┘ 720
-                     448              832
+             392  448              832  888
+             └── pernas do pórtico ──┘
 ```
 
 ### 4.1 HUD — a banda de 0 a 88
@@ -209,14 +231,54 @@ Sete linhas × 64 = **448** de altura. Base da pilha em `y: 664`; uma pilha chei
 área de jogo, do trilho ao chão. A criança não precisa acertar um bloco; basta tocar do lado
 certo da tela.
 
-### 4.3 O trilho e a garra
+### 4.3 O pórtico, a plataforma e a garra
 
-Trilho em `y: 104`: barra horizontal de `tintaSuave` com rebites, atravessando a largura da
-grade mais uma margem. A garra pende dele por uma corrente e desce até o topo da pilha.
+**Por que pórtico e não a torre lateral do piloto.** A torre do Jogo dos Blocos fica em
+`x ≈ 102`. Aqui não cabe: o operário ocupa a faixa esquerda e o painel das formas a direita, e
+não há margem livre para plantar uma torre de um lado só. Duas pernas, uma de cada lado da
+grade, resolvem — e são a máquina mecanicamente correta para o gesto do jogo, que é um carrinho
+correndo sobre uma pilha. De quebra o pórtico **enquadra a área de jogo**, o que tira a grade da
+sensação de flutuar num vazio azul.
+
+| peça | geometria |
+|---|---|
+| 2 pernas treliçadas | largura 44, do trilho até a plataforma; viga clara com contorno escuro de 4 px, treliça em X de 3 px em passo **42** |
+| pés | base alargada apoiada na plataforma |
+| lança | 24 px de altura em `trilhoY - 18`, de perna a perna com sobra |
+| treliça da lança | zigue-zague de 2 px em passo **36** |
+| faixas de advertência | 20×24 nas pontas, raios assimétricos |
+| trilho de aço | 6 px em `trilhoY + 6` |
+| carrinho + roldana | 52×20, seguindo a garra; roldana r=10 com eixo r=4 |
+
+A paleta e os passos de treliça são **os do piloto**, copiados de propósito: é o que faz os dois
+jogos parecerem a mesma coleção. Os eixos das pernas saem da grade
+(`gradeX ∓ espaco.md ∓ 14`), nunca escritos à mão — a grade muda de 5 para 6 colunas entre os
+níveis, e as pernas acompanham.
+
+**A plataforma.** O `Background` do tema `construcao` **já pinta o chão**: areia de `y 590` a
+`720`, com faixa de borda de 12 px no topo. A versão anterior desta tela punha uma faixa de
+madeira de largura total cobrindo só `657..720` — sobrava uma tira de areia de 67 px entre o
+skyline e a madeira, com a faixa escura exposta no meio: **três chãos disputando o mesmo
+lugar**, e o marrom saturado brigando com a areia, que foi dessaturada de propósito para não
+competir por atenção.
+
+Agora a madeira é um objeto: uma plataforma de obra que passa por baixo das pernas do pórtico,
+com tábuas, juntas alinhadas às colunas da grade e duas travessas de apoio. A areia volta a ser
+o chão, e a plataforma passa a ser o que devia desde o começo — a base de onde a pilha nasce e
+onde o maquinário se apoia. O piloto tem um pedestal de madeira exatamente para isso.
+
+**A garra.** Cabo com elos (um cabo liso sobe e desce sem que nada na tela diga que se mexeu),
+bloco de gancho, e duas mandíbulas curvas que **abrem e fecham**: `abertura` vai de 0 a 1,
+tweenada em `movimento.rapido`. Ela desce aberta, fecha no bloco, sobe fechada, e abre para
+largar — o gesto passa a ter causa visível, em vez de a peça saltar para a garra.
+
+O vão fechado (52 px) abraça o azulejo de 50; o aberto é curto de propósito (64 px). Medido: com
+o vão aberto largo, a garra vazia virava o objeto mais largo da tela e puxava a atenção para o
+nada.
 
 **A folga vertical é intencional e comunica.** Entre o trilho (104) e o topo de uma pilha cheia
 (216) há 112 px — menos de dois blocos. Quando a pilha está quase no teto e a garra carrega
-três blocos, a carga chega perto do trilho e a tela fica visivelmente apertada. É o aviso de
+três blocos, a carga chega perto da lança e a tela fica visivelmente apertada. É o aviso de
 "você está perdendo" antes de o jogo terminar, e sai de graça da geometria.
 
 ### 4.4 Os dois painéis laterais
@@ -224,12 +286,30 @@ três blocos, a carga chega perto do trilho e a tela fica visivelmente apertada.
 A grade ocupa 384 dos 1280 px de largura — a mesma proporção do original (300 de 800). Sobram
 duas faixas de cerca de 440 px, e elas não ficam vazias:
 
-**Esquerda — o mascote.** `Mascot` vetorial, 180 px, apoiado no chão de madeira. Reage à
-partida: pula a cada combo, inclina quando a pilha passa da quinta linha, encolhe na derrota.
-É linguagem corporal, não texto, e é assim que um público que não lê recebe retorno.
+**Esquerda — o mascote.** O **mesmo operário do Jogo dos Blocos** (`bob.webp`, o mesmo
+arquivo), 300 px de altura. Reage à partida: pula a cada combo, inclina quando a pilha passa da
+quinta linha, encolhe na derrota. É linguagem corporal, não texto, e é assim que um público que
+não lê recebe retorno.
 
-**Direita — o painel "AS FORMAS".** `Panel` de 360 px em `x: 880`, listando **as formas em jogo
-naquele nível**, cada uma com a peça vetorial de verdade ao lado do nome em caixa alta.
+Duas razões para não ser a coruja vetorial, e nenhuma é economia de trabalho. A primeira é que
+as duas aulas passam a ser a mesma coleção aos olhos da criança. A segunda foi medida: as telas
+do motor escalam o mascote **pela altura**, assumindo arte alta e estreita; a coruja é quadrada,
+e no menu ela nascia com 550 px de lado e transbordava por cima do botão JOGAR. Arte com a
+proporção certa resolve isso sem tocar no motor.
+
+**A arte é de meio corpo** (1760×2000, cortada na altura das coxas), e isso decide o `y`: ela
+não tem pé, então "apoiar no chão" não se aplica. O corte vai para a **borda inferior da tela**,
+onde não aparece — o mesmo padrão que o `MenuScreen` usa com esta imagem. Alinhá-la pelo chão da
+plataforma, como se houvesse sola, deixaria um torso terminando no ar sobre a areia.
+
+O limite honesto do modo imagem: uma figura estática não troca de rosto. As expressões seguem
+funcionando como linguagem corporal, mas a feição não muda — para isso seria preciso uma imagem
+por estado (`imagensPorExpressao`).
+
+**Direita — o painel "AS FORMAS".** `Panel` listando **as formas em jogo naquele nível**, cada
+uma com a peça de verdade ao lado do nome em caixa alta. O `x` sai da **borda externa do
+pórtico**, não da borda da grade: a perna direita vai do trilho até o chão, atravessando toda a
+faixa de altura do painel, e medindo pela grade ela invadia 8 px.
 
 Este painel não é enfeite para preencher espaço: é o objetivo pedagógico exposto na tela
 durante a partida inteira. A criança que esqueceu qual é o triângulo olha para o lado. E ele
@@ -256,7 +336,8 @@ sai de `movimento`; todo amortecimento de `Easing`.
 | Blocos caindo por gravidade | `movimento.padrao` | `quicarSaida` | O quique é o que faz "assentou" ser lido sem som |
 | Linha nova subindo | `movimento.lento` (420 ms) | `suave` | Devagar de propósito: é a ameaça, e precisa ser vista |
 | Bloco-estrela nascendo | `movimento.entrada` | `costasSaida` | O leve exagero marca a recompensa |
-| Coruja pulando no combo | `movimento.padrao` | `quicarSaida` | — |
+| Operário pulando no combo | `movimento.padrao` | `quicarSaida` | — |
+| Mandíbulas abrindo/fechando | `movimento.rapido` | `suaveSaida` | O token do gesto curto: a garra fecha no bloco, não sobre ele |
 
 **Nada anima em cima de outra animação.** Durante a descida e a subida da garra o toque está
 travado (regra da seção 4.2 do documento de regras), e a cascata de combos é sequencial: um elo
@@ -277,7 +358,7 @@ O trabalho visual das seis telas do motor é este, e só este:
 | `titulo` | `Jogo das Formas` |
 | `subtitulo` | `Junte três formas iguais!` |
 | `tema` | `'construcao'` — o mesmo canteiro do piloto, para as duas aulas parecerem da mesma coleção |
-| `mascote` | sem `asset`: coruja vetorial |
+| `mascote` | `{ asset: 'mascote' }` → `bob.webp`, o operário do piloto (seção 4.4) |
 | `niveis[]` | `id`, `nome`, `descricao`, `amostra`, `cor`, e os campos de mecânica |
 | `tutorial[]` | três passos, com `titulo`, `texto`, `fala` e a função `desenho` |
 | `audio` | `musica`, `erro`, `vitoria`, `derrota`, `abertura` |
@@ -319,7 +400,7 @@ Fora dos quatro azulejos emprestados (seção 3.2), a arte de 2013 fica em
 | `relogio.png`, `relogioCapa.png`, `relogioFundo.png` | O relógio analógico exige leitura de ponteiro. A `TimerBar` avisa por cor e pulso |
 | `Blocolosango.png` | **Visualmente indistinguível de `BlocoRetangulo.png`** — mesmo azulejo verde com um retângulo dentro, bytes diferentes, aparência igual. Segundo motivo independente para o losango ficar fora, além de não ter locução |
 | `brilho1/2/3.png` | Flash alternando é piscar (regra 4 do `DESIGN.md`) |
-| `coruja1/2/3.png`, `estrela1/2/3.png` | `Mascot` vetorial e `icons.estrela` |
+| `coruja1/2/3.png`, `estrela1/2/3.png` | O mascote é o operário do piloto; a estrela é `icons.estrela` |
 | `tronco.png`, `troncoArea.png` | Chão e cenário vêm do `Background` e de `Shape` |
 | `tutorial1.jpg`, `instrucoes1/2.png` | Os passos do tutorial são animação vetorial, não imagem estática |
 | `seta1/2/3.png` | `icons.setaEsquerda` / `setaDireita` |
@@ -334,11 +415,11 @@ Fora dos quatro azulejos emprestados (seção 3.2), a arte de 2013 fica em
 |---|---|
 | Céu, sol, nuvens, chão | `Background` — **pronto** |
 | Azulejo e as quatro formas | `Sprite` sobre os PNG de 2013 — **andaime, pronto**. `Shape` cobre as quatro nativamente quando a arte chegar (3.1) |
-| Trilho, garra, corrente | `Shape` com `desenharPersonalizado` — **a desenhar na cena** |
+| Pórtico, garra com elos e mandíbulas, plataforma | `Node` com `desenhar` próprio — **pronto** (seção 4.3) |
 | Barra de pontos | `ScoreBar.acompanhar(placar)` — **pronto** |
 | Cronômetro com aviso | `TimerBar` — **pronto**, estreia aqui |
 | Pausa e som | `IconButton` + `SoundToggle` — **pronto** |
-| Mascote reagindo | `Mascot` vetorial, 5 expressões — **pronto** |
+| Mascote reagindo | `Mascot` no modo imagem, expressão como linguagem corporal — **pronto** |
 | Painel lateral | `Panel` + `Shape` + `TextNode` — **pronto** |
 | Grade, combos, gravidade | `GridBoard` — **pronto**, estreia aqui |
 | Garra por colunas | `CraneController` modo `colunas` — **pronto**, testado só em unidade |
@@ -367,7 +448,7 @@ nada disto:
       medida que decide se o andaime da seção 3.2 aguenta ir ao ar ou tem de ser trocado antes
 - [ ] Quadrado e retângulo são distinguíveis a dois metros de um projetor de sala
 - [ ] Uma pilha de sete linhas com a garra carregada não fica ilegível
-- [ ] A coruja reage sem competir com a grade pela atenção
+- [ ] O operário reage sem competir com a grade pela atenção
 - [ ] O painel "AS FORMAS" é lido como referência, e não como algo para arrastar
 - [ ] A troca de cor da `TimerBar` é percebida sem ninguém apontar
 - [ ] Girado, num celular de pé, tudo acima continua verdadeiro
