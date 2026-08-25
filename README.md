@@ -85,6 +85,7 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 |---|---|
 | `node tools/serve.mjs [porta]` | Servidor estático local. Imprime o endereço de cada jogo e serve `/__jogos.json`, que alimenta as abas do host do AVA. **Depois de editá-lo, reinicie** — Node não recarrega o próprio código |
 | `node tools/new-game.mjs <slug> "Nome"` | Cria um jogo a partir do template |
+| `node tools/pages-index.mjs` | Gera o `index.html` da raiz (a capa que lista os jogos). Rode depois de criar um jogo novo — a lista é medida em `Games/`, não escrita à mão |
 | `node tools/build.mjs [slug]` | Copia o motor para dentro dos jogos |
 | `node tools/verificar-independencia.mjs [slug]` | **Portão de entrega**: falha se o jogo depender de algo externo ou se a cópia do motor estiver desatualizada |
 | `node tools/audio-info.mjs [slug]` | Inventário de áudio medido: formato, duração, hash, lote, e reprova ficha ausente ou desatualizada |
