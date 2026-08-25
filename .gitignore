@@ -29,3 +29,9 @@ npm-debug.log*
 *.log
 *.tmp
 tmp/
+
+# ------------------------------------------------------------------- scratch
+# Scripts descartáveis de depuração (driver de navegador, teste de fluxo à mão).
+# Mesma natureza de `.capturas/`: refazem-se, e poluem o `git status` de quem
+# está tentando ver a mudança de verdade.
+scratch/
