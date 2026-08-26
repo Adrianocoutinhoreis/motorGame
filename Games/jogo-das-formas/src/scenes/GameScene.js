@@ -578,13 +578,35 @@ export class GameScene extends Scene {
     this.adicionar(this.portico);
   }
 
+  /**
+    * O HUD é uma COLUNA à esquerda, não uma faixa no topo.
+    *
+    * Mudou por causa do celular, e o raciocínio é de orçamento: o tamanho físico
+    * do alvo é a fração da ALTURA que uma célula ocupa, então cada pixel gasto em
+    * faixa horizontal no topo é pixel que a grade não tem. O HUD ocupava de 0 a
+    * 104 — 14% da altura — para mostrar dois valores e dois botões.
+    *
+    * A coluna só existe porque o mascote saiu da partida: a tira entre a borda da
+    * tela e a perna esquerda do pórtico tem 344 px em 6 colunas e 384 em 5, e
+    * estava vazia. Nada aqui é escrito à mão — a largura sai de `xPernas`, que
+    * sai da grade, que muda entre os níveis.
+    *
+    * Os botões passaram de 72 para 96 px lógicos: 72 dava 36 px físicos no
+    * celular, abaixo do piso de 44 do WCAG 2.5.5, e eles são alvos ISOLADOS —
+    * errar um não faz nada, ao contrário das colunas, que se encaixam na vizinha.
+    * 96 × 0,5 = 48 px físicos.
+    */
   _montarHud() {
-    const { largura: L, config } = this;
+    const { config } = this;
+
+    const colunaX = espaco.md;
+    const colunaLargura = (this.xPernas.esquerda - PERNA_L / 2) - espaco.md * 2;
+    const ladoBotao = 96;
 
     this.barra = new ScoreBar({
-      largura: 360,
-      altura: 34,
-      x: espaco.md,
+      largura: colunaLargura,
+      altura: 40,
+      x: colunaX,
       y: espaco.md,
       icone: 'estrela',
       mostrarNumeros: true,
@@ -595,10 +617,10 @@ export class GameScene extends Scene {
     this.barra.acompanhar(this.placar);
 
     this.tempo = new TimerBar({
-      largura: 360,
-      altura: 34,
-      x: Math.round((L - 360) / 2),
-      y: espaco.md,
+      largura: colunaLargura,
+      altura: 40,
+      x: colunaX,
+      y: espaco.md + 40 + espaco.md,
       duracao: this.nivel.duracao,
     });
     this.tempo.on('acabou', () => {
@@ -607,18 +629,23 @@ export class GameScene extends Scene {
 
     this.adicionar(this.barra, this.tempo);
 
+    // Os dois botões lado a lado, abaixo das barras.
+    const yBotoes = espaco.md + (40 + espaco.md) * 2 + espaco.sm;
+
     this.adicionar(new IconButton({
       icone: 'pausa',
-      x: L - 180,
-      y: espaco.md,
+      tamanho: ladoBotao,
+      x: colunaX,
+      y: yBotoes,
       audio: this.audio,
       somToque: config.audio?.clique,
       aoTocar: () => this.pausar(),
     }));
 
     this.adicionar(new SoundToggle({
-      x: L - 96,
-      y: espaco.md,
+      tamanho: ladoBotao,
+      x: colunaX + ladoBotao + espaco.md,
+      y: yBotoes,
       audio: this.audio,
     }));
   }
@@ -635,8 +662,13 @@ export class GameScene extends Scene {
     // chão, atravessando toda a faixa de altura deste painel — medido, ela
     // invadia 8 px quando o recuo saía da borda da grade. Partir da borda externa
     // do maquinário faz a folga ser real em 5 e em 6 colunas.
+    // A margem da direita é `espaco.md`, não `espaco.xl`: com a célula em 80 a
+    // largura do painel é `544 − 3 × célula` = 304, e ele precisa de 288 (recuo +
+    // azulejo + folga + 174 px do "RETÂNGULO" a 28, medido). Com `espaco.xl`
+    // sobravam 276 e o nome da forma não caberia. Encolher o nome seria pior: ele
+    // é conteúdo pedagógico, não legenda.
     const x = this.direitaDoPortico + espaco.md;
-    const largura = this.largura - x - espaco.xl;
+    const largura = this.largura - x - espaco.md;
     const formas = this.nivel.formas;
     const alturaLinha = 72;
     const altura = espaco.lg + espaco.md + formas.length * alturaLinha + espaco.md;

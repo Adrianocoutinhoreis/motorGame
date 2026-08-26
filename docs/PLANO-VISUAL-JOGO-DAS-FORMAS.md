@@ -64,7 +64,7 @@ Cada bloco é um **azulejo** com a forma desenhada dentro. O azulejo dá a leitu
 quando a pilha cresce; a forma dentro dele é o conteúdo pedagógico. É o modelo do original, e
 ele está certo — a refação o mantém.
 
-**A célula da grade é 64 px** em qualquer fase (é o alvo tocável, seção 4.2). O que muda entre
+**A célula da grade é 80 px** em qualquer fase (é o alvo tocável, seção 4.2). O que muda entre
 o andaime e o alvo é só o que se desenha dentro dela.
 
 ### 3.1 Alvo — azulejo vetorial com o volume do PNG
@@ -81,8 +81,8 @@ PNG pela peça branca, o que teria **piorado** a tela.
 
 Então o alvo passa a ser: mesma aparência, mais nitidez, cores dentro dos tokens.
 
-**O azulejo:** 60×60 px lógicos, centrado na célula de 64. Canto `raio.sm`. Cinco passes, na
-ordem do piloto:
+**O azulejo:** 74×74 px lógicos, centrado na célula de 80 (a mesma proporção do 60/64 de
+antes). Canto `raio.sm`. Cinco passes, na ordem do piloto:
 
 1. sombra própria (`sombras.suave`);
 2. corpo com **gradiente vertical de três paradas** na matiz da forma — claro no topo, base
@@ -122,7 +122,7 @@ modo `colunas` estreando, o ciclo vertical da garra e a linha nova. Emprestar a 
 Todos 50×50 px, RGBA, 1,3 a 2,1 KB. Copiados para `assets/img/` do jogo — nada fica apontando
 para fora da pasta, e o `verificar-independencia.mjs` continua aprovando.
 
-**Desenhar no tamanho nativo, 50 px, centrado na célula de 64.** Não esticar para 60: a folga
+**Desenhar a 62 px, centrado na célula de 80.** Não esticar para 60: a folga
 de 7 px de cada lado vira a separação entre blocos, que 3.1 desenharia de propósito de todo
 jeito, e evita um passo de ampliação de graça.
 
@@ -177,55 +177,92 @@ quase 2:1) e cor bem separada (`laranja` contra `roxo`).
 ```
  0                                                                        1280
  ┌──────────────────────────────────────────────────────────────────────────┐ 0
- │ [★ PONTOS 12/16 ]        [⟳ tempo ▓▓▓▓▓▓░░░ ]           [⏸]  [🔊]      │
- ├──────────────────────────────────────────────────────────────────────────┤ 88
- │            ▓█══════════ lança + carrinho ══════════█▓                    │ 104
- │            ▓█              [garra]            █▓                         │
- │            ▓█                                 █▓          ┌───────────┐  │
- │            ▓█                                 █▓          │ AS FORMAS │  │ 216
- │            ▓█                                 █▓          │           │  │
- │            ▓█      ┌──────────────────┐       █▓          │ ● CÍRCULO │  │
- │            ▓█      │                  │       █▓          │ ■ QUADRADO│  │
- │  (operário)▓█      │   grade 6×7      │       █▓          │ ▲ TRIÂNGULO│ │
- │      /|\   ▓█      │   64 px/célula   │       █▓          │ ▬ RETÂNGULO│ │
- │      / \   ▓█      │                  │       █▓          └───────────┘  │
- │ ~~~~~~~~~~~▓█══════└══════════════════┘═══════█▓~~~~~~~~~~~~~~~~~~~~~~~~ │ 657
- │ ░░░░ areia do Background ░░░░ ║ plataforma ║ ░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+ │                  ▓█═════ lança + carrinho ═════█▓                        │ 40
+ │ [★ PONTOS 0/12 ] ▓█          [garra]           █▓                        │ 70
+ │ [⟳ tempo ▓▓▓▓▓░] ▓█                            █▓                        │
+ │                  ▓█   ┌────────────────────┐   █▓      ┌──────────────┐  │ 140
+ │ [  ⏸  ] [  🔊  ] ▓█   │                    │   █▓      │  AS FORMAS   │  │
+ │                  ▓█   │                    │   █▓      │              │  │
+ │  coluna do HUD   ▓█   │    grade 6×7       │   █▓      │  ● CÍRCULO   │  │
+ │   0 ──── 344     ▓█   │    80 px/célula    │   █▓      │  ■ QUADRADO  │  │
+ │                  ▓█   │                    │   █▓      │  ▲ TRIÂNGULO │  │
+ │                  ▓█   │                    │   █▓      │  ▬ RETÂNGULO │  │
+ │                  ▓█   │                    │   █▓      └──────────────┘  │
+ │ ~~~~~~~~~~~~~~~~~▓█═══└────────────────────┘═══█▓~~~~~~~~~~~~~~~~~~~~~~~ │ 700
+ │ ░░░ faixa de base do Background ░░ ║ plataforma ║ ░░░░░░░░░░░░░░░░░░░░░░ │
  └──────────────────────────────────────────────────────────────────────────┘ 720
-             392  448              832  888
-             └── pernas do pórtico ──┘
+                    366  400            880  914      956 ─────────── 1260
+                    └──── pernas do pórtico ────┘      └── painel (304) ──┘
 ```
 
-### 4.1 HUD — a banda de 0 a 88
+Duas coisas mudaram de lugar em relação ao original desta seção, e as duas pela
+mesma razão — o **celular**, medido:
+
+- **O HUD saiu do topo e virou coluna à esquerda.** A banda de 0 a 104 custava 14%
+  da altura para mostrar dois valores e dois botões, e em celular é a altura que
+  limita a escala. A coluna cabe no vão que o mascote deixou ao sair da partida.
+- **A célula subiu de 64 para 80 px**, o que só foi possível com o topo liberado.
+  A grade passou de 448 para 560 px de altura, e o teto da pilha de `y: 216` para
+  `y: 140`.
+
+### 4.1 HUD — a coluna da esquerda
 
 | Elemento | Posição | Detalhe |
 |---|---|---|
-| `ScoreBar` dos pontos | `x: espaco.md`, `y: espaco.md`, 360×34 | `icone: 'estrela'`, `mostrarNumeros: true`. Ligada por `acompanhar(placar)`: passa a se atualizar sozinha |
-| `TimerBar` | centralizada, `y: espaco.md`, 360×34 | `icone: 'reiniciar'`, sem números — a criança não lê relógio |
-| `IconButton` pausa | `x: L - 180`, `y: espaco.md`, 64×64 | `icone: 'pausa'` |
-| `SoundToggle` | `x: L - 96`, `y: espaco.md`, 64×64 | preferência persistida pelo `Storage` |
+| `ScoreBar` dos pontos | topo da coluna, `largura × 40` | `icone: 'estrela'`, `mostrarNumeros: true`. Ligada por `acompanhar(placar)`: passa a se atualizar sozinha |
+| `TimerBar` | abaixo da ScoreBar, `largura × 40` | `icone: 'reiniciar'`, sem números — a criança não lê relógio |
+| `IconButton` pausa | coluna esquerda, 96×96 | `icone: 'pausa'` |
+| `SoundToggle` | ao lado da pausa, 96×96 | preferência persistida pelo `Storage` |
 
 A `TimerBar` já faz sozinha o aviso que importa: **muda de cor a 35% e a 15% do tempo, e pulsa
 no trecho crítico**. Aviso que não depende de saber ler número, e que o original não tinha —
 lá o relógio era um ponteiro girando numa timeline.
 
-Os dois botões da direita ficam a 64 px de lado e a 20 px um do outro, acima do mínimo de
-`acessibilidade.espacoEntreAlvos`.
+Os dois botões ficam a **96 px** de lado e a 20 px um do outro, acima do mínimo de
+`acessibilidade.espacoEntreAlvos`. Não são 64 por um motivo medido: 64 px lógicos viram 32
+físicos num celular de 360 px de altura, e estes são alvos **isolados** — errar um não faz
+nada. 96 dá 48 px físicos, acima do piso de 44 do WCAG 2.5.5.
 
 ### 4.2 A grade
 
-Célula de **64 px** — exatamente `acessibilidade.alvoMinimo`. Não é coincidência: a coluna é o
-alvo tocável do jogo, e amarrar a célula ao mínimo de acessibilidade impede que um ajuste
-visual futuro produza um alvo pequeno demais sem ninguém perceber.
+Célula de **80 px** — dimensionada pelo CELULAR, e não pelo mínimo lógico.
+
+Era 64, amarrado a `acessibilidade.alvoMinimo`. O raciocínio parecia sólido e estava incompleto:
+o mínimo de 64 é garantido em espaço **lógico**, e no celular a escala do `Stage` o reduz. Como
+em celular a altura é que limita a escala (`escala = altura_física / 720`), o tamanho físico do
+alvo é **(célula ÷ 720) × altura do aparelho** — só a FRAÇÃO DA ALTURA importa, e alargar a tela
+não muda nada.
+
+Medido num Android 20:9 (800×360 deitado, escala 0,500):
+
+| Célula lógica | Físico no aparelho | |
+|---|---|---|
+| 64 | 32,0 px | era isto — abaixo do piso de 44 do WCAG 2.5.5 |
+| **80** | **40,0 px** | é isto agora, +25% |
+| 88 | 44,0 px | o piso; não cabe, ver abaixo |
+
+**Por que não 88.** O painel "AS FORMAS" fica à direita do maquinário, e a largura dele é
+`544 − 3 × célula`. Ele precisa de 288 px (32 de recuo + azulejo + 20 de folga + os 174 px do
+"RETÂNGULO" a 28, medidos). Em 80 sobram 304; em 88 sobram 280 e o nome não cabe — e encolher o
+nome da forma seria pior, porque ele é conteúdo pedagógico, não legenda.
+
+Passar de 44 px exige o passo seguinte, que é decisão de JOGO e não de layout: **6 linhas em vez
+de 7**. Sete linhas de 88 são 616 px, 86% da altura lógica, e não sobra vão para o trilho, o
+curso da garra e a plataforma.
 
 | | Nível 1 | Níveis 2 e 3 |
 |---|---|---|
 | Colunas | 5 | 6 |
-| Largura | 320 | 384 |
-| `x` | 480 → 800 | 448 → 832 |
+| Largura | 400 | 480 |
+| `x` | 440 → 840 | 400 → 880 |
 
-Sete linhas × 64 = **448** de altura. Base da pilha em `y: 664`; uma pilha cheia chega a
-`y: 216`.
+Sete linhas × 80 = **560** de altura. Base da pilha em `y: 700`; uma pilha cheia chega a
+`y: 140`.
+
+**O que pagou por esses 16 px de célula** foi o HUD sair do topo. Ele ocupava de 0 a 104 — 14%
+da altura — para mostrar dois valores e dois botões, e cada pixel de faixa horizontal no topo é
+pixel que a grade não tem. Virou coluna à esquerda, no vão que o mascote deixou (344 px em 6
+colunas, 384 em 5). Sem aquela tira livre, esta mudança não existiria.
 
 **O alvo tocável de cada coluna é a faixa inteira** — 64 px de largura por toda a altura da
 área de jogo, do trilho ao chão. A criança não precisa acertar um bloco; basta tocar do lado
@@ -234,8 +271,8 @@ certo da tela.
 ### 4.3 O pórtico, a plataforma e a garra
 
 **Por que pórtico e não a torre lateral do piloto.** A torre do Jogo dos Blocos fica em
-`x ≈ 102`. Aqui não cabe: o operário ocupa a faixa esquerda e o painel das formas a direita, e
-não há margem livre para plantar uma torre de um lado só. Duas pernas, uma de cada lado da
+`x ≈ 102`. Aqui não cabe: a coluna do HUD ocupa a faixa esquerda e o painel das formas a
+direita, e não há margem livre para plantar uma torre de um lado só. Duas pernas, uma de cada lado da
 grade, resolvem — e são a máquina mecanicamente correta para o gesto do jogo, que é um carrinho
 correndo sobre uma pilha. De quebra o pórtico **enquadra a área de jogo**, o que tira a grade da
 sensação de flutuar num vazio azul.
@@ -283,13 +320,21 @@ três blocos, a carga chega perto da lança e a tela fica visivelmente apertada.
 
 ### 4.4 Os dois painéis laterais
 
-A grade ocupa 384 dos 1280 px de largura — a mesma proporção do original (300 de 800). Sobram
-duas faixas de cerca de 440 px, e elas não ficam vazias:
+A grade ocupa 480 dos 1280 px de largura — proporção próxima à do original (300 de 800). Sobram
+duas faixas de cerca de 344 px, e elas não ficam vazias:
 
-**Esquerda — o mascote.** O **mesmo operário do Jogo dos Blocos** (`bob.webp`, o mesmo
-arquivo), 300 px de altura. Reage à partida: pula a cada combo, inclina quando a pilha passa da
-quinta linha, encolhe na derrota. É linguagem corporal, não texto, e é assim que um público que
-não lê recebe retorno.
+**Esquerda — a coluna do HUD.** Pontos, tempo e os dois botões, empilhados (seção 4.1).
+
+**Esta faixa era do mascote, e a troca foi deliberada.** O operário ficava aqui, 300 px de
+altura, reagindo à partida — pulava no combo, inclinava com a pilha alta. Saiu por dois motivos.
+No tutorial ele disputava a atenção com a ilustração, que é o que ensina o gesto; e na partida o
+retorno da jogada já vem pelo som, pelo placar e pelo bloco desaparecendo, enquanto a faixa que
+ele ocupava era a única reserva de espaço da tela. Ele continua no menu e no resultado, onde faz
+trabalho de verdade (`mascote.telas` no config).
+
+**Ficou uma lacuna, e está declarada:** o aviso de **pilha alta** era a inclinação dele, e era o
+único retorno da partida sem som próprio. Hoje não aparece em lugar nenhum. Se voltar, precisa
+de outro portador — piscar a linha do teto, por exemplo.
 
 Duas razões para não ser a coruja vetorial, e nenhuma é economia de trabalho. A primeira é que
 as duas aulas passam a ser a mesma coleção aos olhos da criança. A segunda foi medida: as telas
@@ -448,7 +493,8 @@ nada disto:
       medida que decide se o andaime da seção 3.2 aguenta ir ao ar ou tem de ser trocado antes
 - [ ] Quadrado e retângulo são distinguíveis a dois metros de um projetor de sala
 - [ ] Uma pilha de sete linhas com a garra carregada não fica ilegível
-- [ ] O operário reage sem competir com a grade pela atenção
+- [ ] A coluna do HUD é lida de relance sem puxar o olho da grade
+- [ ] A pilha chegando ao teto é percebida sem o aviso que o mascote dava
 - [ ] O painel "AS FORMAS" é lido como referência, e não como algo para arrastar
 - [ ] A troca de cor da `TimerBar` é percebida sem ninguém apontar
 - [ ] Girado, num celular de pé, tudo acima continua verdadeiro

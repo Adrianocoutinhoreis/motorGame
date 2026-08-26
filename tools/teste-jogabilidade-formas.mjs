@@ -243,9 +243,9 @@ try {
 
   console.log('\n4. Toque fora da faixa de jogo NÃO é jogada');
   const antesDeFora = await estado();
-  await tocar(150, 500);                    // faixa vazia à esquerda do pórtico
+  await tocar(150, 500);                    // faixa vazia sob a coluna do HUD
   await esperar(500);
-  await tocar(geo.xColunas[2], 40);         // sobre o HUD
+  await tocar(geo.xColunas[2], 20);         // acima do trilho, sobre o pórtico
   await esperar(500);
   const depoisDeFora = await estado();
   checar('tocar fora da faixa de jogo e no HUD não pega bloco',
@@ -253,7 +253,25 @@ try {
     `carga=${depoisDeFora.carga} grade=${depoisDeFora.naGrade}`);
 
   console.log('\n5. Sair da pausa NÃO deve virar uma jogada (o bug relatado)');
-  await tocar(1280 - 180 + 32, 20 + 32);    // botão de pausa
+
+  // O botão de pausa é PROCURADO na cena, não cravado em coordenada.
+  //
+  // Estava `tocar(1280 - 180 + 32, 20 + 32)`, a posição dele quando o HUD era uma
+  // faixa no topo. Quando o HUD virou coluna à esquerda (para a grade poder
+  // crescer no celular), essas coordenadas passaram a cair no vazio e QUATRO
+  // verificações desta seção quebraram — sem que nada do jogo tivesse quebrado.
+  // Um teste que codifica o layout falha quando o layout muda de propósito, que é
+  // exatamente quando ele deveria continuar valendo.
+  const botaoPausa = await aval(`(() => {
+    const alvo = window.jogo.cena.filhos.find((f) => f.icone === 'pausa');
+    if (!alvo) return null;
+    const m = alvo.matrizMundo;
+    return { x: Math.round(m.tx + (alvo.largura ?? 0) / 2),
+             y: Math.round(m.ty + (alvo.altura ?? 0) / 2) };
+  })()`);
+  if (!botaoPausa) throw new Error('não achei o botão de pausa na cena');
+  console.log(`  (tocando na pausa em x=${botaoPausa.x} y=${botaoPausa.y})`);
+  await tocar(botaoPausa.x, botaoPausa.y);
   await esperar(700);
   const naPausa = await estado();
   checar('a pausa abriu', naPausa.pausada === true, `pausada=${naPausa.pausada}`);

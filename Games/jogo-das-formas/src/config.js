@@ -133,15 +133,49 @@ export default {
     retangulo: { nome: 'Retângulo', imagem: 'blocoRetangulo', som: 'retangulo', cor: cores.ludica.roxo },
   },
 
-  /** Geometria da partida. 64 = acessibilidade.alvoMinimo, e não por acaso: a
-   *  coluna é o alvo tocável do jogo. Ver PLANO-VISUAL, seção 4.2. */
+  /**
+   * Geometria da partida — dimensionada pelo CELULAR, medida, não estimada.
+   *
+   * A coluna é o alvo tocável do jogo, e `celula` é a largura dela. O problema:
+   * em celular a altura é que limita a escala do `Stage` (`escala = altura_física
+   * / 720`), então o tamanho físico do alvo é **(célula ÷ 720) × altura do
+   * aparelho** — só a FRAÇÃO DA ALTURA importa, e alargar a tela não muda nada.
+   *
+   * Medido num Android 20:9 (800×360 deitado, escala 0,500):
+   *
+   *   célula 64  ->  32,0 px físicos   (era isto; abaixo do piso de 44 do WCAG 2.5.5)
+   *   célula 80  ->  40,0 px físicos   (+25%)
+   *   célula 88  ->  44,0 px físicos   (o piso — ver por que NÃO cabe, abaixo)
+   *
+   * **Por que 80 e não 88.** Com o painel "AS FORMAS" à direita do maquinário, a
+   * largura dele é `544 − 3 × célula`. O painel precisa de 288 px (32 de recuo +
+   * azulejo + 20 de folga + 174 do "RETÂNGULO" a 28 px, medido). Em 80 sobra 304;
+   * em 88 sobram 280 e o nome da forma não cabe. Encolher o nome era pior: ele é
+   * conteúdo pedagógico, não legenda.
+   *
+   * Passar de 44 exige o passo seguinte, que é decisão de JOGO e não de layout:
+   * 6 linhas em vez de 7. Sete linhas de 88 são 616 px, 86% da altura lógica.
+   *
+   * O orçamento vertical, agora que o HUD virou coluna lateral:
+   *
+   *      0 –  40   margem e trilho
+   *     40 – 140   curso da garra (repouso em trilhoY+30, pega a 6ª linha em 140)
+   *    140 – 700   A GRADE — 7 linhas × 80
+   *    700 – 720   plataforma (fica decorativa: 29 px)
+   */
   grade: {
-    celula: 64,
-    /** Lado do azulejo desenhado dentro da célula. 50 = tamanho NATIVO do PNG
-     *  de 2013; não esticar, a ampliação já é 3x num notebook retina. */
-    azulejo: 50,
-    baseY: 664,
-    trilhoY: 104,
+    celula: 80,
+    /**
+     * Lado do azulejo dentro da célula — 77,5% dela, a mesma proporção de antes
+     * (50/64). Passa do tamanho NATIVO do PNG de 2013 (50 px), e isso é uma
+     * troca consciente: no celular o azulejo é DESENHADO menor que a fonte
+     * (62 × 0,5 = 31 px físicos), então lá não há ampliação nenhuma; a perda de
+     * nitidez cai só onde a pendência 1 do README já a declara — tela grande e
+     * retina. Ganhar 25% de alvo tocável no aparelho da criança vale isso.
+     */
+    azulejo: 62,
+    baseY: 700,
+    trilhoY: 40,
   },
 
   // --------------------------------------------------------------- tutorial
