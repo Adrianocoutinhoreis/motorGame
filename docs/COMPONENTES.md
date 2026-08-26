@@ -56,8 +56,49 @@ Tween.de(alvo).esperar(400).entao({ scaleX: 1 }, 220, Easing.costasSaida).emLaco
 Tween.removerDe(bloco);   // cancela só os deste alvo
 ```
 
-Curvas: `linear`, `suaveEntrada/Saida/suave`, `cubica*`, `costasSaida`, `quicarSaida`,
-`elasticaSaida`.
+Curvas: `linear`, `suaveEntrada`, `suaveSaida`, **`suave`** (é o *ease-in-out*: acelera e
+desacelera; não existe `suaveEntradaSaida`), `cubicaEntrada/Saida/cubica`, `costasSaida`,
+`quicarSaida`, `elasticaSaida`.
+
+#### `emCadaQuadro(fn)` — para valores DERIVADOS
+
+`chamar` dispara uma vez, ao chegar numa etapa. `emCadaQuadro` dispara **a cada quadro**, e serve
+para o que não se expressa como interpolação de propriedade: interpola-se um `t` de 0 a 1 e o
+valor sai dele.
+
+```js
+const p = { t: 0 };
+Tween.para(p, { t: 1 }, 650, Easing.suave)
+  .emCadaQuadro((_alvo, dt) => {          // dt em segundos, já com Tween.escalaTempo
+    const u = 1 - p.t;                    // curva de Bézier: x e y não são lineares
+    no.x = u * u * x0 + 2 * u * p.t * xc + p.t * p.t * x1;
+  })
+  .chamar(() => no.removerDoPai());
+```
+
+Não é uma etapa: é propriedade do tween inteiro, então pode ser encadeada em qualquer ponto.
+Dois detalhes de que quem usa depende:
+
+- **dispara também no quadro em que o tween termina**, depois dos `chamar` desse quadro — uma
+  callback que mexe num nó já removido precisa tolerar isso;
+- **uma exceção aqui não derruba o quadro**: vai para o console e o tween segue, como em
+  `chamar`. Isso é deliberado — um efeito com bug pode falhar sozinho, mas não pode matar a
+  jogada em curso.
+
+#### `Tween.temAtivo(alvo)` — para a cena checar a própria invariante
+
+```js
+Tween.temAtivo(this.garra);   // há tween vivo neste alvo?
+```
+
+Existe para o `Watchdog`: uma cena consegue afirmar "enquanto a jogada está em curso há sempre
+tween vivo na garra ou em mim", e checar isso é muito melhor que cronometrar quanto tempo a
+jogada "deveria" levar. Conta a espera pura também (`Tween.de(cena).esperar(380)`), que é o que
+mantém a cascata em pé entre os passes.
+
+**Cada tween é isolado no quadro.** Uma exceção num deles é logada, ele é descartado, e os
+demais seguem — sem isso o primeiro que falhasse abortava o laço e todos os criados depois
+perdiam o quadro, sempre os mesmos.
 
 ---
 
@@ -135,6 +176,53 @@ rand.inteiro(1, 5); rand.item(lista); rand.embaralhar(lista); new Rand(42); // c
 
 `Loader` **não** derruba o jogo quando um recurso falha — nos originais, um MP3 ausente
 travava a tela de carregamento para sempre, sem mensagem.
+
+---
+
+### `Watchdog`
+Percebe que a partida **travou** e avisa quem sabe consertar.
+
+**O defeito que ele existe para cobrir** aconteceu de verdade: um efeito visual novo do
+bloco-estrela chamou um método inexistente do `Tween` de dentro da cascata de combos. Como a
+cascata roda dentro de um `Tween.chamar`, que engole exceções e loga, a página não caiu — a
+cascata abortou pela metade, `fase` nunca voltou a `'livre'` e a garra travou. O jogo seguiu
+animando, contando o tempo e **ignorando todo toque**. Uma criança de cinco anos não lê console.
+
+```js
+this.guarda = new Watchdog({
+  nome: 'ciclo da jogada',
+  ocupado: () => this.fase !== 'livre' && !this.pausada && !this.placar.encerrado,
+  vivo: () => Tween.temAtivo(this) || Tween.temAtivo(this.garra),
+  graca: 0.5,        // segundos de "ocupado sem sinal de vida" antes de disparar
+  limite: 12,        // segunda rede: ocupado contínuo, para o tween que nunca acaba
+  aoTravar: ({ tentativa }) => { … },
+});
+
+// no atualizar(dt) da cena, DEPOIS do desvio da pausa:
+this.guarda.atualizar(dt);
+```
+
+**Não é um cronômetro, e isso é o ponto.** "Se passar de N segundos, destrava" é ruim por dois
+lados: N é um chute que envelhece (uma cascata longa é legítima e demora vários segundos) e N
+segundos de jogo morto é exatamente o que se quer evitar. O caminho melhor é a **invariante da
+cena**, que existe em todo jogo do motor: enquanto o ciclo está em curso há sempre um tween vivo
+no alvo que vai disparar o `chamar` final. Ocupado **e** sem sinal de vida não é demora — é
+cadeia perdida, e se percebe em meio segundo.
+
+**Quem detecta e quem decide são separados.** O motor detecta; o que é um estado seguro para
+voltar é decisão do jogo. Nos dois jogos o resgate escala: a primeira tentativa devolve a jogada,
+e se travar de novo a partida vai para o resultado com os pontos já feitos — pior que jogar,
+muito melhor que uma tela surda.
+
+| | `ocupado` | `vivo` | Resgate |
+|---|---|---|---|
+| Jogo das Formas | `fase !== 'livre'` | tween na cena ou na garra | devolve a jogada e refaz a cascata → encerra |
+| Jogo dos Blocos | `travado` | tween no bloco em queda ou na cena | devolve o gancho → encerra |
+
+Ele grita em `console.error`, de propósito: os testes de navegador reprovam a sessão que produz
+erro no console, então um disparo em falso aparece como teste vermelho. Verificado por injeção
+de falha em `tools/teste-jogabilidade-formas.mjs` (seção 6c) — a cascata é quebrada de propósito
+e o teste exige que o jogo volte.
 
 ---
 
@@ -264,11 +352,29 @@ Todas vêm registradas por `iniciarJogo()`; um jogo só fornece `jogando`.
 | `MenuScreen` | `menu` | JOGAR e COMO JOGAR |
 | `TutorialScreen` | `tutorial` | Passos narrados de `config.tutorial` |
 | `LevelSelectScreen` | `niveis` | Cartões; aparece só se houver mais de um nível |
-| `ResultScreen` | `resultado` | Vitória/derrota — **o ponto de registro no AVA** |
+| `ResultScreen` | `resultado` | Vitória/derrota — **o ponto de registro no AVA**. Desenha a fileira de estrelas (abaixo) |
 | `PauseScreen` | — | Camada sobreposta, adicionada pela cena de jogo |
 | `LoadingScreen` | — | HTML; existe antes do motor |
 
 Sobrescrever uma delas é possível: `iniciarJogo({ cenas: { menu: MeuMenu, jogando: … } })`.
+
+### A fileira de estrelas da `ResultScreen`
+
+**Cinco estrelas, em qualquer jogo e qualquer meta**, preenchidas por *um quinto da meta por
+estrela*. **O jogo não passa nota nenhuma** — a tela deriva a fileira dos mesmos campos que já
+mostra e que vão para o AVA:
+
+```js
+import { estrelasDoResultado } from '../engine/screens/ResultScreen.js';
+estrelasDoResultado({ acertos: 14, totalPerguntas: 20 });  // 3
+estrelasDoResultado({ acertos: 15, totalPerguntas: 12 });  // 5 (passar da meta não estoura)
+estrelasDoResultado({ acertos: 4,  totalPerguntas: 5  });  // 4 (meta 5: um ponto por estrela)
+```
+
+A função é exportada porque é a única regra desta tela que produz um número, e número se prova
+sem navegador (`tools/testes.mjs`). `Math.floor`: a quinta estrela exige a meta INTEIRA.
+
+Regra **RE-04** de `REGRAS-EDUCACIONAIS.md`, e é lá que está o porquê de ser fixa.
 
 ---
 
@@ -280,7 +386,7 @@ Placar e **fonte única** dos números do AVA.
 ```js
 const placar = new ScoreSystem({ total: 5, nivel: 1, vidas: 3 });
 placar.acertar(); placar.errar();
-placar.progresso; placar.estrelas; placar.venceu; placar.perdeu;
+placar.progresso; placar.aproveitamento; placar.venceu; placar.perdeu;
 placar.paraAva(venceu, { conteudo: 'Números 1 a 5' });
 placar.on('vitoria', …); placar.on('derrota', …);
 ```

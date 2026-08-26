@@ -1,6 +1,6 @@
 import {
   Scene, Node, Sprite, TextNode, ScoreSystem, ScoreBar, Lives, IconButton,
-  PauseScreen, Background, CraneController, Tween, Easing, ESTADOS,
+  PauseScreen, Background, CraneController, Tween, Easing, ESTADOS, Watchdog,
   cores, tipografia, espaco, texto as aplicarCaixa,
 } from '../../engine/index.js';
 
@@ -264,7 +264,46 @@ export class GameScene extends Scene {
     this.indiceSimbolo = 0;
     this.blocoNoGancho = null;
     this.travado = false;   // durante a queda, o toque não faz nada
+    /** O bloco em queda, enquanto `travado`. Ver `_montarGuarda`. */
+    this._emQueda = null;
     this.particulas = [];
+
+    /**
+     * O cão de guarda da queda.
+     *
+     * **A invariante:** enquanto `travado`, existe sempre um tween vivo no bloco
+     * que cai ou na cena — a queda anima o bloco, o assentamento anima a escala
+     * dele, e a espera de 420 ms antes do bloco seguinte é um `Tween.de(this)`.
+     * É sempre o `chamar` de uma dessas cadeias que devolve o toque à criança.
+     * `travado` sem nenhum dos dois não é demora: é cadeia perdida.
+     *
+     * Este jogo nunca travou — a rede é preventiva, e está aqui porque a
+     * exposição é a mesma que travou o Jogo das Formas: um efeito visual novo
+     * dentro de um `Tween.chamar`, que engole exceções. O piloto é o arquivo de
+     * onde os jogos seguintes copiam, então deixá-lo sem rede seria ensinar o
+     * padrão errado.
+     */
+    this.guarda = new Watchdog({
+      nome: 'queda do bloco',
+      ocupado: () => this.travado && !this.pausada && !this.placar.encerrado,
+      vivo: () => Tween.temAtivo(this._emQueda) || Tween.temAtivo(this),
+      graca: 0.5,
+      limite: 12,
+      aoTravar: ({ tentativa }) => {
+        // Primeiro degrau: devolve o gancho. Se não há bloco pendurado, chama o
+        // próximo — é o que a cadeia perdida deixaria de fazer.
+        if (tentativa === 1) {
+          this.travado = false;
+          this._emQueda = null;
+          if (!this.blocoNoGancho) this._novoBloco();
+          return;
+        }
+        // Segundo degrau: travou de novo. Melhor a tela de resultado com os
+        // pontos feitos que uma torre que não aceita mais nenhum toque.
+        this.guarda.desligar();
+        this._terminar(this.placar.venceu);
+      },
+    });
 
     // ------------------------------------------------------------- cenário
     this.adicionar(new Background({ largura: L, altura: A, tema: 'construcao' }));
@@ -384,6 +423,7 @@ export class GameScene extends Scene {
     this.camadaBlocos.adicionar(bloco);
     this.blocoNoGancho = bloco;
     this.controle.carregar(bloco);
+    this._emQueda = null;
     this.travado = false;
   }
 
@@ -397,6 +437,9 @@ export class GameScene extends Scene {
     this.travado = true;
     const bloco = this.blocoNoGancho;
     this.blocoNoGancho = null;
+    // Quem está caindo, para o cão de guarda saber onde procurar sinal de vida:
+    // enquanto `travado`, há sempre um tween neste bloco ou na cena.
+    this._emQueda = bloco;
     bloco.rotation = 0; // reseta a inércia durante a queda livre
 
     const alvoX = this.centroDoTopo;
@@ -441,7 +484,11 @@ export class GameScene extends Scene {
     this.placar.acertar();
 
     if (!this.placar.encerrado) {
-      Tween.de({}).esperar(420).chamar(() => this._novoBloco());
+      // `Tween.de(this)`, e não `Tween.de({})`: um alvo anônimo não pode ser
+      // consultado nem cancelado, e é justamente este tween que devolve o jogo à
+      // criança. Com a cena como alvo, `Tween.temAtivo(this)` enxerga a espera e
+      // o cão de guarda sabe que o ciclo ainda progride.
+      Tween.de(this).esperar(420).chamar(() => this._novoBloco());
     }
   }
 
@@ -503,13 +550,20 @@ export class GameScene extends Scene {
     this.pausa.abrir();
   }
 
+  /**
+   * A cena não passa nota de estrelas: a fileira da `ResultScreen` tem cinco e
+   * a preenche pelo percentual da meta (regra RE-04). Passava
+   * `placar.estrelas`, uma nota de 0 a 3 derivada dos erros — e ela já era
+   * ignorada aqui, porque a meta deste jogo é 5 e a tela caía no ramo "uma
+   * estrela por pergunta". Com a meta em 5, um quinto da meta é um ponto: a
+   * fileira mostra exatamente o mesmo que mostrava.
+   */
   _terminar(venceu) {
     this.controle.pausar();
     this.travado = true;
 
     this.irPara('resultado', {
       nivel: this.nivel,
-      estrelas: this.placar.estrelas,
       resultado: this.placar.paraAva(venceu, {
         conteudo: this.nivel.nome,
         blocosEmpilhados: this.torre.length,
@@ -524,6 +578,9 @@ export class GameScene extends Scene {
     }
 
     super.atualizar(dt);
+
+    // Depois do desvio da pausa: pausa é ocupação legítima e o cão não a conta.
+    this.guarda.atualizar(dt);
 
     this.controle.atualizar(dt);
     this.guindaste.posX = this.controle.x;

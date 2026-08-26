@@ -144,12 +144,17 @@ export class GameScene extends Scene {
   /**
    * Fim de partida. É AQUI que o registro no AVA acontece: ao entrar no estado
    * 'resultado', o motor chama o AvaBridge com este objeto — uma vez só.
+   *
+   * **Não passe `estrelas` aqui.** A fileira da tela de resultado tem cinco e
+   * quem a calcula é a própria tela, pelo percentual da meta que este payload já
+   * carrega (regra RE-04 de `docs/REGRAS-EDUCACIONAIS.md`). Um jogo que calcule
+   * a própria nota recria a divergência que a regra fechou: a tela dizendo um
+   * número e o jogo achando outro.
    */
   _terminar(venceu) {
     this.alvo.visible = false;
     this.irPara('resultado', {
       nivel: this.nivel,
-      estrelas: this.placar.estrelas,
       resultado: this.placar.paraAva(venceu),
     });
   }

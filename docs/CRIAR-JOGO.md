@@ -97,7 +97,6 @@ aoEntrar() {
 _terminar(venceu) {
   this.irPara('resultado', {
     nivel: this.nivel,
-    estrelas: this.placar.estrelas,
     resultado: this.placar.paraAva(venceu),
   });
 }

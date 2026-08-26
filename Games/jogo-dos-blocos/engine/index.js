@@ -24,6 +24,7 @@ export { Tween, Easing } from './core/Tween.js';
 export { Scene } from './core/Scene.js';
 export { Game } from './core/Game.js';
 export { ESTADOS, TRANSICOES, transicaoValida } from './core/Estados.js';
+export { Watchdog } from './core/Watchdog.js';
 
 // ------------------------------------------------------------------------ tema
 export {
@@ -41,6 +42,7 @@ export { Lives } from './ui/Lives.js';
 export { SoundToggle } from './ui/SoundToggle.js';
 export { Mascot, mascoteVisivel } from './ui/Mascot.js';
 export { Background } from './ui/Background.js';
+export { ParticleSystem, criarEstrelaVoadora } from './ui/FX.js';
 
 // ----------------------------------------------------------------------- telas
 export { LoadingScreen } from './screens/LoadingScreen.js';

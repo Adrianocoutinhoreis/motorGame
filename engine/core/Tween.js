@@ -54,6 +54,8 @@ export class Tween {
     this.pausado = false;
     this.concluido = false;
     this.laco = false;
+    /** @type {Array<Function>} chamadas de cada quadro — ver `emCadaQuadro`. */
+    this._porQuadro = [];
   }
 
   /** Cria e inicia um tween para o alvo. */
@@ -88,6 +90,37 @@ export class Tween {
     return this;
   }
 
+  /**
+   * Executa `fn` UMA VEZ POR QUADRO enquanto este tween estiver vivo.
+   *
+   * É a irmã de `chamar`: aquela dispara uma vez, ao chegar numa etapa; esta
+   * dispara a cada quadro. Serve para o que não se expressa como interpolação de
+   * propriedade — um valor DERIVADO. O caso que a trouxe: a estrela voadora do
+   * `FX.js` percorre uma curva de Bézier, e `x` e `y` não são interpolações
+   * lineares de nada; o que se interpola é um `t` de 0 a 1, e a posição sai dele
+   * a cada quadro. Sem isto, cada efeito assim teria de manter o próprio relógio.
+   *
+   * Não é uma etapa: é uma propriedade do tween inteiro. Por isso pode ser
+   * encadeada em qualquer ponto — antes ou depois dos `entao` — e vale para
+   * todos eles. `fn` recebe `(alvo, dt)`, com `dt` em segundos já multiplicado
+   * por `Tween.escalaTempo`.
+   *
+   * Dois detalhes que a implementação garante e de que quem usa depende:
+   *
+   *  - **Dispara também no quadro em que o tween termina**, depois dos `chamar`
+   *     desse quadro. Uma callback que mexe num nó que o `chamar` final removeu
+   *     precisa tolerar isso — mexer num nó solto é inofensivo, mas contar com
+   *     ele estar na cena não é.
+   *  - **Uma exceção aqui não derruba o quadro.** Vai para o console e o tween
+   *     segue, como em `chamar`. Antes disto existir, um erro de API dentro de um
+   *     efeito de partida bastava para congelar o jogo: a jogada morria no meio,
+   *     a fase nunca voltava a 'livre' e a garra ficava travada.
+   */
+  emCadaQuadro(fn) {
+    if (typeof fn === 'function') this._porQuadro.push(fn);
+    return this;
+  }
+
   /** Define propriedades instantaneamente nesta etapa. */
   definir(propriedades) {
     this._passos.push({ tipo: 'definir', propriedades });
@@ -116,7 +149,8 @@ export class Tween {
   atualizar(dt) {
     if (this.pausado || this.concluido) return;
 
-    let restante = dt * Tween.escalaTempo;
+    const dtEscalado = dt * Tween.escalaTempo;
+    let restante = dtEscalado;
     let guarda = 0;
 
     while (restante > 0 && !this.concluido) {
@@ -184,6 +218,15 @@ export class Tween {
         restante = 0;
       }
     }
+
+    // Depois das etapas, com os valores já deste quadro. Ver `emCadaQuadro`.
+    for (const fn of this._porQuadro) {
+      try {
+        fn(this.alvo, dtEscalado);
+      } catch (err) {
+        console.error('[motor] Tween.emCadaQuadro falhou:', err);
+      }
+    }
   }
 
   _proximoPasso() {
@@ -194,9 +237,41 @@ export class Tween {
 
   // ------------------------------------------------------------------ estáticos
 
-  /** Chamado uma vez por quadro pelo Game. */
+  /**
+   * Chamado uma vez por quadro pelo Game.
+   *
+   * **Cada tween é isolado.** Sem o `try`, uma exceção num tween abortava o
+   * `for` e todos os que vinham depois na lista PERDIAM o quadro — e como a
+   * ordem é a de criação, sempre os mesmos. Um erro numa animação decorativa
+   * congelava as animações que carregam a jogada. O tween que falha é descartado
+   * em vez de repetir o erro sessenta vezes por segundo; quem depende de um
+   * `chamar` que agora não vai acontecer é o `Watchdog` da cena que descobre.
+   */
   static atualizarTodos(dt) {
-    for (const t of [...Tween._ativos]) t.atualizar(dt);
+    for (const t of [...Tween._ativos]) {
+      try {
+        t.atualizar(dt);
+      } catch (err) {
+        console.error('[motor] Tween: um tween falhou e foi descartado:', err);
+        t.parar();
+      }
+    }
+  }
+
+  /**
+   * Existe algum tween vivo para este alvo?
+   *
+   * Serve para uma cena checar a própria INVARIANTE: em `jogo-das-formas`, por
+   * exemplo, enquanto a jogada está em curso existe sempre um tween na garra ou
+   * na cena, porque é o `chamar` do fim da cadeia que libera o toque de novo. Se
+   * a fase está ocupada e não há tween em nenhum dos dois, a cadeia se perdeu —
+   * e isso é detectável em meio segundo, sem precisar cronometrar quanto tempo
+   * uma jogada "deveria" levar. Ver `Watchdog`.
+   */
+  static temAtivo(alvo) {
+    if (!alvo) return false;
+    for (const t of Tween._ativos) if (t.alvo === alvo && !t.concluido) return true;
+    return false;
   }
 
   /** Cancela todos os tweens de um alvo (ex.: bloco removido do tabuleiro). */

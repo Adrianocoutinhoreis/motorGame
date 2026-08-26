@@ -11,7 +11,7 @@ import { desenharIcone } from '../theme/icons.js';
 import { cores, tipografia, espaco } from '../theme/tokens.js';
 
 /**
- * Estrelas — a nota visual da partida (0 a 3).
+ * Estrelas — a nota visual da partida, sempre em CINCO.
  *
  * Só existe na tela: **não vai para o AVA**. Quanto a partida vale em XP ou
  * nota é decisão do servidor (METODO A3), e o jogo não deve nem calcular isso.
@@ -21,10 +21,10 @@ class Estrelas extends Node {
   /**
    * @param {number} quantidade estrelas preenchidas
    * @param {{total?: number, tamanho?: number}} opcoes
-   *   `total` é quantas estrelas a fileira desenha (padrão 5).
+   *   `total` é quantas estrelas a fileira desenha (padrão `Estrelas.TOTAL`).
    */
   constructor(quantidade, opcoes = {}) {
-    const total = Math.max(1, Math.round(opcoes.total ?? 5));
+    const total = Math.max(1, Math.round(opcoes.total ?? Estrelas.TOTAL));
     const tamanho = opcoes.tamanho ?? Estrelas.ALTURA_PADRAO;
     super({ largura: Estrelas.larguraDe(total, tamanho), altura: tamanho, ...opcoes });
     this.total = total;
@@ -47,6 +47,16 @@ class Estrelas extends Node {
    * centraliza o bloco "título + estrelas" precisa do número antes de instanciar.
    */
   static ALTURA_PADRAO = 76;
+
+  /**
+   * Quantas estrelas a fileira tem — **cinco, em qualquer jogo e qualquer meta**.
+   *
+   * Cinco porque é a escala que a criança já reconhece de fora do jogo, e fixo
+   * porque uma fileira de tamanho variável obriga a ler DOIS números (quantas
+   * acesas de quantas) antes de saber se foi bem. Com o total sempre igual, a
+   * quantidade de ouro na tela é a mensagem inteira.
+   */
+  static TOTAL = 5;
 
   animar() {
     // O atraso encolhe conforme a fileira cresce: com 220 ms fixos, cinco
@@ -97,6 +107,28 @@ class Estrelas extends Node {
 }
 
 /**
+ * Quantas das cinco estrelas este resultado acende — **um quinto da meta por
+ * estrela**, sobre a pontuação que a mesma tela mostra e que vai para o AVA.
+ *
+ * Está separada da tela, e exportada, por um motivo prático: é a única regra da
+ * `ResultScreen` que produz um NÚMERO, e um número se prova sem navegador.
+ * Enquanto ela morava dentro de `aoEntrar`, a única verificação possível era
+ * abrir o jogo e contar estrelas na captura.
+ *
+ * @param {{acertos?: number, totalPerguntas?: number}} resultado o payload do AVA
+ * @returns {number} 0 a `Estrelas.TOTAL`
+ */
+export function estrelasDoResultado(resultado) {
+  const meta = Number(resultado?.totalPerguntas) || 0;
+  const pontos = Number(resultado?.acertos) || 0;
+  // Sem meta declarada não há fração de meta, e inventar uma nota seria pior do
+  // que não dar nenhuma: a fileira vazia ao menos não afirma nada falso.
+  if (meta <= 0) return 0;
+  const fracao = Math.max(0, Math.min(1, pontos / meta));
+  return Math.floor(fracao * Estrelas.TOTAL);
+}
+
+/**
  * ResultScreen — fim de partida: vitória ou derrota.
  *
  * É o ponto ÚNICO de registro no AVA. O `Game` dispara o `AvaBridge` ao entrar
@@ -118,7 +150,6 @@ export class ResultScreen extends Scene {
       acertos: 0, erros: 0, totalPerguntas: 0, nivel: 1, vitoria: false,
     };
     const venceu = !!resultado.vitoria;
-    const estrelas = this.game.dados.estrelas ?? (venceu ? 1 : 0);
 
     // Mesmo canteiro de obras do menu e da partida, em vez de um céu vazio.
     // A tela de resultado é a última coisa que a criança vê da atividade; com
@@ -172,33 +203,43 @@ export class ResultScreen extends Scene {
       alinhamento: 'center',
     }));
 
-    // Uma estrela por pergunta, preenchidas pela PONTUAÇÃO da partida.
+    // **Cinco estrelas, sempre**, preenchidas pelo PERCENTUAL DA META que a
+    // pontuação alcançou — um quinto da meta por estrela.
     //
-    // Duas correções sucessivas moram aqui, e vale registrar as duas para a
-    // terceira não repetir nenhuma:
+    // Três desenhos moraram aqui, e vale registrar todos para o quarto não
+    // repetir nenhum:
     //
-    //  1. Eram sempre TRÊS estrelas, vindas de `ScoreSystem.estrelas`, que
-    //     deriva dos erros. A fileira era o medidor de vidas com outra roupa:
-    //     dava para completar a meta e ver uma estrela só.
+    //  1. Eram sempre TRÊS, vindas de `ScoreSystem.estrelas`, que derivava dos
+    //     erros. A fileira era o medidor de vidas com outra roupa: dava para
+    //     completar a meta e ver uma estrela só.
     //  2. Passaram a ser uma por pergunta preenchida pelo ACERTO BRUTO — e aí
     //     encheram sempre. Como vencer exige acertar a meta inteira, toda
     //     vitória virava nota máxima: "5 de 5" com duas quedas pelo caminho.
+    //  3. Uma por pergunta preenchida pela PONTUAÇÃO, com queda para a nota de
+    //     0 a 3 acima de 6 perguntas — porque 20 estrelas não caberiam no
+    //     painel. Isso deu DUAS escalas no mesmo lugar: o Jogo dos Blocos
+    //     mostrava 5 estrelas e o Jogo das Formas 3, sem que nada na tela
+    //     explicasse por quê, e cada jogo com meta grande tinha de calcular a
+    //     própria nota (havia duas fórmulas de "0 a 3" divergentes no repo).
     //
-    // Agora vêm de `resultado.acertos`, que é a `pontuacao` do `ScoreSystem`:
-    // desconta as falhas na vitória e preserva o progresso na derrota. O mesmo
-    // número vai para o AVA, então tela e relatório não podem divergir.
+    // Agora a fileira tem tamanho fixo e o cálculo é UM, aqui, sobre os mesmos
+    // campos que a tela já mostra e que vão para o AVA — o jogo não passa mais
+    // nota nenhuma. Meta 5 dá exatamente o que dava antes (um ponto = uma
+    // estrela), então o piloto não muda de comportamento.
     //
-    // Acima de 6 perguntas a fileira não caberia no painel nem se leria de
-    // relance, então aí a nota de 0 a 3 volta a ser a leitura honesta. É o único
-    // caso em que ela ainda é usada.
-    const totalPerguntas = Number(resultado.totalPerguntas) || 0;
-    const umaPorPergunta = totalPerguntas >= 1 && totalPerguntas <= 6;
-    const totalEstrelas = umaPorPergunta ? totalPerguntas : 3;
-    const estrelasCheias = umaPorPergunta ? (Number(resultado.acertos) || 0) : estrelas;
+    // `Math.floor` de propósito: a quinta estrela exige a meta INTEIRA. Com
+    // arredondamento, 90% da meta acenderia as cinco e a tela voltaria a dizer
+    // "nota máxima" para uma partida incompleta, que é o defeito que a regra
+    // RE-02 existe para impedir. O preço é o outro extremo: abaixo de 20% da
+    // meta a fileira fica vazia. É aceitável porque a linha de baixo diz o
+    // progresso na unidade ("2 pontos"), e porque o desenho anterior era mais
+    // severo — zerava abaixo de 30%.
+    const pontos = Number(resultado.acertos) || 0;
+    const estrelasCheias = estrelasDoResultado(resultado);
 
     const estrelasNode = new Estrelas(estrelasCheias, {
-      total: totalEstrelas,
-      x: (larguraPainel - Estrelas.larguraDe(totalEstrelas)) / 2,
+      total: Estrelas.TOTAL,
+      x: (larguraPainel - Estrelas.larguraDe(Estrelas.TOTAL)) / 2,
       y: yTitulo + PASSO_TITULO,
     });
     painel.adicionar(estrelasNode.animar());
@@ -225,8 +266,10 @@ export class ResultScreen extends Scene {
     //
     // Para o AVA nada muda: `acertos`, `erros` e `totalPerguntas` seguem indo
     // inteiros e crus na mensagem. Quanto a partida vale é do servidor (METODO A3).
-    const pontos = Number(resultado.acertos) || 0;
-
+    //
+    // `pontos` está declarado junto com o cálculo das estrelas, acima: é o mesmo
+    // número alimentando as duas leituras, e separá-los era o caminho curto para
+    // a fileira dizer uma coisa e a linha dizer outra.
     painel.adicionar(new TextNode(
       `${pontos} ${pontos === 1 ? 'ponto' : 'pontos'}`,
       {

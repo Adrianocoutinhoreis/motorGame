@@ -44,6 +44,9 @@ export const ICONES = {
   certo: { tracar: ['M4.5 12.5l5 5 10-11'] },
   errado: { tracar: ['M6.5 6.5l11 11', 'M17.5 6.5l-11 11'] },
   pular: { preencher: ['M5 5l8 7-8 7z', 'M15 5h3v14h-3z'] },
+  relogio: {
+    tracar: ['M12 3a9 9 0 0 1 0 18a9 9 0 0 1 0 -18', 'M12 7v5h4.5'],
+  },
 };
 
 const cacheCaminhos = new Map();

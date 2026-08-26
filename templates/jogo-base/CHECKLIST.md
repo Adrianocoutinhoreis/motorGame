@@ -19,6 +19,10 @@
 - [ ] **Regras educacionais conferidas** (`docs/REGRAS-EDUCACIONAIS.md`), uma a uma:
   - [ ] RE-01 — toda letra apresentada como conteúdo está em **CAIXA ALTA**
         (frases de instrução seguem em caixa normal)
+  - [ ] RE-02 — a nota da partida desconta o erro **na vitória**, nunca na derrota
+        (nada a fazer se a cena usa `placar.paraAva()`; confira que usa)
+  - [ ] RE-03 — o placar do fim de partida diz a **unidade** ("7 PONTOS"), não "7 de 10"
+  - [ ] RE-04 — a cena **não** passa `estrelas` em `irPara('resultado', …)`; a fileira é da tela
 
 ## 2. Assets
 
@@ -49,6 +53,12 @@
 - [ ] Feedback **imediato** de erro (visual + som), sem tom punitivo
 - [ ] Dificuldade dos níveis testada de verdade (não só configurada)
 - [ ] Nenhum estado travado: sempre dá para agir ou a partida termina
+  - [ ] Se a partida tem uma fase em que o toque é ignorado de propósito (`travado`, `fase`,
+        `movendo`…), ela tem um **`Watchdog`** ligado no `atualizar(dt)`, depois do desvio da
+        pausa. Sem ele, uma exceção engolida por `Tween.chamar` deixa o jogo animando e surdo
+        para sempre — ver `docs/COMPONENTES.md`
+  - [ ] A invariante do `vivo` foi **conferida durante** a fase travada, não só depois: um
+        predicado olhando para o alvo errado provoca resgate em falso, que é pior que não ter rede
 - [ ] Reiniciar limpa **todo** o estado da partida anterior
 
 ## 5. Contrato do AVA

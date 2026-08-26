@@ -151,21 +151,21 @@ export class ScoreSystem extends Emitter {
   }
 
   /**
-   * Nota de 0 a 3 estrelas, derivada dos ERROS.
+   * **Não existe mais um `estrelas` aqui, e a ausência é proposital.**
    *
-   * É a SAÍDA DE RESERVA, não o padrão: a `ResultScreen` desenha uma estrela
-   * por pergunta, preenchida pela `pontuacao`, quando o total é de 1 a 6, e só
-   * cai nesta nota de 0 a 3 quando a fileira não caberia no painel nem se leria
-   * de relance.
+   * Havia: uma nota de 0 a 3 derivada dos ERROS. Ela morreu quando a fileira da
+   * `ResultScreen` passou a ter cinco estrelas fixas preenchidas pelo
+   * percentual da meta (regra RE-04) — a tela deriva a nota dos três campos que
+   * já mostra, e nenhum jogo precisa calcular nota nenhuma.
    *
-   * Só é exibida — não vai para o AVA (quanto vale a partida é do servidor).
+   * Um getter sem chamador aqui não seria inofensivo: seria uma SEGUNDA
+   * definição de "quantas estrelas", divergente da que a tela usa (esta dava
+   * zero em qualquer derrota, e a da tela mostra o progresso). O próximo jogo a
+   * encontrá-lo passaria a exibir um número que a tela contradiz — e evitar
+   * exatamente isso é o motivo desta classe existir.
+   *
+   * Quem quiser um percentual pronto tem `aproveitamento`, acima.
    */
-  get estrelas() {
-    if (!this.venceu) return 0;
-    if (this.erros === 0) return 3;
-    if (this.erros <= Math.max(1, Math.floor(this.total * 0.25))) return 2;
-    return 1;
-  }
 
   /**
    * Objeto no formato que o `AvaBridge.concluir()` espera.

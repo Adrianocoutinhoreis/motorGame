@@ -504,6 +504,52 @@ async function principal() {
     await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
     await esperar(900);
 
+    // ------------------------------------------- o cão de guarda da queda
+    //
+    // A rede que percebe a partida travada só serve se a INVARIANTE dela estiver
+    // certa: enquanto `travado`, tem de haver tween vivo no bloco que cai ou na
+    // cena. Se o predicado olhasse para o alvo errado, o cão acusaria travamento
+    // no meio de uma queda perfeitamente normal — e um resgate em falso é pior
+    // que não ter rede. Por isso a verificação é feita DURANTE a queda.
+    //
+    // O `nenhum console.error durante a sessão`, no fim deste arquivo, é a outra
+    // metade: o cão grita em `console.error`, então qualquer disparo em falso ao
+    // longo das partidas inteiras já reprova ali.
+    const naQueda = await avaliar(`(() => {
+      const c = ${g}.cena;
+      if (!c.guarda) return { semGuarda: true };
+      c.soltar();
+      return {
+        travado: c.travado,
+        vivo: c.guarda.vivo(),
+        ocupado: c.guarda.ocupado(),
+        disparos: c.guarda.disparos,
+      };
+    })()`);
+    checar('a partida tem cão de guarda armado', !naQueda.semGuarda, JSON.stringify(naQueda));
+    checar('durante a queda o ciclo está ocupado — o cão sabe que há o que terminar',
+      naQueda.travado === true && naQueda.ocupado === true, JSON.stringify(naQueda));
+    checar('durante a queda a invariante dá sinal de vida (nada de resgate em falso)',
+      naQueda.vivo === true, JSON.stringify(naQueda));
+
+    await esperar(1600);
+    const depoisDaQueda = await avaliar(`(() => {
+      const c = ${g}.cena;
+      return { travado: c.travado, disparos: c.guarda.disparos, ocupado: c.guarda.ocupado() };
+    })()`);
+    checar('a queda terminou sozinha e o cão não precisou intervir',
+      depoisDaQueda.travado === false && depoisDaQueda.disparos === 0,
+      JSON.stringify(depoisDaQueda));
+
+    // Recomeça a partida: a inspeção acima soltou um bloco de verdade, e a
+    // verificação da RE-02, logo abaixo, conta erros a partir de um tabuleiro do
+    // zero. Sem isto ela media uma partida que já tinha uma jogada feita — e foi
+    // exatamente assim que ela reprovou na primeira tentativa desta seção.
+    await avaliar(`${g}.irPara('menu')`);
+    await esperar(400);
+    await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
+    await esperar(900);
+
     // Derruba exatamente 2 (o terceiro erro encerraria por derrota) e depois
     // completa a torre. Mesmo caminho de código do toque do aluno.
     const vencerComQuedas = `
@@ -569,9 +615,22 @@ async function principal() {
       })()
     `);
 
+    // A fileira tem CINCO, em qualquer jogo e qualquer meta (regra RE-04), e a
+    // tela é que a calcula — um quinto da meta por estrela. Aqui a meta é 5, e
+    // por isso um quinto dela é um ponto: 3 pontos acendem 3 estrelas. Esta
+    // igualdade é a que garante que o piloto não mudou de comportamento quando a
+    // fileira deixou de ter tamanho variável.
     checar('a tela mostra 3 estrelas de 5, não 5 de 5',
       telaComQuedas.estrelas?.cheias === 3 && telaComQuedas.estrelas?.total === 5,
       JSON.stringify(telaComQuedas.estrelas));
+
+    // RE-04: a cena não passa nota nenhuma. Se voltar a passar, volta a existir
+    // uma segunda fórmula de "quantas estrelas" divergindo da que a tela usa.
+    const notaDaCena = await avaliar(
+      'document.getElementById("quadro").contentWindow.jogo.dados.estrelas ?? "ausente"',
+    );
+    checar('a cena não passa nota de estrelas — quem calcula é a tela',
+      notaDaCena === 'ausente', JSON.stringify(notaDaCena));
     // O placar da tela diz a UNIDADE, não uma fração: "3 pontos", não "3 de 5".
     // O "de N" saiu porque a pontuação pode passar da meta (um combo do Jogo das
     // Formas fechava a partida anunciando "13 de 12"). A verificação que importa
@@ -580,9 +639,18 @@ async function principal() {
     checar('o número da tela é o MESMO que foi para o AVA',
       telaComQuedas.textos.some((x) => x.includes(`${m3.acertos} pontos`)),
       JSON.stringify(telaComQuedas.textos));
+    // Atenção ao escrever esta regex: ela já esteve aqui como `/d+ de d+/`, sem
+    // as barras invertidas — um heredoc as engoliu na hora de escrever o arquivo.
+    // O padrão passou a casar o texto literal "d+ de d+", que nunca aparece, e a
+    // verificação passou a aprovar sempre, inclusive uma tela dizendo "3 de 5".
+    // Teste que não pode falhar não é teste.
     checar('a tela NÃO promete um total que a pontuação pode passar',
-      !telaComQuedas.textos.some((x) => /d+ de d+/.test(x)),
+      !telaComQuedas.textos.some((x) => /\d+ de \d+/.test(x)),
       JSON.stringify(telaComQuedas.textos));
+    // E a prova de que a verificação acima ainda MORDE: o mesmo padrão contra um
+    // texto que deveria reprovar.
+    checar('a verificação do "N de N" reprova quando existe um "N de N"',
+      /\d+ de \d+/.test('3 de 5'));
 
     // A linha "2 tentativas perdidas" saiu da tela de resultado (o fim de partida
     // comemora o avanço, não enumera falha — docs/DESIGN.md). Os erros seguem

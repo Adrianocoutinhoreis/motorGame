@@ -58,6 +58,26 @@ export class ScoreBar extends Node {
     return this;
   }
 
+  /**
+   * Faz o ícone do HUD dar um pulso leve de celebração (ex.: ao receber estrela).
+   *
+   * **O pulso anima um objeto PRÓPRIO, e não uma propriedade da barra.** Motivo
+   * medido no código: `Tween.removerDe` cancela por ALVO, não por propriedade, e
+   * `definirValor` (logo acima) chama `Tween.removerDe(this)` a cada mudança de
+   * placar. Com o pulso pendurado na própria barra os dois se atropelavam nos dois
+   * sentidos — uma pontuação nova no meio do pulso deixava o ícone **grande para
+   * sempre**, porque nada mais mexia naquele valor, e um pulso no meio da barra
+   * subindo congelava o preenchimento a meio caminho. Em alvos separados, os dois
+   * convivem.
+   */
+  pulsarIcone() {
+    this._pulso ??= { escala: 1 };
+    this._pulso.escala = 1.35;
+    Tween.removerDe(this._pulso);
+    Tween.para(this._pulso, { escala: 1 }, movimento.padrao, Easing.costasSaida);
+    return this;
+  }
+
   desenhar(ctx) {
     const { largura: l, altura: a } = this;
     const r = a / 2;
@@ -67,8 +87,11 @@ export class ScoreBar extends Node {
     ctx.save();
 
     if (this.icone) {
+      const esc = this._pulso?.escala ?? 1;
       ctx.save();
-      ctx.translate(0, 0);
+      ctx.translate(a / 2, a / 2);
+      ctx.scale(esc, esc);
+      ctx.translate(-a / 2, -a / 2);
       desenharIcone(ctx, this.icone, a, cores.atencao, 2.2);
       ctx.restore();
     }
@@ -119,7 +142,7 @@ export class ScoreBar extends Node {
  */
 export class TimerBar extends ScoreBar {
   constructor(opcoes = {}) {
-    super({ icone: 'reiniciar', mostrarNumeros: false, ...opcoes });
+    super({ icone: 'relogio', mostrarNumeros: false, ...opcoes });
     this.duracao = opcoes.duracao ?? 120;
     this.restante = this.duracao;
     this.rodando = false;

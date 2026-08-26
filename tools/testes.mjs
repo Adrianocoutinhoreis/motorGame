@@ -17,6 +17,8 @@ import { Rand } from '../engine/core/Rand.js';
 import { GridBoard } from '../engine/gameplay/GridBoard.js';
 import { ScoreSystem } from '../engine/gameplay/ScoreSystem.js';
 import { CraneController } from '../engine/gameplay/CraneController.js';
+import { estrelasDoResultado } from '../engine/screens/ResultScreen.js';
+import { Watchdog } from '../engine/core/Watchdog.js';
 import { Stage } from '../engine/core/Stage.js';
 import { Loader } from '../engine/core/Loader.js';
 import { AvaBridge } from '../engine/ava/AvaBridge.js';
@@ -122,6 +124,61 @@ grupo('Matrix2D', () => {
 
 // ------------------------------------------------------------------- Tween
 grupo('Tween', () => {
+  // ---------------------------------------------------------- emCadaQuadro
+  //
+  // Existe porque um efeito precisava dela e ela NÃO existia: o `FX.js` chamava
+  // `Tween.para(...).emCadaQuadro(...)`, o que lançava `TypeError`. Como a
+  // chamada acontecia dentro de `Tween.chamar` (que engole exceções e loga), o
+  // efeito não derrubava a página — abortava a cascata do Jogo das Formas pela
+  // metade e deixava a garra travada para sempre. Estes testes são o que faz uma
+  // ausência dessas reprovar aqui, em vez de aparecer como jogo congelado.
+  teste('emCadaQuadro roda a cada quadro, com o alvo e o dt', () => {
+    Tween.removerTodos();
+    const alvo = { x: 0 };
+    const quadros = [];
+    Tween.para(alvo, { x: 100 }, 1000, Easing.linear)
+      .emCadaQuadro((a, dt) => quadros.push({ x: a.x, dt }));
+
+    Tween.atualizarTodos(0.25);
+    Tween.atualizarTodos(0.25);
+    igual(quadros.length, 2, 'quantos quadros:');
+    perto(quadros[0].x, 25, 0.001, 'valor no 1º quadro:');
+    perto(quadros[1].x, 50, 0.001, 'valor no 2º quadro:');
+    perto(quadros[0].dt, 0.25, 0.001, 'dt recebido:');
+  });
+
+  teste('emCadaQuadro para de rodar quando o tween acaba', () => {
+    Tween.removerTodos();
+    let vezes = 0;
+    Tween.para({ x: 0 }, { x: 1 }, 100, Easing.linear).emCadaQuadro(() => { vezes++; });
+    Tween.atualizarTodos(0.2);   // já conclui neste quadro
+    const noFim = vezes;
+    Tween.atualizarTodos(0.2);
+    Tween.atualizarTodos(0.2);
+    igual(vezes, noFim, 'nenhuma chamada depois de concluído:');
+    ok(noFim >= 1, 'roda no quadro em que conclui');
+  });
+
+  teste('uma exceção em emCadaQuadro não interrompe o tween', () => {
+    // É o que impede o defeito da garra travada de se repetir por outro caminho:
+    // um efeito com bug pode falhar sozinho, mas não pode matar a jogada.
+    Tween.removerTodos();
+    const alvo = { x: 0 };
+    const erroOriginal = console.error;
+    console.error = () => {};
+    try {
+      Tween.para(alvo, { x: 100 }, 1000, Easing.linear)
+        .emCadaQuadro(() => { throw new Error('efeito com bug'); })
+        .chamar(() => { alvo.terminou = true; });
+      Tween.atualizarTodos(0.5);
+      Tween.atualizarTodos(0.6);
+    } finally {
+      console.error = erroOriginal;
+    }
+    perto(alvo.x, 100, 0.001, 'a animação chegou ao fim:');
+    igual(alvo.terminou, true, 'o `chamar` seguinte rodou:');
+  });
+
   teste('anima até o valor final', () => {
     Tween.removerTodos();
     const alvo = { x: 0 };
@@ -432,18 +489,253 @@ grupo('ScoreSystem', () => {
     perto(placar.progresso, 0.4);
   });
 
-  teste('estrelas: 3 sem erro, menos com erros', () => {
-    const perfeito = new ScoreSystem({ total: 4 });
-    perfeito.acertar(4);
-    igual(perfeito.estrelas, 3, 'partida perfeita:');
+  teste('não existe nota de estrelas no placar', () => {
+    // Havia um getter `estrelas` aqui, de 0 a 3 pelos erros. Ele saiu com a
+    // regra RE-04, e este teste existe para que não volte por descuido: duas
+    // definições de "quantas estrelas" no repo é como a tela e o relatório
+    // começam a divergir. A nota é da `ResultScreen`, testada logo abaixo.
+    const placar = new ScoreSystem({ total: 4 });
+    placar.acertar(4);
+    igual(placar.estrelas, undefined, 'ScoreSystem.estrelas:');
+  });
+});
 
-    const comErros = new ScoreSystem({ total: 4 });
-    comErros.errar().errar().errar().acertar(4);
-    ok(comErros.estrelas < 3, 'com erros precisa valer menos');
+// ------------------------------------------------- nota em estrelas da tela
+grupo('estrelasDoResultado', () => {
+  const nota = (acertos, totalPerguntas) => estrelasDoResultado({ acertos, totalPerguntas });
+
+  teste('a quinta estrela exige a meta inteira', () => {
+    igual(nota(20, 20), 5, 'meta cravada:');
+    igual(nota(19, 20), 4, '95% da meta:');
+    // O caso que a regra RE-02 existe para impedir: quase-máximo não é máximo.
+    igual(nota(18, 20), 4, '90% da meta:');
+  });
+
+  teste('a pontuação pode passar da meta sem estourar a fileira', () => {
+    // Jogo das Formas: um combo resolve vários blocos e o bloco-estrela vale 2,
+    // então 15 numa meta de 12 é resultado normal, não erro de conta.
+    igual(nota(15, 12), 5, '125% da meta:');
+    igual(nota(999, 12), 5, 'absurdo:');
+  });
+
+  teste('um quinto da meta por estrela', () => {
+    igual(nota(0, 20), 0, 'nada feito:');
+    igual(nota(3, 20), 0, '15% da meta:');
+    igual(nota(4, 20), 1, '20% da meta:');
+    igual(nota(10, 20), 2, 'metade da meta:');
+    igual(nota(14, 20), 3, '70% da meta:');
+  });
+
+  teste('meta 5 dá uma estrela por ponto, como no Jogo dos Blocos', () => {
+    // O piloto não pode mudar de comportamento: com meta 5, um quinto da meta
+    // é exatamente um ponto. Se esta igualdade quebrar, a regra regrediu.
+    for (let pontos = 0; pontos <= 5; pontos++) igual(nota(pontos, 5), pontos, `${pontos} de 5:`);
+  });
+
+  teste('sem meta declarada não inventa nota', () => {
+    igual(nota(7, 0), 0, 'meta zero:');
+    igual(estrelasDoResultado(undefined), 0, 'sem resultado:');
+    igual(estrelasDoResultado({}), 0, 'resultado vazio:');
+  });
+
+  teste('nunca passa de zero para baixo nem de cinco para cima', () => {
+    igual(nota(-5, 10), 0, 'pontuação negativa:');
+    ok(nota(1000, 1) <= 5, 'teto da fileira');
   });
 });
 
 // --------------------------------------------------------- CraneController
+// ------------------------------------------------------------------ Watchdog
+//
+// A rede que percebe a partida travada. Existe por um defeito real: um efeito
+// visual chamou um método inexistente dentro da cascata de combos, `Tween.chamar`
+// engoliu a exceção, a cascata abortou pela metade e a garra ficou travada para
+// sempre — com o jogo animando, contando o tempo e ignorando todo toque.
+//
+// Estes testes existem porque uma rede de segurança que ninguém verifica é pior
+// que nenhuma: dá a sensação de estar coberto.
+grupo('Watchdog', () => {
+  /** Roda N segundos em quadros de 1/60, como o laço do Game. */
+  const rodar = (cao, segundos) => {
+    const passo = 1 / 60;
+    for (let t = 0; t < segundos; t += passo) cao.atualizar(passo);
+  };
+  const calado = (fn) => {
+    const original = console.error;
+    console.error = () => {};
+    try { return fn(); } finally { console.error = original; }
+  };
+
+  teste('não dispara enquanto o ciclo dá sinal de vida', () => {
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => true, graca: 0.5, aoTravar: () => {},
+    });
+    calado(() => rodar(cao, 30));
+    igual(cao.disparos, 0, 'disparos em 30 s ocupado e vivo:');
+  });
+
+  teste('não dispara quando o ciclo nem está ocupado', () => {
+    const cao = new Watchdog({
+      ocupado: () => false, vivo: () => false, graca: 0.5, aoTravar: () => {},
+    });
+    calado(() => rodar(cao, 10));
+    igual(cao.disparos, 0, 'disparos com a cena livre:');
+  });
+
+  teste('dispara quando fica ocupado SEM sinal de vida', () => {
+    let resgates = 0;
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => false, graca: 0.5,
+      aoTravar: () => { resgates++; },
+    });
+    calado(() => rodar(cao, 0.4));
+    igual(cao.disparos, 0, 'antes da graça terminar:');
+    calado(() => rodar(cao, 0.2));
+    igual(cao.disparos, 1, 'depois da graça:');
+    igual(resgates, 1, 'resgates chamados:');
+  });
+
+  teste('a graça reinicia a cada sinal de vida', () => {
+    // O caso que isto protege: uma cascata longa alterna espera e movimento, e
+    // um cão que somasse o tempo total acusaria em falso no meio da jogada.
+    let vivo = true;
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => vivo, graca: 0.5, aoTravar: () => {},
+    });
+    for (let i = 0; i < 20; i++) {
+      vivo = false;
+      calado(() => rodar(cao, 0.4));   // quase estoura...
+      vivo = true;
+      cao.atualizar(1 / 60);           // ...e um sinal zera a contagem
+    }
+    igual(cao.disparos, 0, 'disparos em 8 s de vai-e-vem:');
+  });
+
+  teste('o limite absoluto pega o ciclo que está vivo mas nunca acaba', () => {
+    // É a segunda rede: um tween em laço, ou pausado, mantém o "sinal de vida"
+    // para sempre. A invariante não vê isso; o relógio vê.
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => true, graca: 0.5, limite: 2, aoTravar: () => {},
+    });
+    calado(() => rodar(cao, 1.5));
+    igual(cao.disparos, 0, 'antes do limite:');
+    calado(() => rodar(cao, 0.6));
+    igual(cao.disparos, 1, 'depois do limite:');
+  });
+
+  teste('escala: a tentativa sobe se o resgate não resolver', () => {
+    const tentativas = [];
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => false, graca: 0.5,
+      aoTravar: ({ tentativa }) => tentativas.push(tentativa),
+    });
+    calado(() => rodar(cao, 3.2));
+    ok(tentativas.length >= 2, 'disparou mais de uma vez');
+    igual(tentativas[0], 1, 'primeiro disparo:');
+    igual(tentativas[1], 2, 'segundo disparo:');
+  });
+
+  teste('cada disparo exige uma graça inteira, não um por quadro', () => {
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => false, graca: 0.5, aoTravar: () => {},
+    });
+    calado(() => rodar(cao, 1.1));
+    // 1,1 s / 0,5 s de graça = 2 disparos. Sem o reinício depois do resgate
+    // seriam ~36 (um por quadro), e o console viraria uma cachoeira.
+    igual(cao.disparos, 2, 'disparos em 1,1 s:');
+  });
+
+  teste('a tentativa volta a 1 quando a cena se recupera', () => {
+    // Um travamento no começo da partida não pode fazer o travamento seguinte,
+    // meia hora depois, pular direto para "encerrar a partida".
+    let travado = true;
+    const tentativas = [];
+    const cao = new Watchdog({
+      ocupado: () => travado, vivo: () => false, graca: 0.5,
+      aoTravar: ({ tentativa }) => tentativas.push(tentativa),
+    });
+    calado(() => rodar(cao, 0.6));
+    travado = false;
+    cao.atualizar(1 / 60);
+    travado = true;
+    calado(() => rodar(cao, 0.6));
+    igual(tentativas.join(','), '1,1', 'tentativas dos dois episódios:');
+  });
+
+  teste('desligar cala o cão em definitivo', () => {
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => false, graca: 0.5, aoTravar: () => {},
+    });
+    cao.desligar();
+    calado(() => rodar(cao, 10));
+    igual(cao.disparos, 0, 'disparos depois de desligar:');
+  });
+
+  teste('um resgate que lança não derruba o quadro', () => {
+    const cao = new Watchdog({
+      ocupado: () => true, vivo: () => false, graca: 0.5,
+      aoTravar: () => { throw new Error('resgate com bug'); },
+    });
+    calado(() => rodar(cao, 0.6));   // não deve lançar daqui para fora
+    igual(cao.disparos, 1, 'disparou mesmo com resgate quebrado:');
+  });
+
+  teste('exige ocupado e aoTravar — não aceita rede pela metade', () => {
+    let erros = 0;
+    try { new Watchdog({ aoTravar: () => {} }); } catch { erros++; }
+    try { new Watchdog({ ocupado: () => true }); } catch { erros++; }
+    igual(erros, 2, 'construções recusadas:');
+  });
+});
+
+// --------------------------------------------------- Tween.temAtivo (a invariante)
+grupo('Tween.temAtivo', () => {
+  teste('enxerga tween vivo por alvo e esquece o concluído', () => {
+    Tween.removerTodos();
+    const garra = { y: 0 };
+    const outro = { y: 0 };
+    ok(!Tween.temAtivo(garra), 'antes de criar: nada');
+
+    Tween.para(garra, { y: 100 }, 100, Easing.linear);
+    ok(Tween.temAtivo(garra), 'durante: vivo');
+    ok(!Tween.temAtivo(outro), 'outro alvo não conta');
+
+    Tween.atualizarTodos(0.2);
+    ok(!Tween.temAtivo(garra), 'depois de acabar: nada');
+  });
+
+  teste('uma espera sem animação também conta como sinal de vida', () => {
+    // É o caso da cascata: `Tween.de(cena).esperar(380).chamar(...)` não anima
+    // nada, e ainda assim é o que mantém o ciclo em pé.
+    Tween.removerTodos();
+    const cena = {};
+    Tween.de(cena).esperar(300).chamar(() => {});
+    ok(Tween.temAtivo(cena), 'esperando: vivo');
+    Tween.atualizarTodos(0.1);
+    ok(Tween.temAtivo(cena), 'no meio da espera: vivo');
+    Tween.atualizarTodos(0.5);
+    ok(!Tween.temAtivo(cena), 'terminada: nada');
+  });
+
+  teste('um tween que falha é descartado, e não starva os outros', () => {
+    // Sem o `try` por tween em `atualizarTodos`, o primeiro que lançasse abortava
+    // o laço e todos os criados depois PERDIAM o quadro — sempre os mesmos, pois
+    // a ordem é a de criação. Um erro em animação decorativa congelava a jogada.
+    Tween.removerTodos();
+    const bom = { x: 0 };
+    const ruim = { get x() { throw new Error('propriedade explosiva'); }, set x(_v) { throw new Error('boom'); } };
+    Tween.para(ruim, { x: 1 }, 100, Easing.linear);
+    Tween.para(bom, { x: 100 }, 100, Easing.linear);
+
+    const original = console.error;
+    console.error = () => {};
+    try { Tween.atualizarTodos(0.05); } finally { console.error = original; }
+
+    perto(bom.x, 50, 0.001, 'o tween seguinte andou:');
+    ok(!Tween.temAtivo(ruim), 'o tween quebrado foi descartado');
+  });
+});
+
 grupo('CraneController', () => {
   teste('oscila entre os limites sem sair deles', () => {
     const g = new CraneController({ xMin: 100, xMax: 500, duracao: 1 });

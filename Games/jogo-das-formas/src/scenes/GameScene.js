@@ -2,7 +2,7 @@ import {
   Scene, Node, TextNode, ScoreSystem, ScoreBar, TimerBar, IconButton, SoundToggle,
   PauseScreen, Panel, Background, Mascot, GridBoard, CraneController,
   Tween, Easing, ESTADOS, desenharIcone, cores, tipografia, espaco, raio,
-  sombras, movimento, rand, mascoteVisivel,
+  sombras, movimento, rand, mascoteVisivel, ParticleSystem, criarEstrelaVoadora, Watchdog,
 } from '../../engine/index.js';
 
 /**
@@ -88,6 +88,7 @@ class Bloco extends Node {
     // Âncora no centro: tween de posição e de escala ficam naturais.
     this.regX = lado / 2;
     this.regY = lado / 2;
+    this._tempoEstrela = Math.random() * Math.PI * 2;
   }
 
   get forma() {
@@ -96,6 +97,13 @@ class Bloco extends Node {
 
   get valor() {
     return this.estrela ? 2 : 1;
+  }
+
+  atualizar(dt) {
+    super.atualizar(dt);
+    if (this.estrela) {
+      this._tempoEstrela += dt * 4;
+    }
   }
 
   desenhar(ctx) {
@@ -115,11 +123,27 @@ class Bloco extends Node {
     }
 
     if (this.estrela) {
-      // Selo vetorial: a arte de 2013 não tem versão "estrela" do azulejo.
-      const t = this.lado * 0.42;
+      // 1. Moldura com Aura Dourada Radiante
+      const haloAlfa = 0.5 + 0.3 * Math.sin(this._tempoEstrela);
       ctx.save();
-      ctx.translate(this.lado - t * 0.82, -t * 0.18);
-      desenharIcone(ctx, 'estrela', t, cores.atencao, 2);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = `rgba(234, 179, 8, ${haloAlfa.toFixed(2)})`;
+      ctx.shadowColor = '#EAB308';
+      ctx.shadowBlur = 10 + 4 * Math.sin(this._tempoEstrela);
+      ctx.beginPath();
+      ctx.roundRect(-2, -2, this.lado + 4, this.lado + 4, raio.sm + 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. Selo com Respiração / Pulso Contínuo
+      const t = this.lado * 0.44;
+      const esc = 1 + 0.12 * Math.sin(this._tempoEstrela);
+      ctx.save();
+      ctx.translate(this.lado - t * 0.75, -t * 0.1);
+      ctx.scale(esc, esc);
+      ctx.shadowColor = 'rgba(234, 179, 8, 0.9)';
+      ctx.shadowBlur = 8;
+      desenharIcone(ctx, 'estrela', t, '#EAB308', 2.4);
       ctx.restore();
     }
   }
@@ -447,6 +471,9 @@ export class GameScene extends Scene {
     this.tabuleiro = new Node();
     this.adicionar(this.tabuleiro);
 
+    this.particulas = new ParticleSystem();
+    this.adicionar(this.particulas);
+
     // ---------------------------------------------------------- a garra
     this.controle = new CraneController({
       modo: 'colunas',
@@ -463,6 +490,8 @@ export class GameScene extends Scene {
     this.carga = [];
     /** 'livre' = aceita toque · 'movendo' = jogada em curso. */
     this.fase = 'livre';
+
+    this._montarGuarda();
 
     this._montarHud();
     this._montarPainelFormas();
@@ -828,6 +857,19 @@ export class GameScene extends Scene {
    *     esgotava as 40 tentativas e avisava no console. Aqui cada passe
    *     RECONFERE o conjunto inteiro, e é isso que faz a garantia valer.
    *
+   * **O conserto de cada peça é ESCOLHIDO, não sorteado**, e isto foi corrigido
+   * depois de medir: resorteando ao acaso, os 12 passes falhavam em cerca de uma
+   * partida a cada quatro no nível 1 — 15 blocos e só 3 formas dão pouca margem
+   * para a sorte, e cada re-sorteio podia recriar o mesmo grupo. O tabuleiro
+   * nascia com pontos que a criança não fez, e o portão de jogabilidade ficava
+   * intermitente, o que é quase pior: um portão que reprova sem motivo ensina a
+   * ignorá-lo.
+   *
+   * Agora cada peça problemática procura entre as formas do nível uma que NÃO
+   * forme grupo, em ordem aleatória para o tabuleiro não ficar enviesado. Uma
+   * célula tem no máximo quatro vizinhas, então quase sempre existe uma escolha
+   * boa — e quando não existe, cai no sorteio e o passe seguinte reconfere.
+   *
    * O aviso é último recurso: se nem 12 passes convergirem, o tabuleiro nasce
    * com um combo de graça — e o console diz, em vez de fingir que está tudo bem.
    */
@@ -835,13 +877,38 @@ export class GameScene extends Scene {
     for (let passe = 0; passe < maxPasses; passe++) {
       const problemas = pecas.filter((p) => this.grade.grupoConectado(p).length >= 3);
       if (problemas.length === 0) return true;
-      for (const p of problemas) p.tipo = this._sortearTipo();
+      for (const p of problemas) p.tipo = this._tipoSemCombo(p);
     }
     console.warn(
       `[jogo-das-formas] ${maxPasses} passes não bastaram para desfazer os combos de graça; `
       + 'o tabuleiro começa com pontos que a criança não fez.',
     );
     return false;
+  }
+
+  /**
+   * Uma forma para esta peça que não a deixe num grupo de 3 — procurada entre as
+   * formas do nível, em ordem aleatória. Devolve um sorteio comum se nenhuma
+   * servir; quem chama reconfere no passe seguinte.
+   */
+  _tipoSemCombo(peca) {
+    const original = peca.tipo;
+    const candidatos = [...this.nivel.formas];
+    // Embaralha com o `rand` do motor (mesma fonte do sorteio), para o conserto
+    // não puxar sempre para a primeira forma da lista.
+    for (let i = candidatos.length - 1; i > 0; i--) {
+      const j = rand.inteiro(0, i);
+      [candidatos[i], candidatos[j]] = [candidatos[j], candidatos[i]];
+    }
+
+    for (const tipo of candidatos) {
+      if (tipo === original) continue; // já se sabe que esta forma o coloca num grupo
+      peca.tipo = tipo;
+      if (this.grade.grupoConectado(peca).length < 3) return tipo;
+    }
+
+    peca.tipo = original;
+    return this._sortearTipo();
   }
 
   /** Maior índice de linha ocupado numa coluna, ou -1 se estiver vazia. */
@@ -1008,6 +1075,68 @@ export class GameScene extends Scene {
       .chamar(() => this._resolver());
   }
 
+  // ------------------------------------------------------------ cão de guarda
+
+  /**
+   * O cão de guarda da jogada.
+   *
+   * **A invariante que ele vigia:** enquanto `fase !== 'livre'`, existe SEMPRE um
+   * tween vivo na garra ou na cena, porque é o `chamar` do fim de uma dessas
+   * cadeias que devolve o toque à criança — `_pegar` e `_depositar` animam
+   * `this.garra`, e cada passe da cascata é um `Tween.de(this)`. Fase ocupada e
+   * nenhum tween nos dois não é demora: é cadeia perdida.
+   *
+   * Isso é melhor que cronometrar. Uma cascata longa é legítima e pode levar
+   * segundos (cada passe custa 380 ms de espera mais 240 de gravidade, e a de
+   * pior caso encadeia uns catorze passes num tabuleiro de 42 células), então
+   * qualquer prazo generoso o bastante para não acusar em falso seria longo
+   * demais para a criança esperar. A invariante acusa em meio segundo.
+   *
+   * `limite` fica como segunda rede, para o que a invariante não pega: um tween
+   * que está vivo mas nunca termina. Os 12 s são folgados de propósito — ali o
+   * objetivo é não ficar preso para sempre, não reagir rápido.
+   */
+  _montarGuarda() {
+    this.guarda = new Watchdog({
+      nome: 'ciclo da jogada',
+      ocupado: () => this.fase !== 'livre' && !this.pausada && !this.placar.encerrado,
+      vivo: () => Tween.temAtivo(this) || Tween.temAtivo(this.garra),
+      graca: 0.5,
+      limite: 12,
+      aoTravar: (info) => this._resgatarJogada(info),
+    });
+  }
+
+  /**
+   * O resgate, em dois degraus. Quem detecta é o motor; o que é estado seguro é
+   * decisão do jogo, e é aqui.
+   *
+   * **Primeiro degrau — devolver a jogada.** A garra volta ao repouso, aberta, e
+   * a fase é liberada. Depois disso `_resolver()` é chamado de novo: se a cascata
+   * morreu no meio, pode ter ficado um grupo válido de pé no tabuleiro, e deixar
+   * grupo válido em pé é o defeito que o `VALIDA()` do jogo de 2013 denunciava.
+   * Se o caminho estiver realmente quebrado, ele quebra de novo — e aí o cão
+   * dispara outra vez em meio segundo, o que é justamente o que se quer.
+   *
+   * **Segundo degrau — encerrar com o que foi feito.** Travou de novo: o defeito
+   * não é transitório e insistir só prende a criança numa tela morta. A partida
+   * vai para o resultado com os pontos já conquistados. É pior que jogar e muito
+   * melhor que um jogo surdo, e a criança pode tocar em JOGAR DE NOVO.
+   */
+  _resgatarJogada({ tentativa }) {
+    if (tentativa === 1) {
+      Tween.removerDe(this.garra);
+      this.garra.abertura = 1;
+      Tween.para(this.garra, { y: this.geo.trilhoY + 30 }, movimento.padrao, Easing.suaveSaida);
+      this.fase = 'livre';
+      this._resolver();
+      return;
+    }
+
+    this.guarda.desligar();
+    this._terminar(this.placar.venceu);
+  }
+
   // ---------------------------------------------------------------- cascata
 
   /**
@@ -1055,18 +1184,55 @@ export class GameScene extends Scene {
         if (bloco === estrela) continue;
         pontos += bloco.valor;
         somados.add(bloco);
+
+        if (bloco.estrela) {
+          criarEstrelaVoadora({
+            cena: this,
+            origemX: bloco.x,
+            origemY: bloco.y,
+            destinoX: this.barra.x + 20,
+            destinoY: this.barra.y + 20,
+            particulas: this.particulas,
+            aoChegar: () => this.barra.pulsarIcone(),
+          });
+        }
       }
 
       if (estrela) {
         estrela.estrela = true;
         Tween.removerDe(estrela);
-        Tween.para(estrela, { scaleX: 1.25, scaleY: 1.25 }, movimento.entrada, Easing.costasSaida)
+        Tween.para(estrela, { scaleX: 1.3, scaleY: 1.3 }, movimento.entrada, Easing.costasSaida)
           .entao({ scaleX: 1, scaleY: 1 }, movimento.padrao, Easing.suaveSaida);
+
+        this.particulas.disparar({
+          x: estrela.x,
+          y: estrela.y,
+          cor: '#FDE047',
+          quantidade: 14,
+          tamanhoMin: 10,
+          tamanhoMax: 18,
+          velocidade: 150,
+          duracao: 0.5,
+          gravidade: false,
+        });
       }
     }
 
     // Sai da grade agora; o desaparecer é só visual.
     for (const bloco of somados) {
+      const corForma = this.arte.formas[bloco.tipo]?.cor ?? '#F59E0B';
+      this.particulas.disparar({
+        x: bloco.x,
+        y: bloco.y,
+        cor: corForma,
+        quantidade: 10,
+        tamanhoMin: 10,
+        tamanhoMax: 18,
+        velocidade: 120,
+        duracao: 0.4,
+        gravidade: true,
+      });
+
       if (this.grade.obter(bloco.lin, bloco.col) === bloco) {
         this.grade.remover(bloco.lin, bloco.col);
       }
@@ -1187,28 +1353,18 @@ export class GameScene extends Scene {
   }
 
   /**
-   * A nota da partida, em 0 a 3 estrelas, pelo PERCENTUAL da meta alcançado.
-   *
-   * A `ResultScreen` desenha uma estrela por pergunta só até 6; acima disso ela
-   * usa o valor que a cena passar. A nota de reserva do `ScoreSystem` derivaria
-   * dos erros e daria ZERO em qualquer derrota — uma criança que fez 15 de 20
-   * pontos veria a fileira vazia, o oposto do que o DESIGN.md manda. Por isso a
-   * conta é aqui. Ver PLANO-VISUAL, seção 8.
-   */
-  _notaEmEstrelas() {
-    const fracao = this.placar.total > 0 ? this.placar.pontuacao / this.placar.total : 0;
-    if (fracao >= 1) return 3;
-    if (fracao >= 0.7) return 2;
-    if (fracao >= 0.3) return 1;
-    return 0;
-  }
-
-  /**
    * Fim de partida. É AQUI que o registro no AVA acontece: ao ENTRAR no estado
    * 'resultado' o motor chama o `AvaBridge` com este objeto, uma vez só.
    *
    * `acertos` sai de `placar.pontuacao`, que desconta as falhas na vitória
    * (regra RE-02). O bruto viaja nos extras, para o professor que quiser ver.
+   *
+   * **A cena não passa nota de estrelas.** Passava — `_notaEmEstrelas()`, uma
+   * conta de 0 a 3 pelo percentual da meta, que existia só porque a fileira da
+   * `ResultScreen` mudava de tamanho conforme a meta e acima de 6 perguntas
+   * exigia que o jogo calculasse a própria nota. Com a fileira fixa em cinco, a
+   * tela deriva a nota dos campos que já recebe, e a segunda fórmula deixou de
+   * existir. Regra RE-04.
    */
   _terminar(venceu) {
     this.tempo.pausar();
@@ -1217,7 +1373,6 @@ export class GameScene extends Scene {
 
     this.irPara('resultado', {
       nivel: this.nivel,
-      estrelas: this._notaEmEstrelas(),
       resultado: this.placar.paraAva(venceu, {
         pontosBrutos: this.placar.acertos,
         ciclosSemCombo: this.placar.erros,
@@ -1232,6 +1387,11 @@ export class GameScene extends Scene {
       return;
     }
     super.atualizar(dt);
+
+    // Depois do desvio da pausa, de propósito: pausa é ocupação legítima e o cão
+    // não deve contá-la. Antes de qualquer `return` abaixo, também de propósito —
+    // uma rede que só é atualizada no caminho felizmente normal não é rede.
+    this.guarda.atualizar(dt);
 
     // O carrinho do pórtico segue a garra. É o mesmo padrão do piloto: a
     // estrutura tem um só campo animado, e quem manda nele é a cena.

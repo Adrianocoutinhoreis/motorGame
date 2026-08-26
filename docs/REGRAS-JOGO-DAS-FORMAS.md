@@ -149,6 +149,14 @@ fazer.
 **A cada N segundos uma linha nova de blocos nasce na base e empurra a pilha uma linha para
 cima.** A linha nova também nasce sem combo de graça.
 
+**"Sem combo de graça" passou a ser garantia, e não tentativa.** O conserto era um re-sorteio
+ao acaso repetido até doze vezes, e medido em 60 tabuleiros ele falhava em **8 partidas do
+nível 1** — 15 blocos e só 3 formas dão pouca margem para a sorte, e cada re-sorteio podia
+recriar o mesmo grupo. Nessas partidas o tabuleiro nascia com pontos que a criança não fez.
+Agora cada peça problemática **escolhe** entre as formas do nível uma que não forme grupo, em
+ordem aleatória para o tabuleiro não ficar enviesado: 0 falhas em 60 tabuleiros de cada nível,
+com a distribuição das formas intacta (32,6 / 34,6 / 32,9 % no nível 1).
+
 É isto que faz o jogo ser um jogo. Sem a linha nova não há risco nenhum: mover peças é neutro,
 não há vidas, e a criança passaria 120 s reorganizando um tabuleiro que nunca a ameaça. A
 tensão do original é a pilha subindo enquanto se tenta limpar, e é ela que faz o jogo pedir
@@ -231,7 +239,6 @@ A cena de partida faz **uma** chamada, e o motor cuida do resto:
 
 ```js
 this.irPara('resultado', {
-  estrelas: this.notaEmEstrelas(),                    // seção 8
   resultado: this.placar.paraAva(venceu, { pontosBrutos: this.placar.acertos }),
 });
 ```
@@ -242,26 +249,37 @@ O ponto bruto vai nos extras, como o piloto faz com `blocosEmpilhados`.
 
 ## 8. Tela de resultado e estrelas
 
-A meta é 12, 16 ou 20 — acima de 6 —, então a `ResultScreen` desenha **três** estrelas e as
-preenche com o valor que a cena passa em `estrelas`. Quem decide a nota é o jogo, e a nota é o
-**percentual da meta alcançado**, com o desconto da RE-02 já aplicado:
+**A fileira tem cinco estrelas, e este jogo não calcula nota nenhuma.** A `ResultScreen`
+preenche uma estrela por *um quinto da meta* alcançado, sobre a pontuação que ela já mostra —
+com o desconto da RE-02 embutido, porque é a mesma `pontuacao`. Regra **RE-04**.
 
-| Pontuação (`acertos`) ÷ meta | Estrelas |
-|---|---|
-| 100% | ⭐⭐⭐ |
-| 70% a 99% | ⭐⭐ |
-| 30% a 69% | ⭐ |
-| abaixo de 30% | nenhuma |
+| Pontuação (`acertos`) ÷ meta | Nível 1 (meta 12) | Nível 3 (meta 20) | Estrelas |
+|---|---|---|---|
+| 100% ou mais | 12+ | 20+ | ⭐⭐⭐⭐⭐ |
+| 80% a 99% | 10–11 | 16–19 | ⭐⭐⭐⭐ |
+| 60% a 79% | 8–9 | 12–15 | ⭐⭐⭐ |
+| 40% a 59% | 5–7 | 8–11 | ⭐⭐ |
+| 20% a 39% | 3–4 | 4–7 | ⭐ |
+| abaixo de 20% | 0–2 | 0–3 | nenhuma |
 
-Nada disso exige mudança no motor: a `ResultScreen` já lê `game.dados.estrelas`. E a escala por
-percentual conserta, para este jogo, um efeito colateral do padrão: a nota de reserva do
-`ScoreSystem` dá **zero** estrelas em qualquer derrota, e uma criança que fez 15 dos 20 pontos
-veria a fileira vazia — o oposto do que o `DESIGN.md` manda ("a derrota mostra o quanto o aluno
-avançou, não o quanto falhou").
+**Passar da meta não estoura a fileira:** a pontuação chega a 15 numa meta de 12 (combo em
+cascata, bloco-estrela valendo 2) e a fileira para em cinco.
 
-Abaixo das estrelas a tela já mostra `<pontuação> de <meta>` e uma frase de apoio; o rótulo
-"pontos" entra no subtítulo do resultado se a leitura pedir. Todo texto em CAIXA ALTA — o
-`bootstrap` aplica a RE-01, não a tela.
+**Era diferente, e vale registrar o que mudou.** A meta deste jogo é 12, 16 ou 20 — acima de 6
+—, e a `ResultScreen` antiga desenhava *uma estrela por pergunta* só até 6, caindo numa nota de
+0 a 3 acima disso. Consequências, as duas ruins:
+
+- **duas escalas no mesmo lugar.** O Jogo dos Blocos mostrava 5 estrelas e este mostrava 3, sem
+  que nada na tela explicasse por quê — e uma fileira de tamanho variável obriga a criança a ler
+  DOIS números (quantas acesas de quantas) antes de saber se foi bem;
+- **cada jogo com meta grande calculava a própria nota.** Havia uma `_notaEmEstrelas()` aqui e
+  um getter `estrelas` no `ScoreSystem`, com fórmulas diferentes — o getter dava **zero** em
+  qualquer derrota, o oposto do que o `DESIGN.md` manda. Os dois saíram.
+
+O piloto não mudou de comportamento: com meta 5, um quinto da meta é exatamente um ponto.
+
+Abaixo das estrelas a tela mostra a pontuação **na unidade** — "14 PONTOS", não "14 de 20"
+(regra RE-03). Todo texto em CAIXA ALTA — o `bootstrap` aplica a RE-01, não a tela.
 
 ---
 
@@ -332,7 +350,7 @@ O passo 3 é o que o original não ensinava em lugar nenhum, e é a regra que de
 | `GridBoard` — conectividade, grupos, gravidade `'cima'`, desfazer combo inicial | **Pronto**, estreia aqui |
 | `CraneController` modo `colunas` (`seguirX`, `irParaColuna`, `carregar`, `soltar`) | **Pronto**, testado só em unidade |
 | `TimerBar` | **Pronto**, sem uso real ainda |
-| Estrelas por percentual | **Nada a fazer no motor** — a cena passa `estrelas` (seção 8) |
+| Estrelas por percentual | **Nada a fazer no motor, e nada a fazer na cena** — a `ResultScreen` deriva a fileira do payload (seção 8) |
 | Ciclo vertical da garra (descer, pegar, subir) | **É da cena**, com `Tween`. O `CraneController` só faz o eixo horizontal e a gestão de carga |
 | Subir a linha nova | **É da cena** — o `GridBoard` não tem operação de deslocar tudo uma linha |
 | Narração das formas | `AudioBus`, canal `speech`, pronto |

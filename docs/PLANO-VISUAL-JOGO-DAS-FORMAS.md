@@ -210,7 +210,7 @@ mesma razão — o **celular**, medido:
 | Elemento | Posição | Detalhe |
 |---|---|---|
 | `ScoreBar` dos pontos | topo da coluna, `largura × 40` | `icone: 'estrela'`, `mostrarNumeros: true`. Ligada por `acompanhar(placar)`: passa a se atualizar sozinha |
-| `TimerBar` | abaixo da ScoreBar, `largura × 40` | `icone: 'reiniciar'`, sem números — a criança não lê relógio |
+| `TimerBar` | abaixo da ScoreBar, `largura × 40` | `icone: 'relogio'`, sem números — a criança não lê relógio, mas reconhece o mostrador |
 | `IconButton` pausa | coluna esquerda, 96×96 | `icone: 'pausa'` |
 | `SoundToggle` | ao lado da pausa, 96×96 | preferência persistida pelo `Storage` |
 
@@ -470,7 +470,7 @@ Fora dos quatro azulejos emprestados (seção 3.2), a arte de 2013 fica em
 | Garra por colunas | `CraneController` modo `colunas` — **pronto**, testado só em unidade |
 | Ciclo vertical da garra | `Tween` — **a escrever na cena** |
 | Linha nova subindo | `Tween` + deslocamento da grade — **a escrever na cena** |
-| Estrelas por percentual | a cena passa `estrelas` — **nada a fazer no motor** |
+| Estrelas por percentual | `ResultScreen` — **nada a fazer no motor, e nada a fazer na cena**: a fileira tem cinco e a tela a preenche pelo percentual da meta (RE-04) |
 
 **Nenhuma mudança no motor é pré-requisito deste plano.** O que falta é a `GameScene` e os sete
 campos do `config.js`.

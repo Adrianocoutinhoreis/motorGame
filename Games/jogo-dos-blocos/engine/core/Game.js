@@ -176,12 +176,24 @@ export class Game extends Emitter {
       this._ultimoTempo = agora;
       this._quadro++;
 
+      // Animações e cena em blocos SEPARADOS, e isso não é estilo.
+      //
+      // Estava tudo num `try` só, e a consequência era grave: uma exceção nos
+      // tweens pulava `stage.atualizar(dt)` no mesmo quadro. Como um tween
+      // quebrado costuma quebrar todo quadro, a cena parava de atualizar para
+      // sempre — inclusive o `Watchdog`, que é justamente quem deveria perceber
+      // a jogada travada. A rede de segurança morria junto com o que ela vigia.
       try {
         Tween.atualizarTodos(dt);
+      } catch (err) {
+        console.error('[motor] erro nos tweens:', err);
+      }
+
+      try {
         this.stage.atualizar(dt);
         this.emit('quadro', dt, this._quadro);
       } catch (err) {
-        console.error('[motor] erro no update:', err);
+        console.error('[motor] erro no update da cena:', err);
       }
 
       try {

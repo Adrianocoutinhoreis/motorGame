@@ -47,7 +47,6 @@ Um jogo faz **uma** chamada, e nada mais:
 
 ```js
 this.irPara('resultado', {
-  estrelas: this.placar.estrelas,
   resultado: this.placar.paraAva(venceu),
 });
 ```

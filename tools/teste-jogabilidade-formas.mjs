@@ -307,8 +307,282 @@ try {
   checar('tocar numa coluna depois da pausa ainda pega',
     aposPausa.carga > 0, `carga=${aposPausa.carga}`);
 
-  checar('nenhum erro ou aviso no console durante a sessão',
+  // ------------------------------------------------------------------------
+  // 6b. Um combo que CONSOME um bloco-estrela não pode travar a garra
+  //
+  // O defeito relatado, e por que ele era total: os efeitos do bloco-estrela
+  // (`criarEstrelaVoadora`) rodam DENTRO de `_resolver()`, e `_resolver()` roda
+  // dentro de um `Tween.chamar`, que engole exceções e as manda para o console.
+  // Uma chamada a uma API inexistente ali — era `Tween.emCadaQuadro`, que não
+  // existia — não derrubava a página: abortava a cascata pela metade. Os blocos
+  // não saíam da grade, o passe seguinte não era agendado e `this.fase` ficava
+  // em 'movendo' para sempre. A garra parava, e nada na tela dizia por quê.
+  //
+  // Por isso a verificação é de ESTADO, e não de console: o que precisa ser
+  // impossível é a partida ficar sem saída da fase 'movendo'.
+  /**
+   * Prepara um tabuleiro previsível: UM grupo de exatamente quatro na coluna 0,
+   * opcionalmente com um bloco-estrela plantado dentro dele.
+   *
+   * Começa com uma PARTIDA NOVA, e isso não é zelo: a primeira versão desta
+   * montagem herdava o tabuleiro da seção anterior, que já estava gasto pelos
+   * toques — sobravam menos de quatro blocos, nenhum grupo se formava e a
+   * verificação seguinte media um jogo que não tinha nada para resolver. Ela
+   * passou a "provar" o contrário do que eu queria provar.
+   *
+   * `estrelaEm` é o índice na coluna. Note que o 2 não é o bloco que a cena vai
+   * eleger como estrela nova (ela elege o mais próximo da base), então ele é
+   * CONSUMIDO pelo combo — que é justamente o caminho onde o efeito roda.
+   */
+  const montarGrupoDeQuatro = async ({ tipo, estrelaEm = null }) => {
+    await aval(`window.jogo.irPara('jogando', { nivel: window.jogo.config.niveis[0] })`);
+    await esperar(1500);
+    return aval(`(() => {
+      const c = window.jogo.cena;
+      const blocos = [];
+      for (let lin = 0; lin < c.linhas; lin++) {
+        for (let col = 0; col < c.colunas; col++) {
+          const b = c.grade.obter(lin, col);
+          if (b) blocos.push(b);
+        }
+      }
+      for (const b of c.carga) b.removerDoPai();
+      c.carga = [];
+      for (const b of blocos) c.grade.remover(b.lin, b.col);
+      const usados = blocos.slice(0, 4);
+      for (const b of blocos.slice(4)) b.removerDoPai();
+      for (let i = 0; i < usados.length; i++) {
+        const b = usados[i];
+        b.tipo = '${tipo}';
+        b.estrela = false;
+        c.grade.definir(i, 0, b);
+        b.x = c.xColunas[0];
+        b.y = c._yDaLinha(i);
+      }
+      const iEstrela = ${estrelaEm === null ? 'null' : estrelaEm};
+      if (iEstrela !== null) usados[iEstrela].estrela = true;
+      c.ultimoDepositado = null;
+      return {
+        blocosDisponiveis: blocos.length,
+        grupos: c.grade.gruposValidos(3).map((g) => g.length),
+        fase: c.fase,
+      };
+    })()`);
+  };
+
+  console.log('\n6b. Combo que consome um bloco-estrela (garra travada)');
+
+  const montado = await montarGrupoDeQuatro({ tipo: 'circulo', estrelaEm: 2 });
+  checar('o cenário montou UM grupo de quatro',
+    montado.grupos.length === 1 && montado.grupos[0] === 4, JSON.stringify(montado));
+
+  const pontosAntes = await aval('window.jogo.cena.placar.acertos');
+  await aval('window.jogo.cena._resolver()');
+  await esperar(2500);
+
+  const depoisDoCombo = await aval(`(() => {
+    const c = window.jogo.cena;
+    let naGrade = 0;
+    for (let lin = 0; lin < c.linhas; lin++)
+      for (let col = 0; col < c.colunas; col++) if (c.grade.obter(lin, col)) naGrade++;
+    return { estado: window.jogo.estado, fase: c.fase, pontos: c.placar.acertos, naGrade };
+  })()`);
+
+  checar('a cascata terminou e a garra voltou a aceitar toque (fase = livre)',
+    depoisDoCombo.fase === 'livre', JSON.stringify(depoisDoCombo));
+  checar('os blocos do combo saíram da grade, sobrando só a estrela nova',
+    depoisDoCombo.naGrade === 1, JSON.stringify(depoisDoCombo));
+  checar('a estrela consumida valeu 2 pontos (1+2+1 no combo de quatro)',
+    depoisDoCombo.pontos - pontosAntes === 4,
+    `${pontosAntes} -> ${depoisDoCombo.pontos}`);
+
+  // O HUD depois da festa. A estrela voadora termina pulsando o ícone do placar,
+  // e o pulso já deixou dois rastros permanentes por cancelamento cruzado:
+  // `Tween.removerDe` cancela por ALVO, e `definirValor` da barra cancela os
+  // tweens dela a cada mudança de placar. Se o pulso morresse no meio, o ícone
+  // ficaria grande para sempre — nada mais mexe naquele valor.
+  const hud = await aval(`(() => {
+    const b = window.jogo.cena.barra;
+    return { escalaIcone: b._pulso?.escala ?? 1, valor: b.valor, visual: b._valorVisual };
+  })()`);
+  checar('o ícone do placar voltou ao tamanho normal depois do pulso',
+    Math.abs(hud.escalaIcone - 1) < 0.01, JSON.stringify(hud));
+  checar('a barra de pontos chegou ao valor novo, sem congelar no meio',
+    Math.abs(hud.visual - hud.valor) < 0.01, JSON.stringify(hud));
+  await captura('26-combo-com-estrela');
+
+  // Toque de verdade, para provar que a trava não sobreviveu ao efeito.
+  //
+  // A coluna é DESCOBERTA, e não a 0: o cenário acima esvaziou o tabuleiro para
+  // isolar um único grupo, e depois da cascata sobra pouca coisa em lugares que
+  // dependem da gravidade e da linha que estava a subir. Tocar numa coluna vazia
+  // é ação neutra por regra — a garra nem sai do lugar —, então cravar a coluna
+  // fazia esta verificação reprovar por causa do cenário, não do jogo.
+  const colunaComBloco = await aval(`(() => {
+    const c = window.jogo.cena;
+    for (let col = 0; col < c.colunas; col++) {
+      for (let lin = 0; lin < c.linhas; lin++) {
+        if (c.grade.obter(lin, col)) return { col, x: Math.round(c.xColunas[col]) };
+      }
+    }
+    return null;
+  })()`);
+  if (!colunaComBloco) throw new Error('nenhuma coluna com bloco depois da cascata');
+  await tocar(colunaComBloco.x, geo.meioDaGrade);
+  await esperar(1400);
+  const aindaJoga = await estado();
+  checar('depois do combo com estrela a garra volta a pegar bloco',
+    aindaJoga.carga > 0, `coluna ${colunaComBloco.col}: ${JSON.stringify(aindaJoga)}`);
+
+  checar('nenhum erro ou aviso no console durante a partida',
     mensagens.length === 0, mensagens.join(' | '));
+  const disparosAntes = await aval('window.jogo.cena.guarda.disparos');
+  checar('o cão de guarda NÃO disparou na partida normal',
+    disparosAntes === 0, `disparos=${disparosAntes}`);
+
+  // ------------------------------------------------------------------------
+  // 6c. INJEÇÃO DE FALHA: o cão de guarda resgata a partida travada?
+  //
+  // Um dispositivo de segurança que ninguém viu funcionar é fé, não engenharia.
+  // Aqui a cascata é quebrada de propósito — `aplicarGravidade` passa a lançar,
+  // exatamente como o efeito da estrela lançava — e o que se verifica é que o
+  // jogo VOLTA. Sem o cão, `fase` ficaria em 'movendo' para sempre.
+  //
+  // Repare no que a quebra escolhida tem de fiel: ela acontece dentro de um
+  // `Tween.chamar`, que engole a exceção. Nenhum try/catch da cena veria isso, e
+  // é por isso que a rede precisa ser um observador de fora.
+  console.log('\n6c. Injeção de falha: a partida travada se recupera (Watchdog)');
+
+  const cenarioDaFalha = await montarGrupoDeQuatro({ tipo: 'quadrado' });
+  checar('o cenário da falha tem um grupo para resolver',
+    cenarioDaFalha.grupos.length === 1 && cenarioDaFalha.grupos[0] === 4,
+    JSON.stringify(cenarioDaFalha));
+
+  // A quebra: some a gravidade da cascata. Ela é chamada dentro do `chamar` do
+  // passe, então o passe seguinte nunca é agendado — e `Tween.chamar` engole a
+  // exceção, que é o que torna o travamento silencioso.
+  await aval(`(() => {
+    const c = window.jogo.cena;
+    window.__gravidadeReal = c.grade.aplicarGravidade.bind(c.grade);
+    c.grade.aplicarGravidade = () => { throw new Error('falha injetada no teste'); };
+    return true;
+  })()`);
+
+  const marcadorFalha = mensagens.length;
+  await aval('window.jogo.cena._resolver()');
+
+  // Antes da graça de 0,5 s terminar: o jogo está travado, e é isso que se espera.
+  await esperar(600);
+  const travado = await aval(`(() => {
+    const c = window.jogo.cena;
+    return { fase: c.fase, disparos: c.guarda.disparos };
+  })()`);
+  checar('logo depois da falha o ciclo está de fato travado',
+    travado.fase === 'movendo', JSON.stringify(travado));
+
+  // Depois: o cão precisa ter percebido e devolvido a jogada.
+  await esperar(1200);
+  const resgatado = await aval(`(() => {
+    const c = window.jogo.cena;
+    return { estado: window.jogo.estado, fase: c.fase, disparos: c.guarda.disparos };
+  })()`);
+  checar('o cão de guarda percebeu o travamento',
+    resgatado.disparos >= 1, JSON.stringify(resgatado));
+  checar('a jogada foi devolvida: a fase voltou a livre',
+    resgatado.fase === 'livre' && resgatado.estado === 'jogando',
+    JSON.stringify(resgatado));
+
+  const doTravamento = mensagens.slice(marcadorFalha);
+  checar('o travamento gritou no console, com nome e motivo',
+    doTravamento.some((m) => m.includes('Watchdog') && m.includes('ciclo da jogada')),
+    doTravamento.join(' | '));
+
+  // Desfaz a quebra e prova que a criança consegue jogar de novo.
+  await aval('window.jogo.cena.grade.aplicarGravidade = window.__gravidadeReal');
+  const colunaViva = await aval(`(() => {
+    const c = window.jogo.cena;
+    for (let col = 0; col < c.colunas; col++)
+      for (let lin = 0; lin < c.linhas; lin++)
+        if (c.grade.obter(lin, col)) return { col, x: Math.round(c.xColunas[col]) };
+    return null;
+  })()`);
+  if (!colunaViva) throw new Error('nenhuma coluna com bloco depois do resgate');
+  await tocar(colunaViva.x, geo.meioDaGrade);
+  await esperar(1400);
+  const jogaDeNovo = await estado();
+  checar('depois do resgate a criança consegue jogar de novo',
+    jogaDeNovo.carga > 0, `coluna ${colunaViva.col}: ${JSON.stringify(jogaDeNovo)}`);
+  await captura('27-resgatado-pelo-cao-de-guarda');
+
+  // Marca o ponto: a partir daqui a tela de resultado entra em cena, e ela
+  // avisa no console cada narração de fim de partida que o config ainda não
+  // declara. Essas lacunas são conhecidas e estão listadas no README do jogo —
+  // então a verificação abaixo é a que interessa: NADA ALÉM delas.
+  const mensagensDaPartida = mensagens.length;
+
+  // ------------------------------------------------------------------------
+  // 7. A fileira de estrelas da tela final (regra RE-04)
+  //
+  // Jogar até a meta de 12 pontos levaria minutos e daria um número diferente a
+  // cada execução, então aqui o resultado é ENTREGUE à tela — é o mesmo payload
+  // que `_terminar` monta. O que se verifica é só a tela: quantas estrelas ela
+  // desenha e se ela as calcula sozinha.
+  //
+  // Este jogo é o motivo da regra: com meta 12, 16 ou 20, a fileira antiga tinha
+  // TRÊS estrelas enquanto o piloto tinha cinco.
+  console.log('\n7. A tela final desenha cinco estrelas e calcula a nota (RE-04)');
+
+  const CASOS = [
+    { rotulo: 'venceu na meta (12 de 12)', acertos: 12, meta: 12, vitoria: true, esperado: 5 },
+    { rotulo: 'passou da meta (15 de 12)', acertos: 15, meta: 12, vitoria: true, esperado: 5 },
+    { rotulo: 'parou em 14 de 20', acertos: 14, meta: 20, vitoria: false, esperado: 3 },
+    { rotulo: 'parou em 2 de 12', acertos: 2, meta: 12, vitoria: false, esperado: 0 },
+  ];
+
+  for (const caso of CASOS) {
+    await aval(`window.jogo.irPara('resultado', ${JSON.stringify({
+      nivel: { id: 1 },
+      resultado: {
+        acertos: caso.acertos, erros: 0, totalPerguntas: caso.meta,
+        nivel: 1, vitoria: caso.vitoria,
+      },
+    })})`);
+    await esperar(1400);
+
+    const tela = await aval(`(() => {
+      const achatar = (no, saida = []) => {
+        saida.push(no);
+        for (const f of no.filhos ?? []) achatar(f, saida);
+        return saida;
+      };
+      const todos = achatar(window.jogo.cena);
+      const fileira = todos.find((n) => n._escalas && typeof n.total === 'number');
+      return {
+        total: fileira?.total ?? null,
+        cheias: fileira?.quantidade ?? null,
+        notaDaCena: window.jogo.dados.estrelas ?? 'ausente',
+        textos: todos.filter((n) => typeof n.texto === 'string').map((n) => n.texto),
+      };
+    })()`);
+
+    checar(`${caso.rotulo}: cinco estrelas, ${caso.esperado} acesas`,
+      tela.total === 5 && tela.cheias === caso.esperado,
+      `${tela.cheias} de ${tela.total}`);
+    checar(`${caso.rotulo}: o placar diz a unidade`,
+      tela.textos.some((x) => x.includes(`${caso.acertos} pontos`))
+      && !tela.textos.some((x) => /\d+ de \d+/.test(x)),
+      JSON.stringify(tela.textos));
+    if (caso === CASOS[0]) {
+      checar('a cena não passa nota de estrelas — quem calcula é a tela',
+        tela.notaDaCena === 'ausente', JSON.stringify(tela.notaDaCena));
+      await captura('25-resultado-cinco-estrelas');
+    }
+  }
+
+  const novasNaTelaFinal = mensagens.slice(mensagensDaPartida);
+  const inesperadas = novasNaTelaFinal.filter((m) => !/narra|locu|áudio|audio/i.test(m));
+  checar('a tela final não produz erro no console além das lacunas de narração',
+    inesperadas.length === 0, inesperadas.join(' | '));
 } catch (err) {
   falharam++;
   console.error('\nFALHOU (exceção):', err.message);

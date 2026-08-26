@@ -116,6 +116,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | `Emitter`, `Matrix2D`, `Node` | Pronto | Hit-test com matriz inversa validado em teste |
 | `Stage` (escala + letterbox) | Pronto | Validado em iframe de 400×700, 640×480 e 1280×720 |
 | Giro em aparelho de pé | Pronto | O CSS gira `#palco`, o `Stage` detecta e inverte o mapa tela→lógico. Medido: desperdício de tela cai de 75% para 20% num celular de 360×720. Coberto por teste de unidade e por um toque real, no pixel real, com o palco girado |
+| Jogada travada sem saída | **Coberto** | Todo jogo tem uma fase em que o toque é ignorado de propósito, e quem a libera é sempre um `chamar` no fim de uma cadeia de `Tween` — que `Tween.chamar` pode perder engolindo uma exceção. O `Watchdog` do motor vigia a invariante "ciclo em curso ⇒ tween vivo no alvo" e devolve a jogada em meio segundo; se travar de novo, a partida encerra com os pontos feitos. Ligado nos dois jogos, com injeção de falha no portão de jogabilidade |
 | Alvo tocável em celular | **Parcial** | O mínimo de 64 px é garantido em espaço LÓGICO, e a escala do Stage o reduz a 32–36 px físicos em celular — abaixo do piso de 44 px do WCAG 2.5.5. **O motor continua sem mecanismo próprio**; o que existe é a saída por LAYOUT, feita no Jogo das Formas: o HUD virou coluna lateral e a célula subiu de 64 para 80, o que dá 40 px físicos (+25%). O que governa isso é a fração da ALTURA que o alvo ocupa — alargar a tela não muda nada, e por isso "área visível adaptativa" (abaixo) NÃO resolve este item. Cruzar os 44 px pede reduzir uma linha da grade, que é decisão de jogo |
 | Área visível adaptativa | **Planejado** | Sobram ~20% de barra num celular 20:9 e ~25% num iPad deitado, porque o jogo é 16:9 fixo. Exige o `Stage` expor um retângulo visível maior que a caixa segura e o `Background` pintar até a borda dele |
 | `Input` (Pointer Events) | Pronto | `toque` só dispara se apertar e soltar no mesmo nó |
@@ -131,7 +132,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | Peça | Estado | Observação |
 |---|---|---|
 | `tokens.js` / `tokens.css` | Pronto | Fonte única compartilhada entre canvas e DOM |
-| `icons.js` | Pronto | 15 ícones; ampliar conforme necessidade |
+| `icons.js` | Pronto | 16 ícones; ampliar conforme necessidade |
 | `Button` / `IconButton` | Pronto | Alvo mínimo de 64px garantido no construtor |
 | `Panel`, `ScoreBar`, `TimerBar`, `Lives` | Pronto | `TimerBar` estreou no Jogo das Formas: 120 s por delta, cor mudando a 35% e a 15% e pulso no trecho crítico |
 | `SoundToggle` | Pronto | Preferência persistida |
@@ -150,7 +151,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | `TutorialScreen` | Pronto | Passos narrados, ilustração animada, navegação |
 | `LevelSelectScreen` | Pronto | Aparece sozinha só quando há mais de um nível |
 | `PauseScreen` | Pronto | Camada sobreposta |
-| `ResultScreen` | Pronto | Vitória e derrota; uma estrela por pergunta (até 6), cenário do canteiro de obras |
+| `ResultScreen` | Pronto | Vitória e derrota; **cinco estrelas** pelo percentual da meta, calculadas pela própria tela (RE-04); placar na unidade (RE-03); cenário do tema do jogo |
 | Tela de créditos / objetivo | **Planejado** | Útil ao professor; não pedida ainda |
 
 ## Jogabilidade

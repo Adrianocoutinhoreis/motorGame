@@ -34,6 +34,7 @@ Público de referência: **Educação Infantil e 1º ano (4 a 7 anos)**.
 | [RE-01](#re-01--todo-texto-exibido-em-caixa-alta) | Todo texto exibido em CAIXA ALTA | **Vigente** | Todo jogo para 4–7 anos |
 | [RE-02](#re-02--a-nota-da-partida-desconta-o-erro-na-vitória-nunca-na-derrota) | A nota da partida desconta o erro na vitória, nunca na derrota | **Vigente** | Todo jogo do motor |
 | [RE-03](#re-03--o-placar-do-fim-de-partida-diz-a-unidade-não-uma-fração-da-meta) | O placar do fim de partida diz a unidade, não uma fração da meta | **Vigente** | Todo jogo do motor |
+| [RE-04](#re-04--a-fileira-de-estrelas-tem-sempre-cinco-e-quem-a-calcula-é-a-tela) | A fileira de estrelas tem sempre cinco, e quem a calcula é a tela | **Vigente** | Todo jogo do motor |
 
 ---
 
@@ -178,10 +179,12 @@ a `ResultScreen` desenha — os três a partir do mesmo número.
 ```js
 // na cena de partida, ao terminar — inalterado
 this.irPara('resultado', {
-  estrelas: this.placar.estrelas,
   resultado: this.placar.paraAva(venceu, { blocosEmpilhados: this.torre.length }),
 });
 ```
+
+A cena não passa nota de estrelas: a tela deriva a fileira desta mesma `pontuacao` (RE-04), e
+por isso o desconto desta regra chega às estrelas sem ninguém recalculá-lo.
 
 O acerto **bruto** não se perde: mande-o nos campos extras quando for parte do que o professor
 precisa ver (o Jogo dos Blocos manda como `blocosEmpilhados`).
@@ -235,7 +238,7 @@ serve para algo.
 | Onde | Vale? | Motivo |
 |---|---|---|
 | Linha de placar da tela de resultado | **Sim** | É o caso que a regra existe para corrigir |
-| Fileira de estrelas da mesma tela | Não se aplica | Ela continua sendo a leitura de "quanto da meta" — em forma que se lê sem saber ler. É complementar, não concorrente |
+| Fileira de estrelas da mesma tela | Não se aplica | Ela continua sendo a leitura de "quanto da meta" — em forma que se lê sem saber ler. É complementar, não concorrente. Quantas estrelas e por quê: **RE-04** |
 | Barra de progresso **durante** a partida | **Não** | Ali a fração É a informação certa: a criança precisa saber quanto falta enquanto ainda pode agir |
 | Cartão de nível | **Não** | "12 pontos" ali é a meta sendo anunciada, e é para isso que serve |
 | Campos da mensagem do AVA | **Não** | `acertos`, `erros` e `totalPerguntas` seguem indo inteiros e crus. Como o servidor combina os três é decisão dele (METODO A3) |
@@ -270,6 +273,91 @@ declara a meta em `niveis[].meta`, como já fazia.
   segue existindo no relatório do professor. Decidir qual das duas é a correção: a meta virar
   teto da pontuação, ou o servidor tolerar mais de 100%. **Não decidido de propósito** — mexer
   no número muda o que já foi registrado.
+
+---
+
+## RE-04 — A fileira de estrelas tem sempre cinco, e quem a calcula é a tela
+
+**Status:** Vigente · **Desde:** 2026-08-26
+**Aplica-se a:** todo jogo do motor
+
+### A regra
+
+**A tela de resultado mostra sempre CINCO estrelas**, preenchidas por *um quinto da meta
+alcançado* — e **o jogo não passa nota nenhuma**: a `ResultScreen` deriva a fileira dos mesmos
+`acertos` e `totalPerguntas` que ela já exibe e que vão para o AVA.
+
+A quinta estrela exige a meta **inteira** (`Math.floor` do percentual, não arredondamento).
+
+### Por quê
+
+**Cinco, e fixo.** Uma fileira de tamanho variável obriga a criança a ler DOIS números — quantas
+acesas, de quantas — antes de saber se foi bem. Com o total sempre igual, a quantidade de ouro na
+tela é a mensagem inteira, e é a mesma leitura de uma partida para a outra e de um jogo para o
+outro. Cinco porque é a escala que a criança já reconhece de fora do jogo.
+
+**A tela, e não o jogo.** Era o jogo quem calculava, e o resultado foi previsível: passaram a
+existir **duas fórmulas divergentes** de "quantas estrelas" no repositório — uma no
+`ScoreSystem` (0 a 3 pelos erros, que dava **zero** em qualquer derrota) e outra na cena do Jogo
+das Formas (0 a 3 pelo percentual). A do `ScoreSystem` contradizia a diretriz de
+[`DESIGN.md`](DESIGN.md) — "a derrota mostra o quanto o aluno avançou, não o quanto falhou" —, e
+nada obrigava as duas a concordarem. Nota é apresentação; apresentação é da tela.
+
+**Piso e teto.** A pontuação **passa da meta** (um combo resolve vários blocos, o bloco-estrela
+vale 2), e a fileira para em cinco em vez de estourar. No outro extremo, abaixo de 20% da meta
+ela fica vazia: é o preço do `Math.floor`, e é aceitável porque o número embaixo diz o progresso
+na unidade ("2 PONTOS", RE-03) e porque o desenho anterior era mais severo — zerava abaixo de
+30%. O que `Math.floor` compra é o inverso, e vale mais: com arredondamento, 90% da meta
+acenderia as cinco estrelas e a tela voltaria a anunciar nota máxima para uma partida
+incompleta, que é exatamente o defeito que a **RE-02** existe para impedir.
+
+### Escopo — e o que a regra NÃO diz
+
+| Onde | Vale? | Motivo |
+|---|---|---|
+| Fileira de estrelas da tela de resultado | **Sim** | É o caso da regra |
+| Quem calcula a nota | **A tela, sempre** | Um jogo que calcule a própria nota recria a divergência que esta regra fecha |
+| Campos da mensagem do AVA | **Não** | As estrelas **não vão para o AVA**. Quanto a partida vale em XP ou nota é do servidor (METODO A3) |
+| Barra de progresso **durante** a partida | **Não** | Ali a leitura é "quanto falta", em fração da meta, e é a informação certa enquanto a criança ainda pode agir |
+| Ícone de estrela no HUD | Não se aplica | É a marca do placar, não uma nota |
+| Bloco-estrela do Jogo das Formas | Não se aplica | É uma peça que vale 2 pontos, e não tem relação com a fileira |
+
+A regra **não** diz que a derrota tenha de acender ao menos uma estrela, e **não** muda nenhum
+número do relatório: nada aqui atravessa a fronteira do AVA.
+
+### Como aplicar
+
+Nada a fazer num jogo novo, e **uma coisa a não fazer**: não passe `estrelas` em
+`irPara('resultado', …)`. O jogo declara a meta em `niveis[].meta` e entrega o payload:
+
+```js
+this.irPara('resultado', {
+  nivel: this.nivel,
+  resultado: this.placar.paraAva(venceu),
+});
+```
+
+A conta é `estrelasDoResultado()`, exportada de `engine/screens/ResultScreen.js` — separada da
+tela porque é a única regra dela que produz um número, e número se prova sem navegador.
+
+### Onde já está aplicado
+
+- **Jogo das Formas** — o caso que originou a regra: metas de 12, 16 e 20 mostravam **três**
+  estrelas, e o piloto mostrava cinco, sem que nada na tela explicasse a diferença.
+- **Jogo dos Blocos** — **inalterado na prática**: com meta 5, um quinto da meta é exatamente um
+  ponto, então a fileira mostra o que já mostrava. O que mudou foi o caminho do código.
+- Travado por teste em `tools/testes.mjs` (a conta, incluindo a igualdade com "um ponto por
+  estrela" na meta 5, e uma verificação de que `ScoreSystem.estrelas` **não voltou a existir**) e
+  em `tools/teste-navegador.mjs` (a fileira desenhada, no navegador).
+
+### Casos ainda não decididos
+
+- **Um jogo com meta muito pequena** (2 ou 3) ganha estrelas em saltos grandes: na meta 2, cada
+  ponto acende duas estrelas e meia, e o `floor` faz a terceira aparecer sem que nada tenha
+  mudado na tela anterior. Nenhum jogo do motor tem meta abaixo de 5 hoje. Se tiver, decidir ali.
+- **Meia estrela** para o resto da divisão foi cogitada e não decidida: resolve o salto acima e
+  custa uma arte nova, além de introduzir uma leitura de fração — que é justamente o que a RE-03
+  tirou da tela.
 
 ---
 
@@ -312,3 +400,4 @@ aplica é preenchido com "não se aplica" e o motivo — nunca apagado.
 | 2026-08-19 | RE-01 | **Ampliada para todo texto exibido.** A versão anterior preservava caixa normal nas frases alegando velocidade de leitura — argumento válido para leitor fluente, mas não para quem tem 4–7 anos e lê apenas letra bastão. Passou a ser opção por jogo (`textoEmCaixaAlta`), ligada por padrão | Sim — Jogo dos Blocos atualizado e reverificado no mesmo dia |
 | 2026-08-24 | RE-02 | Criada. A fileira de estrelas vinha do acerto bruto e enchia em toda vitória, porque vencer exige acertar a meta inteira: "5 de 5" com duas quedas era indistinguível de uma partida limpa. A nota passou a descontar a falha na vitória, e o mesmo número passou a ir para o AVA | **Sim** — muda o `score_percent` de vitórias com falha (100% → 60% no caso de 2 quedas em 5). Jogo dos Blocos atualizado e reverificado |
 | 2026-08-25 | RE-03 | Criada. A tela de resultado dizia "${acertos} de ${totalPerguntas}", e no Jogo das Formas isso produzia "13 de 12" — a pontuação passa da meta porque um combo resolve vários blocos e o bloco-estrela vale 2. O placar passou a ser dito na unidade ("13 PONTOS") e a linha que enumerava as falhas saiu da tela | Não — nenhum número mudou, só a forma de enunciá-lo. Os dois jogos atualizados e reverificados |
+| 2026-08-26 | RE-04 | Criada. A fileira tinha tamanho variável — uma estrela por pergunta até 6, caindo para três acima disso —, então o Jogo dos Blocos mostrava cinco e o Jogo das Formas três, e cada jogo com meta grande calculava a própria nota. Havia **duas fórmulas divergentes** de "quantas estrelas" no repo. A fileira passou a ter cinco fixas preenchidas pelo percentual da meta, calculadas pela tela; `ScoreSystem.estrelas` e `GameScene._notaEmEstrelas()` foram removidos | **Não para o AVA** — as estrelas nunca viajaram na mensagem. Na tela: Jogo das Formas muda (3 estrelas → 5, ex. 14 de 20 passa de ⭐⭐ para ⭐⭐⭐); Jogo dos Blocos **não muda**, porque na meta 5 um quinto da meta é um ponto. Os dois reverificados |
