@@ -1,170 +1,730 @@
 import {
-  Scene, Node, ScoreSystem, ScoreBar, Lives, IconButton, PauseScreen,
-  Background, Tween, Easing, ESTADOS, desenharIcone, cores, espaco, rand,
+  Scene, Node, TextNode, ScoreSystem, ScoreBar, TimerBar, IconButton, SoundToggle,
+  PauseScreen, Panel, Background, GridBoard, PathSelector, Watchdog,
+  Tween, Easing, ESTADOS, cores, tipografia, espaco, raio, movimento, rand,
 } from '../../engine/index.js';
 
 /**
- * Alvo — a estrela que aparece na tela.
+ * GameScene — a partida do Jogo das Cores.
  *
- * Exemplo mínimo de um objeto de jogo: um Node com desenho próprio, área de
- * toque redonda e um evento quando é acertado.
+ * Especificação: `docs/REGRAS-JOGO-DAS-CORES.md` e
+ * `docs/PLANO-VISUAL-JOGO-DAS-CORES.md`.
+ *
+ * O ciclo de uma jogada:
+ *
+ *   aperta numa peça  →  arrasta pelas vizinhas IGUAIS  →  solta
+ *        (ou)  toca peça por peça  →  para de tocar
+ *   3 ou mais  →  narra a cor  →  peças somem  →  gravidade  →  peças novas
+ *
+ * Durante a resolução `this.fase` é `'movendo'` e o gesto não começa outro
+ * caminho. É a trava que `docs/STATES.md` exige — e o `Watchdog` (seção final)
+ * é a rede para quando ela não se soltar.
  */
-class Alvo extends Node {
-  constructor(opcoes = {}) {
-    const tamanho = opcoes.tamanho ?? 120;
-    super({ ...opcoes, largura: tamanho, altura: tamanho, interativo: true });
-    this.tamanho = tamanho;
-    this.regX = tamanho / 2;
-    this.regY = tamanho / 2;
-    this._t = 0;
-  }
 
-  atualizar(dt) {
-    super.atualizar(dt);
-    this._t += dt;
-    // Pulsar chama a atenção sem piscar (piscar cansa e pode incomodar).
-    const p = 1 + Math.sin(this._t * 3.2) * 0.06;
-    this.scaleX = this.scaleY = p;
+/** Quanto o caminho de TOQUE espera, em ms, antes de fechar sozinho. */
+const ESPERA_DO_TOQUE = 900;
+
+// ---------------------------------------------------------------------------
+// Peca
+// ---------------------------------------------------------------------------
+
+/**
+ * Peca — um quadrado colorido do tabuleiro.
+ *
+ * A arte é o SVG de `assets/img/cor-<nome>.svg`, com a **textura assada
+ * dentro**. A peça não sabe desenhar textura, e é assim que se garante que a
+ * arte tenha uma fonte só: trocar os oito arquivos não mexe em código.
+ *
+ * `cor` é o nome da cor (`'azul'`), não o código — é o que o `PathSelector`
+ * compara, e é o id da narração.
+ */
+class Peca extends Node {
+  constructor({ cor, lado, arte }) {
+    super({ largura: lado, altura: lado });
+    this.cor = cor;
+    this.lado = lado;
+    this.arte = arte;
+    // Âncora no centro: tween de escala e de posição ficam naturais.
+    this.regX = lado / 2;
+    this.regY = lado / 2;
   }
 
   desenhar(ctx) {
-    desenharIcone(ctx, 'estrela', this.tamanho, cores.atencao, 2);
-  }
+    const img = this.arte.imagens[this.cor];
+    if (img) {
+      // A sombra fica FORA do SVG de propósito: não caberia no viewBox, e
+      // escalar com a peça a faria parecer papel recortado em vez de volume.
+      ctx.save();
+      ctx.shadowColor = 'rgba(17, 24, 39, 0.28)';
+      ctx.shadowBlur = this.lado * 0.09;
+      ctx.shadowOffsetY = this.lado * 0.035;
+      ctx.drawImage(img, 0, 0, this.lado, this.lado);
+      ctx.restore();
+      return;
+    }
 
-  contemPontoLocal(x, y) {
-    const r = this.tamanho / 2;
-    const dx = x - r;
-    const dy = y - r;
-    return dx * dx + dy * dy <= r * r;
+    // Reserva: sem o SVG ainda dá para jogar, e o console já avisou qual arquivo
+    // faltou. Falhar alto, nunca em silêncio (MOTOR.md, princípio 10).
+    //
+    // Mas repare no que se perde: a TEXTURA. Sem ela o jogo fica inacessível a
+    // quem não distingue cor, porque sete das oito cores caem na mesma
+    // luminância. Por isso a reserva não é "quase igual" — é modo degradado.
+    ctx.fillStyle = this.arte.cores[this.cor]?.cor ?? cores.tintaSuave;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, this.lado, this.lado, raio.md);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
   }
 }
 
-/**
- * GameScene — a partida.
- *
- * Este é o esqueleto que um jogo novo substitui pela sua mecânica. Ele já faz,
- * de ponta a ponta, tudo que uma partida do motor precisa fazer:
- *
- *   1. lê o nível escolhido em `this.game.dados.nivel`;
- *   2. cria um `ScoreSystem` — a fonte ÚNICA dos números da tela e do AVA;
- *   3. monta HUD (progresso, vidas, pausa);
- *   4. reage ao toque contando acerto/erro;
- *   5. ao terminar, vai para 'resultado' passando `resultado: placar.paraAva(...)`
- *      — e é isso que faz o motor registrar a partida no AVA, uma única vez.
- *
- * O passo 5 é o contrato: qualquer jogo novo precisa fazer exatamente isso.
- */
+// ---------------------------------------------------------------------------
+// GameScene
+// ---------------------------------------------------------------------------
+
 export class GameScene extends Scene {
   aoEntrar() {
     this.estado = ESTADOS.JOGANDO;
     const { largura: L, altura: A, config } = this;
 
     this.nivel = this.game.dados.nivel ?? config.niveis[0];
+    this.geo = config.grade;
+    this.coresDoNivel = this.nivel.cores;
+
     this.placar = new ScoreSystem({
-      total: this.nivel.meta ?? 5,
-      nivel: this.nivel.id ?? 1,
-      vidas: this.nivel.vidas ?? 3,
+      total: this.nivel.meta,
+      nivel: this.nivel.id,
+      vidas: 0,
     });
 
-    this.adicionar(new Background({ largura: L, altura: A }));
+    // A arte, resolvida uma vez: um `loader.imagem()` por quadro por peça
+    // custaria caro e repetiria o mesmo aviso de console centenas de vezes.
+    this.arte = {
+      cores: config.cores,
+      imagens: Object.fromEntries(
+        Object.entries(config.cores).map(([nome, c]) => [nome, this.loader.imagem(c.imagem)]),
+      ),
+    };
 
-    // ------------------------------------------------------------------ HUD
-    this.barra = new ScoreBar({ largura: 340, altura: 34, x: espaco.md, y: espaco.md })
-      .acompanhar(this.placar);
-    this.vidas = new Lives({ total: this.nivel.vidas ?? 3, x: L / 2 - 80, y: espaco.md })
-      .acompanhar(this.placar);
-    this.adicionar(this.barra, this.vidas);
+    // ------------------------------------------------------------- cenário
+    // Tema emprestado do Jogo das Formas por decisão do humano (config.tema).
+    //
+    // `mostrarPecas: false` não é economia: o fundo é a única superfície desta
+    // tela que NÃO pode ter cor interessante. Qualquer mancha colorida atrás do
+    // tabuleiro compete com a comparação de cores que é o conteúdo do jogo.
+    this.adicionar(new Background({
+      largura: L,
+      altura: A,
+      tema: config.tema ?? 'formas',
+      mostrarPecas: false,
+    }));
+
+    this._calcularGeometria();
+    this._montarTabuleiro();
+    this._montarHud();
+    this._montarPainelCores();
+    this._montarPausa();
+    this._montarGesto();
+    this._montarGuarda();
+
+    /** 'livre' = aceita gesto · 'movendo' = resolvendo um caminho. */
+    this.fase = 'livre';
+    /** Quantos caminhos válidos a criança fechou — vai nos extras do AVA. */
+    this.caminhosFeitos = 0;
+
+    this.tempo.iniciar();
+    this.placar.on('vitoria', () => this._terminar(true));
+    this.placar.on('derrota', () => this._terminar(false));
+  }
+
+  // ------------------------------------------------------------- geometria
+
+  /**
+   * Tudo derivado, nada cravado. PLANO-VISUAL, seção 2.
+   *
+   * O tabuleiro é empurrado para a DIREITA, e não centrado: a coluna do HUD à
+   * esquerda equilibra a composição, e é a mesma solução do Jogo das Formas —
+   * para os dois jogos não parecerem de coleções diferentes.
+   */
+  _calcularGeometria() {
+    const { celula } = this.geo;
+    this.colunas = 7;
+    this.linhas = 5;
+
+    this.larguraTabuleiro = this.colunas * celula;
+    this.alturaTabuleiro = this.linhas * celula;
+    this.tabuleiroX = this.largura - espaco.md - this.larguraTabuleiro;
+    this.tabuleiroY = Math.round((this.altura - this.alturaTabuleiro) / 2);
+
+    this.hudX = espaco.md;
+    this.hudLargura = this.tabuleiroX - espaco.md * 2;
+
+    this.xCelula = (col) => this.tabuleiroX + col * celula + celula / 2;
+    this.yCelula = (lin) => this.tabuleiroY + lin * celula + celula / 2;
+  }
+
+  // ------------------------------------------------------------- tabuleiro
+
+  _montarTabuleiro() {
+    this.grade = new GridBoard({
+      linhas: this.linhas,
+      colunas: this.colunas,
+      // Vizinhança de 8: a diagonal vale, como no original de 2013.
+      diagonais: true,
+    });
+
+    this.moldura = new Node({ largura: this.largura, altura: this.altura });
+    const { tabuleiroX: bx, tabuleiroY: by, larguraTabuleiro: bw, alturaTabuleiro: bh } = this;
+    // A moldura é o que arredonda os cantos que o original deixava VAZIOS (ele
+    // tinha 31 peças, não 35). Assim o `GridBoard` não precisa do conceito de
+    // célula bloqueada, que mexeria em gravidade e reposição por um ganho
+    // puramente visual. REGRAS, seção 3.1.
+    this.moldura.desenhar = (ctx) => {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+      ctx.beginPath();
+      ctx.roundRect(bx - 12, by - 12, bw + 24, bh + 24, 44);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.30)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    };
+    this.adicionar(this.moldura);
+
+    this.tabuleiro = new Node();
+    this.adicionar(this.tabuleiro);
+
+    for (let lin = 0; lin < this.linhas; lin++) {
+      for (let col = 0; col < this.colunas; col++) this._nascerPeca(lin, col);
+    }
+
+    // **Sem `_evitarComboDeGraca`.** No Jogo das Formas um grupo que se toque
+    // resolve sozinho, então o tabuleiro inicial podia dar pontos que a criança
+    // não fez. Aqui o caminho é DESENHADO por ela: nada acontece sem gesto, e
+    // não existe ponto de graça a evitar.
+    this.camadaCaminho = new Node({ largura: this.largura, altura: this.altura });
+    this.camadaCaminho.desenhar = (ctx) => this._desenharCaminho(ctx);
+    this.adicionar(this.camadaCaminho);
+  }
+
+  _sortearCor() {
+    return this.coresDoNivel[rand.inteiro(0, this.coresDoNivel.length - 1)];
+  }
+
+  _nascerPeca(lin, col, corForcada = null) {
+    const peca = new Peca({
+      cor: corForcada ?? this._sortearCor(),
+      lado: this.geo.peca,
+      arte: this.arte,
+    });
+    peca.x = this.xCelula(col);
+    peca.y = this.yCelula(lin);
+    this.tabuleiro.adicionar(peca);
+    this.grade.definir(lin, col, peca);
+    return peca;
+  }
+
+  // -------------------------------------------------------------------- HUD
+
+  /**
+   * Coluna à esquerda, 324 px de largura, derivada de `tabuleiroX`.
+   *
+   * Os botões são 96 px lógicos = 48 físicos no celular, acima do piso de 44 do
+   * WCAG 2.5.5. São alvos ISOLADOS: errar um não faz nada, ao contrário das
+   * células do tabuleiro, que se encaixam na vizinha.
+   */
+  _montarHud() {
+    const { config } = this;
+    const x = this.hudX;
+    const w = this.hudLargura;
+
+    this.barra = new ScoreBar({
+      largura: w,
+      altura: 44,
+      x,
+      y: this.tabuleiroY,
+      icone: 'estrela',
+      mostrarNumeros: true,
+    });
+    this.barra.acompanhar(this.placar);
+    this.adicionar(this.barra);
+
+    this.tempo = new TimerBar({
+      largura: w,
+      altura: 44,
+      x,
+      y: this.tabuleiroY + 44 + espaco.md,
+      duracao: this.nivel.duracao,
+    });
+    this.tempo.on('acabou', () => {
+      if (!this.placar.encerrado) this.placar.encerrarPorTempo();
+    });
+    this.adicionar(this.tempo);
+
+    const yBotoes = this.tabuleiroY + (44 + espaco.md) * 2;
+    const lado = 96;
 
     this.adicionar(new IconButton({
       icone: 'pausa',
-      x: L - 96,
-      y: espaco.md,
+      tamanho: lado,
+      x,
+      y: yBotoes,
       audio: this.audio,
       somToque: config.audio?.clique,
       aoTocar: () => this.pausar(),
     }));
 
-    // ---------------------------------------------------------------- pausa
-    this.pausa = new PauseScreen({
-      largura: L,
-      altura: A,
+    this.adicionar(new SoundToggle({
+      tamanho: lado,
+      x: x + lado + espaco.md,
+      y: yBotoes,
       audio: this.audio,
-      config,
-      aoContinuar: () => { this.pausada = false; },
+    }));
+
+    this.yPainelCores = yBotoes + lado + espaco.md;
+  }
+
+  /**
+   * "AS CORES" — onde textura, cor e NOME se encontram.
+   *
+   * É conteúdo, não legenda: a criança que ainda não lê associa a amostra ao
+   * padrão do tabuleiro, e a que já lê ganha a palavra escrita junto do nome que
+   * vai ouvir ao fechar o caminho.
+   */
+  _montarPainelCores() {
+    const x = this.hudX;
+    const w = this.hudLargura;
+    const y = this.yPainelCores;
+    const h = this.tabuleiroY + this.alturaTabuleiro - y;
+
+    const painel = new Panel({ largura: w, altura: h, x, y });
+    this.adicionar(painel);
+
+    painel.adicionar(new TextNode('As cores', {
+      x: espaco.md,
+      y: espaco.sm,
+      tamanho: tipografia.apoio,
+      peso: tipografia.pesoForte,
+      cor: cores.tintaSuave,
+      alinhamento: 'left',
+    }));
+
+    // A altura da linha é DERIVADA do número de cores do nível, não fixa: com 4
+    // cores o painel respira, com 8 ele fecha. Cravar 44 faria o nível 3 estourar.
+    const yLista = espaco.sm + tipografia.apoio + espaco.sm;
+    const passo = (h - yLista - espaco.sm) / this.coresDoNivel.length;
+    const amostra = Math.min(34, passo - 6);
+
+    for (let i = 0; i < this.coresDoNivel.length; i++) {
+      const nome = this.coresDoNivel[i];
+      const cy = yLista + passo * i + passo / 2;
+
+      const swatch = new Peca({ cor: nome, lado: amostra, arte: this.arte });
+      swatch.x = espaco.md + amostra / 2;
+      swatch.y = cy;
+      painel.adicionar(swatch);
+
+      painel.adicionar(new TextNode(nome, {
+        x: espaco.md + amostra + espaco.sm,
+        y: cy - tipografia.apoio * 0.6,
+        tamanho: tipografia.apoio,
+        peso: tipografia.pesoForte,
+        cor: cores.tinta,
+        alinhamento: 'left',
+      }));
+    }
+  }
+
+  _montarPausa() {
+    this.pausa = new PauseScreen({
+      largura: this.largura,
+      altura: this.altura,
+      audio: this.audio,
+      somToque: this.config.audio?.clique,
+      aoContinuar: () => {
+        this.pausada = false;
+        this.tempo.retomar();
+      },
       aoReiniciar: () => this.irPara('jogando', { nivel: this.nivel }),
       aoSair: () => this.irPara('menu'),
     });
     this.adicionar(this.pausa);
+  }
 
-    // ----------------------------------------------------------- mecânica
-    this.alvo = new Alvo({ tamanho: 130 });
-    this.alvo.on('toque', () => this._acertou());
-    this.adicionar(this.alvo);
-    this.pausa.paraFrente(); // a camada de pausa fica sempre por cima
+  // ------------------------------------------------------------------ gesto
 
-    // Toque que NÃO caiu no alvo conta como erro.
-    this.ouvirEntrada('toque', (_ponto, no) => {
-      if (this.pausada || this.placar.encerrado) return;
-      if (no !== this.alvo) this._errou();
+  /**
+   * Os dois gestos, com as MESMAS regras de vizinhança e cor.
+   *
+   * ## Como arrasto e toque são separados
+   *
+   * O `Input` emite `soltar` e, logo depois, `toque` — este último só se apertar
+   * e soltar caíram no mesmo nó. Como a área de jogo é um nó só, um arrasto que
+   * começa e termina nela dispara os dois. Então:
+   *
+   *  - `arrastar` marca o gesto como arrasto ao entrar na SEGUNDA célula. Uma
+   *    célula só não é arrasto: é dedo tremendo sobre a peça que ele tocou;
+   *  - `soltar` fecha o caminho **se houve arrasto**, e arma `_ignorarToque`;
+   *  - `toque` monta o caminho por toques, a menos que o arrasto acabou de
+   *    acontecer.
+   *
+   * `_ignorarToque` é zerado em `apertar`, e não só quando é usado: um arrasto
+   * que termina FORA da área de jogo nunca gera `toque`, e a bandeira presa
+   * engoliria o toque seguinte.
+   */
+  _montarGesto() {
+    // Nó interativo cobrindo a área de jogo. Sem ele não existe toque nenhum:
+    // `toque` exige um nó sob o dedo, e as peças nascem `interativo: false`.
+    // (COMPONENTES.md, "A armadilha: sem nó interativo, não existe toque".)
+    this.areaJogo = new Node({
+      x: this.tabuleiroX,
+      y: this.tabuleiroY,
+      largura: this.larguraTabuleiro,
+      altura: this.alturaTabuleiro,
+      interativo: true,
+    });
+    this.adicionar(this.areaJogo);
+
+    this.caminho = new PathSelector({
+      grade: this.grade,
+      minimo: this.geo.minimo ?? 3,
+      corDe: (p) => p?.cor,
     });
 
-    this.placar.on('vitoria', () => this._terminar(true));
-    this.placar.on('derrota', () => this._terminar(false));
+    this._arrastou = false;
+    this._ignorarToque = false;
+    this._pecaInicial = null;
 
-    this._reposicionar();
+    this.areaJogo.on('apertar', (ponto) => {
+      this._arrastou = false;
+      this._ignorarToque = false;
+      this._pecaInicial = this._pecaSob(ponto);
+    });
+
+    this.areaJogo.on('arrastar', (ponto) => {
+      if (this.pausada || this.fase !== 'livre' || this.placar.encerrado) return;
+      const peca = this._pecaSob(ponto);
+      if (!peca) return;
+
+      if (!this._arrastou) {
+        if (!this._pecaInicial || peca === this._pecaInicial) return;
+        this._arrastou = true;
+        this._pararEsperaDoToque();
+        this.caminho.cancelar();
+        this.caminho.comecar(this._pecaInicial);
+      }
+      this.caminho.oferecer(peca);
+    });
+
+    this.areaJogo.on('soltar', () => {
+      if (!this._arrastou) return;
+      this._ignorarToque = true;
+      this._arrastou = false;
+      this._fecharCaminho();
+    });
+
+    this.areaJogo.on('toque', (ponto) => {
+      if (this._ignorarToque) { this._ignorarToque = false; return; }
+      if (this.pausada || this.fase !== 'livre' || this.placar.encerrado) return;
+      const peca = this._pecaSob(ponto);
+      if (!peca) return;
+
+      this.caminho.alternar(peca);
+      // Válido no toque significa feito — mas só quando a criança PARA de tocar,
+      // senão um caminho de cinco seria cortado no terceiro toque. Ver a
+      // pendência sobre o valor desta espera nas REGRAS, seção 11.
+      if (this.caminho.valido) this._armarEsperaDoToque();
+      else this._pararEsperaDoToque();
+    });
+
+    // Tocar fora do tabuleiro cancela um caminho de toque em curso. Sem isto não
+    // haveria como desistir a não ser desfazendo peça por peça.
+    //
+    // **`apertar` no `Input`, e não `toque`** — e a primeira versão disto usava
+    // `toque`, que não funcionava. O motivo é a armadilha documentada em
+    // COMPONENTES.md: `toque` exige um nó INTERATIVO sob o dedo, e fora do
+    // tabuleiro não há nenhum (o painel e o fundo nascem `interativo: false`),
+    // então nada era emitido. Já `apertar` o `Input` emite sempre que o ponto cai
+    // na área do jogo, com nó ou sem nó — que é exatamente o caso aqui.
+    //
+    // Ouvir no `Input` recebe TODO aperto, inclusive os que começam no tabuleiro
+    // e nos botões; por isso a primeira linha do corpo é a que importa.
+    this.ouvirEntrada('apertar', (ponto) => {
+      if (this._dentroDoTabuleiro(ponto)) return;
+      if (this.pausada || this.caminho.tamanho === 0) return;
+      this._pararEsperaDoToque();
+      this.caminho.cancelar();
+    });
   }
 
-  _reposicionar() {
-    const margem = 140;
-    this.alvo.x = rand.entre(margem, this.largura - margem);
-    this.alvo.y = rand.entre(margem + 60, this.altura - margem);
-    this.alvo.alpha = 0;
-    Tween.removerDe(this.alvo);
-    Tween.para(this.alvo, { alpha: 1 }, 180, Easing.suaveSaida);
+  _dentroDoTabuleiro(ponto) {
+    return ponto.x >= this.tabuleiroX
+      && ponto.x < this.tabuleiroX + this.larguraTabuleiro
+      && ponto.y >= this.tabuleiroY
+      && ponto.y < this.tabuleiroY + this.alturaTabuleiro;
   }
 
-  _acertou() {
-    if (this.pausada || this.placar.encerrado) return;
-    if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
-    this.placar.acertar();
-    if (!this.placar.encerrado) this._reposicionar();
+  /**
+   * A peça sob um ponto — pela CÉLULA inteira, não pelo retângulo da peça.
+   *
+   * É o que faz o alvo tocável ser 128 px (64 físicos no celular) e não 112: o
+   * vão de 16 px entre vizinhas pertence à célula, e exigir precisão dentro da
+   * peça devolveria ao dedo da criança o problema que a medição resolveu.
+   */
+  _pecaSob(ponto) {
+    if (!this._dentroDoTabuleiro(ponto)) return null;
+    const { celula } = this.geo;
+    const col = Math.floor((ponto.x - this.tabuleiroX) / celula);
+    const lin = Math.floor((ponto.y - this.tabuleiroY) / celula);
+    return this.grade.obter(lin, col);
   }
 
-  _errou() {
-    if (this.config.audio?.erro) this.audio.efeito(this.config.audio.erro);
-    this.placar.errar();
+  _armarEsperaDoToque() {
+    this._pararEsperaDoToque();
+    this._esperaToque = Tween.de(this)
+      .esperar(ESPERA_DO_TOQUE)
+      .chamar(() => { this._esperaToque = null; this._fecharCaminho(); });
   }
+
+  _pararEsperaDoToque() {
+    if (this._esperaToque) {
+      this._esperaToque.parar();
+      this._esperaToque = null;
+    }
+  }
+
+  // ------------------------------------------------------------- resolução
+
+  _fecharCaminho() {
+    const ganhas = this.caminho.confirmar();
+    if (ganhas.length === 0) return;   // tentativa cancelada: nem som, nem erro
+
+    this.fase = 'movendo';
+    this.caminhosFeitos++;
+
+    // A narração é o CONTEÚDO: nomear a cor no instante em que ela é conquistada
+    // é o que transforma discriminação visual em vocabulário. Sem arquivo, o
+    // motor fica em silêncio e diz no console o que a voz deveria falar.
+    const nome = ganhas[0].cor;
+    this.audio.falar(this.config.cores[nome]?.som ?? null, { texto: nome });
+
+    this.placar.acertar(ganhas.length);
+
+    for (const peca of ganhas) {
+      if (this.grade.obter(peca.lin, peca.col) === peca) {
+        this.grade.remover(peca.lin, peca.col);
+      }
+      Tween.removerDe(peca);
+      Tween.para(peca, { scaleX: 1.15, scaleY: 1.15 }, movimento.rapido, Easing.suaveSaida)
+        .entao({ alpha: 0, scaleX: 0.6, scaleY: 0.6 }, movimento.padrao, Easing.suaveEntrada)
+        .chamar(() => peca.removerDoPai());
+    }
+
+    if (this.placar.encerrado) return;
+
+    // A cadeia é `Tween.de(this)` — a CENA como alvo — e isso é o que o
+    // `Watchdog` observa: enquanto a fase está ocupada existe tween vivo aqui.
+    Tween.de(this)
+      .esperar(movimento.rapido + movimento.padrao)
+      .chamar(() => this._cairERepor());
+  }
+
+  _cairERepor() {
+    // Gravidade para BAIXO: a linha 0 é o topo neste jogo.
+    const movimentos = this.grade.aplicarGravidade('baixo');
+    for (const m of movimentos) {
+      Tween.removerDe(m.peca);
+      Tween.para(m.peca, { y: this.yCelula(m.paraLin) }, movimento.padrao, Easing.quicarSaida);
+    }
+
+    // Repõe de cima: a peça nasce ACIMA da moldura e cai para o lugar. Nascer no
+    // lugar faria peças aparecerem do nada no meio do tabuleiro.
+    const novas = [];
+    for (const { lin, col } of this.grade.vazias()) {
+      const peca = this._nascerPeca(lin, col);
+      peca.y = this.tabuleiroY - this.geo.celula * (this.linhas - lin);
+      novas.push({ peca, lin });
+    }
+    for (const { peca, lin } of novas) {
+      Tween.para(peca, { y: this.yCelula(lin) }, movimento.padrao * 1.4, Easing.quicarSaida);
+    }
+
+    Tween.de(this)
+      .esperar(movimento.padrao * 1.4)
+      .chamar(() => { this.fase = 'livre'; });
+  }
+
+  // ---------------------------------------------------------- o caminho na tela
+
+  /**
+   * O desenho mais importante da tela: é ele que mostra à criança o que ela está
+   * montando. Três elementos, e a ordem importa.
+   *
+   * **A linha vai POR CIMA das peças.** Descoberto no protótipo: com peça de 112
+   * numa célula de 128 sobram 16 px entre vizinhas, e a linha desenhada por baixo
+   * ficava inteiramente escondida. Aumentar o vão encolheria a peça — então a
+   * linha subiu, com contorno escuro para se ler sobre as oito cores.
+   *
+   * **A ponta numerada faz dois trabalhos:** marca de onde o caminho pode crescer
+   * (a regra é "vizinha da ÚLTIMA" — sem isso a criança vê o conjunto mas não
+   * sabe qual peça está viva) e CONTA quantas peças entraram. Fica verde ao
+   * passar do mínimo, que é como a tela diz "agora isto vale" sem texto.
+   */
+  _desenharCaminho(ctx) {
+    const pecas = this.caminho?.pecas ?? [];
+    if (pecas.length === 0) return;
+
+    const lado = this.geo.peca;
+    const r = raio.md + 6;
+
+    // 1. o aro em cada peça do caminho
+    for (const p of pecas) {
+      const x = p.x - lado / 2;
+      const y = p.y - lado / 2;
+      ctx.strokeStyle = cores.superficie;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.roundRect(x - 4, y - 4, lado + 8, lado + 8, r);
+      ctx.stroke();
+      ctx.strokeStyle = cores.tinta;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(x - 7.5, y - 7.5, lado + 15, lado + 15, r + 3);
+      ctx.stroke();
+    }
+
+    // 2. a linha, por cima
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    const traco = () => {
+      ctx.beginPath();
+      pecas.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      // Um caminho de uma peça só não tem segmento: um ponto no lugar, para o
+      // aro não ficar sozinho sem indicação de que o gesto começou.
+      if (pecas.length === 1) ctx.lineTo(pecas[0].x, pecas[0].y);
+      ctx.stroke();
+    };
+    ctx.strokeStyle = 'rgba(17, 24, 39, 0.55)';
+    ctx.lineWidth = 20;
+    traco();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = 12;
+    traco();
+    ctx.restore();
+
+    // 3. a ponta numerada
+    const ponta = pecas[pecas.length - 1];
+    const valido = this.caminho.valido;
+    ctx.fillStyle = valido ? cores.acerto : cores.superficie;
+    ctx.strokeStyle = cores.tinta;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(ponta.x, ponta.y, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = valido ? cores.superficie : cores.tinta;
+    ctx.font = `${tipografia.pesoForte} 22px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(pecas.length), ponta.x, ponta.y + 1);
+  }
+
+  // ------------------------------------------------------------ cão de guarda
+
+  /**
+   * A invariante que ele vigia: enquanto `fase !== 'livre'`, existe SEMPRE um
+   * tween vivo na cena, porque toda a resolução é uma cadeia de `Tween.de(this)`
+   * e é o `chamar` do fim dela que devolve o gesto à criança.
+   *
+   * Fase ocupada e nenhum tween na cena não é demora: é cadeia perdida. Ver
+   * `Watchdog` em COMPONENTES.md, e o defeito real que o trouxe (uma exceção
+   * engolida por `Tween.chamar` deixou a garra do Jogo das Formas travada para
+   * sempre, com o jogo animando e surdo).
+   */
+  _montarGuarda() {
+    this.guarda = new Watchdog({
+      nome: 'resolução do caminho',
+      ocupado: () => this.fase !== 'livre' && !this.pausada && !this.placar.encerrado,
+      vivo: () => Tween.temAtivo(this),
+      graca: 0.5,
+      limite: 12,
+      aoTravar: ({ tentativa }) => {
+        if (tentativa === 1) {
+          // Devolve o gesto e reconcilia o tabuleiro: se a cadeia morreu no
+          // meio, pode ter sobrado célula vazia sem peça reposta.
+          this.caminho.cancelar();
+          this.fase = 'livre';
+          this._cairERepor();
+          return;
+        }
+        this.guarda.desligar();
+        this._terminar(this.placar.venceu);
+      },
+    });
+  }
+
+  // -------------------------------------------------------------- ciclo/fim
 
   pausar() {
     if (this.placar.encerrado) return;
     this.pausada = true;
+    this.tempo.pausar();
+    this._pararEsperaDoToque();
+    this.caminho.cancelar();
     this.pausa.abrir();
   }
 
   /**
-   * Fim de partida. É AQUI que o registro no AVA acontece: ao entrar no estado
-   * 'resultado', o motor chama o AvaBridge com este objeto — uma vez só.
+   * Fim de partida. É AQUI que o registro no AVA acontece: ao ENTRAR no estado
+   * 'resultado' o motor chama o `AvaBridge` com este objeto, uma vez só.
    *
-   * **Não passe `estrelas` aqui.** A fileira da tela de resultado tem cinco e
-   * quem a calcula é a própria tela, pelo percentual da meta que este payload já
-   * carrega (regra RE-04 de `docs/REGRAS-EDUCACIONAIS.md`). Um jogo que calcule
-   * a própria nota recria a divergência que a regra fechou: a tela dizendo um
-   * número e o jogo achando outro.
+   * **`erros` é sempre 0, e é uma afirmação, não uma omissão.** Este jogo não
+   * tem resposta errada possível: a checagem de cor acontece na SELEÇÃO, e a
+   * criança não consegue montar um caminho inválido. Soltar com menos de três é
+   * tentativa cancelada — ela estava explorando o tabuleiro, que é o
+   * comportamento que a atividade quer. REGRAS, seção 7.
+   *
+   * A cena não passa nota de estrelas: a fileira da `ResultScreen` tem cinco e
+   * quem a calcula é a tela (regra RE-04).
    */
   _terminar(venceu) {
-    this.alvo.visible = false;
+    this.tempo.pausar();
+    this.fase = 'movendo';
+    this._pararEsperaDoToque();
+    this.caminho.cancelar();
+
     this.irPara('resultado', {
       nivel: this.nivel,
-      resultado: this.placar.paraAva(venceu),
+      resultado: this.placar.paraAva(venceu, {
+        caminhosFeitos: this.caminhosFeitos,
+      }),
     });
   }
 
   atualizar(dt) {
-    // A pausa precisa continuar animando mesmo com a partida congelada.
     if (this.pausada) {
       this.pausa.atualizar(dt);
       return;
     }
     super.atualizar(dt);
+
+    // Depois do desvio da pausa: pausa é ocupação legítima e o cão não a conta.
+    this.guarda.atualizar(dt);
+  }
+
+  /**
+   * Limpeza. `Tween.removerTodos()` não é excesso de zelo: os tweens vivem numa
+   * lista GLOBAL, e um `chamar` pendente de reposição rodaria depois de a cena
+   * ter sido destruída — mexendo num tabuleiro que não existe mais. Sair para o
+   * menu no meio de uma resolução é exatamente esse caso.
+   */
+  aoSair() {
+    this.audio.calar();
+    this._pararEsperaDoToque();
+    Tween.removerTodos();
   }
 }
