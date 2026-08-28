@@ -146,12 +146,15 @@ Duas decisões dentro dessa, e as duas são pela mesma razão:
    para ser encontrado. Ficam só as formas brancas gigantes, que não nomeiam
    nada.
 
-**O personagem não aparece na partida nem no tutorial** (`mascote.telas` no
-config). Na partida ele ocupava a tira à esquerda do pórtico sem ter função — o
-retorno da jogada vem do som, do placar e do bloco desaparecendo — e a grade é
-centrada na tela, então tirá-lo não moveu nada. No tutorial ele disputava a
-atenção com a ilustração, que é justamente o que ensina o gesto. Fica no menu (é
-quem recebe) e no resultado (é quem comemora).
+**O personagem aparece SÓ NO MENU** (`mascote.telas` no config). Na partida ele
+ocupava a tira à esquerda do pórtico sem ter função — o retorno da jogada vem do
+som, do placar e do bloco desaparecendo — e a grade é centrada na tela, então
+tirá-lo não moveu nada; a tira virou a coluna do HUD e 16 px de célula a mais. No
+tutorial ele disputava a atenção com a ilustração, que é justamente o que ensina o
+gesto. Na tela de resultado ele ficava encostado na borda do painel, e o que a
+criança precisa ler ali é o bloco central — título, cinco estrelas, pontos; a
+comemoração já está nas estrelas acendendo uma a uma. Fica o menu, onde ele é a
+primeira figura que a criança vê e dá rosto à atividade.
 
 Consequência registrada: o aviso de **pilha alta** era carregado pela expressão
 do mascote, e era o único retorno da partida sem som próprio. Hoje esse aviso não

@@ -317,7 +317,9 @@ significa "em todas"**, então um jogo que não declara nada não muda.
 
 Existe porque "não quero mascote aqui" não tinha como ser dito: `mascote: null`
 não apaga o mascote — faz o motor cair na coruja vetorial. O Jogo das Formas usa
-`telas: ['menu', 'resultado']`.
+`telas: ['menu']` — saiu da partida (a tira dele virou a coluna do HUD), do
+tutorial (disputava atenção com a ilustração que ensina o gesto) e do resultado
+(o que se lê ali é o bloco central, e a comemoração está nas estrelas acendendo).
 
 O helper `mascoteVisivel(config, tela)` é exportado pelo `index.js`, e é ele que
 a cena de partida de um jogo consulta — para "onde o mascote aparece" ter uma

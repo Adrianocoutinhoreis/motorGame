@@ -347,20 +347,27 @@ export default {
     /**
      * Onde o mascote aparece. Fora desta lista, a tela não o cria.
      *
-     * **Não está na PARTIDA nem no TUTORIAL**, e as razões são diferentes:
+     * **Só no MENU**, que é a tela de receber. As três saídas foram decididas
+     * uma a uma, e por motivos diferentes:
      *
-     *  - Na partida ele ocupava a tira à esquerda do pórtico e não tinha função:
+     *  - Na PARTIDA ele ocupava a tira à esquerda do pórtico e não tinha função:
      *    o retorno da jogada já vem pelo som, pelo placar e pelo próprio bloco
      *    desaparecendo. A grade é centrada na tela (`gradeX` sai de `L / 2`), então
-     *    tirá-lo não move nada de lugar — só devolve o espaço.
-     *  - No tutorial ele disputava a atenção com a ILUSTRAÇÃO, que é justamente o
+     *    tirá-lo não move nada de lugar — só devolve o espaço, que virou a coluna
+     *    do HUD e 16 px de célula a mais.
+     *  - No TUTORIAL ele disputava a atenção com a ILUSTRAÇÃO, que é justamente o
      *    que ensina o gesto. Duas figuras animadas na mesma tela, e a criança
      *    olha a errada.
+     *  - No RESULTADO ele ficava encostado na borda esquerda do painel, e o que
+     *    a criança precisa ler ali é o bloco central: "MUITO BEM!", as cinco
+     *    estrelas e os pontos. A comemoração já está nas estrelas acendendo uma
+     *    a uma, que é a linguagem da tela — e o painel é centrado na tela, então
+     *    tirá-lo não desequilibra nada.
      *
-     * Fica no menu (é quem recebe) e no resultado (é quem comemora), que é onde
-     * um personagem faz trabalho de verdade.
+     * Sobra o menu, e ali ele trabalha: é a primeira figura que a criança vê e é
+     * quem dá rosto à atividade antes de o jogo começar.
      */
-    telas: ['menu', 'resultado'],
+    telas: ['menu'],
   },
 
   /**
