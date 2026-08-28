@@ -139,9 +139,13 @@ export class GameScene extends Scene {
     /** Quantos caminhos válidos a criança fechou — vai nos extras do AVA. */
     this.caminhosFeitos = 0;
     /**
-     * Quantas vezes o tabuleiro travou e precisou ser misturado. Vai nos extras
-     * do AVA porque é DADO DE PROJETO, não desempenho da criança: muitas
-     * misturas numa turma dizem que o nível tem cores demais para o tabuleiro.
+     * Quantas misturas a criança VIU — o tabuleiro que nasce morto é corrigido
+     * antes de a tela aparecer e não entra aqui, porque este número mede
+     * interrupção, e aquela não interrompe nada.
+     *
+     * Vai nos extras do AVA porque é DADO DE PROJETO, não desempenho da criança:
+     * muitas misturas numa turma dizem que o nível tem cores demais para o
+     * tabuleiro.
      */
     this.misturas = 0;
 
@@ -225,7 +229,13 @@ export class GameScene extends Scene {
     // nenhuma jogada possível. Medido: 1,6% dos tabuleiros de 8 cores. Aqui a
     // correção é silenciosa e sem animação — ninguém viu o tabuleiro ainda, e
     // uma mistura na tela de entrada só assustaria.
-    if (this.grade.garantirJogada({ minimo: this.minimo })) this._recolocarPecas();
+    this.grade.garantirJogada({ minimo: this.minimo });
+    // Incondicional de propósito. A versão anterior era
+    // `if (garantirJogada(...)) recolocar()`, e o `recolocar` só rodava nos 1,6%
+    // de tabuleiros que nascem mortos — quer dizer, **em nenhum teste**. Quebrado,
+    // ninguém saberia até uma criança ver peças fora do lugar. Assim a posição
+    // sai de um lugar só, sempre, e todo teste passa por ela.
+    this._recolocarPecas();
 
     this.camadaCaminho = new Node({ largura: this.largura, altura: this.altura });
     this.camadaCaminho.desenhar = (ctx) => this._desenharCaminho(ctx);
