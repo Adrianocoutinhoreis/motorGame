@@ -1,0 +1,7 @@
+ESTA PASTA É UMA CÓPIA GERADA. NÃO EDITE NADA AQUI.
+
+Motor v1.3.1
+Jogo:  jogo-das-cores
+
+Para atualizar:
+    node tools/build.mjs jogo-das-cores

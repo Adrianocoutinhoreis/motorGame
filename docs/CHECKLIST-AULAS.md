@@ -133,8 +133,9 @@ selecionada **corta o rabo do caminho**. Solta com 3 ou mais: pontua o **tamanho
 o áudio fala o nome da cor. Grade 5×7 com os quatro cantos vazios (31 peças). Fácil =
 verde/amarelo/azul/vermelho (meta 30); difícil = rosa/marrom/roxo/laranja (meta 45). 120 s.
 
-> **Atenção — arte:** este é o único dos três **sem nenhum PNG de bloco**. As peças coloridas
-> são vetor dentro do `JogoCores_visual.js` (344 KB). A arte é obrigatoriamente nova.
+> **Arte:** este é o único dos três **sem nenhum PNG de bloco** — as peças coloridas eram vetor
+> dentro do `JogoCores_visual.js` (344 KB). A arte nova já existe: **oito SVG, 17 KB somados**,
+> com a textura assada dentro de cada um.
 
 **Assets aproveitáveis:** só o áudio (nomes das 8 cores, instrução, fundo, feedback).
 
@@ -171,7 +172,8 @@ sempre** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-cores"` · derrota também
 | `GridBoard` vizinhança de 8 + gravidade `'baixo'` | ✅ pronto, e escrito prevendo este jogo |
 | `Watchdog`, `ScoreSystem`, `TimerBar`, telas padrão | ✅ prontos |
 | Célula bloqueada (os 4 cantos do original) | ❌ **não vamos precisar** — tabuleiro retangular cheio, cantos arredondados pela arte |
-| Textura dentro da peça | 📋 a escrever na cena. **Desenhada e conferida em protótipo** (`tools/mock-cores.html`), inclusive o teste de escala de cinza |
+| As oito peças | ✅ **SVG prontos** em `assets/img/cor-*.svg`, 2,1 KB cada, textura assada dentro. Conferidos a 112, 64 e 34 px e em escala de cinza |
+| Pasta do jogo | ✅ criada por `new-game.mjs` (jogo de andaime, ainda o do template) |
 | Célula de 128 px | ✅ **medida**: 64 px físicos no pior celular, 45% acima do piso do WCAG 2.5.5 — o primeiro jogo do motor a passar sem ressalva |
 | Cena, arte, tutorial, fichas de áudio | 📋 a fazer |
 
