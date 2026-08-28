@@ -65,16 +65,31 @@ conceito — e não antes.
 normalmente joga pela cor e não repara na textura; quem não vê joga pela textura. Ninguém
 perde informação, e ninguém é obrigado a usar o canal que não tem.
 
+**As oito cores já existem em `cores.ludica`** — nenhuma precisa ser inventada, e nenhuma sai
+de `cores.erro`/`cores.atencao`, que são semânticas de interface e não peça de jogo.
+
 | Cor | Token | Textura | Nível |
 |---|---|---|---|
-| vermelho | `cores.erro` | xadrez | 1 |
-| azul | `cores.ludica.azul` | bolinhas | 1 |
-| verde | `cores.ludica.verde` | liso | 1 |
-| amarelo | `cores.atencao` | listras horizontais | 1 |
-| laranja | `cores.ludica.laranja` | listras diagonais | 2 |
-| roxo | `cores.ludica.roxo` | ondas | 2 |
-| rosa | a definir | estrelinhas | 3 |
-| marrom | a definir | grade | 3 |
+| vermelho | `ludica.vermelho` | xadrez | 1 |
+| azul | `ludica.azul` | bolinhas | 1 |
+| verde | `ludica.verde` | liso | 1 |
+| amarelo | `ludica.amarelo` | listras horizontais | 1 |
+| laranja | `ludica.laranja` | listras diagonais | 2 |
+| roxo | `ludica.roxo` | ondas | 2 |
+| rosa | `ludica.rosa` | estrelinhas | 3 |
+| marrom | `ludica.marrom` | grade | 3 |
+
+**A medição que fecha o assunto da acessibilidade.** Luminância das oito, em 0–255:
+
+| marrom | vermelho | azul | roxo | rosa | verde | laranja | amarelo |
+|---|---|---|---|---|---|---|---|
+| 106 | 119 | 122 | 124 | 130 | 137 | 144 | 197 |
+
+Sete das oito caem numa faixa de 38 unidades, e **vermelho, azul e roxo ficam a 5 unidades um do
+outro**. Em escala de cinza são o mesmo cinza — e **vermelho e azul estão os dois no nível 1**,
+separados por 3. Sem textura, o nível mais fácil já é impossível para quem não distingue essas
+duas. A textura não é acréscimo de acessibilidade: é o canal que faz o jogo existir para essa
+criança.
 
 **Por que textura e não forma.** Forma por cor (círculo = azul, quadrado = vermelho) também
 seria acessível, e foi recusada: no **Jogo das Formas** a mesma criança aprende que uma forma
@@ -85,8 +100,11 @@ faria as duas aulas se contradizerem.
 do tabuleiro dessaturada tem de continuar jogável. Vai para a seção 9 (o que só o olho
 verifica) como item obrigatório.
 
-**Rosa e marrom não têm token** e entram só no nível 3. Quando entrarem, é decisão de design
-se viram token da paleta lúdica ou ficam locais ao jogo.
+**A geometria do tabuleiro e o tamanho da célula estão no**
+[`PLANO-VISUAL-JOGO-DAS-CORES.md`](PLANO-VISUAL-JOGO-DAS-CORES.md), medidos: célula de **128 px**,
+que dá **64 px físicos** no pior celular — 45% acima do piso de 44 px do WCAG 2.5.5, e o
+primeiro jogo do motor a passar desse piso sem ressalva. É possível porque este jogo tem **5
+linhas** onde o Jogo das Formas tem 7, e é o número de linhas que limita a célula.
 
 ---
 
@@ -287,10 +305,14 @@ Toda locução precisa de ficha em `assets/audio-transcricao/<id>/transcricao.md
 - **A espera do toque sequencial** (seção 4.3): quanto tempo depois do último toque o caminho
   se fecha. Precisa ser medido jogando com criança; um valor cedo corta caminhos longos, um
   valor tarde faz o jogo parecer travado.
-- **Tokens de rosa e marrom** (seção 3.2): entram na paleta lúdica ou ficam locais ao jogo.
 - **Locução dos cartões de nível** (seção 8): depende de regravar, e são três nomes novos.
-- **Alvo tocável em celular:** a célula do tabuleiro herda o mesmo problema medido no Jogo das
-  Formas — o mínimo de 64 px lógicos vira 32 físicos num celular de 360 px de altura. Aqui é
-  pior, porque o gesto é arrasto por células vizinhas e não toque isolado. O tabuleiro é 7×5:
-  há mais folga horizontal que no Jogo das Formas, e o `PLANO-VISUAL` deste jogo precisa medir
-  isso antes de escolher o tamanho da célula.
+- **Arte desenhada ou imagem** (plano visual, seção 3.3): a peça nasce desenhada em código, com
+  a costura pronta para virar PNG. Se virar, a imagem tem de trazer **a textura assada dentro
+  dela** — PNG lisos reintroduziriam o problema da luminância sem nada avisar.
+- **Textura em peça pequena** (plano visual, seção 7): a 112 px lógicos é confortável, mas num
+  iframe apertado a peça pode cair para 60 px de tela e a bolinha de 7,5% vira ruído. Se
+  apertar, a saída é textura com menos repetições — nunca textura mais fina.
+
+**Resolvido, e por isso saiu desta lista:** o alvo tocável em celular. Estava aqui como risco
+herdado do Jogo das Formas; a medição do plano visual mostrou que **este jogo passa o piso do
+WCAG com folga** (64 px físicos), porque tem 5 linhas onde o outro tem 7.

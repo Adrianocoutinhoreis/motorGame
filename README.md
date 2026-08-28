@@ -66,6 +66,8 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 |---|---|
 | [`docs/REGRAS-JOGO-DAS-FORMAS.md`](docs/REGRAS-JOGO-DAS-FORMAS.md) | Jogo das Formas — mecânica, níveis, pontuação, contrato |
 | [`docs/PLANO-VISUAL-JOGO-DAS-FORMAS.md`](docs/PLANO-VISUAL-JOGO-DAS-FORMAS.md) | Jogo das Formas — layout, tamanhos, movimento |
+| [`docs/REGRAS-JOGO-DAS-CORES.md`](docs/REGRAS-JOGO-DAS-CORES.md) | Jogo das Cores — o caminho, níveis, contrato |
+| [`docs/PLANO-VISUAL-JOGO-DAS-CORES.md`](docs/PLANO-VISUAL-JOGO-DAS-CORES.md) | Jogo das Cores — layout medido, as oito texturas |
 
 ---
 

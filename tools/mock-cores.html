@@ -1,0 +1,276 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Jogo das Cores — protótipo de layout e texturas</title>
+<!--
+  PROTÓTIPO, e com prazo de validade declarado.
+
+  Existe para duas coisas que nenhum teste automático julga: se a célula de
+  128 px dá um tabuleiro grande o bastante para o dedo de uma criança, e se as
+  oito texturas se distinguem EM ESCALA DE CINZA — o teste do daltonismo, que
+  num jogo cujo conteúdo é a cor não é acréscimo, é o que faz o jogo existir
+  para quem não a distingue.
+
+  Ele já pagou por si: foi aqui que se descobriu que a linha do caminho, se
+  desenhada ANTES das peças, fica inteiramente escondida (sobram 16 px entre
+  vizinhas). Ver PLANO-VISUAL-JOGO-DAS-CORES.md, seção 4.1.
+
+  O código das texturas daqui vai para a cena de partida do jogo. QUANDO ELA
+  EXISTIR, ESTE ARQUIVO DEVE SER APAGADO — duas cópias da mesma textura é como
+  as duas divergem sem ninguém notar.
+
+  Uso:  abra direto no navegador, ou
+        node tools/serve.mjs  ->  http://localhost:8080/tools/mock-cores.html
+-->
+
+<style>
+  body { margin: 0; background: #0B1220; font-family: system-ui, sans-serif; }
+  .rot { color: #94A3B8; font: 600 13px system-ui; padding: 10px 14px 4px; }
+  canvas { display: block; border-bottom: 1px solid #1E293B; }
+  #cinza { filter: grayscale(1) contrast(1.05); }
+</style>
+
+<div class="rot">1. LAYOUT — 1280×720 lógicos, célula 128 px, caminho de 4 peças selecionado</div>
+<canvas id="cor" width="1280" height="720"></canvas>
+<div class="rot">2. O MESMO, EM ESCALA DE CINZA — o teste do daltonismo: tem de continuar jogável</div>
+<canvas id="cinza" width="1280" height="720"></canvas>
+
+<script>
+// ------------------------------------------------------------------ tokens
+const T = {
+  vermelho: '#EF4444', laranja: '#F97316', amarelo: '#FACC15', verde: '#22C55E',
+  azul: '#3B82F6', roxo: '#8B5CF6', rosa: '#EC4899', marrom: '#A16207',
+};
+const TINTA = '#111827', SUP = '#FFFFFF', SUAVE = '#F9FAFB', LINHA = '#E5E7EB';
+
+// -------------------------------------------------------------- geometria
+const L = 1280, A = 720;
+const CEL = 128;            // <- o número que este protótipo existe para julgar
+const COLS = 7, LINS = 5;
+const LADO = 112;           // peça dentro da célula (88%)
+const MD = 20, LG = 32;
+
+const BW = COLS * CEL, BH = LINS * CEL;      // 896 x 640
+const BX = L - MD - BW;                       // empurrado para a direita: 364
+const BY = Math.round((A - BH) / 2);          // 40
+const HUD_X = MD, HUD_W = BX - MD * 2;        // 20 .. 324 de largura
+
+// ------------------------------------------------------------- texturas
+// Cada cor tem um padrão PRÓPRIO, redundante com ela. Desenhados recortados
+// no retângulo da peça.
+const TEXTURAS = {
+  verde: (c) => {},                                   // liso
+  amarelo: (c, x, y, s) => {                          // listras horizontais
+    c.strokeStyle = 'rgba(0,0,0,0.28)'; c.lineWidth = s * 0.08;
+    for (let i = 1; i < 5; i++) { const yy = y + s * i / 5; c.beginPath(); c.moveTo(x, yy); c.lineTo(x + s, yy); c.stroke(); }
+  },
+  azul: (c, x, y, s) => {                             // bolinhas
+    c.fillStyle = 'rgba(255,255,255,0.62)';
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+      c.beginPath(); c.arc(x + s * (i + 0.5) / 3, y + s * (j + 0.5) / 3, s * 0.075, 0, 7); c.fill();
+    }
+  },
+  vermelho: (c, x, y, s) => {                         // xadrez
+    c.fillStyle = 'rgba(0,0,0,0.24)'; const n = 4, p = s / n;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if ((i + j) % 2) c.fillRect(x + i * p, y + j * p, p, p);
+  },
+  laranja: (c, x, y, s) => {                          // listras diagonais
+    c.strokeStyle = 'rgba(0,0,0,0.26)'; c.lineWidth = s * 0.085;
+    for (let i = -1; i < 5; i++) { c.beginPath(); c.moveTo(x + s * i / 4, y); c.lineTo(x + s * (i + 1) / 4, y + s); c.stroke(); }
+  },
+  roxo: (c, x, y, s) => {                             // ondas
+    c.strokeStyle = 'rgba(255,255,255,0.66)'; c.lineWidth = s * 0.075;
+    for (let k = 1; k < 4; k++) {
+      const yy = y + s * k / 4; c.beginPath(); c.moveTo(x, yy);
+      for (let t = 0; t <= s; t += 4) c.lineTo(x + t, yy + Math.sin(t / s * Math.PI * 2) * s * 0.055);
+      c.stroke();
+    }
+  },
+  rosa: (c, x, y, s) => {                             // estrelinhas
+    c.fillStyle = 'rgba(255,255,255,0.75)';
+    const estrela = (cx, cy, r) => {
+      c.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const ang = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r;
+        c[i ? 'lineTo' : 'moveTo'](cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr);
+      }
+      c.closePath(); c.fill();
+    };
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) estrela(x + s * (i + 0.5) / 2, y + s * (j + 0.5) / 2, s * 0.13);
+  },
+  marrom: (c, x, y, s) => {                           // grade
+    c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = s * 0.055;
+    for (let i = 1; i < 4; i++) {
+      c.beginPath(); c.moveTo(x + s * i / 4, y); c.lineTo(x + s * i / 4, y + s); c.stroke();
+      c.beginPath(); c.moveTo(x, y + s * i / 4); c.lineTo(x + s, y + s * i / 4); c.stroke();
+    }
+  },
+};
+
+function peca(c, cx, cy, cor, selecionada) {
+  const x = cx - LADO / 2, y = cy - LADO / 2, r = 22;
+  c.save();
+  c.shadowColor = 'rgba(17,24,39,0.28)'; c.shadowBlur = 10; c.shadowOffsetY = 4;
+  c.fillStyle = T[cor];
+  c.beginPath(); c.roundRect(x, y, LADO, LADO, r); c.fill();
+  c.restore();
+
+  c.save();                                  // textura recortada na peça
+  c.beginPath(); c.roundRect(x, y, LADO, LADO, r); c.clip();
+  TEXTURAS[cor](c, x, y, LADO);
+  c.restore();
+
+  c.save();                                  // brilho de cima, dá volume
+  c.beginPath(); c.roundRect(x, y, LADO, LADO, r); c.clip();
+  const g = c.createLinearGradient(0, y, 0, y + LADO);
+  g.addColorStop(0, 'rgba(255,255,255,0.30)'); g.addColorStop(0.5, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(x, y, LADO, LADO);
+  c.restore();
+
+  if (selecionada) {                         // aro branco grosso
+    c.strokeStyle = SUP; c.lineWidth = 7;
+    c.beginPath(); c.roundRect(x - 4, y - 4, LADO + 8, LADO + 8, r + 4); c.stroke();
+    c.strokeStyle = TINTA; c.lineWidth = 2.5;
+    c.beginPath(); c.roundRect(x - 7.5, y - 7.5, LADO + 15, LADO + 15, r + 7); c.stroke();
+  }
+}
+
+// ------------------------------------------------------------------ cena
+function desenhar(c) {
+  // fundo
+  const g = c.createLinearGradient(0, 0, L, A);
+  g.addColorStop(0, '#1E3A8A'); g.addColorStop(0.55, '#4338CA'); g.addColorStop(1, '#0E7490');
+  c.fillStyle = g; c.fillRect(0, 0, L, A);
+
+  // moldura do tabuleiro: é ela que arredonda os cantos que o original
+  // deixava VAZIOS, sem o motor precisar de célula bloqueada
+  c.save();
+  c.fillStyle = 'rgba(255,255,255,0.10)';
+  c.beginPath(); c.roundRect(BX - 12, BY - 12, BW + 24, BH + 24, 44); c.fill();
+  c.strokeStyle = 'rgba(255,255,255,0.30)'; c.lineWidth = 3;
+  c.beginPath(); c.roundRect(BX - 12, BY - 12, BW + 24, BH + 24, 44); c.stroke();
+  c.restore();
+
+  // tabuleiro
+  const mapa = [
+    'AVZRLXPM'.slice(0, 7),
+    'ZZVRRPM',
+    'RZZLVMP',
+    'VRZPMLL',
+    'MPLVZRA',
+  ];
+  const cores = { A: 'amarelo', V: 'verde', Z: 'azul', R: 'vermelho', L: 'laranja', P: 'roxo', M: 'marrom', X: 'rosa' };
+  const cx = (col) => BX + col * CEL + CEL / 2;
+  const cy = (lin) => BY + lin * CEL + CEL / 2;
+
+  // o CAMINHO selecionado: linha grossa ligando os centros. É o desenho mais
+  // importante desta tela — é o que mostra à criança o que ela está montando.
+  const caminho = [[1, 0], [1, 1], [2, 1], [2, 2], [3, 2]];
+  const noCaminho = new Set(caminho.map(([l, k]) => l + ',' + k));
+
+  for (let lin = 0; lin < LINS; lin++) {
+    for (let col = 0; col < COLS; col++) {
+      const cor = cores[mapa[lin][col]];
+      const sel = noCaminho.has(lin + ',' + col);
+      if (!sel) peca(c, cx(col), cy(lin), cor, false);
+    }
+  }
+
+  for (const [l, k] of caminho) peca(c, cx(k), cy(l), cores[mapa[l][k]], true);
+
+  // A linha vai POR CIMA das peças, e não por baixo.
+  //
+  // Descoberto no protótipo: com peça de 112 numa célula de 128 sobram 16 px
+  // entre vizinhas, e a linha desenhada antes ficava inteiramente escondida.
+  // Aumentar o vão para a linha caber encolheria a peça — então a linha sobe.
+  // Contorno escuro por fora do traço branco, para ela se ler sobre qualquer
+  // uma das oito cores.
+  c.save();
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  const traco = () => {
+    c.beginPath();
+    caminho.forEach(([l, k], i) => c[i ? 'lineTo' : 'moveTo'](cx(k), cy(l)));
+    c.stroke();
+  };
+  c.strokeStyle = 'rgba(17,24,39,0.55)'; c.lineWidth = 20; traco();
+  c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = 12; traco();
+
+  // A PONTA do caminho — de onde ele pode crescer. Sem isto a criança vê o
+  // conjunto selecionado mas não sabe qual é a peça viva, e a regra do jogo é
+  // "vizinha da ÚLTIMA".
+  const [pl, pk] = caminho[caminho.length - 1];
+  c.fillStyle = SUP; c.strokeStyle = TINTA; c.lineWidth = 4;
+  c.beginPath(); c.arc(cx(pk), cy(pl), 20, 0, 7); c.fill(); c.stroke();
+  c.fillStyle = TINTA; c.font = '700 22px system-ui';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(String(caminho.length), cx(pk), cy(pl) + 1);
+  c.restore();
+
+  // ------------------------------------------------------------ HUD
+  const painel = (x, y, w, h, r = 16) => {
+    c.save();
+    c.shadowColor = 'rgba(17,24,39,0.22)'; c.shadowBlur = 12; c.shadowOffsetY = 4;
+    c.fillStyle = SUP; c.beginPath(); c.roundRect(x, y, w, h, r); c.fill();
+    c.restore();
+  };
+
+  // barra de pontos
+  painel(HUD_X, BY, HUD_W, 44, 22);
+  c.fillStyle = '#F59E0B';
+  c.beginPath(); c.arc(HUD_X + 26, BY + 22, 15, 0, 7); c.fill();
+  c.fillStyle = LINHA;
+  c.beginPath(); c.roundRect(HUD_X + 50, BY + 14, HUD_W - 120, 16, 8); c.fill();
+  c.fillStyle = '#16A34A';
+  c.beginPath(); c.roundRect(HUD_X + 50, BY + 14, (HUD_W - 120) * 0.45, 16, 8); c.fill();
+  c.fillStyle = TINTA; c.font = '700 22px system-ui'; c.textAlign = 'right'; c.textBaseline = 'middle';
+  c.fillText('14/30', HUD_X + HUD_W - 14, BY + 22);
+
+  // barra de tempo
+  const yT = BY + 44 + MD;
+  painel(HUD_X, yT, HUD_W, 44, 22);
+  c.strokeStyle = '#F59E0B'; c.lineWidth = 3;
+  c.beginPath(); c.arc(HUD_X + 26, yT + 22, 13, 0, 7); c.stroke();
+  c.beginPath(); c.moveTo(HUD_X + 26, yT + 14); c.lineTo(HUD_X + 26, yT + 22); c.lineTo(HUD_X + 32, yT + 22); c.stroke();
+  c.fillStyle = LINHA;
+  c.beginPath(); c.roundRect(HUD_X + 50, yT + 14, HUD_W - 64, 16, 8); c.fill();
+  c.fillStyle = '#3B82F6';
+  c.beginPath(); c.roundRect(HUD_X + 50, yT + 14, (HUD_W - 64) * 0.62, 16, 8); c.fill();
+
+  // botões
+  const yB = yT + 44 + MD;
+  for (let i = 0; i < 2; i++) {
+    const x = HUD_X + i * (96 + MD);
+    painel(x, yB, 96, 96, 24);
+    c.fillStyle = TINTA;
+    if (i === 0) { c.fillRect(x + 34, yB + 30, 10, 36); c.fillRect(x + 52, yB + 30, 10, 36); }
+    else {
+      c.beginPath(); c.moveTo(x + 34, yB + 40); c.lineTo(x + 44, yB + 40); c.lineTo(x + 56, yB + 28);
+      c.lineTo(x + 56, yB + 68); c.lineTo(x + 44, yB + 56); c.lineTo(x + 34, yB + 56); c.closePath(); c.fill();
+      c.strokeStyle = TINTA; c.lineWidth = 4;
+      c.beginPath(); c.arc(x + 60, yB + 48, 10, -0.9, 0.9); c.stroke();
+    }
+  }
+
+  // legenda das cores — é onde textura, cor e NOME se encontram
+  const yL = yB + 96 + MD;
+  const alturaL = BY + BH - yL;
+  painel(HUD_X, yL, HUD_W, alturaL, 20);
+  c.fillStyle = '#4B5563'; c.font = '700 15px system-ui'; c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.fillText('AS CORES', HUD_X + 18, yL + 22);
+  const nomes = ['vermelho', 'azul', 'verde', 'amarelo', 'laranja', 'roxo', 'rosa', 'marrom'];
+  const passo = (alturaL - 44) / nomes.length;
+  nomes.forEach((n, i) => {
+    const y = yL + 40 + passo * i + passo / 2;
+    const s = Math.min(34, passo - 6);
+    c.save();
+    c.fillStyle = T[n];
+    c.beginPath(); c.roundRect(HUD_X + 18, y - s / 2, s, s, 8); c.fill();
+    c.beginPath(); c.roundRect(HUD_X + 18, y - s / 2, s, s, 8); c.clip();
+    TEXTURAS[n](c, HUD_X + 18, y - s / 2, s);
+    c.restore();
+    c.fillStyle = TINTA; c.font = '700 19px system-ui';
+    c.fillText(n.toUpperCase(), HUD_X + 18 + s + 14, y);
+  });
+}
+
+for (const id of ['cor', 'cinza']) desenhar(document.getElementById(id).getContext('2d'));
+</script>

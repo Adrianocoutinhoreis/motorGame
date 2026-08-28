@@ -123,7 +123,8 @@ crescer, e é isso que `erros` conta.
 
 ## 3. Jogo das Cores — `870296` 🚧
 
-**Especificação completa:** [`REGRAS-JOGO-DAS-CORES.md`](REGRAS-JOGO-DAS-CORES.md).
+**Especificação completa:** [`REGRAS-JOGO-DAS-CORES.md`](REGRAS-JOGO-DAS-CORES.md) ·
+**plano visual:** [`PLANO-VISUAL-JOGO-DAS-CORES.md`](PLANO-VISUAL-JOGO-DAS-CORES.md).
 
 **Original:** `js/JogoCores.js` (370 linhas). **Não é match-3** — é **desenhar um caminho**:
 aperta numa peça e arrasta; cada peça nova entra se for vizinha da ÚLTIMA do caminho
@@ -170,7 +171,8 @@ sempre** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-cores"` · derrota também
 | `GridBoard` vizinhança de 8 + gravidade `'baixo'` | ✅ pronto, e escrito prevendo este jogo |
 | `Watchdog`, `ScoreSystem`, `TimerBar`, telas padrão | ✅ prontos |
 | Célula bloqueada (os 4 cantos do original) | ❌ **não vamos precisar** — tabuleiro retangular cheio, cantos arredondados pela arte |
-| Textura dentro da peça | 📋 a escrever na cena (padrão de canvas): é arte deste jogo |
+| Textura dentro da peça | 📋 a escrever na cena. **Desenhada e conferida em protótipo** (`tools/mock-cores.html`), inclusive o teste de escala de cinza |
+| Célula de 128 px | ✅ **medida**: 64 px físicos no pior celular, 45% acima do piso do WCAG 2.5.5 — o primeiro jogo do motor a passar sem ressalva |
 | Cena, arte, tutorial, fichas de áudio | 📋 a fazer |
 
 ---
