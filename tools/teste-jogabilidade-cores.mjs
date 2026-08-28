@@ -27,8 +27,10 @@
  *   4. TOQUE sequencial monta o mesmo caminho e a espera o fecha sozinha;
  *   5. tocar de novo na última peça desfaz;
  *   6. apertar fora do tabuleiro cancela;
- *   7. a pausa abre;
- *   8. o `Watchdog` não dispara numa sessão normal.
+ *   7. TABULEIRO MORTO — o jogo detecta, mistura e devolve o gesto;
+ *   8. e continua jogável depois da mistura;
+ *   9. a pausa abre;
+ *  10. o `Watchdog` não dispara numa sessão normal.
  *
  * As lacunas de narração são esperadas e separadas do resto: os oito nomes de
  * cor de 2013 ainda não foram trazidos, e o motor as declara no console.
@@ -308,7 +310,142 @@ try {
   const cancelado = await aval('window.jogo.cena.caminho.tamanho');
   checar('o caminho foi cancelado', cancelado === 0, `tamanho=${cancelado}`);
 
-  console.log('\n7. A pausa');
+  console.log('\n7. TABULEIRO MORTO: o jogo mistura em vez de parar');
+  // O defeito relatado. Planta um caminho de verdade, arrasta com o ponteiro, e
+  // DEPOIS que a reposição encheu o tabuleiro pinta-o com uma coloração própria
+  // do grafo do rei — `(lin%2)*2 + (col%2)` — em que nenhuma peça tem vizinha da
+  // mesma cor, nem na diagonal. É o tabuleiro sem ligação nenhuma.
+  //
+  // O gesto é real e a cadeia de resolução é real: o que o teste injeta é só a
+  // COR das peças, na janela entre a reposição e a conferência.
+  await aval(`(() => {
+    const c = window.jogo.cena;
+    c.caminho.cancelar();
+    for (let col = 0; col < 3; col++) c.grade.obter(4, col).cor = 'rosa';
+    for (const [l, k] of [[3,0],[3,1],[3,2],[3,3],[4,3]]) c.grade.obter(l, k).cor = 'verde';
+    return true;
+  })()`);
+  await arrastar([cel(4, 0), cel(4, 1), cel(4, 2)]);
+  // Cadeia: soltar +380 ms cai e repõe · +336 ms confere. `arrastar` já voltou
+  // 120 ms depois de soltar, então 300 aqui caem no meio da janela.
+  await esperar(300);
+  const morto = await aval(`(() => {
+    const c = window.jogo.cena;
+    if (c.grade.vazias().length > 0) return { erro: 'a reposição ainda não rodou' };
+    c.grade.paraCada((p, l, k) => {
+      if (p) p.cor = ['vermelho', 'azul', 'verde', 'amarelo'][(l % 2) * 2 + (k % 2)];
+    });
+    const censo = {};
+    for (const p of c.grade.todas()) censo[p.cor] = (censo[p.cor] ?? 0) + 1;
+    return {
+      temJogada: c.grade.temJogada(3), fase: c.fase, censo, misturas: c.misturas,
+      mapa: c.grade.celulas.map((li) => li.map((p) => ({vermelho:'R',azul:'A',verde:'V',amarelo:'M',laranja:'L',roxo:'X',rosa:'S',marrom:'B'})[p.cor]).join('')).join('/'),
+    };
+  })()`);
+  console.log(`  tabuleiro morto: ${JSON.stringify(morto)}`);
+  checar('o tabuleiro ficou de fato sem jogada nenhuma',
+    morto.temJogada === false, JSON.stringify(morto));
+  checar('e o jogo ainda estava resolvendo (a conferência vem depois)',
+    morto.fase === 'movendo', `fase=${morto.fase}`);
+
+  // A conferência dispara a ~716 ms do soltar; aqui estamos em ~420.
+  await esperar(450);
+  const misturando = await aval(`(() => {
+    const c = window.jogo.cena;
+    return {
+      misturas: c.misturas, fase: c.fase,
+      aviso: !!c.aviso.visible, tempoRodando: !!c.tempo.rodando,
+      temJogada: c.grade.temJogada(3), naGrade: c.grade.todas().length,
+    };
+  })()`);
+  console.log(`  misturando: ${JSON.stringify(misturando)}`);
+  checar('o jogo detectou e misturou', misturando.misturas === 1, JSON.stringify(misturando));
+  checar('a mistura resolveu o travamento', misturando.temJogada === true, JSON.stringify(misturando));
+  checar('a criança foi avisada na tela', misturando.aviso === true, JSON.stringify(misturando));
+  checar('o cronômetro parou durante a mistura (o defeito não é dela)',
+    misturando.tempoRodando === false, JSON.stringify(misturando));
+  checar('o gesto continua travado enquanto as peças voam',
+    misturando.fase === 'movendo', `fase=${misturando.fase}`);
+  checar('nenhuma peça se perdeu na mistura', misturando.naGrade === 35, `naGrade=${misturando.naGrade}`);
+  await captura('06-misturando');
+
+  // Fim da mistura: lento (420) + padrão (240).
+  await esperar(900);
+  const misturado = await aval(`(() => {
+    const c = window.jogo.cena;
+    const censo = {};
+    for (const p of c.grade.todas()) censo[p.cor] = (censo[p.cor] ?? 0) + 1;
+    // Cada peça precisa estar onde a grade diz — é o que prova que o tween de
+    // posição foi para o lugar certo, e não que só a grade mudou.
+    let foraDeLugar = 0;
+    c.grade.paraCada((p, l, k) => {
+      if (!p) return;
+      if (Math.abs(p.x - c.xCelula(k)) > 1 || Math.abs(p.y - c.yCelula(l)) > 1) foraDeLugar++;
+    });
+    return {
+      fase: c.fase, aviso: !!c.aviso.visible, tempoRodando: !!c.tempo.rodando,
+      temJogada: c.grade.temJogada(3), censo, foraDeLugar,
+      disparos: c.guarda.disparos,
+      mapa: c.grade.celulas.map((li) => li.map((p) => ({vermelho:'R',azul:'A',verde:'V',amarelo:'M',laranja:'L',roxo:'X',rosa:'S',marrom:'B'})[p.cor]).join('')).join('/'),
+    };
+  })()`);
+  console.log(`  depois da mistura: ${JSON.stringify(misturado)}`);
+  checar('o gesto voltou para a criança', misturado.fase === 'livre', `fase=${misturado.fase}`);
+  checar('o aviso saiu da tela', misturado.aviso === false, JSON.stringify(misturado));
+  checar('o cronômetro voltou a correr', misturado.tempoRodando === true, JSON.stringify(misturado));
+  checar('ainda há jogada no tabuleiro', misturado.temJogada === true, JSON.stringify(misturado));
+  checar('as peças estão nas células que a grade diz',
+    misturado.foraDeLugar === 0, `foraDeLugar=${misturado.foraDeLugar}`);
+  // O censo é o que separa MISTURAR de trocar as cores: as mesmas peças, nos
+  // mesmos números, em outros lugares.
+  //
+  // Comparado por entradas ORDENADAS, e não por `JSON.stringify` do objeto: a
+  // primeira versão desta linha reprovou um censo idêntico só porque a ordem das
+  // chaves mudou depois da mistura. Era a comparação errada, não o jogo.
+  const censoEmTexto = (c) => Object.entries(c).sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, n]) => `${k}=${n}`).join(' ');
+  checar('o censo de cores não mudou (misturou, não repintou)',
+    censoEmTexto(morto.censo) === censoEmTexto(misturado.censo),
+    `${censoEmTexto(morto.censo)} -> ${censoEmTexto(misturado.censo)}`);
+  checar('o cão de guarda não confundiu a mistura com travamento',
+    misturado.disparos === 0, `disparos=${misturado.disparos}`);
+  await captura('07-depois-da-mistura');
+
+  // ------------------------------------------------- o teste do daltonismo
+  // Herdado de `tools/mock-cores.html`, que foi apagado quando esta cena passou
+  // a existir. Num jogo cujo CONTEÚDO é a cor, a vista em escala de cinza não é
+  // acréscimo: é o que faz o jogo existir para quem não distingue cor — sete das
+  // oito cores da paleta caem numa faixa de 38 unidades de luminância, e
+  // vermelho, azul e roxo ficam a 5 unidades um do outro.
+  //
+  // A captura não se julga sozinha: quem olha é uma pessoa. O que o teste
+  // garante é que ela SEJA PRODUZIDA a cada rodada, sobre o jogo de verdade e
+  // não sobre um protótipo que pode ter divergido dele.
+  await aval(`(() => {
+    window.jogo.stage.canvas.style.filter = 'grayscale(1) contrast(1.05)';
+    return true;
+  })()`);
+  await esperar(200);
+  await captura('08-escala-de-cinza');
+  await aval(`(() => { window.jogo.stage.canvas.style.filter = ''; return true; })()`);
+  checar('a vista em escala de cinza foi capturada para conferência humana', true);
+
+  console.log('\n8. Um caminho ainda funciona depois da mistura');
+  await aval(`(() => {
+    const c = window.jogo.cena;
+    for (let col = 0; col < 3; col++) c.grade.obter(0, col).cor = 'laranja';
+    for (const [l, k] of [[1,0],[1,1],[1,2],[1,3],[0,3]]) c.grade.obter(l, k).cor = 'roxo';
+    return true;
+  })()`);
+  const antesFinal = await aval('window.jogo.cena.placar.acertos');
+  await arrastar([cel(0, 0), cel(0, 1), cel(0, 2)]);
+  await esperar(300);
+  const depoisFinal = await aval('window.jogo.cena.placar.acertos');
+  checar('o jogo continua jogável depois de misturar',
+    depoisFinal - antesFinal === 3, `${antesFinal} -> ${depoisFinal}`);
+  await esperar(1600);
+
+  console.log('\n9. A pausa');
   const btPausa = await aval(`(() => {
     const a = window.jogo.cena.filhos.find((f) => f.icone === 'pausa');
     const m = a.matrizMundo;
@@ -319,7 +456,7 @@ try {
   checar('a pausa abriu', await aval('!!window.jogo.cena.pausada'));
   await captura('05-pausa');
 
-  console.log('\n8. O cão de guarda não dispara numa sessão normal');
+  console.log('\n10. O cão de guarda não dispara numa sessão normal');
   checar('nenhum disparo do Watchdog', await aval('window.jogo.cena.guarda.disparos') === 0);
 
   const lacunas = mensagens.filter((m) => /narra/i.test(m));

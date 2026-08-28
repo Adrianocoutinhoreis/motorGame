@@ -13,7 +13,7 @@ Legenda: ✅ concluído · 🚧 em andamento · 📋 planejado
 |---|---|---|---|---|
 | 1 | Jogo dos Blocos | `870294` | `jogo-dos-blocos` | ✅ **refeito** (piloto) |
 | 2 | Jogo das Formas | `870298` | `jogo-das-formas` | 🚧 **jogável**, com pendências declaradas |
-| 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 🚧 **especificado** — regras fechadas, mecânica central no motor e testada |
+| 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 🚧 **joga, sem voz** — partida completa e testada com gesto real; falta narração e identidade visual própria |
 
 ---
 
@@ -151,6 +151,18 @@ verde/amarelo/azul/vermelho (meta 30); difícil = rosa/marrom/roxo/laranja (meta
    selecionar peça de cor diferente. Soltar com menos de 3 é tentativa cancelada. Respondendo à
    pergunta que estava aberta aqui: **`erros` é sempre 0**, e as regras afirmam isso na
    seção 7, em vez de omitir.
+
+### A quarta, achada em JOGO REAL e não na leitura da fonte
+
+4. **O tabuleiro pode ficar sem nenhuma jogada possível**, e nem o original nem a refação
+   tratavam isso — o jogo simplesmente parava, com a criança arrastando o dedo sem nada
+   acontecer. Medido depois do relato: **76% das partidas de 8 cores** chegavam a esse
+   tabuleiro antes da meta. Hoje o jogo detecta e mistura, anunciando e com o cronômetro
+   parado (regras, seção 10-A).
+
+   A lição para os próximos jogos de tabuleiro: **ler a fonte pegou três erros de inventário,
+   mas não pegou este.** Não estava no código de 2013 para ser lido — era uma ausência, e
+   ausência não se acha lendo. Achou-se jogando, e depois se mediu.
 
 ### Decisões tomadas (as três que estavam abertas)
 

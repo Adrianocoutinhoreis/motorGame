@@ -401,12 +401,54 @@ dois sentidos e desfazer combos iniciais.
 divergia. O flood-fill do original era recursivo e estourava a pilha em tabuleiro grande.
 
 ```js
-const grade = new GridBoard({ linhas: 5, colunas: 7, diagonais: true });
-grade.definir(0, 0, { tipo: 'azul' });
+const grade = new GridBoard({
+  linhas: 5, colunas: 7, diagonais: true,
+  tipoDe: (p) => p.cor,        // o campo que decide se duas peças são iguais
+});
+grade.definir(0, 0, { cor: 'azul' });
 grade.grupoConectado(peca); grade.gruposValidos(3);
 grade.removerGrupo(grupo); grade.aplicarGravidade('baixo');
 grade.paraTexto();   // ótimo para depurar
 ```
+
+#### `tipoDe`: se o jogo não guarda `tipo`, DIGA
+
+O padrão é `peca.tipo`. O Jogo das Cores guarda `peca.cor`, e antes de `tipoDe` existir a
+grade comparava `undefined` com `undefined` — achava o tabuleiro inteiro de um tipo só e
+`temJogada()` respondia **`true` sempre**. Verificação que nunca reprova é pior que verificação
+nenhuma: ela faz o caso parecer coberto.
+
+Sintoma para reconhecer: `grupoConectado` devolve o tabuleiro inteiro.
+
+#### Tabuleiro sem jogada: `temJogada` e `garantirJogada`
+
+```js
+grade.temJogada(3);                       // existe alguma jogada?
+const info = grade.garantirJogada({ minimo: 3 });
+if (info) animar(info.movimentos);        // null = já havia jogada, nada a fazer
+```
+
+`garantirJogada` embaralha (`embaralhar()`, que permuta as peças entre as células ocupadas e
+**preserva o censo**) e reconfere; se o sorteio insistir em não resolver, `_plantarGrupo`
+junta peças de um mesmo tipo trocando-as de lugar. Devolve o **diferencial** entre antes e
+depois — um movimento por peça, direto para o destino, para a cena animar sem ver as
+tentativas — e `possivel: false` quando nem plantando dava (não existem `minimo` peças de um
+mesmo tipo: é configuração impossível, não azar).
+
+**Por que existe.** Medido por simulação no tabuleiro 7x5 do Jogo das Cores: com 8 cores, 1,6%
+dos tabuleiros nascem sem jogada e **76% das partidas chegam a um tabuleiro morto antes da
+meta**. Com 4 cores é 1 em 20 mil. Sem isso o jogo simplesmente para, e a criança fica
+arrastando o dedo sem nada acontecer — foi um defeito relatado em jogo real.
+
+**`temJogada` vale para o caminho também, e isso não é óbvio.** A jogada do Jogo das Cores é
+um caminho simples, não um grupo conexo (é por isso que `PathSelector` existe). Mas para a
+pergunta "existe ALGUMA jogada?" os dois coincidem: todo grafo conexo com 3+ vértices tem um
+vértice de grau 2 ou mais, e ele com dois vizinhos já é um caminho de 3. Teste exato, não
+aproximação.
+
+**Quem anima é a cena**, e ela tem três obrigações que o motor não pode cumprir por ela:
+travar o gesto enquanto as peças voam, manter um tween vivo no alvo que o `Watchdog` observa,
+e **avisar a criança** — tela que se reorganiza sozinha e em silêncio assusta nesta idade.
 
 ### `PathSelector`
 O **caminho** que a criança desenha por peças vizinhas iguais — a mecânica central do Jogo das

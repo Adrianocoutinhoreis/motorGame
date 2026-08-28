@@ -24,6 +24,9 @@ import {
 /** Quanto o caminho de TOQUE espera, em ms, antes de fechar sozinho. */
 const ESPERA_DO_TOQUE = 900;
 
+/** Atraso, em ms, de cada coluna na onda da mistura. Ver `_misturar`. */
+const ATRASO_POR_COLUNA = 45;
+
 // ---------------------------------------------------------------------------
 // Peca
 // ---------------------------------------------------------------------------
@@ -91,6 +94,8 @@ export class GameScene extends Scene {
     this.nivel = this.game.dados.nivel ?? config.niveis[0];
     this.geo = config.grade;
     this.coresDoNivel = this.nivel.cores;
+    /** Quantas peças um caminho precisa para valer. Um lugar só. */
+    this.minimo = this.geo.minimo ?? 3;
 
     this.placar = new ScoreSystem({
       total: this.nivel.meta,
@@ -126,12 +131,19 @@ export class GameScene extends Scene {
     this._montarPainelCores();
     this._montarPausa();
     this._montarGesto();
+    this._montarAviso();
     this._montarGuarda();
 
     /** 'livre' = aceita gesto · 'movendo' = resolvendo um caminho. */
     this.fase = 'livre';
     /** Quantos caminhos válidos a criança fechou — vai nos extras do AVA. */
     this.caminhosFeitos = 0;
+    /**
+     * Quantas vezes o tabuleiro travou e precisou ser misturado. Vai nos extras
+     * do AVA porque é DADO DE PROJETO, não desempenho da criança: muitas
+     * misturas numa turma dizem que o nível tem cores demais para o tabuleiro.
+     */
+    this.misturas = 0;
 
     this.tempo.iniciar();
     this.placar.on('vitoria', () => this._terminar(true));
@@ -172,6 +184,10 @@ export class GameScene extends Scene {
       colunas: this.colunas,
       // Vizinhança de 8: a diagonal vale, como no original de 2013.
       diagonais: true,
+      // A peça deste jogo tem `cor`, não `tipo`. Sem isto o `temJogada()` da
+      // grade compararia `undefined` com `undefined` e responderia "tem jogada"
+      // sempre — verificação que nunca reprova.
+      tipoDe: (p) => p?.cor,
     });
 
     this.moldura = new Node({ largura: this.largura, altura: this.altura });
@@ -204,6 +220,13 @@ export class GameScene extends Scene {
     // resolve sozinho, então o tabuleiro inicial podia dar pontos que a criança
     // não fez. Aqui o caminho é DESENHADO por ela: nada acontece sem gesto, e
     // não existe ponto de graça a evitar.
+    //
+    // Mas o problema SIMÉTRICO existe e é grave: o tabuleiro pode nascer sem
+    // nenhuma jogada possível. Medido: 1,6% dos tabuleiros de 8 cores. Aqui a
+    // correção é silenciosa e sem animação — ninguém viu o tabuleiro ainda, e
+    // uma mistura na tela de entrada só assustaria.
+    if (this.grade.garantirJogada({ minimo: this.minimo })) this._recolocarPecas();
+
     this.camadaCaminho = new Node({ largura: this.largura, altura: this.altura });
     this.camadaCaminho.desenhar = (ctx) => this._desenharCaminho(ctx);
     this.adicionar(this.camadaCaminho);
@@ -389,7 +412,7 @@ export class GameScene extends Scene {
 
     this.caminho = new PathSelector({
       grade: this.grade,
-      minimo: this.geo.minimo ?? 3,
+      minimo: this.minimo,
       corDe: (p) => p?.cor,
     });
 
@@ -457,6 +480,72 @@ export class GameScene extends Scene {
       this._pararEsperaDoToque();
       this.caminho.cancelar();
     });
+  }
+
+  // ------------------------------------------------------------------ aviso
+
+  /**
+   * "MISTUREI AS CORES!" — a faixa que explica o tabuleiro se reorganizando.
+   *
+   * Existe porque a alternativa é pior: a tela toda mexendo sozinha, em silêncio,
+   * sem a criança ter tocado em nada. Nesta idade isso lê-se como erro dela.
+   *
+   * Fica centrada no tabuleiro, e essa escolha tem um custo: por menos de um
+   * segundo ela cobre parte de uma linha de peças em movimento. O outro lugar
+   * possível era a coluna do HUD, onde o olho não está. Preferi cobrir peça a
+   * não ser lida — **e é dos itens que só o olho verifica** (PLANO-VISUAL,
+   * seção 6).
+   */
+  _montarAviso() {
+    const w = Math.min(460, this.larguraTabuleiro - espaco.lg * 2);
+    const h = 92;
+
+    this.aviso = new Panel({
+      largura: w,
+      altura: h,
+      // Âncora no centro: o tween de escala tem de crescer a partir do meio, e
+      // não empurrar a faixa para o lado enquanto cresce.
+      x: this.tabuleiroX + this.larguraTabuleiro / 2,
+      y: this.tabuleiroY + this.alturaTabuleiro / 2,
+      regX: w / 2,
+      regY: h / 2,
+      contorno: cores.tinta,
+    });
+    this.aviso.visible = false;
+
+    this.aviso.adicionar(new TextNode('Misturei as cores!', {
+      x: w / 2,
+      y: h / 2,
+      // `subtitulo`, não `titulo`: em caixa alta (RE-01) são 18 caracteres, e a
+      // 48 px eles estouram os 460 da faixa.
+      tamanho: tipografia.subtitulo,
+      peso: tipografia.pesoForte,
+      cor: cores.tinta,
+      alinhamento: 'center',
+      linhaBase: 'middle',
+      larguraMaxima: w - espaco.md * 2,
+    }));
+
+    this.aviso.mostrar = () => {
+      this.aviso.visible = true;
+      this.aviso.alpha = 0;
+      this.aviso.scaleX = 0.8;
+      this.aviso.scaleY = 0.8;
+      Tween.removerDe(this.aviso);
+      Tween.para(
+        this.aviso,
+        { alpha: 1, scaleX: 1, scaleY: 1 },
+        movimento.padrao,
+        Easing.costasSaida,
+      );
+    };
+    this.aviso.esconder = () => {
+      Tween.removerDe(this.aviso);
+      Tween.para(this.aviso, { alpha: 0 }, movimento.rapido, Easing.suaveEntrada)
+        .chamar(() => { this.aviso.visible = false; });
+    };
+
+    this.adicionar(this.aviso);
   }
 
   _dentroDoTabuleiro(ponto) {
@@ -553,7 +642,100 @@ export class GameScene extends Scene {
 
     Tween.de(this)
       .esperar(movimento.padrao * 1.4)
-      .chamar(() => { this.fase = 'livre'; });
+      .chamar(() => this._liberarGesto());
+  }
+
+  /**
+   * O fim de toda resolução: devolver o gesto à criança — mas só depois de
+   * garantir que existe jogada para ela fazer.
+   *
+   * **É aqui que o defeito relatado se resolve.** Sem esta conferência o jogo
+   * devolvia o gesto num tabuleiro que podia estar morto, e a criança ficava
+   * arrastando o dedo por peças que nunca formavam caminho, sem nada na tela
+   * dizendo que o problema não era ela. Medido no nível 3 (8 cores): **76% das
+   * partidas chegavam a esse tabuleiro** antes da meta.
+   */
+  _liberarGesto() {
+    const info = this.grade.garantirJogada({ minimo: this.minimo });
+    if (!info) {
+      this.fase = 'livre';
+      return;
+    }
+    if (!info.possivel) {
+      // Não existem `minimo` peças de uma mesma cor no tabuleiro — configuração
+      // impossível, não azar. Devolve o gesto de todo modo: melhor um tabuleiro
+      // sem jogada do que um jogo que não responde ao dedo.
+      console.error('[cores] não há jogada possível e não consegui criar uma; o nível está mal configurado');
+      this.fase = 'livre';
+      return;
+    }
+    this._misturar(info);
+  }
+
+  /**
+   * A mistura, com a criança olhando. `fase` continua `'movendo'`.
+   *
+   * Três decisões, e nenhuma é enfeite:
+   *
+   *  - **as peças VOAM para o lugar novo**, uma por uma, em vez de trocar num
+   *    corte. A criança precisa ver que são as mesmas peças mudando de lugar; um
+   *    corte seco lê-se como "o jogo recomeçou" ou como erro;
+   *  - **o tempo para.** O travamento é falha do tabuleiro, não da criança, e
+   *    cobrar dela o segundo que a mistura leva seria cobrar pelo nosso defeito;
+   *  - **é anunciado**, na voz e por escrito. Uma tela que se reorganiza sozinha
+   *    e em silêncio é assustadora nesta idade.
+   */
+  _misturar(info) {
+    this.misturas++;
+
+    this.audio.falar(this.config.audio?.misturar ?? null, { texto: 'Misturei as cores!' });
+    this.tempo.pausar();
+    this.aviso.mostrar();
+
+    // **Escalonado por coluna, e isso saiu de uma captura.** Na primeira versão
+    // as 35 peças partiam juntas, cruzavam o meio da tela ao mesmo tempo e se
+    // amontoavam num bolo — lê-se como a tela desmoronando, não como misturar.
+    // Saindo da esquerda para a direita, vira uma onda, e a criança consegue
+    // seguir peça por peça.
+    for (const m of info.movimentos) {
+      Tween.removerDe(m.peca);
+      Tween.de(m.peca)
+        .esperar(m.deCol * ATRASO_POR_COLUNA)
+        .entao(
+          { x: this.xCelula(m.paraCol), y: this.yCelula(m.paraLin) },
+          movimento.lento,
+          Easing.suave,
+        );
+    }
+
+    // A cadeia é `Tween.de(this)` — a cena — porque é ela que o `Watchdog`
+    // observa. Uma mistura resolvida por tweens só nas peças deixaria a fase
+    // ocupada sem sinal de vida na cena, e o cão de guarda a mataria no meio.
+    // Derivado, não cravado: a última coluna só PARTE em
+    // `(colunas-1) * ATRASO_POR_COLUNA`, e devolver o gesto antes de ela chegar
+    // deixaria a criança arrastar por peças em voo.
+    const duracao = (this.colunas - 1) * ATRASO_POR_COLUNA + movimento.lento + movimento.padrao;
+    Tween.de(this)
+      .esperar(duracao)
+      .chamar(() => {
+        this.aviso.esconder();
+        this.fase = 'livre';
+        // `pausada` importa: a criança pode ter aberto a pausa durante a
+        // mistura, e retomar aqui destravaria o cronômetro por trás da tela.
+        if (!this.pausada && !this.placar.encerrado) this.tempo.retomar();
+      });
+  }
+
+  /**
+   * Põe cada peça no lugar que a grade diz. Para depois de uma troca SEM
+   * animação: `garantirJogada` mexe na grade, e o x/y da peça não a acompanha.
+   */
+  _recolocarPecas() {
+    this.grade.paraCada((peca, lin, col) => {
+      if (!peca) return;
+      peca.x = this.xCelula(col);
+      peca.y = this.yCelula(lin);
+    });
   }
 
   // ---------------------------------------------------------- o caminho na tela
@@ -701,6 +883,8 @@ export class GameScene extends Scene {
       nivel: this.nivel,
       resultado: this.placar.paraAva(venceu, {
         caminhosFeitos: this.caminhosFeitos,
+        // Não é desempenho da criança: é medida do NÍVEL. Ver `_misturar`.
+        misturas: this.misturas,
       }),
     });
   }

@@ -161,8 +161,8 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 |---|---|---|
 | `ScoreSystem` | Pronto | Fonte única dos números do AVA |
 | `CraneController` | Pronto | Modo oscilante validado no piloto; **modo colunas estreou** no Jogo das Formas. O ciclo vertical (descer, pegar, subir) NÃO é dele: é `Tween` na cena, e vale saber disso antes de planejar o próximo jogo de guindaste |
-| `GridBoard` | Pronto | **Estreou** no Jogo das Formas: conectividade de 4, gravidade `cima`, cascata. Dois limites conhecidos: não tem operação de deslocar a grade inteira uma linha (a linha nova mora na cena), e `desfazerCombosIniciais` resolve num passe só sem reconferir as peças já vistas — ver abaixo |
-| Arrasto contínuo (drag path) | **Planejado** | Necessário para o Jogo das Cores (match-3 por arrasto) |
+| `GridBoard` | Pronto | **Estreou** no Jogo das Formas (conectividade de 4, gravidade `cima`, cascata) e ganhou no Jogo das Cores `tipoDe`, `trocar`, `embaralhar` e `garantirJogada` — tabuleiro sem jogada possível, medido e tratado. Dois limites conhecidos: não tem operação de deslocar a grade inteira uma linha (a linha nova mora na cena), e `desfazerCombosIniciais` resolve num passe só sem reconferir as peças já vistas — ver abaixo |
+| `PathSelector` | Pronto | **Estreou** no Jogo das Cores: o caminho desenhado pela criança, arrasto e toque, vizinhança vinda da grade. 18 testes de unidade |
 | `GridBoard.desfazerCombosIniciais` sem reconferência | **A corrigir** | Ver abaixo |
 
 ### O limite do `desfazerCombosIniciais`, medido
@@ -177,9 +177,17 @@ resolveu na cena, com passes que **reconferem o conjunto inteiro** a cada rodada
 (`GameScene._evitarComboDeGraca`), e isso também evita o segundo problema: `todas()` mexeria em
 peças que já estão na tela, trocando a forma de um bloco debaixo do olhar da criança.
 
-**O Jogo das Cores vai precisar do mesmo**, com vizinhança de 8 — que é um tabuleiro ainda mais
-propenso a grupos. Vale promover a versão da cena ao `GridBoard` **antes** de começar Cores, e
-não depois: é a mesma correção feita uma vez em vez de duas.
+**Previsão que não se cumpriu, e vale registrar por quê.** Estava escrito aqui que o Jogo das
+Cores precisaria do mesmo conserto, com vizinhança de 8. Ele **não precisa de nenhum**: no Jogo
+das Formas um grupo que se toque resolve sozinho, então o tabuleiro inicial dava pontos que a
+criança não fez; no Jogo das Cores o caminho é DESENHADO por ela e nada acontece sem gesto, de
+modo que não existe ponto de graça a evitar.
+
+O que aquele jogo precisou foi do **problema simétrico**, que ninguém tinha previsto: tabuleiro
+que nasce ou é reposto **sem nenhuma jogada possível** (`garantirJogada`). Medido em 76% das
+partidas de 8 cores — ver `REGRAS-JOGO-DAS-CORES.md`, seção 10-A. A lição não é sobre grade:
+é que a mecânica decide qual das duas patologias o tabuleiro tem, e supor a do jogo anterior
+custou um defeito encontrado em jogo real em vez de em medição.
 
 ## Áudio
 

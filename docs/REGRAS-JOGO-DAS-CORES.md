@@ -300,12 +300,80 @@ Toda locução precisa de ficha em `assets/audio-transcricao/<id>/transcricao.md
 
 ---
 
+## 10-A. Tabuleiro sem jogada: o defeito relatado, medido e resolvido
+
+Relatado em jogo real: **"apareceu um evento que não tinha como fazer ligações"**. Não havia
+nada no código que conferisse isso — o tabuleiro nascia e era reposto por sorteio, e ninguém
+perguntava se sobrara jogada.
+
+### Quão frequente, de fato
+
+Simulação da regra exata (7x5, vizinhança de 8, gravidade para baixo, reposição no topo):
+200 mil tabuleiros e 20 mil partidas jogadas até a meta, por nível.
+
+| Nível | Cores | Tabuleiro recém-sorteado | **Partidas que travam antes da meta** |
+|---|---|---|---|
+| 1 Conhecer | 4 | 0 em 200.000 | **0,005%** |
+| 2 Ampliar | 6 | 0,11% | **10,4%** |
+| 3 Desafio | 8 | 1,6% | **76,2%** |
+
+Três de cada quatro partidas do nível 3 chegavam a um tabuleiro morto. **Não é canto raro: é o
+caso comum**, e explica o relato ter vindo de uma partida de 8 cores.
+
+### A regra
+
+**O jogo nunca devolve o gesto à criança num tabuleiro sem jogada.** A conferência acontece em
+dois pontos, e só nesses dois:
+
+1. ao montar o tabuleiro (`GameScene.aoEntrar`) — correção **silenciosa e sem animação**,
+   porque ninguém viu o tabuleiro ainda e uma mistura na entrada só assustaria;
+2. no fim de toda reposição (`_liberarGesto`), que é o único lugar de onde a fase `'movendo'`
+   volta para `'livre'`.
+
+Quando falta jogada, o tabuleiro **mistura**: as mesmas peças, nos mesmos números, em outros
+lugares (`GridBoard.garantirJogada`). Misturar e não repintar é a diferença que importa num
+jogo de cores — a criança que estava olhando uma peça vermelha a reencontra em outro lugar, em
+vez de vê-la virar azul onde estava.
+
+A mistura é **anunciada** ("MISTUREI AS CORES!", com locução pendente), o **cronômetro para**
+enquanto ela acontece — o travamento é falha do tabuleiro, não da criança — e as peças **voam
+em onda, coluna por coluna**. A onda não é enfeite: partindo todas juntas, as 35 peças cruzam o
+meio da tela ao mesmo tempo e se amontoam num bolo que lê como a tela desmoronando. Está numa
+captura em `.capturas/cores/06-misturando.png`.
+
+### Quantas interrupções isso custa
+
+| Nível | Misturas por partida | Pior partida | Embaralhadas por mistura |
+|---|---|---|---|
+| 1 Conhecer (4 cores) | 0,00 | 1 | 1,00 |
+| 2 Ampliar (6 cores) | 0,10 | 2 | 1,00 |
+| 3 Desafio (8 cores) | **1,23** | 6 | 1,03 |
+
+Em 20 mil partidas por nível, **nenhuma** deixou de ser resolvida no limite de 30 embaralhadas.
+
+### O sinal de projeto que ficou, e é decisão humana
+
+O nível 3 pede mais de uma mistura por partida. Medido no mesmo simulador: **7 cores dariam
+0,57** e 5 cores dariam 0,01. Baixar o nível 3 de 8 para 7 cores cortaria as interrupções pela
+metade — mas conhecer as **oito** cores parece ser justamente o ponto do nível Desafio, e essa
+troca é pedagógica, não técnica. Fica registrada aqui, não decidida.
+
+Para a decisão não depender de simulação, cada partida reporta `extras.misturas` ao AVA. É
+**dado do nível, não desempenho da criança**: muitas misturas numa turma dizem que aquele
+nível tem cores demais para o tabuleiro.
+
+---
+
 ## 11. Decisões em aberto
 
 - **A espera do toque sequencial** (seção 4.3): quanto tempo depois do último toque o caminho
   se fecha. Precisa ser medido jogando com criança; um valor cedo corta caminhos longos, um
   valor tarde faz o jogo parecer travado.
 - **Locução dos cartões de nível** (seção 8): depende de regravar, e são três nomes novos.
+- **Quantas cores no nível 3** (seção 10-A): 8 cores custam 1,23 misturas por partida, 7 cores
+  custariam 0,57. Decisão pedagógica.
+- **"Misturei as cores!" não existe na aula de 2013**, porque lá o travamento não era tratado —
+  o jogo parava. É gravação nova, além das 16 originais.
 - **Arte desenhada ou imagem** (plano visual, seção 3.3): a peça nasce desenhada em código, com
   a costura pronta para virar PNG. Se virar, a imagem tem de trazer **a textura assada dentro
   dela** — PNG lisos reintroduziriam o problema da luminância sem nada avisar.

@@ -284,16 +284,22 @@ por isso ele continua sendo `switch` no `Background` e não invenção de sistem
 
 ## 6. O que só o olho verifica
 
-Há um protótipo para isto: **`tools/mock-cores.html`**, que desenha o layout desta seção 2 no
-tamanho lógico real, com um caminho selecionado, e uma segunda cópia em escala de cinza. Ele
-tem prazo de validade — quando a cena existir, deve ser apagado, porque duas cópias da mesma
-textura é como as duas divergem sem ninguém notar.
+Havia um protótipo para isto, `tools/mock-cores.html`. **Foi apagado quando a cena passou a
+existir**, como o próprio arquivo declarava: duas cópias da mesma textura é como as duas
+divergem sem ninguém notar.
 
+O que ele fazia de mais valioso — a **vista em escala de cinza** — não se perdeu: mudou para
+`tools/teste-jogabilidade-cores.mjs`, que a captura a cada rodada em
+`.capturas/cores/08-escala-de-cinza.png`, **sobre o jogo de verdade** e não sobre um protótipo.
+O teste não julga a imagem; ele garante que ela exista para uma pessoa julgar. Conferida no
+nível 1: verde liso, azul bolinhas, vermelho xadrez e amarelo listrado ficam inconfundíveis, e
+o painel lateral liga cada textura ao nome escrito.
 
 Os testes provam que a tela abre, que o caminho obedece às regras e que o gesto funciona.
 Não provam nada disto:
 
-- [ ] **O tabuleiro em escala de cinza continua jogável** — as oito texturas se distinguem, e as
+- [x] **O tabuleiro em escala de cinza continua jogável** — CONFERIDO no nível 1 (captura 08).
+      Falta conferir os níveis 2 e 3: as oito texturas se distinguem, e as
       quatro do nível 1 em particular
 - [ ] A linha do caminho se lê sobre as oito cores, inclusive amarelo (o mais claro)
 - [ ] A ponta numerada não cobre informação de que a criança precisa

@@ -18,9 +18,11 @@ Refação da aula **870296** de 2013. Especificação completa em
 [`docs/REGRAS-JOGO-DAS-CORES.md`](../../docs/REGRAS-JOGO-DAS-CORES.md) e
 [`docs/PLANO-VISUAL-JOGO-DAS-CORES.md`](../../docs/PLANO-VISUAL-JOGO-DAS-CORES.md).
 
-> **Estado: em construção.** A pasta ainda roda o jogo de ANDAIME que o
-> `new-game.mjs` gera (toque nas estrelas). O que já existe deste jogo são as
-> oito peças e a especificação. Ver as pendências no fim.
+> **Estado: joga, sem voz.** A partida está completa — os dois gestos, o caminho,
+> a pontuação, o fim de partida e o registro no AVA. O que falta é a **narração**
+> (as 16 gravações de 2013 não foram trazidas) e a **identidade visual própria**:
+> por decisão do humano, o visual é emprestado do Jogo das Formas por enquanto,
+> e a troca é um campo só (`config.tema`). Ver as pendências no fim.
 
 ## Como rodar localmente
 
@@ -106,12 +108,15 @@ diz qual textura ele carrega e por quê.
 > provisória, mecânica a confirmar. É melhor uma entrega com pendência declarada
 > do que uma que aparenta estar pronta.
 
-1. **A cena de partida não existe.** A pasta roda o jogo de andaime do template. O que está
-   pronto é a especificação, as oito peças e o `PathSelector` (o caminho) no motor, com 18
-   testes de unidade.
-2. **Áudio ainda não copiado.** As 16 gravações da aula original — os oito nomes de cor, a
-   instrução, os dois de nível e o feedback — continuam em `Aulas para Refazer/Jogo das Cores/`.
-   Nenhuma ficha de transcrição foi criada.
+1. **Nenhum som.** As 16 gravações da aula original — os oito nomes de cor, a instrução, os
+   dois de nível e o feedback — continuam em `Aulas para Refazer/Jogo das Cores/`, e nenhuma
+   ficha de transcrição foi criada. **É a pendência mais séria**: nomear a cor no instante em
+   que ela é conquistada é o que transforma discriminação visual em vocabulário, ou seja, é o
+   conteúdo pedagógico da aula. Até então o motor fica em silêncio e diz no console o que a voz
+   deveria falar.
+   É preciso gravar uma frase que a aula de 2013 não tem: **"Misturei as cores!"** (ver 6).
+2. **O visual é emprestado do Jogo das Formas**, por decisão do humano, até este jogo ganhar
+   identidade própria. A troca é um campo só: `config.tema`.
 3. **Os áudios de nível dizem "fácil" e "difícil"**, e este jogo tem três níveis com nomes
    diferentes (Conhecer, Ampliar, Desafio). Os dois arquivos não servem sem regravar; até lá os
    cartões ficam sem locução, e o motor avisa a lacuna no console.
@@ -121,6 +126,11 @@ diz qual textura ele carrega e por quê.
 5. **A textura a 34 px** (amostra do painel lateral) é o limite conferido: ali o xadrez do
    vermelho e a grade do marrom são o par que mais se aproxima. A amostra vem com o nome
    escrito ao lado, o que atenua. Abaixo disso não foi conferido.
+6. **Quantas cores no nível 3.** Com 8 cores o tabuleiro trava e precisa ser misturado 1,23
+   vezes por partida; com 7 seriam 0,57. O jogo trata o travamento (mistura anunciada, com o
+   cronômetro parado — ver REGRAS, seção 10-A), então isto não é defeito: é a pergunta
+   pedagógica de quanta interrupção vale conhecer a oitava cor. Cada partida reporta
+   `extras.misturas` ao AVA para a decisão sair de dados de turma, não de simulação.
 
 ## Atualizar o motor neste jogo
 

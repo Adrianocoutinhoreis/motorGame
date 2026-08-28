@@ -365,6 +365,151 @@ grupo('GridBoard', () => {
     grade.paraCada((_, l, c) => grade.definir(l, c, { tipo: 'X' }));
     igual(grade.grupoConectado(grade.obter(0, 0)).length, 1600);
   });
+
+  // ----------------------------------------------------- tipoDe / travamento
+  //
+  // Tudo daqui para baixo nasceu de um defeito relatado no Jogo das Cores: um
+  // tabuleiro apareceu SEM nenhuma ligação possível, e nada no código conferia
+  // isso. Ver `garantirJogada` e a medição em REGRAS-JOGO-DAS-CORES, seção 12.
+
+  /** Peça que guarda `cor`, como a do Jogo das Cores — e nenhum `tipo`. */
+  const montarPorCor = (mapa) => {
+    const grade = new GridBoard({
+      linhas: mapa.length,
+      colunas: mapa[0].length,
+      diagonais: true,
+      tipoDe: (p) => p?.cor,
+    });
+    mapa.forEach((linha, l) => {
+      [...linha].forEach((c, col) => {
+        if (c !== '.') grade.definir(l, col, { cor: c });
+      });
+    });
+    return grade;
+  };
+
+  teste('tipoDe deixa a grade comparar por outro campo', () => {
+    const grade = montarPorCor([
+      'AAB',
+      'BBB',
+    ]);
+    igual(grade.grupoConectado(grade.obter(0, 0)).length, 2, 'par de A:');
+    igual(grade.gruposValidos(3).length, 1, 'só o trio de B:');
+  });
+
+  teste('sem tipoDe, peça com `cor` engana a grade — é o defeito que motivou', () => {
+    // A prova de que o padrão cravado em `peca.tipo` MENTIA: todas as peças têm
+    // `tipo === undefined`, então o tabuleiro inteiro vira um grupo só e
+    // `temJogada` responde `true` num tabuleiro que pode estar morto.
+    const errada = new GridBoard({ linhas: 2, colunas: 3, diagonais: true });
+    [...'AAB', ...'BBB'].forEach((c, i) => {
+      errada.definir(Math.floor(i / 3), i % 3, { cor: c });
+    });
+    igual(errada.grupoConectado(errada.obter(0, 0)).length, 6, 'engole o tabuleiro:');
+    ok(errada.temJogada(3), 'e por isso nunca reprova (é o defeito, não o certo)');
+  });
+
+  teste('temJogada reprova tabuleiro sem nenhuma ligação', () => {
+    // Coloração própria do grafo do rei: `(lin%2)*2 + (col%2)`. Nenhuma peça tem
+    // vizinha da mesma cor, nem na diagonal.
+    const morto = new GridBoard({ linhas: 5, colunas: 7, diagonais: true, tipoDe: (p) => p?.cor });
+    morto.paraCada((_, l, c) => morto.definir(l, c, { cor: 'ABCD'[(l % 2) * 2 + (c % 2)] }));
+    ok(!morto.temJogada(3), 'tabuleiro morto tem de reprovar');
+    igual(morto.gruposValidos(1).length, 35, 'todos os componentes são de uma peça:');
+  });
+
+  teste('trocar leva as duas peças e corrige lin/col', () => {
+    const grade = montarPorCor(['AB']);
+    const a = grade.obter(0, 0);
+    const b = grade.obter(0, 1);
+    grade.trocar(0, 0, 0, 1);
+    ok(grade.obter(0, 0) === b && grade.obter(0, 1) === a, 'as peças trocaram de célula');
+    igual([b.col, a.col], [0, 1], 'a peça precisa saber onde está:');
+  });
+
+  teste('embaralhar preserva o censo e não enche célula vazia', () => {
+    const grade = montarPorCor([
+      'AAB',
+      '..C',
+      'DEF',
+    ]);
+    const censoAntes = grade.todas().map((p) => p.cor).sort().join('');
+    const vaziasAntes = grade.vazias().map((v) => `${v.lin},${v.col}`).sort().join(' ');
+    grade.embaralhar();
+    igual(grade.todas().map((p) => p.cor).sort().join(''), censoAntes, 'mesmas peças:');
+    igual(grade.vazias().map((v) => `${v.lin},${v.col}`).sort().join(' '), vaziasAntes, 'mesmas vazias:');
+  });
+
+  teste('movimento do embaralhar aponta a origem, não o destino', () => {
+    // O erro fácil aqui: `definir` sobrescreve `peca.lin`, e ler a origem depois
+    // devolveria o destino nos dois campos — animação que não sai do lugar.
+    const grade = montarPorCor([
+      'AB',
+      'CD',
+    ]);
+    const movimentos = grade.embaralhar();
+    for (const m of movimentos) {
+      ok(m.deLin !== m.paraLin || m.deCol !== m.paraCol, 'movimento parado na lista');
+      ok(m.peca.lin === m.paraLin && m.peca.col === m.paraCol, 'destino tem de casar com a grade');
+    }
+  });
+
+  teste('garantirJogada devolve null quando já há jogada', () => {
+    const grade = montarPorCor(['AAA']);
+    ok(grade.garantirJogada({ minimo: 3 }) === null, 'não pode mexer em tabuleiro bom');
+  });
+
+  teste('garantirJogada ressuscita tabuleiro morto sem trocar as cores', () => {
+    const grade = new GridBoard({ linhas: 5, colunas: 7, diagonais: true, tipoDe: (p) => p?.cor });
+    grade.paraCada((_, l, c) => grade.definir(l, c, { cor: 'ABCD'[(l % 2) * 2 + (c % 2)] }));
+    const censoAntes = grade.todas().map((p) => p.cor).sort().join('');
+
+    const info = grade.garantirJogada({ minimo: 3 });
+    ok(info !== null, 'tinha de agir');
+    ok(info.possivel, 'tinha de conseguir');
+    ok(grade.temJogada(3), 'e o tabuleiro precisa ter jogada agora');
+    igual(grade.todas().map((p) => p.cor).sort().join(''), censoAntes, 'censo de cores intacto:');
+    igual(grade.todas().length, 35, 'nenhuma peça perdida:');
+  });
+
+  teste('garantirJogada planta o grupo quando não pode embaralhar', () => {
+    // `maxEmbaralhos: 0` força a saída garantida — é ela que permite ao laço de
+    // embaralhadas ter limite em vez de ser um `while` sem fim.
+    const grade = new GridBoard({ linhas: 5, colunas: 7, diagonais: true, tipoDe: (p) => p?.cor });
+    grade.paraCada((_, l, c) => grade.definir(l, c, { cor: 'ABCD'[(l % 2) * 2 + (c % 2)] }));
+
+    const info = grade.garantirJogada({ minimo: 3, maxEmbaralhos: 0 });
+    igual(info.embaralhos, 0, 'não devia embaralhar:');
+    ok(info.plantou, 'tinha de plantar');
+    ok(grade.temJogada(3), 'e resolver');
+    ok(info.movimentos.length > 0 && info.movimentos.length <= 6, `plantar mexe pouco (mexeu ${info.movimentos.length})`);
+  });
+
+  teste('garantirJogada admite que é impossível em vez de travar', () => {
+    // Três peças, três cores: não existe arranjo com trio. Tem de devolver
+    // `possivel: false` — e não girar num laço para sempre.
+    const grade = montarPorCor(['ABC']);
+    const info = grade.garantirJogada({ minimo: 3 });
+    ok(info !== null && !info.possivel, 'precisa reportar impossível');
+    igual(grade.todas().length, 3, 'e não pode perder peça:');
+  });
+
+  teste('garantirJogada resolve 2000 tabuleiros de 8 cores, sempre', () => {
+    // O caso do relato, em escala: 7x5 com 8 cores é onde o travamento é comum.
+    const paleta = ['vermelho', 'azul', 'verde', 'amarelo', 'laranja', 'roxo', 'rosa', 'marrom'];
+    let agiu = 0;
+    for (let i = 0; i < 2000; i++) {
+      const grade = new GridBoard({ linhas: 5, colunas: 7, diagonais: true, tipoDe: (p) => p?.cor });
+      grade.paraCada((_, l, c) => {
+        grade.definir(l, c, { cor: paleta[Math.floor(Math.random() * paleta.length)] });
+      });
+      const info = grade.garantirJogada({ minimo: 3 });
+      if (info) agiu++;
+      ok(grade.temJogada(3), `tabuleiro ${i} ficou sem jogada`);
+      igual(grade.todas().length, 35, `tabuleiro ${i} perdeu peça:`);
+    }
+    ok(agiu > 0, `a amostra tinha de conter tabuleiro morto (agiu em ${agiu})`);
+  });
 });
 
 // ------------------------------------------------------------- ScoreSystem

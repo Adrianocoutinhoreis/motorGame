@@ -350,6 +350,13 @@ export default {
     abertura: null,
     falaVitoria: null,
     falaDerrota: null,
+    /**
+     * "Misturei as cores!" — quando o tabuleiro trava e as peças se
+     * reorganizam. NÃO existe na aula de 2013, porque lá o travamento não era
+     * tratado: o jogo simplesmente parava. Precisa ser gravado junto com os
+     * outros; até então o motor avisa a lacuna no console.
+     */
+    misturar: null,
   },
 
   // -------------------------------------------------------------------- AVA
