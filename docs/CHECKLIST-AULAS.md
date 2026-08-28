@@ -13,7 +13,7 @@ Legenda: ✅ concluído · 🚧 em andamento · 📋 planejado
 |---|---|---|---|---|
 | 1 | Jogo dos Blocos | `870294` | `jogo-dos-blocos` | ✅ **refeito** (piloto) |
 | 2 | Jogo das Formas | `870298` | `jogo-das-formas` | 🚧 **jogável**, com pendências declaradas |
-| 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 📋 planejado |
+| 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 🚧 **especificado** — regras fechadas, mecânica central no motor e testada |
 
 ---
 
@@ -121,32 +121,57 @@ crescer, e é isso que `erros` conta.
 
 ---
 
-## 3. Jogo das Cores — `870296` 📋
+## 3. Jogo das Cores — `870296` 🚧
 
-**Original:** `js/JogoCores.js`. Match-3 por **arrasto** numa grade 5×7: liga blocos
-adjacentes (inclusive na diagonal) da mesma cor, mínimo 3. Ao eliminar, o áudio fala o nome
-da cor. Fácil = verde/amarelo/azul/vermelho (meta 30 pts); difícil = rosa/marrom/roxo/laranja
-(meta 45 pts). 120 s.
+**Especificação completa:** [`REGRAS-JOGO-DAS-CORES.md`](REGRAS-JOGO-DAS-CORES.md).
+
+**Original:** `js/JogoCores.js` (370 linhas). **Não é match-3** — é **desenhar um caminho**:
+aperta numa peça e arrasta; cada peça nova entra se for vizinha da ÚLTIMA do caminho
+(vizinhança de 8, diagonais valem) e da mesma cor. Arrastar de volta sobre uma peça já
+selecionada **corta o rabo do caminho**. Solta com 3 ou mais: pontua o **tamanho** do caminho e
+o áudio fala o nome da cor. Grade 5×7 com os quatro cantos vazios (31 peças). Fácil =
+verde/amarelo/azul/vermelho (meta 30); difícil = rosa/marrom/roxo/laranja (meta 45). 120 s.
 
 > **Atenção — arte:** este é o único dos três **sem nenhum PNG de bloco**. As peças coloridas
 > são vetor dentro do `JogoCores_visual.js` (344 KB). A arte é obrigatoriamente nova.
 
 **Assets aproveitáveis:** só o áudio (nomes das 8 cores, instrução, fundo, feedback).
 
-**Contrato proposto:** `totalPerguntas: 30` (fácil) / `45` (difícil) · `acertos` = pontos
-feitos · `erros` = tentativas de combo com menos de 3 · `nivel` = 1 \| 2.
+### Três correções a este inventário, achadas lendo a fonte
 
-**O motor precisa ganhar antes:**
-- **arrasto contínuo (drag path) no `Input`** — selecionar vários blocos num só gesto é a
-  mecânica central e hoje não existe;
-- `GridBoard` com vizinhança de 8 (já implementado e testado).
+1. **"Match-3" estava errado.** É caminho ordenado, não grupo conectado — a criança traça o
+   grupo, e `GridBoard.grupoConectado` (flood-fill) é o primitivo errado. Ver seção 4.1 das
+   regras.
+2. **"arrasto contínuo no `Input` hoje não existe" estava errado.** Existe: o `Input` emite
+   `arrastar` continuamente no nó pressionado, e o Jogo das Formas já usa, com teste de
+   ponteiro real.
+3. **Não há erro possível neste jogo.** A checagem de cor é na SELEÇÃO: a criança não consegue
+   selecionar peça de cor diferente. Soltar com menos de 3 é tentativa cancelada. Respondendo à
+   pergunta que estava aberta aqui: **`erros` é sempre 0**, e as regras afirmam isso na
+   seção 7, em vez de omitir.
 
-**Pontos a confirmar com o humano:**
-- **Acessibilidade:** num jogo cujo conteúdo É a cor, cada peça precisa de forma ou símbolo
-  próprio, senão a atividade é inacessível a quem tem daltonismo. Isso muda a arte.
-- O nível difícil (rosa/marrom/roxo/laranja) tem pares de baixo contraste entre si — vale
-  revisar quais cores entram.
-- "Combo com menos de 3" é mesmo um erro, ou é só uma tentativa cancelada?
+### Decisões tomadas (as três que estavam abertas)
+
+| Questão | Decisão |
+|---|---|
+| Acessibilidade num jogo cuja matéria é a cor | **Textura por cor**, redundante com ela (liso, listrado, bolinhas, xadrez…). Forma por cor foi recusada: colidiria com o Jogo das Formas, onde a criança aprende que forma e cor são independentes |
+| Quais cores em cada nível | **Três níveis, 4 → 6 → 8 cores**, acrescentando em vez de substituir. Metas 30 / 36 / 45. As oito locuções de 2013 entram em uso |
+| Gesto no celular | **Arrasto e toque sequencial**, os dois sempre válidos, com as mesmas regras. Arrastar por células de ~40 px físicos é exigente aos 4 anos |
+
+**Contrato:** `totalPerguntas` = 30 \| 36 \| 45 · `acertos` = pontos feitos · `erros` = **0
+sempre** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-cores"` · derrota também registra.
+
+### Estado do motor para este jogo
+
+| Peça | Estado |
+|---|---|
+| `PathSelector` — o caminho (vizinho-da-última, mesma cor, cortar o rabo, os dois gestos) | ✅ **no motor, 18 testes de unidade** |
+| `Input` com `arrastar` contínuo | ✅ pronto, já em uso |
+| `GridBoard` vizinhança de 8 + gravidade `'baixo'` | ✅ pronto, e escrito prevendo este jogo |
+| `Watchdog`, `ScoreSystem`, `TimerBar`, telas padrão | ✅ prontos |
+| Célula bloqueada (os 4 cantos do original) | ❌ **não vamos precisar** — tabuleiro retangular cheio, cantos arredondados pela arte |
+| Textura dentro da peça | 📋 a escrever na cena (padrão de canvas): é arte deste jogo |
+| Cena, arte, tutorial, fichas de áudio | 📋 a fazer |
 
 ---
 

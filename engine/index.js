@@ -56,6 +56,7 @@ export { ResultScreen } from './screens/ResultScreen.js';
 export { ScoreSystem } from './gameplay/ScoreSystem.js';
 export { GridBoard } from './gameplay/GridBoard.js';
 export { CraneController } from './gameplay/CraneController.js';
+export { PathSelector } from './gameplay/PathSelector.js';
 
 // -------------------------------------------------------------------------- ava
 export { AvaBridge } from './ava/AvaBridge.js';

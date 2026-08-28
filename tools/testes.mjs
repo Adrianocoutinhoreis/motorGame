@@ -17,6 +17,7 @@ import { Rand } from '../engine/core/Rand.js';
 import { GridBoard } from '../engine/gameplay/GridBoard.js';
 import { ScoreSystem } from '../engine/gameplay/ScoreSystem.js';
 import { CraneController } from '../engine/gameplay/CraneController.js';
+import { PathSelector } from '../engine/gameplay/PathSelector.js';
 import { estrelasDoResultado } from '../engine/screens/ResultScreen.js';
 import { Watchdog } from '../engine/core/Watchdog.js';
 import { Stage } from '../engine/core/Stage.js';
@@ -733,6 +734,238 @@ grupo('Tween.temAtivo', () => {
 
     perto(bom.x, 50, 0.001, 'o tween seguinte andou:');
     ok(!Tween.temAtivo(ruim), 'o tween quebrado foi descartado');
+  });
+});
+
+// ------------------------------------------------------------- PathSelector
+//
+// O caminho do Jogo das Cores. É a mecânica central daquela aula e é lógica
+// pura, então é aqui que ela se prova — não abrindo o jogo e arrastando o dedo.
+grupo('PathSelector', () => {
+  /** Monta grade + seletor a partir de um mapa de letras ('.' = vazio). */
+  const montar = (mapa, opcoes = {}) => {
+    const grade = new GridBoard({
+      linhas: mapa.length,
+      colunas: mapa[0].length,
+      diagonais: opcoes.diagonais ?? true,   // Cores usa vizinhança de 8
+    });
+    mapa.forEach((linha, l) => {
+      [...linha].forEach((c, col) => {
+        if (c !== '.') grade.definir(l, col, { cor: c });
+      });
+    });
+    const caminho = new PathSelector({ grade, minimo: opcoes.minimo ?? 3 });
+    return { grade, caminho, em: (l, c) => grade.obter(l, c) };
+  };
+  /** As cores do caminho, em ordem, como string — facilita ler a asserção. */
+  const traco = (caminho) => caminho.pecas.map((p) => p.cor).join('');
+
+  teste('cresce por vizinhas da mesma cor', () => {
+    const { caminho, em } = montar([
+      'AAB',
+      'BAB',
+      'BBA',
+    ]);
+    caminho.comecar(em(0, 0));
+    igual(caminho.oferecer(em(0, 1)), 'cresceu', 'vizinha lateral igual:');
+    igual(caminho.oferecer(em(1, 1)), 'cresceu', 'vizinha abaixo igual:');
+    igual(traco(caminho), 'AAA');
+    ok(caminho.valido, 'três peças já valem');
+  });
+
+  teste('recusa cor diferente, e recusar NÃO é erro', () => {
+    const { caminho, em } = montar([
+      'AB',
+      'BA',
+    ]);
+    caminho.comecar(em(0, 0));
+    igual(caminho.oferecer(em(0, 1)), 'ignorada', 'vizinha de outra cor:');
+    igual(caminho.tamanho, 1, 'o caminho não mudou:');
+    // "ignorada" e não "erro": no arrasto o dedo passa por cima de peças de
+    // outras cores o tempo todo, e nada disso é falha da criança.
+  });
+
+  teste('recusa peça que não é vizinha da ÚLTIMA', () => {
+    // A regra é vizinha da última, não da primeira. Se fosse da primeira, um
+    // caminho em L não existiria — e é o que o original permitia.
+    const { caminho, em } = montar([
+      'AAAA',
+      '....',
+      'A...',
+    ]);
+    caminho.comecar(em(0, 0));
+    igual(caminho.oferecer(em(2, 0)), 'ignorada', 'longe da última:');
+    caminho.oferecer(em(0, 1));
+    caminho.oferecer(em(0, 2));
+    igual(traco(caminho), 'AAA', 'seguiu pela linha:');
+    igual(caminho.oferecer(em(0, 3)), 'cresceu', 'vizinha da nova última:');
+    igual(caminho.tamanho, 4);
+  });
+
+  teste('a diagonal vale (vizinhança de 8)', () => {
+    const { caminho, em } = montar([
+      'A.B',
+      '.A.',
+      'B.A',
+    ]);
+    caminho.comecar(em(0, 0));
+    igual(caminho.oferecer(em(1, 1)), 'cresceu', 'diagonal:');
+    igual(caminho.oferecer(em(2, 2)), 'cresceu', 'outra diagonal:');
+    igual(caminho.tamanho, 3);
+  });
+
+  teste('sem diagonais, a mesma jogada é recusada', () => {
+    // Prova que a vizinhança vem da GRADE e não de aritmética duplicada aqui.
+    const { caminho, em } = montar([
+      'A.B',
+      '.A.',
+      'B.A',
+    ], { diagonais: false });
+    caminho.comecar(em(0, 0));
+    igual(caminho.oferecer(em(1, 1)), 'ignorada', 'diagonal com vizinhança 4:');
+  });
+
+  teste('voltar sobre o caminho corta o rabo dele', () => {
+    // É o desfazer sem soltar o dedo: a criança tenta, vê que não vai dar, recua.
+    const { caminho, em } = montar([
+      'AAAA',
+      'BBBB',
+    ]);
+    caminho.comecar(em(0, 0));
+    caminho.oferecer(em(0, 1));
+    caminho.oferecer(em(0, 2));
+    caminho.oferecer(em(0, 3));
+    igual(caminho.tamanho, 4);
+    igual(caminho.oferecer(em(0, 1)), 'cortou', 'voltou à segunda peça:');
+    igual(caminho.tamanho, 2, 'sobraram as duas primeiras:');
+    igual(caminho.oferecer(em(0, 2)), 'cresceu', 'e dá para seguir de novo:');
+  });
+
+  teste('voltar sobre a ÚLTIMA não encurta nada', () => {
+    // O dedo tremendo sobre a peça atual não pode desfazer o caminho.
+    const { caminho, em } = montar(['AAA']);
+    caminho.comecar(em(0, 0));
+    caminho.oferecer(em(0, 1));
+    igual(caminho.oferecer(em(0, 1)), 'ignorada', 'a última de novo:');
+    igual(caminho.tamanho, 2);
+  });
+
+  teste('confirmar devolve as peças e esvazia', () => {
+    const { caminho, em } = montar(['AAAA']);
+    caminho.comecar(em(0, 0));
+    caminho.oferecer(em(0, 1));
+    caminho.oferecer(em(0, 2));
+    const ganhas = caminho.confirmar();
+    igual(ganhas.length, 3, 'peças conquistadas:');
+    igual(caminho.tamanho, 0, 'o seletor voltou a vazio:');
+  });
+
+  teste('caminho curto devolve vazio — tentativa cancelada, não erro', () => {
+    const { caminho, em } = montar(['AAAA']);
+    caminho.comecar(em(0, 0));
+    caminho.oferecer(em(0, 1));
+    ok(!caminho.valido, 'duas peças não valem');
+    let cancelou = false;
+    caminho.on('cancelado', () => { cancelou = true; });
+    igual(caminho.confirmar().length, 0, 'nada conquistado:');
+    ok(cancelou, 'avisou que foi cancelado');
+    igual(caminho.tamanho, 0, 'e esvaziou de qualquer forma:');
+  });
+
+  teste('o mínimo é configurável', () => {
+    const { caminho, em } = montar(['AAAA'], { minimo: 4 });
+    caminho.comecar(em(0, 0));
+    caminho.oferecer(em(0, 1));
+    caminho.oferecer(em(0, 2));
+    ok(!caminho.valido, 'três não bastam quando o mínimo é quatro');
+    caminho.oferecer(em(0, 3));
+    ok(caminho.valido, 'quatro bastam');
+  });
+
+  teste('candidatas saem da ÚLTIMA peça, e excluem as que já entraram', () => {
+    const { caminho, em } = montar([
+      'AAA',
+      'AAA',
+    ]);
+    caminho.comecar(em(0, 0));
+    igual(caminho.candidatas().length, 3, 'vizinhas de (0,0) com diagonal:');
+    caminho.oferecer(em(0, 1));
+    // Vizinhas de (0,1): (0,0) já no caminho, (0,2), (1,0), (1,1), (1,2) = 4.
+    igual(caminho.candidatas().length, 4, 'vizinhas da nova última:');
+    ok(!caminho.candidatas().includes(em(0, 0)), 'não repete quem já entrou');
+  });
+
+  // ------------------------------------------------------- o gesto de TOQUE
+  //
+  // Existe porque no celular a célula tem cerca de 40 px físicos, e soltar o
+  // dedo sem querer no meio de um arrasto perde o caminho inteiro.
+
+  teste('toque: o primeiro começa, o vizinho igual cresce', () => {
+    const { caminho, em } = montar(['AAA']);
+    igual(caminho.alternar(em(0, 0)), 'comecou');
+    igual(caminho.alternar(em(0, 1)), 'cresceu');
+    igual(caminho.tamanho, 2);
+  });
+
+  teste('toque na última peça a remove — é o desfazer do toque', () => {
+    const { caminho, em } = montar(['AAA']);
+    caminho.alternar(em(0, 0));
+    caminho.alternar(em(0, 1));
+    igual(caminho.alternar(em(0, 1)), 'removeu', 'tocou de novo na última:');
+    igual(caminho.tamanho, 1, 'voltou a uma peça:');
+  });
+
+  teste('toque na única peça esvazia — dá para desistir', () => {
+    // Sem isto, começar um caminho sem querer não teria saída pelo toque.
+    const { caminho, em } = montar(['AAA']);
+    caminho.alternar(em(0, 0));
+    igual(caminho.alternar(em(0, 0)), 'esvaziou');
+    igual(caminho.tamanho, 0);
+  });
+
+  teste('toque no meio do caminho corta o rabo, como o arrasto', () => {
+    const { caminho, em } = montar(['AAAA']);
+    caminho.alternar(em(0, 0));
+    caminho.alternar(em(0, 1));
+    caminho.alternar(em(0, 2));
+    caminho.alternar(em(0, 3));
+    igual(caminho.alternar(em(0, 1)), 'cortou');
+    igual(caminho.tamanho, 2);
+  });
+
+  teste('os dois gestos montam o MESMO caminho', () => {
+    // A garantia que faz a dupla de gestos não ser dois jogos: mesma regra de
+    // vizinhança, mesma regra de cor, mesmo resultado.
+    const mapa = ['AABA', 'BAAB'];
+    const a = montar(mapa);
+    const b = montar(mapa);
+    const passos = [[0, 0], [0, 1], [1, 1], [1, 2]];
+
+    a.caminho.comecar(a.em(...passos[0]));
+    for (const p of passos.slice(1)) a.caminho.oferecer(a.em(...p));
+
+    for (const p of passos) b.caminho.alternar(b.em(...p));
+
+    igual(traco(a.caminho), traco(b.caminho), 'traço dos dois gestos:');
+    igual(a.caminho.tamanho, b.caminho.tamanho, 'tamanho:');
+  });
+
+  teste('cor e ultima descrevem o caminho, e somem quando ele esvazia', () => {
+    const { caminho, em } = montar(['AAA']);
+    igual(caminho.cor, null, 'vazio não tem cor:');
+    igual(caminho.ultima, null, 'vazio não tem última:');
+    caminho.comecar(em(0, 0));
+    igual(caminho.cor, 'A');
+    caminho.oferecer(em(0, 1));
+    igual(caminho.ultima, em(0, 1), 'a última é a recém-entrada');
+    caminho.cancelar();
+    igual(caminho.cor, null, 'cancelado volta a não ter cor:');
+  });
+
+  teste('exige a grade — não aceita seletor sem tabuleiro', () => {
+    let recusou = false;
+    try { new PathSelector({}); } catch { recusou = true; }
+    ok(recusou, 'construir sem grade precisa falhar alto');
   });
 });
 

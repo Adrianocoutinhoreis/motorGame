@@ -408,6 +408,44 @@ grade.removerGrupo(grupo); grade.aplicarGravidade('baixo');
 grade.paraTexto();   // ótimo para depurar
 ```
 
+### `PathSelector`
+O **caminho** que a criança desenha por peças vizinhas iguais — a mecânica central do Jogo das
+Cores.
+
+```js
+const caminho = new PathSelector({ grade, minimo: 3, corDe: (p) => p.cor });
+
+caminho.comecar(peca);          // aperta / primeiro toque
+caminho.oferecer(peca);         // arrasto: 'cresceu' | 'cortou' | 'ignorada'
+caminho.alternar(peca);         // toque: idem, e tocar na última a remove
+const ganhas = caminho.confirmar();   // [] se não chegou ao mínimo
+caminho.candidatas();           // quais poderiam entrar agora (tutorial, ajuda)
+```
+
+**Não é `GridBoard.grupoConectado`.** Aquele é flood-fill e devolve todas as peças iguais que
+se toquem; aqui o caminho é **escolha da criança** — duas peças da mesma cor podem se tocar e
+ficar de fora, porque ela não passou por elas. A diferença é pedagógica: para o caminho
+crescer é preciso comparar cada vizinha com a cor que se está seguindo, e essa comparação é o
+conteúdo da atividade.
+
+Três regras, as duas primeiras do original de 2013:
+
+1. a peça nova é **vizinha da última** (a vizinhança vem da `grade`, então 4 ou 8 conforme
+   `diagonais` — o seletor não duplica essa aritmética);
+2. a peça nova é da **mesma cor** que a primeira;
+3. voltar sobre uma peça do caminho **descarta tudo o que veio depois** — desfazer sem soltar
+   o dedo.
+
+**Não é possível montar um caminho inválido:** a checagem é na seleção, não na confirmação. É
+por isso que o Jogo das Cores reporta `erros: 0` sempre — não há resposta errada possível, só
+tentativa cancelada. Um caminho curto em `confirmar()` devolve `[]` em vez de lançar, pela
+mesma razão.
+
+`corDe` é função e não o nome de um campo, para o motor não supor como o jogo guarda o
+atributo comparado.
+
+---
+
 ### `CraneController`
 Guindaste em dois modos: `oscilante` (vai e vem, o aluno escolhe o instante) e `colunas`
 (alinha a colunas discretas, o aluno escolhe o lugar).
