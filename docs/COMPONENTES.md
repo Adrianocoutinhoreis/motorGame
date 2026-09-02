@@ -651,3 +651,16 @@ console, que sem ele não saberia nomear a gravação ausente. Registre a pendê
 ### `AvaBridge`
 Implementa o contrato. **Um jogo nunca o instancia nem o chama** — quem faz isso é o `Game`,
 nas bordas do estado `resultado`. Ver [`CONTRATO-AVA.md`](CONTRATO-AVA.md).
+
+A mensagem leva `vitoria` (booleano) e `tempoSegundos` (inteiro), além dos campos do METODO.
+O tempo entra por um **segundo argumento** de `concluir()`, separado do resultado do jogo:
+
+```js
+ava.concluir(resultado, { tempoSegundos: 47 });
+```
+
+Duas razões para a separação, e as duas são de projeto, não de estilo. A origem do dado fica
+explícita — este número é do motor, e sobrescreve um campo de mesmo nome vindo do jogo, porque
+número medido em dois lugares é número em que não se pode confiar. E `concluir(null)` continua
+avisando que o jogo não entregou resultado: enfiar o tempo dentro do resultado faria a falta
+parecer preenchida e a guarda de honestidade calaria.

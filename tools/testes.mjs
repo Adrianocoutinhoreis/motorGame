@@ -1407,9 +1407,16 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
     return { ponte, enviadas };
   };
 
+  // Esta é a TRAVA do formato: qualquer campo novo na mensagem reprova aqui
+  // até ser declarado de propósito. Foi o que aconteceu ao acrescentar `vitoria`
+  // e `tempoSegundos` — e é exatamente o serviço que ela presta, porque a
+  // mensagem é gravada crua no AVA e mudar o formato sem querer é mudar dado.
   teste('a mensagem tem exatamente o formato do contrato', () => {
     const { ponte, enviadas } = capturar();
-    ponte.concluir({ acertos: 5, erros: 2, totalPerguntas: 5, nivel: 3, vitoria: true });
+    ponte.concluir(
+      { acertos: 5, erros: 2, totalPerguntas: 5, nivel: 3, vitoria: true },
+      { tempoSegundos: 47 },
+    );
     igual(enviadas[0], {
       type: 'JOGO_CONCLUIDO',
       acertos: 5,
@@ -1417,7 +1424,56 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
       totalPerguntas: 5,
       nivel: 3,
       jogo: 'jogo-teste',
+      vitoria: true,
+      tempoSegundos: 47,
     });
+  });
+
+  teste('vitoria distingue "14 de 20" de "14 de 14"', () => {
+    // O motivo do campo existir: os quatro números não respondem isso.
+    const { ponte: a, enviadas: parou } = capturar();
+    a.concluir({ acertos: 14, erros: 0, totalPerguntas: 20, nivel: 1, vitoria: false });
+    const { ponte: b, enviadas: venceu } = capturar();
+    b.concluir({ acertos: 14, erros: 0, totalPerguntas: 14, nivel: 1, vitoria: true });
+
+    igual([parou[0].vitoria, venceu[0].vitoria], [false, true]);
+    igual(parou[0].acertos, venceu[0].acertos, 'o mesmo acertos nos dois:');
+  });
+
+  teste('vitoria vai como booleano de verdade, nunca 0/1 nem texto', () => {
+    const { ponte, enviadas } = capturar();
+    ponte.concluir({ acertos: 1, erros: 0, totalPerguntas: 1, nivel: 1, vitoria: 1 });
+    igual(typeof enviadas[0].vitoria, 'boolean', 'o tipo importa: o payload é gravado cru:');
+    igual(enviadas[0].vitoria, true);
+  });
+
+  teste('a string "false" é FALSA — `!!` não serviria aqui', () => {
+    // Em JavaScript `!!'false'` é `true`. Um jogo que lesse a vitória de uma
+    // configuração de texto reportaria vitória onde houve derrota.
+    const { ponte, enviadas } = capturar();
+    ponte.concluir({ acertos: 0, erros: 3, totalPerguntas: 5, nivel: 1, vitoria: 'false' });
+    igual(enviadas[0].vitoria, false);
+  });
+
+  teste('tempoSegundos vem do MOTOR e vence o que o jogo mandar', () => {
+    // Número medido em dois lugares é número em que não se pode confiar. A fonte
+    // única é o motor (`Game._tempoJogando`).
+    const { ponte, enviadas } = capturar();
+    ponte.concluir(
+      {
+        acertos: 3, erros: 0, totalPerguntas: 3, nivel: 1, vitoria: true,
+        extras: { tempoSegundos: 999, caminhosFeitos: 4 },
+      },
+      { tempoSegundos: 31 },
+    );
+    igual(enviadas[0].tempoSegundos, 31, 'o do motor:');
+    igual(enviadas[0].caminhosFeitos, 4, 'e os outros extras seguem valendo:');
+  });
+
+  teste('sem medição do motor, tempoSegundos não é inventado', () => {
+    const { ponte, enviadas } = capturar();
+    ponte.concluir({ acertos: 1, erros: 0, totalPerguntas: 1, nivel: 1, vitoria: true });
+    ok(!('tempoSegundos' in enviadas[0]), 'melhor ausente que zero falso');
   });
 
   teste('type é exatamente "JOGO_CONCLUIDO"', () => {
@@ -1488,6 +1544,18 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
     const { ponte, enviadas } = capturar();
     ponte.concluir(null);
     igual([enviadas[0].acertos, enviadas[0].erros, enviadas[0].totalPerguntas], [0, 0, null]);
+    igual(enviadas[0].vitoria, false, 'sem resultado não se declara vitória:');
+  });
+
+  teste('o tempo do motor entra mesmo sem resultado do jogo', () => {
+    // É por isso que a medição vai num SEGUNDO argumento: passá-la dentro do
+    // `resultado` faria `concluir(null)` receber um objeto que parece preenchido,
+    // e a guarda de honestidade — o aviso de que o jogo não entregou resultado —
+    // deixaria de disparar.
+    const { ponte, enviadas } = capturar();
+    ponte.concluir(null, { tempoSegundos: 12 });
+    igual(enviadas[0].tempoSegundos, 12);
+    igual(enviadas[0].totalPerguntas, null, 'e o resto continua honesto:');
   });
 
   teste('não envia dado de aluno, lo_id, activity_id, turma, xp ou nota', () => {

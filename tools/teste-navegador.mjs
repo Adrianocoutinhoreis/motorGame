@@ -443,6 +443,20 @@ async function principal() {
       !['lo_id', 'activity_id', 'aluno', 'turma', 'xp', 'nota'].some((c) => c in m1));
     checar('a torre foi realmente empilhada', fim.torre === 5, `torre: ${fim.torre}`);
 
+    // Os dois campos acrescentados ao contrato, medidos numa partida DE VERDADE.
+    // Sem navegador não há como prová-los: `tempoSegundos` sai do laço principal,
+    // que só existe aqui.
+    checar('vitoria = true numa partida vencida', m1.vitoria === true, JSON.stringify(m1.vitoria));
+    checar('vitoria é booleano, não 0/1 nem texto', typeof m1.vitoria === 'boolean', typeof m1.vitoria);
+    console.log(`  tempoSegundos medido: ${m1.tempoSegundos}`);
+    checar('tempoSegundos é inteiro de segundos',
+      typeof m1.tempoSegundos === 'number' && Number.isInteger(m1.tempoSegundos),
+      JSON.stringify(m1.tempoSegundos));
+    // A partida empilhou 5 blocos com 700 ms de espera entre eles, mais o tempo
+    // do guindaste ir e vir: não pode ser 0, e não pode ser um número absurdo.
+    checar('tempoSegundos parece com o que a partida levou',
+      m1.tempoSegundos >= 3 && m1.tempoSegundos <= 180, JSON.stringify(m1.tempoSegundos));
+
     // ------------------------------------------------------- sem duplicação
     console.log('\n3. Sem duplicata e com replay');
     await esperar(2500); // fica parado na tela de resultado
@@ -661,6 +675,46 @@ async function principal() {
       JSON.stringify({ textos: telaComQuedas.textos, erros: m3.erros }));
 
     // ---------------------------------------------------- tamanhos de iframe
+    // ------------------------------ 3c. tempoSegundos é tempo JOGANDO
+    //
+    // A decisão do humano: o campo mede o esforço da criança, não o relógio de
+    // parede. Então a tela de PAUSA não conta.
+    //
+    // Aqui o que se verifica é a CONTABILIDADE, e por isso a pausa é acionada
+    // por dentro: o gesto de tocar no botão de pausa tem verificação própria nos
+    // testes de jogabilidade. O que só este arquivo pode provar é que o
+    // acumulador do laço principal para.
+    console.log('\n3c. tempoSegundos conta tempo JOGANDO, não relógio de parede');
+
+    await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
+    await esperar(1200);
+    const tempoAntes = await avaliar(`${g}._tempoJogando`);
+    checar('o motor está contando durante a partida', tempoAntes > 0.5,
+      `${tempoAntes} s depois de 1,2 s de partida`);
+
+    await avaliar(`${g}.cena.pausar()`);
+    await esperar(2000);
+    const tempoNaPausa = await avaliar(`${g}._tempoJogando`);
+    const cresceuNaPausa = tempoNaPausa - tempoAntes;
+    console.log(`  parado na pausa 2 s: ${tempoAntes.toFixed(2)} -> ${tempoNaPausa.toFixed(2)} s`);
+    // Tolerância de 0,15 s: entre o `pausar()` e o quadro seguinte cabe um dt.
+    checar('a PAUSA não é contada como tempo jogando',
+      cresceuNaPausa < 0.15, `cresceu ${cresceuNaPausa.toFixed(2)} s em 2 s de pausa`);
+
+    // Sai da pausa saindo da tela. O IIFE devolvendo `true` não é estilo: sem
+    // ele o valor de retorno é um nó da cena, com pai e filhos, e o CDP estoura
+    // ao serializar ("Object reference chain is too long").
+    await avaliar(`(() => { ${g}.irPara('menu'); return true; })()`);
+    await esperar(400);
+    // Zera ao ENTRAR numa partida nova: um replay não herda o tempo da anterior.
+    await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
+    await esperar(300);
+    const tempoNoReplay = await avaliar(`${g}._tempoJogando`);
+    checar('partida nova começa do zero, não herda o tempo da anterior',
+      tempoNoReplay < tempoAntes, `${tempoNoReplay.toFixed(2)} s contra ${tempoAntes.toFixed(2)} s`);
+    await avaliar(`${g}.irPara('menu')`);
+    await esperar(400);
+
     console.log('\n4. Comportamento em iframes de tamanhos diferentes');
     for (const [nome, l, a] of [['celular', 400, 700], ['pequeno', 640, 480], ['grande', 1280, 720]]) {
       await avaliar(`

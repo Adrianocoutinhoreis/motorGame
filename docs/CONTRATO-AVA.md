@@ -24,12 +24,51 @@ window.parent.postMessage({
   erros: 2,
   totalPerguntas: 5,
   nivel: 1,
-  jogo: "jogo-dos-blocos"
+  jogo: "jogo-dos-blocos",
+  vitoria: true,            // acréscimo nosso — ver 1.1
+  tempoSegundos: 47         // acréscimo nosso, MEDIDO PELO MOTOR — ver 1.2
 }, "*");
 ```
 
 O jogo **não** envia — nem calcula — aluno, `lo_id`, `activity_id`, turma, XP ou nota.
 Isso é do AVA e do servidor (METODO A3/A4).
+
+### 1.1 `vitoria` — os quatro números não respondem isso
+
+`acertos: 14, totalPerguntas: 20` e `acertos: 14, totalPerguntas: 14` têm o mesmo acerto, e só
+o segundo é vitória. O motor já sabia — a tela final usa o dado para escolher o que dizer — e
+o AVA não recebia.
+
+Vai como **booleano de verdade**, nunca `0`/`1` nem `"true"`: o `payload` é gravado cru, e um
+campo que muda de tipo entre partidas é o que estraga relatório meses depois. `AvaBridge`
+normaliza (e trata `"false"`, que em JavaScript é *verdadeiro* se testado com `!!`).
+
+Cuidado ao ler: **derrota também é registrada** (decisão do projeto), então `vitoria: false`
+não é lixo — é uma tentativa que aconteceu.
+
+### 1.2 `tempoSegundos` — tempo JOGANDO, não relógio de parede
+
+Inteiro, em segundos, **medido pelo motor** (`Game._tempoJogando`) e por nenhum jogo. Um jogo
+que mande `tempoSegundos` nos extras é sobrescrito: número medido em dois lugares é número em
+que não se pode confiar.
+
+O que ele NÃO conta:
+
+- a **tela de pausa** (verificado: 2 s de pausa fazem o contador crescer 0,00 s);
+- a **aba escondida**, de graça — o laço principal nem roda;
+- o tempo de **outra tela** (menu, tutorial, resultado): a contagem zera ao entrar numa partida
+  e um replay não herda o tempo da anterior.
+
+O `dt` é o mesmo que alimenta a barra de tempo na tela, então **o número reportado bate com o
+cronômetro que a criança viu**. Um relógio próprio aqui daria dois tempos para a mesma partida.
+
+> **Por que estes dois campos podem existir sem o METODO listá-los.** A seção A2.1 do METODO
+> lista os campos que o AVA lê para colunas próprias; a **A4** diz que o servidor grava a
+> mensagem crua inteira em `payload`. Então campo extra fica registrado sem coluna — é o mesmo
+> mecanismo que já carrega `blocosEmpilhados`, `caminhosFeitos` e `misturas`.
+>
+> A diferença entre eles: `vitoria` e `tempoSegundos` valem para **todo** jogo do motor e vêm
+> do motor; os outros são de um jogo só e vêm da cena, por `extras`.
 
 ---
 
@@ -42,6 +81,8 @@ Isso é do AVA e do servidor (METODO A3/A4).
 | Montar a mensagem no formato exato | `AvaBridge.montarMensagem()` |
 | Disparar uma vez e re-armar | `Game._definirEstado()`, nas bordas de `RESULTADO` |
 | Enviar o `postMessage` | `AvaBridge._enviar()` |
+| Medir `tempoSegundos` | `Game._tempoJogando`, acumulado no laço principal — **nenhuma cena mexe nisso** |
+| Declarar `vitoria` | `ScoreSystem.paraAva(venceu)`, e a cena decide o que é vencer |
 
 Um jogo faz **uma** chamada, e nada mais:
 
@@ -90,8 +131,13 @@ Regra RE-02 de [`REGRAS-EDUCACIONAIS.md`](REGRAS-EDUCACIONAIS.md).
 | Jogo | `totalPerguntas` | `acertos` | `erros` | `nivel` |
 |---|---|---|---|---|
 | **Jogo dos Blocos** | 5 (blocos da torre) | encaixados − derrubados (na vitória) | blocos derrubados | 1 = 1–5 · 2 = 6–10 · 3 = vogais |
-| **Jogo das Formas** *(planejado)* | 20 (meta de pontos) | pontos feitos | soltas inválidas | 1 (nível único) |
-| **Jogo das Cores** *(planejado)* | 30 (fácil) / 45 (difícil) | pontos feitos | tentativas de combo com menos de 3 | 1 = fácil · 2 = difícil |
+| **Jogo das Formas** | 12 / 16 / 20 (meta de pontos) | pontos feitos | soltas inválidas | 1 = Conhecer · 2 = Combinar · 3 = Desafio |
+| **Jogo das Cores** | 30 / 36 / 45 (meta de pontos) | pontos feitos | **sempre 0** — ver abaixo | 1 = Conhecer · 2 = Ampliar · 3 = Desafio |
+
+> **O Jogo das Cores manda `erros: 0` sempre, e é afirmação e não omissão.** A checagem de cor
+> acontece na SELEÇÃO: a criança não consegue montar um caminho inválido. Soltar com menos de
+> três é tentativa cancelada — ela estava explorando o tabuleiro, que é o comportamento que a
+> atividade quer. Ver `REGRAS-JOGO-DAS-CORES.md`, seção 7.
 
 ### Derrota também registra
 
@@ -124,6 +170,9 @@ this.placar.paraAva(venceu, { conteudo: 'Números 1 a 5', blocosEmpilhados: 5 })
 | Números como `number` | `AvaBridge.numero()` converte e valida | `AvaBridge` |
 | `postMessage` para `window.parent`, `"*"`, protegido | Testado com iframe real | `AvaBridge._enviar()` |
 | Nada de aluno / `lo_id` / XP | Nunca montado; há teste que falha se aparecer | `tools/testes.mjs` |
+| `vitoria` booleano de verdade | `AvaBridge.booleano()` — trata `0/1` e o traiçoeiro `"false"` | `AvaBridge` |
+| `tempoSegundos` inteiro e medido pelo motor | O motor vence campo de mesmo nome vindo do jogo | `AvaBridge.montarMensagem()` |
+| `tempoSegundos` não conta pausa | Verificado em navegador: 2 s de pausa somam 0,00 s | `tools/teste-navegador.mjs` |
 
 ---
 

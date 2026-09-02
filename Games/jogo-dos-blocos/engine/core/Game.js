@@ -59,6 +59,25 @@ export class Game extends Emitter {
     /** Dados passados de uma cena para a próxima (nível escolhido, resultado…). */
     this.dados = {};
 
+    /**
+     * Segundos que a criança passou JOGANDO nesta partida — o `tempoSegundos`
+     * do contrato do AVA.
+     *
+     * Medido pelo motor, e não por cada jogo, pelo mesmo motivo do corte de som
+     * e da música: regra que depende de cada cena lembrar é regra que uma cena
+     * nova vai esquecer. Vale também para jogos sem barra de tempo.
+     *
+     * **É tempo JOGANDO, não relógio de parede**, e a diferença é o que torna o
+     * número honesto:
+     *
+     *  - a tela de PAUSA não conta (`cena.pausada`);
+     *  - a aba escondida não conta, de graça: o laço nem roda (`pausarLaco`);
+     *  - o `dt` é o MESMO que alimenta a barra de tempo na tela, então o número
+     *    reportado bate com o cronômetro que a criança viu. Um relógio próprio
+     *    aqui daria dois tempos diferentes para a mesma partida.
+     */
+    this._tempoJogando = 0;
+
     this._aoMudarVisibilidade = () => {
       if (document.hidden) this.pausarLaco();
       else this.retomarLaco();
@@ -195,9 +214,23 @@ export class Game extends Emitter {
     this.estado = novo;
     this.emit('estado', novo, anterior);
 
+    if (novo === ESTADOS.JOGANDO) {
+      // Começa a contar AQUI, e zera: cada partida tem o seu tempo, e um replay
+      // não herda o da anterior.
+      this._tempoJogando = 0;
+    }
+
     if (novo === ESTADOS.RESULTADO) {
       // Borda de SUBIDA: fim de uma partida → registra uma vez.
-      this.ava.concluir(this.dados.resultado ?? null);
+      //
+      // O tempo vai como SEGUNDO argumento, e não misturado no resultado do
+      // jogo, porque a origem do dado importa: este número é medido pelo motor.
+      // Manter separado também preserva a guarda de honestidade do `AvaBridge` —
+      // `concluir(null)` continua avisando que o jogo não entregou resultado, em
+      // vez de o tempo disfarçar a falta com um objeto que parece preenchido.
+      this.ava.concluir(this.dados.resultado ?? null, {
+        tempoSegundos: Math.round(this._tempoJogando),
+      });
     } else if (anterior === ESTADOS.RESULTADO) {
       // Borda de DESCIDA: saiu do resultado → re-arma para a próxima partida.
       this.ava.rearmar();
@@ -216,6 +249,12 @@ export class Game extends Emitter {
       const dt = Math.min((agora - this._ultimoTempo) / 1000, 0.1);
       this._ultimoTempo = agora;
       this._quadro++;
+
+      // `tempoSegundos` do contrato do AVA, acumulado aqui e em nenhum outro
+      // lugar. Ver `_tempoJogando`.
+      if (this.estado === ESTADOS.JOGANDO && !this.cena?.pausada) {
+        this._tempoJogando += dt;
+      }
 
       // Animações e cena em blocos SEPARADOS, e isso não é estilo.
       //
