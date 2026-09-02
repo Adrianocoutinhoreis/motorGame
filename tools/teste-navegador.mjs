@@ -702,6 +702,48 @@ async function principal() {
     checar('a partida tem um botão de ajuda', antesDaAjuda.temBotao === true,
       JSON.stringify(antesDaAjuda));
 
+    // Toca no pixel de um nó DENTRO do iframe, achado por expressão (onde
+    // `jogo` é o Game do quadro). Existe porque abrir por toque e fechar por
+    // dentro prova só metade do caminho: no Jogo das Cores a ajuda ABRIA e os
+    // botões dela ficavam sob a área de gesto, de modo que não dava para passar
+    // o passo nem voltar ao jogo. Ver o grupo "Camadas sobre a partida" em
+    // `tools/testes.mjs`.
+    const tocarNoJogo = async (busca) => {
+      const p = await avaliar(`
+        (() => {
+          const q = document.getElementById('quadro');
+          const rq = q.getBoundingClientRect();
+          const jogo = q.contentWindow.jogo;
+          const no = (${busca});
+          if (!no) return null;
+          const m = no.matrizMundo;
+          const st = jogo.stage;
+          const rc = st.canvas.getBoundingClientRect();
+          const lx = m.tx + (no.largura ?? 0) / 2;
+          const ly = m.ty + (no.altura ?? 0) / 2;
+          return {
+            x: Math.round(rq.left + rc.left + lx * st.escala + st.deslocX),
+            y: Math.round(rq.top + rc.top + ly * st.escala + st.deslocY),
+          };
+        })()
+      `);
+      if (!p) return false;
+      for (const type of ['mousePressed', 'mouseReleased']) {
+        await cdp.enviar('Input.dispatchMouseEvent', {
+          type, x: p.x, y: p.y, button: 'left', clickCount: 1, pointerType: 'mouse',
+        }, sessionId);
+      }
+      await esperar(380);
+      return true;
+    };
+    /** Busca em profundidade, dentro de um nó do jogo, por ícone ou rótulo. */
+    const noJogo = (raiz, campo, valor) => `(() => {
+      let achado = null;
+      const varrer = (n) => { for (const f of n.filhos ?? []) { if (f.${campo} === '${valor}') achado = f; varrer(f); } };
+      varrer(${raiz});
+      return achado;
+    })()`;
+
     // Toca no botão de verdade, pelas coordenadas de tela dele.
     // O jogo roda DENTRO de um iframe aqui: o ponto de tela soma o retângulo do
     // QUADRO ao do canvas. É o mesmo cálculo do toque sobre a luva do mascote na
@@ -778,8 +820,26 @@ async function principal() {
       tempoLendo - tempoAoAbrir < 0.15,
       `cresceu ${(tempoLendo - tempoAoAbrir).toFixed(2)} s em 1,5 s de ajuda`);
 
-    // Fechar devolve a partida.
-    await avaliar(`(() => { ${g}.cena.ajuda.fechar(); return true; })()`);
+    // Passar o passo, e voltar ao jogo, TOCANDO nos botões da camada.
+    const passos = await avaliar(`${g}.cena.ajuda.tutorial.passos.length`);
+    const passoAntes = await avaliar(`${g}.cena.ajuda.tutorial.indice`);
+    await tocarNoJogo(noJogo('jogo.cena.ajuda.tutorial', 'icone', 'setaDireita'));
+    const passoDepois = await avaliar(`${g}.cena.ajuda.tutorial.indice`);
+    checar('o toque na seta PASSA o passo do tutorial da ajuda',
+      passos > 1 ? passoDepois === passoAntes + 1 : passoDepois === passoAntes,
+      `${passos} passos, indice ${passoAntes} -> ${passoDepois}`);
+
+    // Até o último passo, onde aparece o botão de volta.
+    for (let i = passoDepois; i < passos - 1; i++) {
+      await tocarNoJogo(noJogo('jogo.cena.ajuda.tutorial', 'icone', 'setaDireita'));
+    }
+    const noUltimo = await avaliar(`${g}.cena.ajuda.tutorial.indice`);
+    checar('a seta chega ao último passo', noUltimo === passos - 1,
+      `indice=${noUltimo} de ${passos}`);
+
+    // Fechar devolve a partida — e o toque em VOLTAR AO JOGO é que fecha.
+    const fechou = await tocarNoJogo(noJogo('jogo.cena.ajuda.tutorial', 'rotulo', 'VOLTAR AO JOGO'));
+    checar('a ajuda tem o botão VOLTAR AO JOGO', fechou === true);
     await esperar(400);
     const depoisDaAjuda = await avaliar(`
       (() => {
@@ -829,11 +889,20 @@ async function principal() {
     checar('o motor está contando durante a partida', tempoAntes > 0.5,
       `${tempoAntes} s depois de 1,2 s de partida`);
 
-    await avaliar(`${g}.cena.pausar()`);
+    // O tempo é lido NO MESMO passo em que a pausa é acionada. Ler numa chamada
+    // e pausar na seguinte deixa entre as duas um tempo de ida-e-volta que o
+    // jogo passa rodando — e num navegador sem tela esse intervalo às vezes dá
+    // um salto. Era isso que fazia esta verificação reprovar de vez em quando
+    // sem defeito nenhum, o que é pior que não ter verificação: ensina a ignorar.
+    const tempoAoPausar = await avaliar(`(() => {
+      const t = ${g}._tempoJogando;
+      ${g}.cena.pausar();
+      return t;
+    })()`);
     await esperar(2000);
     const tempoNaPausa = await avaliar(`${g}._tempoJogando`);
-    const cresceuNaPausa = tempoNaPausa - tempoAntes;
-    console.log(`  parado na pausa 2 s: ${tempoAntes.toFixed(2)} -> ${tempoNaPausa.toFixed(2)} s`);
+    const cresceuNaPausa = tempoNaPausa - tempoAoPausar;
+    console.log(`  parado na pausa 2 s: ${tempoAoPausar.toFixed(2)} -> ${tempoNaPausa.toFixed(2)} s`);
     // Tolerância de 0,15 s: entre o `pausar()` e o quadro seguinte cabe um dt.
     checar('a PAUSA não é contada como tempo jogando',
       cresceuNaPausa < 0.15, `cresceu ${cresceuNaPausa.toFixed(2)} s em 2 s de pausa`);

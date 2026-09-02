@@ -113,8 +113,9 @@ export class PauseScreen extends Node {
     // página. Subir aqui torna a ordem de montagem do jogo irrelevante.
     this.paraFrente();
     this.painel.scaleX = this.painel.scaleY = 0.9;
+    this.painel.alpha = 0;
     Tween.removerDe(this.painel);
-    Tween.para(this.painel, { scaleX: 1, scaleY: 1 }, 240, Easing.costasSaida);
+    Tween.para(this.painel, { scaleX: 1, scaleY: 1, alpha: 1 }, 240, Easing.costasSaida);
     this.audio?.calar();
     this.emit('abriu');
     return this;

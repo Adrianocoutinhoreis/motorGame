@@ -1,7 +1,7 @@
 import {
   Scene, Node, TextNode, ScoreSystem, ScoreBar, TimerBar, IconButton, SoundToggle,
   PauseScreen, HelpScreen, Panel, Background, GridBoard, PathSelector, Watchdog,
-  Tween, Easing, ESTADOS, cores, tipografia, espaco, raio, movimento, rand,
+  Tween, Easing, ESTADOS, cores, tipografia, espaco, raio, sombras, movimento, rand,
 } from '../../engine/index.js';
 
 /**
@@ -32,11 +32,26 @@ const ATRASO_POR_COLUNA = 45;
 // ---------------------------------------------------------------------------
 
 /**
- * Peca — um quadrado colorido do tabuleiro.
+ * Peca — um quadrado colorido do tabuleiro. Chapada, sem arquivo de imagem.
  *
- * A arte é o SVG de `assets/img/cor-<nome>.svg`, com a **textura assada
- * dentro**. A peça não sabe desenhar textura, e é assim que se garante que a
- * arte tenha uma fonte só: trocar os oito arquivos não mexe em código.
+ * **Decisão de acessibilidade de 02/09/2026, do humano.** Até aqui a peça era
+ * um SVG com uma TEXTURA própria assada dentro (xadrez, bolinhas, ondas…) — o
+ * canal redundante que fazia o jogo existir para quem não distingue cor.
+ * Considerou-se substituir a textura por um ÍCONE DE FORMA (círculo = azul,
+ * quadrado = vermelho…), e a ideia foi recusada de propósito: no Jogo das
+ * Formas a mesma criança aprende que forma e cor são atributos
+ * INDEPENDENTES, e fixar uma forma por cor aqui contradiria essa lição entre
+ * as duas aulas da mesma coleção. A escolha final, explícita, foi cor
+ * chapada SEM símbolo nenhum — menos poluição visual, e sem reintroduzir a
+ * associação forma=cor.
+ *
+ * **A consequência é real, e fica registrada, não escondida:** sem textura,
+ * o jogo volta a depender só da cor. `vermelho`, `azul` e `roxo` ficam a 5
+ * unidades de luminância um do outro (medição em `REGRAS-JOGO-DAS-CORES.md`,
+ * seção 3.2) — em escala de cinza são praticamente o mesmo cinza, e vermelho
+ * e azul são os dois do nível 1. Para quem não distingue essas cores, o jogo
+ * deixa de ser jogável nesse nível. Não é um efeito colateral não previsto:
+ * é o preço desta decisão, medido.
  *
  * `cor` é o nome da cor (`'azul'`), não o código — é o que o `PathSelector`
  * compara, e é o id da narração.
@@ -53,32 +68,22 @@ class Peca extends Node {
   }
 
   desenhar(ctx) {
-    const img = this.arte.imagens[this.cor];
-    if (img) {
-      // A sombra fica FORA do SVG de propósito: não caberia no viewBox, e
-      // escalar com a peça a faria parecer papel recortado em vez de volume.
-      ctx.save();
-      ctx.shadowColor = 'rgba(17, 24, 39, 0.28)';
-      ctx.shadowBlur = this.lado * 0.09;
-      ctx.shadowOffsetY = this.lado * 0.035;
-      ctx.drawImage(img, 0, 0, this.lado, this.lado);
-      ctx.restore();
-      return;
-    }
-
-    // Reserva: sem o SVG ainda dá para jogar, e o console já avisou qual arquivo
-    // faltou. Falhar alto, nunca em silêncio (MOTOR.md, princípio 10).
-    //
-    // Mas repare no que se perde: a TEXTURA. Sem ela o jogo fica inacessível a
-    // quem não distingue cor, porque sete das oito cores caem na mesma
-    // luminância. Por isso a reserva não é "quase igual" — é modo degradado.
+    ctx.save();
+    ctx.shadowColor = sombras.suave.cor;
+    ctx.shadowBlur = sombras.suave.desfoque;
+    ctx.shadowOffsetX = sombras.suave.x;
+    ctx.shadowOffsetY = sombras.suave.y;
     ctx.fillStyle = this.arte.cores[this.cor]?.cor ?? cores.tintaSuave;
     ctx.beginPath();
     ctx.roundRect(0, 0, this.lado, this.lado, raio.md);
     ctx.fill();
+    ctx.shadowColor = 'transparent';
+    // Contorno interno, para a peça se separar da vizinha da MESMA cor —
+    // sem ele duas peças iguais lado a lado se fundem num retângulo só.
     ctx.strokeStyle = 'rgba(0,0,0,0.16)';
     ctx.lineWidth = 3;
     ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -103,14 +108,10 @@ export class GameScene extends Scene {
       vidas: 0,
     });
 
-    // A arte, resolvida uma vez: um `loader.imagem()` por quadro por peça
-    // custaria caro e repetiria o mesmo aviso de console centenas de vezes.
-    this.arte = {
-      cores: config.cores,
-      imagens: Object.fromEntries(
-        Object.entries(config.cores).map(([nome, c]) => [nome, this.loader.imagem(c.imagem)]),
-      ),
-    };
+    // A peça é chapada — sem SVG a carregar. `arte` sobrevive como objeto só
+    // por `cores` (o token de cada nome, usado em `Peca.desenhar()` e no
+    // painel lateral).
+    this.arte = { cores: config.cores };
 
     // ------------------------------------------------------------- cenário
     // Tema emprestado do Jogo das Formas por decisão do humano (config.tema).

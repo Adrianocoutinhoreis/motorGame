@@ -94,7 +94,8 @@ export default {
       id: 3,
       // As oito. Inclui rosa e marrom, que no original eram o nível "difícil"
       // inteiro — e são, com vermelho e roxo, o grupo de pior contraste entre si.
-      // É onde a textura da peça deixa de ser redundância e passa a ser o canal.
+      // Desde 02/09/2026 a peça é chapada, sem textura redundante (decisão de
+      // acessibilidade do humano) — é aqui que a falta desse canal mais pesa.
       nome: 'Desafio',
       descricao: '8 cores · 45 pontos',
       amostra: '● ● ● ● ● ● ● ●',
@@ -108,29 +109,36 @@ export default {
 
   // ---------------------------------------------------------------- as cores
   /**
-   * A tabela das peças.
+   * A tabela das peças. Não há mais `imagem`: até 02/09/2026 cada cor tinha um
+   * SVG com uma TEXTURA própria assada dentro (xadrez, bolinhas, ondas…), o
+   * canal redundante que fazia o jogo existir para quem não distingue cor.
    *
-   * `imagem` é o id do SVG declarado em `assets`. `cor` é o token equivalente, e
-   * serve para a linha do caminho e como reserva se o SVG não carregar.
+   * **Decisão de acessibilidade do humano, na mesma data:** cor chapada, sem
+   * textura e sem símbolo — considerou-se um ícone de forma por cor e foi
+   * recusado de propósito, porque fixaria "azul = círculo" contradizendo a
+   * lição do Jogo das Formas de que forma e cor são atributos independentes.
+   * A consequência é real e fica medida em `REGRAS-JOGO-DAS-CORES.md`, seção
+   * 3.2: sem textura, vermelho/azul/roxo — a 5 unidades de luminância um do
+   * outro — voltam a ser praticamente indistinguíveis para quem não vê cor.
    *
-   * **A textura NÃO aparece aqui**, e isso é deliberado: ela está dentro do
-   * arquivo SVG, que é o único lugar onde pode estar sem risco de duas cópias
-   * divergirem. Ver PLANO-VISUAL, seção 3.3.
+   * `cor` é o token usado por `Peca.desenhar()`, pela linha do caminho e pelo
+   * painel lateral.
    *
-   * `som` é a locução do nome da cor. **Todas null por enquanto** — as oito
-   * gravações de 2013 existem e ainda não foram trazidas. O motor toca silêncio
-   * e ANUNCIA A LACUNA no console, dizendo o que a voz deveria falar; é o
+   * `som` é a locução do nome da cor. As oito chegaram em 02/09/2026 — narração
+   * NOVA (não os arquivos de 2013), ainda **não confirmada ouvindo** (ver as
+   * fichas em `assets/audio-transcricao/`). Onde `som` continuar `null`
+   * ANUNCIA A LACUNA no console em vez de tocar em silêncio sem explicação; é o
    * comportamento honesto, e é o que impede a pendência de virar esquecimento.
    */
   cores: {
-    vermelho: { imagem: 'corVermelho', cor: cores.ludica.vermelho, som: null },
-    azul: { imagem: 'corAzul', cor: cores.ludica.azul, som: null },
-    verde: { imagem: 'corVerde', cor: cores.ludica.verde, som: null },
-    amarelo: { imagem: 'corAmarelo', cor: cores.ludica.amarelo, som: null },
-    laranja: { imagem: 'corLaranja', cor: cores.ludica.laranja, som: null },
-    roxo: { imagem: 'corRoxo', cor: cores.ludica.roxo, som: null },
-    rosa: { imagem: 'corRosa', cor: cores.ludica.rosa, som: null },
-    marrom: { imagem: 'corMarrom', cor: cores.ludica.marrom, som: null },
+    vermelho: { cor: cores.ludica.vermelho, som: 'vermelho' },
+    azul: { cor: cores.ludica.azul, som: 'azul' },
+    verde: { cor: cores.ludica.verde, som: 'verde' },
+    amarelo: { cor: cores.ludica.amarelo, som: 'amarelo' },
+    laranja: { cor: cores.ludica.laranja, som: 'laranja' },
+    roxo: { cor: cores.ludica.roxo, som: 'roxo' },
+    rosa: { cor: cores.ludica.rosa, som: 'rosa' },
+    marrom: { cor: cores.ludica.marrom, som: 'marrom' },
   },
 
   // --------------------------------------------------------------- geometria
@@ -314,34 +322,48 @@ export default {
 
   // ----------------------------------------------------------------- assets
   /**
-   * As oito peças. Arte NOVA: este é o único dos três originais sem nenhum PNG
-   * de bloco — as peças de 2013 eram vetor dentro de `JogoCores_visual.js`, com
-   * 344 KB. Os oito SVG somam 17 KB.
+   * As oito peças não têm mais arquivo — a cor é chapada, desenhada em
+   * `Peca.desenhar()` (`src/scenes/GameScene.js`). Até 02/09/2026 havia um SVG
+   * por cor, 17 KB somados, com uma textura assada dentro; saíram numa decisão
+   * de acessibilidade — ver o comentário de `cores`, acima.
    *
-   * **O áudio ainda não está aqui.** As 16 gravações da aula original (os oito
-   * nomes de cor, a instrução, dois de nível e o feedback) continuam em
-   * `Aulas para Refazer/Jogo das Cores/sons/`. Decisão do humano: os sons das
-   * cores vêm depois. Até lá o motor toca silêncio e diz no console qual arquivo
-   * falta e o que ele deveria falar.
+   * **Os OITO NOMES DE COR chegaram** em 02/09/2026 — narração NOVA, não os
+   * arquivos de 2013 (formato e tamanho são outros; ver as fichas em
+   * `assets/audio-transcricao/`). Ainda faltam: a instrução do tutorial, os
+   * dois áudios de nível (que nem servem — são "fácil"/"difícil" e este jogo
+   * tem três níveis com outros nomes), o feedback de vitória/derrota e a fala
+   * nova "Misturei as cores!". Essas continuam em
+   * `Aulas para Refazer/Jogo das Cores/sons/`, e até chegarem o motor toca
+   * silêncio e diz no console qual arquivo falta e o que ele deveria falar.
    */
   assets: [
-    { id: 'corVermelho', src: './assets/img/cor-vermelho.svg' },
-    { id: 'corAzul', src: './assets/img/cor-azul.svg' },
-    { id: 'corVerde', src: './assets/img/cor-verde.svg' },
-    { id: 'corAmarelo', src: './assets/img/cor-amarelo.svg' },
-    { id: 'corLaranja', src: './assets/img/cor-laranja.svg' },
-    { id: 'corRoxo', src: './assets/img/cor-roxo.svg' },
-    { id: 'corRosa', src: './assets/img/cor-rosa.svg' },
-    { id: 'corMarrom', src: './assets/img/cor-marrom.svg' },
+    // Os oito nomes de cor narrados — o `id` é o próprio nome, mesma convenção
+    // do Jogo das Formas (`som: 'circulo'`, não `somCirculo`). Nenhuma
+    // transcrição foi CONFIRMADA ouvindo ainda; ver as fichas.
+    { id: 'vermelho', src: './assets/audio/vermelho.mp3' },
+    { id: 'azul', src: './assets/audio/azul.mp3' },
+    { id: 'verde', src: './assets/audio/verde.mp3' },
+    { id: 'amarelo', src: './assets/audio/amarelo.mp3' },
+    { id: 'laranja', src: './assets/audio/laranja.mp3' },
+    { id: 'roxo', src: './assets/audio/roxo.mp3' },
+    { id: 'rosa', src: './assets/audio/rosa.mp3' },
+    { id: 'marrom', src: './assets/audio/marrom.mp3' },
+
+    // A música de fundo da própria aula 870296. É o MESMO arquivo dos outros
+    // dois jogos (SHA-256 idêntico nos três originais de 2013) — a coleção
+    // tinha uma música só, e manter isso é o que faz as três aulas soarem como
+    // a mesma coleção.
+    { id: 'somFundo', src: './assets/audio/somFundo.mp3' },
   ],
 
   /**
-   * Tudo null por enquanto, e o motor lida com isso: `AudioBus.falar(null)`
-   * registra a lacuna com o texto que a voz deveria dizer, e a tela fica em
-   * silêncio em vez de sintetizar uma pronúncia que ninguém revisou.
+   * A MÚSICA e os OITO NOMES DE COR estão ligados. O resto da VOZ ainda não: o
+   * motor lida com a lacuna — `AudioBus.falar(null)` registra no console o
+   * texto que a voz deveria dizer, e a tela fica em silêncio em vez de
+   * sintetizar uma pronúncia que ninguém revisou.
    */
   audio: {
-    musica: null,
+    musica: 'somFundo',
     clique: null,
     acerto: null,
     erro: null,

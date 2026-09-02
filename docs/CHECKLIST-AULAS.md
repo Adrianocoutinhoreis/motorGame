@@ -13,7 +13,7 @@ Legenda: ✅ concluído · 🚧 em andamento · 📋 planejado
 |---|---|---|---|---|
 | 1 | Jogo dos Blocos | `870294` | `jogo-dos-blocos` | ✅ **refeito** (piloto) |
 | 2 | Jogo das Formas | `870298` | `jogo-das-formas` | 🚧 **jogável**, com pendências declaradas |
-| 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 🚧 **joga, sem voz** — partida completa e testada com gesto real; falta narração e identidade visual própria |
+| 3 | Jogo das Cores | `870296` | `jogo-das-cores` | 🚧 **joga, cores narradas** — partida completa e testada com gesto real; os 8 nomes de cor tocam (não confirmados ouvindo), falta o resto da voz e a identidade visual própria |
 
 ---
 
@@ -134,8 +134,9 @@ o áudio fala o nome da cor. Grade 5×7 com os quatro cantos vazios (31 peças).
 verde/amarelo/azul/vermelho (meta 30); difícil = rosa/marrom/roxo/laranja (meta 45). 120 s.
 
 > **Arte:** este é o único dos três **sem nenhum PNG de bloco** — as peças coloridas eram vetor
-> dentro do `JogoCores_visual.js` (344 KB). A arte nova já existe: **oito SVG, 17 KB somados**,
-> com a textura assada dentro de cada um.
+> dentro do `JogoCores_visual.js` (344 KB). *(Nota de planejamento, na época: previa oito SVG
+> com textura própria. Não é mais o que existe — desde 02/09/2026 a peça é chapada, sem arquivo
+> e sem textura, decisão de acessibilidade. Ver `REGRAS-JOGO-DAS-CORES.md`, seção 3.2.)*
 
 **Assets aproveitáveis:** só o áudio (nomes das 8 cores, instrução, fundo, feedback).
 
@@ -184,10 +185,12 @@ sempre** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-cores"` · derrota também
 | `GridBoard` vizinhança de 8 + gravidade `'baixo'` | ✅ pronto, e escrito prevendo este jogo |
 | `Watchdog`, `ScoreSystem`, `TimerBar`, telas padrão | ✅ prontos |
 | Célula bloqueada (os 4 cantos do original) | ❌ **não vamos precisar** — tabuleiro retangular cheio, cantos arredondados pela arte |
-| As oito peças | ✅ **SVG prontos** em `assets/img/cor-*.svg`, 2,1 KB cada, textura assada dentro. Conferidos a 112, 64 e 34 px e em escala de cinza |
+| As oito peças | ✅ **chapadas**, desenhadas em `Peca.desenhar()`, sem arquivo. Até 02/09/2026 eram 8 SVG com textura; removida por decisão de acessibilidade — ver `REGRAS-JOGO-DAS-CORES.md`, seção 3.2 |
 | Pasta do jogo | ✅ criada por `new-game.mjs` (jogo de andaime, ainda o do template) |
 | Célula de 128 px | ✅ **medida**: 64 px físicos no pior celular, 45% acima do piso do WCAG 2.5.5 — o primeiro jogo do motor a passar sem ressalva |
-| Cena, arte, tutorial, fichas de áudio | 📋 a fazer |
+| Cena, arte, tutorial | ✅ feitos |
+| Os 8 nomes de cor narrados + fichas de transcrição | ✅ **ligados** (02/09/2026) — narração nova, nenhuma confirmada ouvindo |
+| Resto da voz (instrução, níveis, vitória/derrota, "Misturei as cores!") | 📋 a fazer |
 
 ---
 

@@ -30,7 +30,9 @@
  *   6. apertar fora do tabuleiro cancela;
  *   7. TABULEIRO MORTO — o jogo detecta, mistura e devolve o gesto;
  *   8. e continua jogável depois da mistura;
- *   9. a pausa abre;
+ *   9. a pausa abre E FECHA — o toque no pixel de CONTINUAR e de SAIR;
+ *  9b. a AJUDA abre, os passos passam e VOLTAR AO JOGO devolve a partida;
+ *  9c. a música de fundo está ligada e tocando;
  *  10. o `Watchdog` não dispara numa sessão normal.
  *
  * As lacunas de narração são esperadas e separadas do resto: os oito nomes de
@@ -150,6 +152,29 @@ try {
     await evento('mouseReleased', c, { buttons: 0 });
     await esperar(60);
   };
+  // Toca no CENTRO de um nó achado por expressão. `matrizMundo.tx` já desconta
+  // o `regX`, então isto acerta tanto nó ancorado no canto quanto no centro —
+  // e é o pixel que o dedo da criança encontraria.
+  const centroDo = (busca) => aval(`(() => {
+    const no = (${busca});
+    if (!no) return null;
+    const m = no.matrizMundo;
+    return { x: Math.round(m.tx + (no.largura ?? 0) / 2), y: Math.round(m.ty + (no.altura ?? 0) / 2) };
+  })()`);
+  const tocarNo = async (busca) => {
+    const c = await centroDo(busca);
+    if (!c) return false;
+    await tocar(c.x, c.y);
+    return true;
+  };
+  // Busca em profundidade por ícone ou rótulo, dentro de um nó.
+  const dentroDe = (raiz, campo, valor) => `(() => {
+    let achado = null;
+    const varrer = (n) => { for (const f of n.filhos ?? []) { if (f.${campo} === '${valor}') achado = f; varrer(f); } };
+    varrer(${raiz});
+    return achado;
+  })()`;
+
   const arrastar = async (pontos) => {
     const telas = [];
     for (const [lx, ly] of pontos) telas.push(await paraTela(lx, ly));
@@ -189,13 +214,15 @@ try {
       celula: c.geo.celula, colunas: c.colunas, linhas: c.linhas,
       bx: c.tabuleiroX, by: c.tabuleiroY, hudW: c.hudLargura,
       naGrade: c.grade.todas().length,
-      imagensOk: Object.values(c.arte.imagens).filter(Boolean).length,
+      // As peças são chapadas desde 02/09/2026 — sem SVG a carregar. O
+      // equivalente de "a arte está pronta" agora é: as 8 cores têm token.
+      coresComToken: Object.values(c.arte.cores).filter((cor) => !!cor?.cor).length,
     };
   })()`);
   console.log(`  geometria: ${JSON.stringify(geo)}`);
   checar('a partida montou', geo.estado === 'jogando' && geo.fase === 'livre');
   checar('35 peças no tabuleiro (7x5)', geo.naGrade === 35, `naGrade=${geo.naGrade}`);
-  checar('os 8 SVG carregaram', geo.imagensOk === 8, `carregadas=${geo.imagensOk}`);
+  checar('as 8 cores têm token de cor', geo.coresComToken === 8, `com token=${geo.coresComToken}`);
   checar('a geometria é a do plano (célula 128, x 364, y 40, HUD 324)',
     geo.celula === 128 && geo.bx === 364 && geo.by === 40 && geo.hudW === 324,
     JSON.stringify(geo));
@@ -230,7 +257,20 @@ try {
   // escolhidos para NÃO fechar em pixel inteiro sem o alinhamento.
   await cdp.enviar('Emulation.setDeviceMetricsOverride',
     { width: 1207, height: 853, deviceScaleFactor: 1.25, mobile: false }, s);
-  await esperar(600);
+  await esperar(250);
+
+  // Espera a geometria ASSENTAR, em vez de confiar num tempo fixo. O
+  // redimensionamento é assíncrono — o `Stage` reage ao `resize` e redesenha no
+  // quadro seguinte — e medir pixel no meio da transição já reprovou uma vez sem
+  // defeito nenhum. Verificação que falha às vezes ensina a ignorar verificação.
+  let geoAnterior = null;
+  for (let i = 0; i < 40; i++) {
+    const agora = await aval(`(() => { const st = window.jogo.stage;
+      return [st.escala, st.deslocX, st.deslocY, st.canvas.width, st.canvas.height].join(':'); })()`);
+    if (agora === geoAnterior) break;
+    geoAnterior = agora;
+    await esperar(100);
+  }
 
   const emenda = await aval(`(() => {
     const st = window.jogo.stage;
@@ -416,38 +456,55 @@ try {
     return true;
   })()`);
   await arrastar([cel(4, 0), cel(4, 1), cel(4, 2)]);
-  // Cadeia: soltar +380 ms cai e repõe · +336 ms confere. `arrastar` já voltou
-  // 120 ms depois de soltar, então 300 aqui caem no meio da janela.
-  await esperar(300);
-  const morto = await aval(`(() => {
-    const c = window.jogo.cena;
-    if (c.grade.vazias().length > 0) return { erro: 'a reposição ainda não rodou' };
-    c.grade.paraCada((p, l, k) => {
-      if (p) p.cor = ['vermelho', 'azul', 'verde', 'amarelo'][(l % 2) * 2 + (k % 2)];
-    });
-    const censo = {};
-    for (const p of c.grade.todas()) censo[p.cor] = (censo[p.cor] ?? 0) + 1;
-    return {
-      temJogada: c.grade.temJogada(3), fase: c.fase, censo, misturas: c.misturas,
-      mapa: c.grade.celulas.map((li) => li.map((p) => ({vermelho:'R',azul:'A',verde:'V',amarelo:'M',laranja:'L',roxo:'X',rosa:'S',marrom:'B'})[p.cor]).join('')).join('/'),
-    };
-  })()`);
+  // A janela é estreita: a reposição enche o tabuleiro ~380 ms depois de soltar,
+  // e a conferência de travamento roda ~336 ms depois dela. Em vez de dormir um
+  // tempo fixo e apostar em cair dentro, este laço PROCURA a janela e pinta o
+  // tabuleiro no mesmo passo em que confirma estar nela.
+  //
+  // A versão anterior dormia 300 ms. Num computador ocupado ela errou a janela e
+  // sete verificações reprovaram sem defeito nenhum no jogo — e verificação que
+  // falha às vezes é pior que verificação nenhuma, porque ensina a ignorar.
+  let morto = null;
+  for (let i = 0; i < 80; i++) {
+    morto = await aval(`(() => {
+      const c = window.jogo.cena;
+      if (c.grade.vazias().length > 0) return { erro: 'a reposição ainda não rodou' };
+      if (c.fase !== 'movendo') return { erro: 'a conferência já passou', fase: c.fase };
+      c.grade.paraCada((p, l, k) => {
+        if (p) p.cor = ['vermelho', 'azul', 'verde', 'amarelo'][(l % 2) * 2 + (k % 2)];
+      });
+      const censo = {};
+      for (const p of c.grade.todas()) censo[p.cor] = (censo[p.cor] ?? 0) + 1;
+      return {
+        temJogada: c.grade.temJogada(3), fase: c.fase, censo, misturas: c.misturas,
+        mapa: c.grade.celulas.map((li) => li.map((p) => ({vermelho:'R',azul:'A',verde:'V',amarelo:'M',laranja:'L',roxo:'X',rosa:'S',marrom:'B'})[p.cor]).join('')).join('/'),
+      };
+    })()`);
+    if (!morto.erro) break;
+    await esperar(25);
+  }
   console.log(`  tabuleiro morto: ${JSON.stringify(morto)}`);
   checar('o tabuleiro ficou de fato sem jogada nenhuma',
     morto.temJogada === false, JSON.stringify(morto));
   checar('e o jogo ainda estava resolvendo (a conferência vem depois)',
     morto.fase === 'movendo', `fase=${morto.fase}`);
 
-  // A conferência dispara a ~716 ms do soltar; aqui estamos em ~420.
-  await esperar(450);
-  const misturando = await aval(`(() => {
-    const c = window.jogo.cena;
-    return {
-      misturas: c.misturas, fase: c.fase,
-      aviso: !!c.aviso.visible, tempoRodando: !!c.tempo.rodando,
-      temJogada: c.grade.temJogada(3), naGrade: c.grade.todas().length,
-    };
-  })()`);
+  // Espera a MISTURA acontecer em vez de cronometrá-la, e lê o estado no mesmo
+  // passo em que a detecta: aviso na tela, cronômetro parado e gesto travado só
+  // são verdade DURANTE a mistura, e a janela dela tem menos de um segundo.
+  let misturando = null;
+  for (let i = 0; i < 80; i++) {
+    misturando = await aval(`(() => {
+      const c = window.jogo.cena;
+      return {
+        misturas: c.misturas, fase: c.fase,
+        aviso: !!c.aviso.visible, tempoRodando: !!c.tempo.rodando,
+        temJogada: c.grade.temJogada(3), naGrade: c.grade.todas().length,
+      };
+    })()`);
+    if (misturando.misturas === 1) break;
+    await esperar(25);
+  }
   console.log(`  misturando: ${JSON.stringify(misturando)}`);
   checar('o jogo detectou e misturou', misturando.misturas === 1, JSON.stringify(misturando));
   checar('a mistura resolveu o travamento', misturando.temJogada === true, JSON.stringify(misturando));
@@ -459,26 +516,31 @@ try {
   checar('nenhuma peça se perdeu na mistura', misturando.naGrade === 35, `naGrade=${misturando.naGrade}`);
   await captura('06-misturando');
 
-  // Fim da mistura: lento (420) + padrão (240).
-  await esperar(900);
-  const misturado = await aval(`(() => {
-    const c = window.jogo.cena;
-    const censo = {};
-    for (const p of c.grade.todas()) censo[p.cor] = (censo[p.cor] ?? 0) + 1;
-    // Cada peça precisa estar onde a grade diz — é o que prova que o tween de
-    // posição foi para o lugar certo, e não que só a grade mudou.
-    let foraDeLugar = 0;
-    c.grade.paraCada((p, l, k) => {
-      if (!p) return;
-      if (Math.abs(p.x - c.xCelula(k)) > 1 || Math.abs(p.y - c.yCelula(l)) > 1) foraDeLugar++;
-    });
-    return {
-      fase: c.fase, aviso: !!c.aviso.visible, tempoRodando: !!c.tempo.rodando,
-      temJogada: c.grade.temJogada(3), censo, foraDeLugar,
-      disparos: c.guarda.disparos,
-      mapa: c.grade.celulas.map((li) => li.map((p) => ({vermelho:'R',azul:'A',verde:'V',amarelo:'M',laranja:'L',roxo:'X',rosa:'S',marrom:'B'})[p.cor]).join('')).join('/'),
-    };
-  })()`);
+  // Fim da mistura: a onda por coluna mais o tween lento dão ~900 ms, mas quem
+  // decide é o jogo — espera o gesto voltar para a criança.
+  let misturado = null;
+  for (let i = 0; i < 120; i++) {
+    misturado = await aval(`(() => {
+      const c = window.jogo.cena;
+      const censo = {};
+      for (const p of c.grade.todas()) censo[p.cor] = (censo[p.cor] ?? 0) + 1;
+      // Cada peça precisa estar onde a grade diz — é o que prova que o tween de
+      // posição foi para o lugar certo, e não que só a grade mudou.
+      let foraDeLugar = 0;
+      c.grade.paraCada((p, l, k) => {
+        if (!p) return;
+        if (Math.abs(p.x - c.xCelula(k)) > 1 || Math.abs(p.y - c.yCelula(l)) > 1) foraDeLugar++;
+      });
+      return {
+        fase: c.fase, aviso: !!c.aviso.visible, tempoRodando: !!c.tempo.rodando,
+        temJogada: c.grade.temJogada(3), censo, foraDeLugar,
+        disparos: c.guarda.disparos,
+        mapa: c.grade.celulas.map((li) => li.map((p) => ({vermelho:'R',azul:'A',verde:'V',amarelo:'M',laranja:'L',roxo:'X',rosa:'S',marrom:'B'})[p.cor]).join('')).join('/'),
+      };
+    })()`);
+    if (misturado.fase === 'livre' && !misturado.aviso) break;
+    await esperar(25);
+  }
   console.log(`  depois da mistura: ${JSON.stringify(misturado)}`);
   checar('o gesto voltou para a criança', misturado.fase === 'livre', `fase=${misturado.fase}`);
   checar('o aviso saiu da tela', misturado.aviso === false, JSON.stringify(misturado));
@@ -535,18 +597,172 @@ try {
     depoisFinal - antesFinal === 3, `${antesFinal} -> ${depoisFinal}`);
   await esperar(1600);
 
-  console.log('\n9. A pausa');
-  const btPausa = await aval(`(() => {
-    const a = window.jogo.cena.filhos.find((f) => f.icone === 'pausa');
-    const m = a.matrizMundo;
-    return { x: Math.round(m.tx + (a.largura ?? 0) / 2), y: Math.round(m.ty + (a.altura ?? 0) / 2) };
-  })()`);
-  await tocar(btPausa.x, btPausa.y);
+  // ---------------------------------------------------------------- 9. a pausa
+  //
+  // **Abrir não é o teste. FECHAR é.** A versão anterior desta seção parava em
+  // "a pausa abriu", e com isso deixou passar o defeito mais grave que este jogo
+  // teve: a área de gesto, montada DEPOIS da camada de pausa, ficava por cima
+  // dos botões dela. A pausa abria e CONTINUAR, SAIR e a ajuda não respondiam a
+  // nada — a criança ficava presa até recarregar a página.
+  //
+  // Por isso cada botão é tocado no seu PIXEL, com a pausa aberta. Chamar
+  // `pausa.fechar()` por dentro passaria com o defeito no lugar.
+  const PAUSA = `window.jogo.cena.filhos.find((f) => f.icone === 'pausa')`;
+  const AJUDA = `window.jogo.cena.filhos.find((f) => f.icone === 'tutorial')`;
+  const BOTAO_PAUSA = (rotulo) => `window.jogo.cena.pausa.painel.filhos.find((f) => f.rotulo === '${rotulo}')`;
+
+  console.log('\n9. A pausa abre e FECHA');
+  await tocarNo(PAUSA);
   await esperar(600);
-  checar('a pausa abriu', await aval('!!window.jogo.cena.pausada'));
+  let p = await aval(`(() => { const c = window.jogo.cena;
+    return { pausada: !!c.pausada, aberta: c.pausa.aberta, rodando: c.tempo.rodando }; })()`);
+  checar('a pausa abriu', p.pausada && p.aberta, JSON.stringify(p));
+  checar('o cronômetro parou com a pausa aberta', p.rodando === false, JSON.stringify(p));
   await captura('05-pausa');
 
+  // O nó que o toque encontra no pixel do botão. Se não for o botão, o defeito
+  // é este — e a mensagem já diz qual camada está na frente.
+  const sobreContinuar = await aval(`(() => {
+    const b = window.jogo.cena.pausa.painel.filhos.find((f) => f.rotulo === 'CONTINUAR');
+    const m = b.matrizMundo;
+    const x = m.tx + b.largura / 2; const y = m.ty + b.altura / 2;
+    const no = window.jogo.stage.raiz.noSobPonto(x, y);
+    return no ? (no.constructor.name + (no.rotulo ? ':' + no.rotulo : '')) : 'nenhum';
+  })()`);
+  checar('quem está sob o pixel do CONTINUAR é o próprio botão',
+    sobreContinuar === 'Button:CONTINUAR', `sob o dedo: ${sobreContinuar}`);
+
+  await tocarNo(BOTAO_PAUSA('CONTINUAR'));
+  await esperar(400);
+  p = await aval(`(() => { const c = window.jogo.cena;
+    return { pausada: !!c.pausada, aberta: c.pausa.aberta, rodando: c.tempo.rodando }; })()`);
+  checar('o toque em CONTINUAR fechou a pausa', !p.pausada && !p.aberta, JSON.stringify(p));
+  checar('e o cronômetro voltou a correr', p.rodando === true, JSON.stringify(p));
+
+  // ------------------------------------------------------------- 9b. a ajuda
+  console.log('\n9b. A AJUDA abre, passa os passos e devolve a partida');
+  const pecasAntes = await aval('window.jogo.cena.grade.todas().length');
+  const acertosAntes = await aval('window.jogo.cena.placar.acertos');
+  const pedidasAntes = await aval('window.jogo._ajudasPedidas');
+  await tocarNo(AJUDA);
+  await esperar(500);
+  let a = await aval(`(() => { const c = window.jogo.cena;
+    return { pausada: !!c.pausada, aberta: c.ajuda.aberta, indice: c.ajuda.tutorial.indice,
+             rodando: c.tempo.rodando, pedidas: window.jogo._ajudasPedidas }; })()`);
+  checar('a ajuda abriu sem trocar de cena',
+    a.aberta && a.pausada && await aval("window.jogo.estado") === 'jogando', JSON.stringify(a));
+  checar('a ajuda começa no primeiro passo', a.indice === 0, JSON.stringify(a));
+  checar('o cronômetro parou com a ajuda aberta', a.rodando === false, JSON.stringify(a));
+  checar('o motor contou o pedido de ajuda',
+    a.pedidas === pedidasAntes + 1, `pedidas ${pedidasAntes}->${a.pedidas}`);
+  await captura('06-ajuda');
+
+  const passos = await aval('window.jogo.cena.ajuda.tutorial.passos.length');
+  for (let i = 1; i < passos; i++) {
+    await tocarNo(dentroDe('window.jogo.cena.ajuda.tutorial', 'icone', 'setaDireita'));
+    await esperar(350);
+    const indice = await aval('window.jogo.cena.ajuda.tutorial.indice');
+    checar(`a seta avançou para o passo ${i + 1} de ${passos}`, indice === i, `indice=${indice}`);
+  }
+
+  await tocarNo(dentroDe('window.jogo.cena.ajuda.tutorial', 'rotulo', 'VOLTAR AO JOGO'));
+  await esperar(500);
+  a = await aval(`(() => { const c = window.jogo.cena;
+    return { pausada: !!c.pausada, aberta: c.ajuda.aberta, rodando: c.tempo.rodando,
+             pecas: c.grade.todas().length, acertos: c.placar.acertos, fase: c.fase }; })()`);
+  checar('VOLTAR AO JOGO fechou a ajuda', !a.aberta && !a.pausada, JSON.stringify(a));
+  checar('o cronômetro voltou a correr depois da ajuda', a.rodando === true, JSON.stringify(a));
+  checar('a partida sobreviveu: mesmas peças e mesmo placar',
+    a.pecas === pecasAntes && a.acertos === acertosAntes,
+    `peças ${pecasAntes}->${a.pecas}, acertos ${acertosAntes}->${a.acertos}`);
+  checar('e o gesto volta a ser aceito', a.fase === 'livre', `fase=${a.fase}`);
+
+  // Depois da ajuda, o jogo tem de continuar JOGÁVEL de verdade — não só
+  // "aceitando", mas pontuando.
+  await aval(`(() => {
+    const c = window.jogo.cena;
+    for (let col = 0; col < 3; col++) c.grade.obter(4, col).cor = 'rosa';
+    return true;
+  })()`);
+  const antesDepoisAjuda = await aval('window.jogo.cena.placar.acertos');
+  await arrastar([cel(4, 0), cel(4, 1), cel(4, 2)]);
+  await esperar(400);
+  checar('o caminho ainda pontua depois de fechar a ajuda',
+    await aval('window.jogo.cena.placar.acertos') - antesDepoisAjuda === 3);
+  await esperar(900);
+
+  // ----------------------------------------------------------- 9c. a música
+  //
+  // O jogo ficou sem música de fundo até 02/09/2026, e nada reprovava: o
+  // `config.audio.musica` era `null` e a pasta de áudio não existia. A criança
+  // jogava no silêncio, e o silêncio total nesta faixa lê-se como jogo quebrado.
+  console.log('\n9c. A música de fundo');
+  checar('a música está declarada no config',
+    await aval("window.jogo.config.audio.musica") === 'somFundo',
+    `musica=${await aval('JSON.stringify(window.jogo.config.audio.musica)')}`);
+  checar('o arquivo da música carregou',
+    await aval("!!window.jogo.loader.audio('somFundo')"));
+  const canais = await aval('window.jogo.audio.sonsTocando');
+  checar('e ela está tocando no canal music', canais.music >= 1, JSON.stringify(canais));
+
   checar('nenhum disparo do Watchdog', await aval('window.jogo.cena.guarda.disparos') === 0);
+
+  // ------------------------------------------------------- 9d. as 8 cores narradas
+  //
+  // Prova, por GESTO REAL e cor por cor, que `config.cores[nome].som` aponta
+  // para o arquivo certo — não só "algum id foi passado", mas o MESMO nome da
+  // cor que a criança acabou de ligar. Um `AudioBus.falar` instrumentado
+  // registra cada pedido; comparar com o `id` esperado pega tanto um campo
+  // esquecido em `null` quanto dois campos trocados entre si (ex.: roxo
+  // tocando o arquivo de rosa) — o `sonsTocando.speech` sozinho não pegaria
+  // nem um nem outro.
+  console.log('\n9d. As 8 cores narradas: cada caminho fala o NOME certo');
+  // `zerar()` — sem isto, os pontos das seções ANTERIORES deste arquivo somam
+  // com os 24 daqui (8 cores × 3) e cruzam a meta do nível no meio do laço: a
+  // partida vence, a cena troca para 'resultado', e a próxima iteração lê
+  // `cena.placar` de um objeto que não é mais este. Zerar aqui torna a seção
+  // independente de quanto as anteriores já pontuaram.
+  await aval(`(() => { window.jogo.cena.placar.zerar(); return true; })()`);
+  await aval(`(() => {
+    window.__falas = [];
+    const audio = window.jogo.audio;
+    if (!audio.__falarOriginal) audio.__falarOriginal = audio.falar.bind(audio);
+    audio.falar = (id, opcoes) => { window.__falas.push(id); return audio.__falarOriginal(id, opcoes); };
+    return true;
+  })()`);
+  const CORES_DO_JOGO = ['vermelho', 'azul', 'verde', 'amarelo', 'laranja', 'roxo', 'rosa', 'marrom'];
+  for (let i = 0; i < CORES_DO_JOGO.length; i++) {
+    const nome = CORES_DO_JOGO[i];
+    await aval(`(() => {
+      const c = window.jogo.cena;
+      c.caminho.cancelar();
+      for (let col = 0; col < 3; col++) c.grade.obter(${i % 5}, col).cor = '${nome}';
+      return true;
+    })()`);
+    await aval('window.__falas.length = 0; true');
+    const antes = await aval('window.jogo.cena.placar.acertos');
+    await arrastar([cel(i % 5, 0), cel(i % 5, 1), cel(i % 5, 2)]);
+    await esperar(350);
+    const depois = await aval('window.jogo.cena.placar.acertos');
+    const falas = await aval('window.__falas');
+    checar(`caminho de ${nome} pontuou e narrou "${nome}"`,
+      depois - antes === 3 && falas.includes(nome),
+      `pontos ${antes}->${depois}, falas=${JSON.stringify(falas)}`);
+  }
+  await esperar(600);
+
+  // ------------------------------------------------- 11. sair pela pausa
+  //
+  // Por último, porque leva embora a partida: o SAIR tem de trocar de cena de
+  // verdade. Era o outro botão que o defeito da camada deixava morto.
+  console.log('\n10. Sair pela pausa');
+  await tocarNo(PAUSA);
+  await esperar(500);
+  checar('a pausa abriu de novo', await aval('!!window.jogo.cena.pausada'));
+  await tocarNo(BOTAO_PAUSA('SAIR'));
+  await esperar(900);
+  const estadoFinal = await aval('window.jogo.estado');
+  checar('o toque em SAIR levou ao menu', estadoFinal === 'menu', `estado=${estadoFinal}`);
 
   const lacunas = mensagens.filter((m) => /narra/i.test(m));
   // `willReadFrequently` é aviso do Chrome causado por ESTE ARQUIVO, não pelo

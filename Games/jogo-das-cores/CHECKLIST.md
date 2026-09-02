@@ -32,9 +32,9 @@
 - [ ] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [ ] Nenhuma fonte, imagem ou som vindo da internet
 - [ ] Origem/licença de cada asset registrada no `README.md`
-- [ ] Ficha de transcrição criada para **cada** áudio, em `assets/audio-transcricao/<nome>/transcricao.md`
-- [ ] Transcrições **confirmadas ouvindo** (o áudio é conteúdo pedagógico: um arquivo trocado passa despercebido sem isso)
-- [ ] Pendências de áudio ainda não gravado listadas explicitamente no `README.md`
+- [x] Ficha de transcrição criada para **cada** áudio, em `assets/audio-transcricao/<nome>/transcricao.md` — 9/9 (os 8 nomes de cor + `somFundo`)
+- [ ] Transcrições **confirmadas ouvindo** (o áudio é conteúdo pedagógico: um arquivo trocado passa despercebido sem isso) — as 9 estão 🟡 INFERIDA; `marrom` merece atenção redobrada (o arquivo chegou com o nome trocado)
+- [x] Pendências de áudio ainda não gravado listadas explicitamente no `README.md`
 
 ## 3. Telas
 

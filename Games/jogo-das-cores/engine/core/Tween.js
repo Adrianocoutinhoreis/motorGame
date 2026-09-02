@@ -274,14 +274,22 @@ export class Tween {
     return false;
   }
 
-  /** Pausa todos os tweens ativos (sem descartá-los). */
+  /**
+   * Pausa todos os tweens ativos, sem descartá-los — o par de `removerTodos`.
+   *
+   * Existe para a PAUSA e a AJUDA: sem isto, uma animação em curso quando a
+   * criança abre a pausa (a mistura de peças do Jogo das Cores é o caso real)
+   * continua rodando ATRÁS do véu — as peças chegam ao lugar em silêncio, e ao
+   * fechar a pausa o jogo já mudou sem a criança ter visto. `retomarTodos`
+   * desfaz.
+   */
   static pausarTodos() {
-    for (const t of Tween._ativos) t.pausado = true;
+    for (const t of Tween._ativos) t.pausar(true);
   }
 
-  /** Retoma todos os tweens pausados. */
+  /** Retoma todos os tweens pausados por `pausarTodos`. */
   static retomarTodos() {
-    for (const t of Tween._ativos) t.pausado = false;
+    for (const t of Tween._ativos) t.pausar(false);
   }
 
   /** Cancela todos os tweens de um alvo (ex.: bloco removido do tabuleiro). */

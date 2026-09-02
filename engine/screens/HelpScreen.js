@@ -86,6 +86,11 @@ export class HelpScreen extends Node {
   abrir() {
     this.visible = true;
     this.interativo = true;
+    // Sobe ao abrir, pelo mesmo motivo do `PauseScreen`: quem recebe o toque é o
+    // nó mais ao topo, e um jogo que adicione a área de gesto depois desta camada
+    // enterraria os botões do tutorial — a ajuda abriria e não daria para passar
+    // o passo nem voltar ao jogo. Aconteceu no Jogo das Cores.
+    this.paraFrente();
     // Sempre do primeiro passo: quem pede ajuda no meio da partida quer a
     // explicação inteira, não a continuação de onde parou na vez anterior.
     this.tutorial.mostrarPasso(0);

@@ -8,10 +8,10 @@ Duas diretrizes governam este documento, e as duas vieram do humano:
 
 1. **O maior espaço possível para o jogo**, porque o alvo tocável no celular é o que decide se
    a criança consegue jogar.
-2. **As peças são SVG**, oito arquivos, um por cor, com a textura assada dentro. Era "desenhar
-   em código até decidir"; o humano decidiu por SVG, e a decisão é melhor: escala sem perder
-   nitidez, um designer edita sem tocar em JavaScript, e a textura não pode se perder num
-   refatoramento. Ver seção 3.
+2. **A peça é chapada — cor sólida, sem textura, sem SVG.** Não foi sempre assim: até
+   02/09/2026 cada cor tinha um arquivo SVG com uma textura própria assada dentro (esta seção
+   dizia isso). Foi trocado numa decisão de acessibilidade do humano — "menos poluição visual"
+   — e a reversão tem consequência real, medida e registrada na seção 3. Ver seção 3.
 
 ---
 
@@ -112,35 +112,39 @@ cravar 364 num arquivo é o tipo de número que sobrevive à mudança que o inva
 
 ## 3. As peças
 
-### 3.1 A peça
+### 3.1 A peça, hoje: chapada, sem arquivo
 
-**112 × 112 px dentro da célula de 128** — 88% dela, deixando 16 px de vão entre vizinhas.
+**112 × 112 px dentro da célula de 128** — 88% dela, deixando 16 px de vão entre vizinhas. Isto
+não mudou com a decisão de 02/09/2026 — é geometria, não arte.
 
 A proporção é maior que a do Jogo das Formas (62/80 = 78%) de propósito: ali a peça é um alvo
 isolado e o vão ajuda a separar as colunas; aqui as peças formam um **campo contínuo** por onde
 o dedo passa, e vão grande faria o tabuleiro parecer uma grade de botões em vez de um lugar.
 
-**A peça é um arquivo SVG.** `assets/img/cor-<nome>.svg`, `viewBox="0 0 112 112"`, e dentro
-dele quatro camadas:
+**A peça é desenhada em `Peca.desenhar()` (`src/scenes/GameScene.js`), sem arquivo.** Duas
+camadas:
 
-1. **corpo** — a cor da paleta lúdica, canto `22`;
-2. **textura** — recortada no corpo por `clipPath`, seção 3.2;
-3. **brilho** — degradê branco de cima, 30% a 0% na metade, que dá volume sem trocar a cor;
-4. **contorno interno** — preto a 16%, 3 px, para uma peça se separar da vizinha da MESMA cor.
+1. **corpo** — a cor da paleta lúdica, canto `raio.md`, uma sombra suave (`sombras.suave`);
+2. **contorno interno** — preto a 16%, 3 px, para uma peça se separar da vizinha da MESMA cor.
    Sem ele, três azuis lado a lado viram um bloco azul só e o caminho fica ilegível.
 
-Duas coisas ficam **fora** do arquivo, de propósito:
+Fica de fora, de propósito: o **aro de seleção** do caminho, que é **estado** e não arte — muda
+a cada movimento do dedo.
 
-- a **sombra**, que o canvas desenha por fora da peça — não caberia no `viewBox`, e escalar com
-  a peça é o que a faz parecer papel recortado em vez de peça com volume;
-- o **aro de seleção** do caminho, que é **estado** e não arte: muda a cada movimento do dedo.
+**Isto substitui o que existia até 02/09/2026** — um arquivo SVG por cor com quatro camadas
+(corpo, TEXTURA redundante com a cor, um degradê de brilho, e o mesmo contorno interno). A
+seção 3.2 conta por quê, e o que essa troca custa.
 
-### 3.2 As oito texturas — e por que elas não são enfeite
+### 3.2 A textura que saiu — a decisão, o motivo, o preço
 
-Cada cor tem um padrão próprio, **redundante** com ela: quem vê cor joga pela cor e não repara
-na textura; quem não vê joga pela textura.
+**Até 02/09/2026 cada cor tinha uma textura própria, redundante com ela** (xadrez no vermelho,
+bolinhas no azul, ondas no roxo…): quem vê cor jogava pela cor e não reparava na textura; quem
+não vê jogava pela textura. Ninguém perdia informação, e ninguém era obrigado a usar o canal
+que não tinha — a WCAG 1.4.1 chama isso de canal redundante, e é o padrão certo quando cor é
+conteúdo.
 
-**A medição que fecha o assunto.** Luminância das oito cores da paleta lúdica, em 0–255:
+**A medição que sustentava a textura, e continua verdadeira hoje.** Luminância das oito cores
+da paleta lúdica, em 0–255:
 
 | marrom | vermelho | azul | roxo | rosa | verde | laranja | amarelo |
 |---|---|---|---|---|---|---|---|
@@ -148,51 +152,51 @@ na textura; quem não vê joga pela textura.
 
 Sete das oito caem numa faixa de 38 unidades, e **vermelho, azul e roxo ficam a 5 unidades um
 do outro** — em escala de cinza são o mesmo cinza. Pior: **vermelho e azul estão os dois no
-nível 1**, separados por 3 unidades. Sem textura, o nível mais fácil já é impossível para quem
-não distingue essas duas.
+nível 1**, separados por 3 unidades.
 
-Os oito arquivos foram gerados de uma vez para a matemática sair exata e as oito ficarem
-consistentes entre si — quatro listras com espaçamento diferente entre arquivos é o tipo de
-deriva que só aparece com o tabuleiro montado. **A partir daí o SVG é a fonte**, e editar à mão
-é o caminho normal.
+**Decisão de acessibilidade do humano, em 02/09/2026: cor chapada, sem textura e sem símbolo.**
+Considerou-se substituir a textura por um ÍCONE DE FORMA por cor (círculo dentro do azul,
+quadrado dentro do vermelho…) — o mesmo tratamento aplicado ao Jogo das Formas nesse dia — e foi
+recusado de propósito: no Jogo das Formas a mesma criança aprende que forma e cor são atributos
+**independentes** (um triângulo pode ser de qualquer cor); fixar "azul = círculo" aqui
+contradiria essa lição entre as duas aulas da mesma coleção. Entre manter a contradição
+curricular e abrir mão do canal redundante, a escolha foi abrir mão dele.
 
-| Cor | Token | Textura | O que está no arquivo |
-|---|---|---|---|
-| verde | `ludica.verde` | **liso** | nada. É a única lisa, e é isso que a identifica |
-| amarelo | `ludica.amarelo` | listras horizontais | 4 linhas, preto a 28%, espessura 8% do lado |
-| azul | `ludica.azul` | bolinhas | 3 × 3 círculos, branco a 62%, raio 7,5% |
-| vermelho | `ludica.vermelho` | xadrez | 4 × 4, preto a 24% nas casas alternadas |
-| laranja | `ludica.laranja` | listras diagonais | 6 linhas a 45°, preto a 26% |
-| roxo | `ludica.roxo` | ondas | 3 senoides, branco a 66% |
-| rosa | `ludica.rosa` | estrelinhas | 2 × 2 estrelas de 5 pontas, branco a 75% |
-| marrom | `ludica.marrom` | grade | 3 + 3 linhas, branco a 55% |
+**O preço é exatamente o que a medição acima diz, e agora ele se paga de verdade: sem
+textura, o nível mais fácil (vermelho e azul, separados por 3 unidades de luminância) não é
+jogável para quem não distingue essas duas cores.** Não é um efeito colateral descoberto depois
+— é a mesma medição que justificava a textura, agora lida ao contrário. Fica registrado aqui
+para quem revisitar o assunto não precisar remedir, e para não reabrir a discussão como se
+fosse descoberta nova.
 
-**Uma consequência a respeitar:** só uma cor pode ser lisa. Se um nono for adicionado, ele
-precisa de padrão próprio — e "liso" já está tomado pelo verde.
+**Histórico — as oito texturas que existiram** (para quem for ler versões antigas do jogo ou
+comparar screenshots antigos):
 
-**O teste obrigatório** é uma captura do tabuleiro em escala de cinza, e ela tem de continuar
-jogável. Está feita e passa: os oito padrões se distinguem, o caminho se lê e a legenda também.
-Vai para a seção 6 como item de olho, porque nenhum teste automático julga isso.
+| Cor | Token | Textura (até 02/09/2026) |
+|---|---|---|
+| verde | `ludica.verde` | liso (nada — era a única lisa, e era isso que a identificava) |
+| amarelo | `ludica.amarelo` | listras horizontais |
+| azul | `ludica.azul` | bolinhas |
+| vermelho | `ludica.vermelho` | xadrez |
+| laranja | `ludica.laranja` | listras diagonais |
+| roxo | `ludica.roxo` | ondas |
+| rosa | `ludica.rosa` | estrelinhas |
+| marrom | `ludica.marrom` | grade |
 
-### 3.3 Por que SVG, e o que trocar depois custa
+### 3.3 Histórico — por que era SVG, e por que deixou de ser
 
-**SVG e não PNG**, e não é gosto:
+Até 02/09/2026 a peça era um arquivo SVG (`assets/img/cor-<nome>.svg`, oito arquivos, 17 KB
+somados) em vez de desenhada em código, por três razões que continuam válidas em geral — só
+deixaram de se aplicar aqui porque não há mais textura para proteger:
 
-- **escala sem perder nitidez.** A peça é desenhada a 112 px numa tela grande e a 34 px na
-  amostra do painel, e é o mesmo arquivo nos dois. Os azulejos de 2013 do Jogo das Formas são
-  PNG de 50 px esticados, e a pendência 1 do README daquele jogo existe por causa disso.
-- **texto de arte legível.** Cada arquivo tem, em comentário, a textura que carrega, a
-  luminância daquela cor e por que aquele padrão foi escolhido. Um designer abre e entende a
-  restrição antes de mexer.
-- **2,1 KB cada.** Os oito somam 17 KB. O `JogoCores_visual.js` de 2013 tinha 344 KB.
+- **escala sem perder nitidez**, relevante para arte com detalhe fino (a textura);
+- **texto de arte legível** — comentário no arquivo explicando o padrão e a luminância;
+- **um designer editava sem tocar em JavaScript**.
 
-**A troca por outra arte continua barata**, porque a peça é um `Sprite`: o jogo pede
-`loader.imagem(cor)` e desenha. Substituir os oito arquivos, mantendo os nomes, não mexe em
-uma linha de código — nem no `PathSelector`, que só compara `peca.cor`.
-
-**O que a arte nova terá de trazer:** a textura assada dentro dela. Peças lisas
-reintroduziriam o problema da seção 3.2 sem nada avisar — e por isso o teste de escala de cinza
-é permanente, não uma conferência de uma vez.
+Uma peça chapada (cor sólida + canto arredondado) não tem nada disso para proteger — é mais
+simples e mais direto desenhar direto no canvas, o mesmo vocabulário que `Panel`/`Button`/
+`Shape` já usam no resto do motor, sem arquivo, sem `Loader`, sem oito arquivos para manter
+consistentes entre si.
 
 ---
 
@@ -236,11 +240,13 @@ negativa ali ensinaria a não explorar o tabuleiro.
 
 ### 4.3 O painel "AS CORES"
 
-Amostra da peça — **com a textura** — mais o nome em caixa alta, uma linha por cor do nível.
+Amostra da peça — chapada, mesmo desenho da peça no tabuleiro — mais o nome em caixa alta, uma
+linha por cor do nível.
 
-É o lugar onde textura, cor e nome se encontram, e é conteúdo, não legenda: a criança que ainda
-não lê associa a amostra ao padrão do tabuleiro, e a que já lê ganha a palavra escrita junto do
-nome que ouve ao fechar o caminho.
+É o lugar onde cor e nome se encontram, e é conteúdo, não legenda: a criança que ainda não lê
+associa a amostra à cor do tabuleiro, e a que já lê ganha a palavra escrita junto do nome que
+ouve ao fechar o caminho. Até 02/09/2026 a amostra também carregava a textura da peça — ver
+seção 3.2 para o porquê de não carregar mais.
 
 Altura disponível: de `y: 284` a `y: 680`, 396 px. Com 8 cores, 44 px por linha e a amostra em
 34 px. Nos níveis 1 e 2 o painel tem 4 e 6 linhas e sobra folga; a altura da linha é derivada do
@@ -269,11 +275,9 @@ grade: {
 },
 niveis: [ /* 4 → 6 → 8 cores, metas 30 / 36 / 45 — regras, seção 6 */ ],
 cores: {
-  // `imagem` é o id do asset; `cor` fica para a linha do caminho e para o
-  // reserva quando o SVG não carrega. A textura NÃO aparece aqui: ela está
-  // dentro do arquivo, que é o único lugar onde ela pode estar sem correr o
-  // risco de duas cópias divergirem.
-  vermelho: { imagem: 'corVermelho', cor: cores.ludica.vermelho, som: 'vermelho' },
+  // Sem `imagem`: a peça é chapada, desenhada em `Peca.desenhar()`. `cor` é o
+  // token usado ali, na linha do caminho e no painel lateral.
+  vermelho: { cor: cores.ludica.vermelho, som: 'vermelho' },
   …
 },
 ```
@@ -292,21 +296,23 @@ divergem sem ninguém notar.
 O que ele fazia de mais valioso — a **vista em escala de cinza** — não se perdeu: mudou para
 `tools/teste-jogabilidade-cores.mjs`, que a captura a cada rodada em
 `.capturas/cores/08-escala-de-cinza.png`, **sobre o jogo de verdade** e não sobre um protótipo.
-O teste não julga a imagem; ele garante que ela exista para uma pessoa julgar. Conferida no
-nível 1: verde liso, azul bolinhas, vermelho xadrez e amarelo listrado ficam inconfundíveis, e
-o painel lateral liga cada textura ao nome escrito.
+O teste não julga a imagem; ele garante que ela exista para uma pessoa julgar.
+
+**Desde 02/09/2026 esta captura NÃO prova mais acessibilidade** — só documenta o estado. Sem
+textura, a escala de cinza é a própria luminância medida na seção 3.2: vermelho e azul, no
+nível 1, são praticamente o mesmo cinza. A captura vai continuar sendo gerada porque é
+diagnóstico honesto do que existe, não porque o jogo passe no teste que ela antes ajudava a
+fazer.
 
 Os testes provam que a tela abre, que o caminho obedece às regras e que o gesto funciona.
 Não provam nada disto:
 
-- [x] **O tabuleiro em escala de cinza continua jogável** — CONFERIDO no nível 1 (captura 08).
-      Falta conferir os níveis 2 e 3: as oito texturas se distinguem, e as
-      quatro do nível 1 em particular
+- [x] **A captura em escala de cinza é gerada a cada rodada** — é diagnóstico, não aprovação
+      (ver acima: sem textura, ela mostra o problema, não a solução).
 - [ ] A linha do caminho se lê sobre as oito cores, inclusive amarelo (o mais claro)
 - [ ] A ponta numerada não cobre informação de que a criança precisa
 - [ ] Arrastar por células vizinhas num celular de verdade, com dedo de criança, sem escorregar
 - [ ] O toque sequencial não parece travado esperando a confirmação (ver pendência da espera)
-- [ ] A textura não polui a peça em tela grande, onde ela é desenhada a 112 px de verdade
 - [ ] A narração da cor começa antes de a peça desaparecer, não depois
 - [ ] O painel "AS CORES" com 8 linhas não fica apertado
 
@@ -317,7 +323,7 @@ Não provam nada disto:
 | O que a tela precisa | Existe? |
 |---|---|
 | Fundo em degradê | `Background` — **falta o tema `'cores'`**, um `case` |
-| Peça com textura | **os oito SVG, prontos** (`assets/img/cor-*.svg`), conferidos a 112, 64 e 34 px e em escala de cinza |
+| Peça | chapada, desenhada em `Peca.desenhar()` — **pronta**, sem arquivo (ver seção 3) |
 | Tabuleiro, vizinhança de 8, gravidade | `GridBoard` — **pronto**, escrito prevendo este jogo |
 | O caminho | `PathSelector` — **pronto, 18 testes** |
 | Arrasto contínuo | `Input` emite `arrastar` no nó pressionado — **pronto** |
@@ -329,11 +335,7 @@ Não provam nada disto:
 **Nenhuma mudança no motor é pré-requisito**, além do `case` do tema no `Background`. O que falta
 é a `GameScene`, a arte da peça e o `config.js`.
 
-O risco visual mora num lugar só: **a textura em tamanho pequeno** — e ele foi medido. A 112 px
-a peça é confortável; a **64 px**, que é o tamanho num celular 20:9, as oito continuam
-distinguíveis, inclusive em escala de cinza. A **34 px** da amostra do painel o xadrez do
-vermelho e a grade do marrom são o par que mais se aproxima, e ali há uma atenuação real: a
-amostra vem **com o nome escrito ao lado**, então não precisa carregar a identificação sozinha.
-
-Se um dia apertar mais que isso, a saída é textura com **menos repetições** — nunca textura
-mais fina.
+**Não há mais risco de tamanho a medir** — a peça é cor sólida, legível em qualquer tamanho por
+construção. O risco que existe hoje não é de tela pequena: é o registrado na seção 3.2, e vale
+em qualquer tamanho — vermelho e azul, sem textura, ficam indistinguíveis para quem não vê cor,
+a 112 px ou a 34 px.

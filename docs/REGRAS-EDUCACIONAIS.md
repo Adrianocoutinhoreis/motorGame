@@ -126,7 +126,7 @@ perderem e para serem decididas quando alguém puder decidir.
 | Ordem do conteúdo | Sequência sempre na ordem canônica (1,2,3…) ou pode ser sorteada depois de algumas partidas? |
 | Tempo | Atividade com cronômetro é adequada a 4–7 anos, ou pressiona quem tem ritmo mais lento? (afeta Formas e Cores) |
 | Feedback de erro | Além do som, deve haver alguma dica do que fazer diferente? |
-| Cor como conteúdo | No Jogo das Cores, cada peça precisará de forma ou símbolo próprio (daltonismo). Isso é regra geral ou específica daquele jogo? |
+| Cor como conteúdo | **Decidido para o Jogo das Cores em 02/09/2026, ao contrário do que esta linha perguntava:** a peça NÃO tem forma nem símbolo — é chapada, por decisão de acessibilidade do humano (menos poluição visual), com o custo em daltonismo medido e aceito. Ver `REGRAS-JOGO-DAS-CORES.md`, seção 3.2. A pergunta que continua aberta é a inversa: se um próximo jogo tiver cor como conteúdo, ele repete essa escolha ou usa o canal redundante? Nenhuma regra geral foi fixada |
 
 ---
 

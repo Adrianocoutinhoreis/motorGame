@@ -53,8 +53,11 @@ Elas vêm da faixa etária, não de gosto:
 `turquesa #14B8A6` · `azul #3B82F6` · `roxo #8B5CF6` · `rosa #EC4899` · `marrom #A16207`
 
 Escolhidas para serem distinguíveis entre si e legíveis sobre branco e sobre `tinta`.
-**No Jogo das Cores, onde a cor É o conteúdo, cada peça precisa também de forma ou
-símbolo próprio** — senão a atividade fica inacessível a quem tem daltonismo.
+**No Jogo das Cores, onde a cor É o conteúdo, a regra 3 pede um canal além da cor** — e, desde
+02/09/2026, esse jogo **não o tem**: a peça é chapada, por decisão de acessibilidade do humano
+que abriu mão do canal redundante (textura) para não criar "forma = cor" fixo, o que
+contradiria o Jogo das Formas. É a única exceção conhecida à regra 3, feita de olhos abertos
+para o custo — ver `REGRAS-JOGO-DAS-CORES.md`, seção 3.2, para a medição e o motivo completo.
 
 ### Cenário
 `madeira #B45309` · `madeiraEscura #7C2D12` · `folha #4ADE80` · `ceu #BAE6FD` ·

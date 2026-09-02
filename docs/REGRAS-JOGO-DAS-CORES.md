@@ -31,7 +31,7 @@ crescer, é preciso comparar cada peça vizinha com a cor que se está seguindo.
 | O que muda | Por quê |
 |---|---|
 | **Três níveis** (4 → 6 → 8 cores) em vez de dois | Os oito áudios de cor **já existem** na pasta original e o original usava todos, mas em dois conjuntos que se **substituíam**: o nível 2 trocava as quatro cores em vez de acrescentar. Acrescentar é progressão; trocar é outro jogo. Mesmo raciocínio que rendeu 3 níveis ao Jogo dos Blocos |
-| **Cada cor tem uma TEXTURA própria** | Num jogo cujo conteúdo É a cor, cor sozinha exclui cerca de 1 em 12 meninos (daltonismo vermelho-verde) — e a WCAG 1.4.1 é explícita: cor nunca pode ser o único canal. A textura é redundante: quem vê cor usa a cor e nem repara nela. Ver seção 3 |
+| Cor chapada, sem TEXTURA | **Revertido em 02/09/2026** — havia uma textura própria por cor (o canal redundante contra daltonismo). Removida por decisão de acessibilidade do humano ("menos poluição visual"), com a consequência medida e registrada. Ver seção 3.2 |
 | **Toque sequencial vale, além do arrasto** | O arrasto é o gesto principal e continua fiel. Mas no celular a célula tem cerca de 40 px físicos, e soltar o dedo sem querer no meio do caminho perde tudo. Aos 4 anos isso acontece muito. Ver seção 4 |
 | Toque funciona | O original só ouvia mouse: injogável em tablet |
 | Tempo por delta | O original usava `setInterval`, que corre com a aba em segundo plano, e comparava `tempoAtual == maxTempo` com igualdade exata — um tique perdido e a partida nunca terminava |
@@ -41,7 +41,7 @@ crescer, é preciso comparar cada peça vizinha com a cor que se está seguindo.
 | Tabuleiro retangular cheio | O original deixava os **quatro cantos vazios** (31 peças em vez de 35). O efeito é decorativo — arredondar o tabuleiro —, e a arte nova faz isso com uma moldura, sem o motor precisar do conceito de "célula bloqueada". Ver seção 3 |
 | Arte nova, obrigatoriamente | Único dos três originais **sem nenhum PNG de peça**: as peças eram vetor dentro de `JogoCores_visual.js` (344 KB) |
 | `window.close()` no botão voltar | Não faz nada dentro do iframe do AVA |
-| Áudio de fundo em laço | O original tocava `somFundo.mp3` continuamente. Fica **desligado por padrão**: música de fundo compete com a narração, que aqui é o conteúdo |
+| Áudio de fundo em laço | **Mantido**, como no original — e isto REVERTE uma decisão que estava escrita aqui. Ver a nota na seção 8 |
 
 ---
 
@@ -60,27 +60,18 @@ puramente visual. A moldura arredondada da arte entrega o mesmo desenho.
 Se algum dia um jogo precisar de tabuleiro não retangular de verdade, aí o motor ganha o
 conceito — e não antes.
 
-### 3.2 As cores e as texturas
-
-**Cada cor tem uma textura própria, e a textura é redundante com a cor.** Quem vê cor
-normalmente joga pela cor e não repara na textura; quem não vê joga pela textura. Ninguém
-perde informação, e ninguém é obrigado a usar o canal que não tem.
+### 3.2 As cores — chapadas desde 02/09/2026, e o que isso custou
 
 **As oito cores já existem em `cores.ludica`** — nenhuma precisa ser inventada, e nenhuma sai
 de `cores.erro`/`cores.atencao`, que são semânticas de interface e não peça de jogo.
 
-| Cor | Token | Textura | Nível |
-|---|---|---|---|
-| vermelho | `ludica.vermelho` | xadrez | 1 |
-| azul | `ludica.azul` | bolinhas | 1 |
-| verde | `ludica.verde` | liso | 1 |
-| amarelo | `ludica.amarelo` | listras horizontais | 1 |
-| laranja | `ludica.laranja` | listras diagonais | 2 |
-| roxo | `ludica.roxo` | ondas | 2 |
-| rosa | `ludica.rosa` | estrelinhas | 3 |
-| marrom | `ludica.marrom` | grade | 3 |
+**Até 02/09/2026 cada cor tinha uma textura própria, redundante com ela** (xadrez no vermelho,
+bolinhas no azul, ondas no roxo, e assim por diante): quem via cor jogava pela cor e não
+reparava na textura; quem não via jogava pela textura. Ninguém perdia informação, e ninguém era
+obrigado a usar o canal que não tinha.
 
-**A medição que fecha o assunto da acessibilidade.** Luminância das oito, em 0–255:
+**A medição que sustentava a textura, e continua verdadeira hoje — só que agora sem remédio.**
+Luminância das oito, em 0–255:
 
 | marrom | vermelho | azul | roxo | rosa | verde | laranja | amarelo |
 |---|---|---|---|---|---|---|---|
@@ -88,18 +79,21 @@ de `cores.erro`/`cores.atencao`, que são semânticas de interface e não peça 
 
 Sete das oito caem numa faixa de 38 unidades, e **vermelho, azul e roxo ficam a 5 unidades um do
 outro**. Em escala de cinza são o mesmo cinza — e **vermelho e azul estão os dois no nível 1**,
-separados por 3. Sem textura, o nível mais fácil já é impossível para quem não distingue essas
-duas. A textura não é acréscimo de acessibilidade: é o canal que faz o jogo existir para essa
-criança.
+separados por 3.
 
-**Por que textura e não forma.** Forma por cor (círculo = azul, quadrado = vermelho) também
-seria acessível, e foi recusada: no **Jogo das Formas** a mesma criança aprende que uma forma
-pode ser de qualquer cor — que forma e cor são atributos independentes. Amarrar as duas aqui
-faria as duas aulas se contradizerem.
+**Decisão de acessibilidade do humano, em 02/09/2026: cor chapada, sem textura e sem símbolo.**
+Um ícone de forma por cor (círculo = azul, quadrado = vermelho) foi considerado — é o mesmo
+tratamento que o Jogo das Formas recebeu nesse dia — e recusado de propósito: no **Jogo das
+Formas** a mesma criança aprende que forma e cor são atributos **independentes** (um triângulo
+pode ser de qualquer cor). Fixar "azul = círculo" aqui contradiria essa lição entre as duas
+aulas da mesma coleção. Entre manter essa contradição curricular e abrir mão do canal
+redundante contra daltonismo, a escolha foi abrir mão dele.
 
-**As texturas precisam ser distinguíveis entre si em escala de cinza.** É o teste: uma captura
-do tabuleiro dessaturada tem de continuar jogável. Vai para a seção 9 (o que só o olho
-verifica) como item obrigatório.
+**A consequência, sem meias palavras: sem textura, o nível mais fácil (vermelho e azul,
+separados por 3 unidades de luminância) não é jogável para quem não distingue essas duas
+cores.** Não é um efeito colateral inesperado — é a mesma medição acima, lida ao contrário.
+Fica escrito aqui para não precisar ser remedido nem redescoberto se o assunto voltar. Detalhe
+da decisão e da peça em `PLANO-VISUAL-JOGO-DAS-CORES.md`, seção 3.
 
 **A geometria do tabuleiro e o tamanho da célula estão no**
 [`PLANO-VISUAL-JOGO-DAS-CORES.md`](PLANO-VISUAL-JOGO-DAS-CORES.md), medidos: célula de **128 px**,
@@ -205,8 +199,9 @@ As metas 30 e 45 são as do original (`maxPontos = 15 + 15 × (nivel + 1)`). A d
 36, entre as duas, proporcional ao aumento de dificuldade.
 
 **As quatro cores do nível 1 são as de maior contraste entre si** — e o nível 3 é o único que
-junta rosa, marrom, roxo e laranja, que era o nível "difícil" inteiro do original. Ali a
-textura deixa de ser redundância e passa a ser o canal principal para muita gente.
+junta rosa, marrom, roxo e laranja, que era o nível "difícil" inteiro do original. Desde que a
+textura saiu (seção 3.2), esse nível é onde a falta de canal além da cor mais pesa: mais cores
+próximas em luminância, todas na mesma tela.
 
 ---
 
@@ -254,11 +249,37 @@ transforma discriminação visual em vocabulário.
 
 | Id | Arquivo | Quando toca |
 |---|---|---|
-| `verde` … `marrom` | as 8 locuções de 2013 | ao fechar um caminho daquela cor |
-| `instrucao` | `instrucao.mp3` | tutorial |
-| `facil` / `dificil` | `facil.mp3`, `dificil.mp3` | cartões de nível — **ver pendência** |
-| `acertoSOS` / `erroSOS` | os dois `.wav` | vitória / derrota |
-| `somFundo` | `somFundo.mp3` | **não usado por padrão** (compete com a narração) |
+| `vermelho` … `marrom` | as 8 locuções — **narração NOVA**, entregue em 02/09/2026, não os arquivos de 2013. Ligadas, nenhuma confirmada ouvindo (🟡 INFERIDA) | ao fechar um caminho daquela cor |
+| `instrucao` | `instrucao.mp3` — **ainda não trazido** | tutorial |
+| `facil` / `dificil` | `facil.mp3`, `dificil.mp3` — **ainda não trazidos** | cartões de nível — **ver pendência** |
+| `acertoSOS` / `erroSOS` | os dois `.wav` — **ainda não trazidos** | vitória / derrota |
+| `somFundo` | `somFundo.mp3` | **em laço, durante todo o jogo** — volume 0,25 contra 1,0 da fala. Ver a nota abaixo |
+
+### A música de fundo: decisão revertida em 02/09/2026
+
+Estava escrito aqui que a música ficaria **desligada**, porque música de fundo compete com a
+narração — e neste jogo a narração é o conteúdo. O raciocínio continua certo. O que ele não
+previu é o estado em que o jogo ficou: **nenhuma das 16 gravações tinha chegado**, então
+desligar a música deixava a atividade em **silêncio absoluto**, e silêncio total nesta faixa não
+se lê como "sóbrio", se lê como jogo quebrado.
+
+**Atualização de 02/09/2026:** os 8 nomes de cor chegaram e já tocam. O silêncio absoluto não
+existe mais — sobra a pergunta de equilíbrio de volume que a seção "a rever" já previa.
+
+Então a música voltou, como no original de 2013. Três coisas sustentam a troca, e é honesto
+listar o que cada uma vale:
+
+- o canal `music` toca a **0,25** e o `speech` a **1,0** — a fala tem quatro vezes o ganho da
+  música, por construção do `AudioBus`, não por sorte;
+- é **o mesmo arquivo** dos outros dois jogos (SHA-256 idêntico nos três originais), o que faz
+  as três aulas soarem como a mesma coleção;
+- a criança pode calar tudo pelo `SoundToggle`, e a preferência fica salva.
+
+**A rever agora que a voz das cores chegou**, e a pergunta é de ouvido, não de código: com a
+voz nomeando a cor em cima da música, os 0,25 bastam? Ninguém ouviu ainda para responder — as
+fichas dos 8 arquivos estão 🟡 INFERIDA. Se não bastarem, há duas saídas antes de desligar a
+música — abaixar `volumeMusica` no `Game`, ou abaixá-la só durante a fala. Trocar o campo
+`config.audio.musica` para `null` devolve o estado anterior e é uma linha.
 
 **Pendência declarada:** os áudios de nível dizem "fácil" e "difícil", e agora há **três**
 níveis com nomes diferentes (Conhecer, Ampliar, Desafio). Os dois arquivos não servem sem
@@ -375,12 +396,13 @@ nível tem cores demais para o tabuleiro.
   custariam 0,57. Decisão pedagógica.
 - **"Misturei as cores!" não existe na aula de 2013**, porque lá o travamento não era tratado —
   o jogo parava. É gravação nova, além das 16 originais.
-- **Arte desenhada ou imagem** (plano visual, seção 3.3): a peça nasce desenhada em código, com
-  a costura pronta para virar PNG. Se virar, a imagem tem de trazer **a textura assada dentro
-  dela** — PNG lisos reintroduziriam o problema da luminância sem nada avisar.
-- **Textura em peça pequena** (plano visual, seção 7): a 112 px lógicos é confortável, mas num
-  iframe apertado a peça pode cair para 60 px de tela e a bolinha de 7,5% vira ruído. Se
-  apertar, a saída é textura com menos repetições — nunca textura mais fina.
+- **~~Arte desenhada ou imagem~~ / ~~Textura em peça pequena~~ — decididas em 02/09/2026,
+  não mais em aberto.** A peça é chapada, desenhada em código, sem textura e sem símbolo (ver
+  seção 3.2). A pergunta que continua genuinamente aberta é a inversa: **se algum dia for
+  reintroduzido um canal redundante contra daltonismo**, ele não pode ser um ícone de forma
+  (contradiria o Jogo das Formas — seção 3.2 explica por quê) nem a textura antiga sem mais
+  nada (voltaria o "ruído em peça pequena" que a seção 7 do plano visual media). Nenhuma
+  alternativa foi avaliada.
 
 **Resolvido, e por isso saiu desta lista:** o alvo tocável em celular. Estava aqui como risco
 herdado do Jogo das Formas; a medição do plano visual mostrou que **este jogo passa o piso do

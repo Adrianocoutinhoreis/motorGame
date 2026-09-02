@@ -20,6 +20,9 @@ import { CraneController } from '../engine/gameplay/CraneController.js';
 import { PathSelector } from '../engine/gameplay/PathSelector.js';
 import { estrelasDoResultado } from '../engine/screens/ResultScreen.js';
 import { Watchdog } from '../engine/core/Watchdog.js';
+import { Node } from '../engine/core/Node.js';
+import { PauseScreen } from '../engine/screens/PauseScreen.js';
+import { HelpScreen } from '../engine/screens/HelpScreen.js';
 import { Stage } from '../engine/core/Stage.js';
 import { Background } from '../engine/ui/Background.js';
 import { Loader } from '../engine/core/Loader.js';
@@ -847,6 +850,60 @@ grupo('Watchdog', () => {
     try { new Watchdog({ aoTravar: () => {} }); } catch { erros++; }
     try { new Watchdog({ ocupado: () => true }); } catch { erros++; }
     igual(erros, 2, 'construções recusadas:');
+  });
+});
+
+// ------------------------------------------------ Tween.pausarTodos / retomarTodos
+//
+// Existe porque a versão anterior deste par foi escrita só na CÓPIA construída
+// de um jogo (`Games/jogo-das-cores/engine/core/Tween.js`), nunca na fonte
+// (`engine/core/Tween.js`). O primeiro `node tools/build.mjs jogo-das-cores`
+// seguinte sobrescreveu a cópia com a fonte — que não tinha os métodos — e
+// devolveu exatamente o travamento que eles corrigiam, sem nenhum teste
+// reprovando. É o preço de editar a cópia (`docs/COMPONENTES.md` já proíbe
+// isso); estes testes travam a fonte, que é o único lugar que sobrevive a um
+// build.
+grupo('Tween.pausarTodos / retomarTodos', () => {
+  teste('pausarTodos para o avanço de todo tween ativo', () => {
+    Tween.removerTodos();
+    const a = { x: 0 }; const b = { y: 0 };
+    Tween.de(a).entao({ x: 100 }, 200, Easing.linear);
+    Tween.de(b).entao({ y: 100 }, 200, Easing.linear);
+    Tween.atualizarTodos(0.1);
+    const xNaMetade = a.x; const yNaMetade = b.y;
+
+    Tween.pausarTodos();
+    Tween.atualizarTodos(0.1);
+    igual(a.x, xNaMetade, 'x não andou com tudo pausado:');
+    igual(b.y, yNaMetade, 'y não andou com tudo pausado:');
+  });
+
+  teste('retomarTodos devolve o avanço de onde parou', () => {
+    Tween.removerTodos();
+    const alvo = { x: 0 };
+    Tween.de(alvo).entao({ x: 100 }, 200, Easing.linear);
+    Tween.atualizarTodos(0.1);
+    Tween.pausarTodos();
+    Tween.atualizarTodos(0.1);   // não deveria mexer
+    Tween.retomarTodos();
+    Tween.atualizarTodos(0.1);
+    perto(alvo.x, 100, 0.001, 'terminou depois de retomar (0,1 pausado + 0,2 rodando = 0,2s úteis):');
+  });
+
+  teste('um tween criado DEPOIS do pausarTodos não nasce travado', () => {
+    // pausarTodos pausa os tweens que existem NO INSTANTE da chamada — não é
+    // um interruptor global que prende tudo que vier depois. A mistura do Jogo
+    // das Cores dispara tweens novos por cima de uma cena já pausada (ver
+    // GameScene._misturar chamado de dentro de uma cadeia que já rodava com a
+    // pausa aberta seria o cenário errado) — mas o CASO comum é o oposto: abrir
+    // a ajuda no meio de uma animação não deve impedir a PRÓPRIA transição da
+    // camada de ajuda de tocar.
+    Tween.removerTodos();
+    Tween.pausarTodos();
+    const alvo = { x: 0 };
+    Tween.de(alvo).entao({ x: 100 }, 200, Easing.linear);
+    Tween.atualizarTodos(0.1);
+    perto(alvo.x, 50, 0.001, 'tween novo anda normalmente:');
   });
 });
 
@@ -1824,6 +1881,119 @@ await (async () => {
     igual(audio.sonsTocando.sfx, 1, 'e contabilizada:');
   });
 })();
+
+// ---------------------------------------------------------------------------
+// Camadas sobre a partida — a que abre fica POR CIMA
+// ---------------------------------------------------------------------------
+//
+// Este grupo existe por causa de um defeito real, encontrado jogando o Jogo das
+// Cores em 02/09/2026: **a pausa abria e nada respondia**. CONTINUAR, SAIR e o
+// botão de ajuda ficavam mortos, e a criança só saía dali recarregando a página.
+//
+// A causa não estava na pausa: a cena montava a área de gesto DEPOIS da camada
+// de pausa, e quem recebe o toque é o nó mais ao topo (`noSobPonto` procura de
+// cima para baixo). A área de gesto cobre o tabuleiro, o tabuleiro cobre o
+// painel da pausa, e o painel ficou enterrado. Os handlers da área de gesto
+// então devolviam sem fazer nada, porque a partida estava `pausada` — o silêncio
+// perfeito.
+//
+// A correção é do MOTOR e não do jogo: a camada sobe sozinha ao abrir, e a ordem
+// em que cada jogo monta a cena deixa de importar. É isso que estes testes
+// travam.
+grupo('Camadas sobre a partida — a que abre fica por cima', () => {
+  /** AudioBus de mentira: as camadas chamam `calar`, `on` e `efeito`. */
+  const audioFalso = () => ({
+    mudo: false,
+    on: () => () => {},
+    alternarMudo: () => false,
+    efeito: () => {},
+    falar: () => {},
+    calar: () => {},
+  });
+
+  /** Cena de mentira, o mínimo que o `HelpScreen` injeta no `TutorialScreen`. */
+  const cenaFalsa = () => ({
+    largura: 1280,
+    altura: 720,
+    game: null,
+    stage: null,
+    input: { on: () => () => {} },
+    audio: audioFalso(),
+    loader: { imagem: () => null, audio: () => null },
+    storage: { obter: () => null, definir: () => {} },
+    config: {
+      audio: {},
+      tutorial: [
+        { titulo: 'Um', texto: 'primeiro passo' },
+        { titulo: 'Dois', texto: 'segundo passo' },
+      ],
+    },
+  });
+
+  /**
+   * Monta o cenário do defeito: a camada e, DEPOIS dela, um nó interativo que
+   * cobre o meio da tela — a área de gesto do Jogo das Cores, em miniatura.
+   */
+  const comAreaDeGestoPorCima = (camada) => {
+    const cena = new Node({ largura: 1280, altura: 720, filhosInterativos: true });
+    cena.adicionar(camada);
+    const areaJogo = new Node({ x: 364, y: 40, largura: 896, altura: 640, interativo: true });
+    cena.adicionar(areaJogo);
+    return { cena, areaJogo };
+  };
+
+  const ultimo = (pai) => pai.filhos[pai.filhos.length - 1];
+
+  teste('a pausa fechada NÃO se mexe — quem move a camada é o abrir', () => {
+    const pausa = new PauseScreen({ audio: audioFalso() });
+    const { cena, areaJogo } = comAreaDeGestoPorCima(pausa);
+    igual(ultimo(cena) === areaJogo, true, 'a área de gesto começa na frente:');
+    igual(cena.filhos.indexOf(pausa), 0, 'e a pausa, atrás:');
+  });
+
+  teste('PauseScreen.abrir traz a camada para a frente dos irmãos', () => {
+    const pausa = new PauseScreen({ audio: audioFalso() });
+    const { cena } = comAreaDeGestoPorCima(pausa);
+    pausa.abrir();
+    igual(ultimo(cena) === pausa, true, 'a pausa aberta tem de ser o último filho:');
+  });
+
+  teste('HelpScreen.abrir traz a camada para a frente dos irmãos', () => {
+    const ajuda = new HelpScreen({ cena: cenaFalsa() });
+    const { cena } = comAreaDeGestoPorCima(ajuda);
+    ajuda.abrir();
+    igual(ultimo(cena) === ajuda, true, 'a ajuda aberta tem de ser o último filho:');
+  });
+
+  teste('com a pausa aberta, o pixel do CONTINUAR encontra o BOTÃO', () => {
+    // O teste que fala a língua do defeito: não "a ordem da lista", mas "o que
+    // está sob o dedo". Sem a correção, o achado aqui é o nó da área de gesto.
+    const pausa = new PauseScreen({ audio: audioFalso() });
+    const { cena } = comAreaDeGestoPorCima(pausa);
+    pausa.abrir();
+    // A animação de entrada põe o painel em alpha 0, e nó transparente não
+    // recebe toque. Adiantar o tempo é o que a criança vê acontecer sozinho.
+    Tween.atualizarTodos(0.3);
+
+    const botao = pausa.painel.filhos.find((f) => f.rotulo === 'CONTINUAR');
+    const m = botao.matrizMundo;
+    const achado = cena.noSobPonto(m.tx + botao.largura / 2, m.ty + botao.altura / 2);
+    igual(achado === botao, true,
+      `sob o pixel do CONTINUAR: ${achado?.constructor.name}${achado?.rotulo ? ':' + achado.rotulo : ''}`);
+  });
+
+  teste('e a camada fechada volta a não interceptar nada', () => {
+    // A contraprova: a camada não pode ficar comendo o toque da partida depois
+    // de fechar só porque subiu na frente.
+    const pausa = new PauseScreen({ audio: audioFalso() });
+    const { cena, areaJogo } = comAreaDeGestoPorCima(pausa);
+    pausa.abrir();
+    Tween.atualizarTodos(0.3);
+    pausa.fechar(true);
+    const achado = cena.noSobPonto(700, 400);
+    igual(achado === areaJogo, true, `sob o dedo depois de fechar: ${achado?.constructor.name}`);
+  });
+});
 
 // ------------------------------------------------------------------ resumo
 console.log(`\n${'-'.repeat(56)}`);

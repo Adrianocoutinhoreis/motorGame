@@ -18,11 +18,12 @@ Refação da aula **870296** de 2013. Especificação completa em
 [`docs/REGRAS-JOGO-DAS-CORES.md`](../../docs/REGRAS-JOGO-DAS-CORES.md) e
 [`docs/PLANO-VISUAL-JOGO-DAS-CORES.md`](../../docs/PLANO-VISUAL-JOGO-DAS-CORES.md).
 
-> **Estado: joga, sem voz.** A partida está completa — os dois gestos, o caminho,
-> a pontuação, o fim de partida e o registro no AVA. O que falta é a **narração**
-> (as 16 gravações de 2013 não foram trazidas) e a **identidade visual própria**:
-> por decisão do humano, o visual é emprestado do Jogo das Formas por enquanto,
-> e a troca é um campo só (`config.tema`). Ver as pendências no fim.
+> **Estado: joga, com os nomes das cores narrados.** A partida está completa — os dois
+> gestos, o caminho, a pontuação, o fim de partida e o registro no AVA — e agora nomeia a cor
+> em voz alta ao fechar um caminho. O que falta é o RESTO da narração (instrução, níveis,
+> vitória/derrota) e a **identidade visual própria**: por decisão do humano, o visual é
+> emprestado do Jogo das Formas por enquanto, e a troca é um campo só (`config.tema`). Ver as
+> pendências no fim.
 
 ## Como rodar localmente
 
@@ -68,7 +69,7 @@ jogo-das-cores/
 │   ├── config.js   identidade, níveis, tutorial, assets, contrato
 │   ├── main.js     ponto de entrada
 │   └── scenes/     as cenas próprias deste jogo
-├── assets/         imagens e áudio (tudo local)
+├── assets/         áudio (tudo local) — a peça não tem imagem, é desenhada
 ├── CHECKLIST.md    passos para concluir o jogo
 └── README.md       este arquivo
 ```
@@ -77,39 +78,34 @@ jogo-das-cores/
 
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
-| `img/cor-vermelho.svg` | SVG, 2,4 KB | **novo**, feito para este jogo. Educandus |
-| `img/cor-laranja.svg` | SVG, 2,1 KB | **novo**. Educandus |
-| `img/cor-amarelo.svg` | SVG, 2,1 KB | **novo**. Educandus |
-| `img/cor-verde.svg` | SVG, 1,9 KB | **novo**. Educandus |
-| `img/cor-azul.svg` | SVG, 2,3 KB | **novo**. Educandus |
-| `img/cor-roxo.svg` | SVG, 2,2 KB | **novo**. Educandus |
-| `img/cor-rosa.svg` | SVG, 2,2 KB | **novo**. Educandus |
-| `img/cor-marrom.svg` | SVG, 2,1 KB | **novo**. Educandus |
+| `audio/vermelho.mp3` … `audio/marrom.mp3` | MP3, ~30 KB cada | **narração nova**, entregue em 02/09/2026 — não são os arquivos da aula 870296 de 2013 (formato e tamanho diferentes). Nenhuma transcrição foi confirmada ouvindo — ver `assets/audio-transcricao/<cor>/transcricao.md` |
+| `audio/somFundo.mp3` | MP3, 228 KB | Aula original 870296 — Educandus. É o mesmo arquivo dos outros dois jogos |
 
-**A arte é obrigatoriamente nova**, e este jogo é o único dos três em que isso vale: as peças
-coloridas de 2013 não eram arquivo, eram vetor exportado dentro de `JogoCores_visual.js`, com
-344 KB. Os oito SVG somam **17 KB**.
+**A peça não tem arquivo.** É desenhada em `Peca.desenhar()` (`src/scenes/GameScene.js`):
+retângulo de canto arredondado, cor sólida, uma sombra suave. Antes de 02/09/2026 havia oito
+SVG (17 KB somados) com uma textura própria em cada — ver por que saíram, abaixo.
 
-### Cada peça tem uma TEXTURA, e ela não é enfeite
+### Por que a peça deixou de ter textura — e o que isso custa
 
-Xadrez no vermelho, bolinhas no azul, ondas no roxo, e assim por diante — a textura é
-**redundante** com a cor: quem vê cor joga pela cor e não repara nela; quem não vê joga pela
-textura.
+Até 02/09/2026 cada cor tinha uma **TEXTURA** redundante assada no SVG: xadrez no vermelho,
+bolinhas no azul, ondas no roxo, e assim por diante. Quem vê cor jogava pela cor e nem reparava
+nela; quem não vê jogava pela textura — e num jogo cujo conteúdo É a cor, isso importa: cor
+sozinha exclui cerca de 1 em 12 meninos (daltonismo vermelho-verde), e a paleta não ajuda —
+medida em luminância (0–255), sete das oito cores caem numa faixa de 38 unidades, e
+**vermelho, azul e roxo ficam a 5 unidades um do outro**, praticamente o mesmo cinza.
 
-Num jogo cujo conteúdo É a cor, cor sozinha exclui cerca de 1 em 12 meninos. E a paleta não
-ajuda: medida em luminância (0–255), sete das oito cores caem numa faixa de 38 unidades, e
-**vermelho, azul e roxo ficam a 5 unidades um do outro** — em escala de cinza são o mesmo cinza.
-Vermelho e azul estão os **dois no nível 1**, separados por 3. Sem textura, o nível mais fácil
-já é impossível para essa criança.
+**Decisão de acessibilidade do humano, na mesma data: cor chapada, sem textura e sem símbolo.**
+Considerou-se substituir a textura por um ÍCONE DE FORMA (círculo dentro do azul, quadrado
+dentro do vermelho…) e foi recusado de propósito — no Jogo das Formas a mesma criança aprende
+que forma e cor são atributos **independentes**; fixar uma forma por cor aqui contradiria essa
+lição entre as duas aulas da mesma coleção. Entre manter essa contradição e abrir mão do canal
+redundante, a escolha foi abrir mão dele.
 
-**Se estes arquivos forem redesenhados, a textura tem de sobreviver**, e o teste é uma captura
-do tabuleiro em escala de cinza: ela tem de continuar jogável. O comentário dentro de cada SVG
-diz qual textura ele carrega e por quê.
-
-### O que NÃO está dentro dos SVG, de propósito
-
-- a **sombra**, desenhada pelo canvas por fora da peça (não caberia no `viewBox`);
-- o **aro de seleção** do caminho, que é estado e não arte.
+**A consequência é real e fica registrada, não escondida:** sem textura, o jogo volta a
+depender só da cor. Vermelho e azul — os dois do nível 1, separados por 3 unidades — ficam
+praticamente indistinguíveis em escala de cinza. Para uma criança que não distingue essas
+cores, o nível mais fácil deste jogo hoje **não é jogável**. Não é um efeito colateral: é o
+preço medido desta decisão, e fica aqui para quem revisitar o assunto não precisar remedir.
 
 ## Pendências conhecidas
 
@@ -117,13 +113,16 @@ diz qual textura ele carrega e por quê.
 > provisória, mecânica a confirmar. É melhor uma entrega com pendência declarada
 > do que uma que aparenta estar pronta.
 
-1. **Nenhum som.** As 16 gravações da aula original — os oito nomes de cor, a instrução, os
-   dois de nível e o feedback — continuam em `Aulas para Refazer/Jogo das Cores/`, e nenhuma
-   ficha de transcrição foi criada. **É a pendência mais séria**: nomear a cor no instante em
-   que ela é conquistada é o que transforma discriminação visual em vocabulário, ou seja, é o
-   conteúdo pedagógico da aula. Até então o motor fica em silêncio e diz no console o que a voz
-   deveria falar.
-   É preciso gravar uma frase que a aula de 2013 não tem: **"Misturei as cores!"** (ver 6).
+1. **Os oito nomes de cor chegaram e estão ligados** (02/09/2026), narração nova — não os
+   arquivos de 2013. Nomear a cor no instante em que o caminho fecha é o conteúdo pedagógico da
+   aula, e agora acontece. **Mas nenhuma das oito transcrições foi confirmada ouvindo** — as
+   fichas em `assets/audio-transcricao/` estão com status 🟡 INFERIDA, apoiadas no nome do
+   arquivo e na duração; a de `marrom` merece atenção redobrada porque o arquivo chegou com o
+   nome trocado (`marron.mp3`, grafia em espanhol) e foi renomeado antes de entrar no config.
+   **Ainda falta o resto:** a instrução do tutorial, os dois áudios de nível (que nem servem —
+   dizem "fácil"/"difícil" e este jogo tem três níveis com outros nomes), o feedback de
+   vitória/derrota, e uma frase que a aula de 2013 não tem: **"Misturei as cores!"** (ver 6). Até
+   chegarem, o motor fica em silêncio nesses pontos e diz no console o que a voz deveria falar.
 2. **O visual é emprestado do Jogo das Formas**, por decisão do humano, até este jogo ganhar
    identidade própria. A troca é um campo só: `config.tema`.
 3. **Os áudios de nível dizem "fácil" e "difícil"**, e este jogo tem três níveis com nomes
@@ -132,9 +131,9 @@ diz qual textura ele carrega e por quê.
 4. **A espera do toque sequencial** não tem valor definido: quanto tempo depois do último toque
    o caminho se fecha. Só se mede jogando com criança — cedo demais corta caminhos longos,
    tarde demais o jogo parece travado.
-5. **A textura a 34 px** (amostra do painel lateral) é o limite conferido: ali o xadrez do
-   vermelho e a grade do marrom são o par que mais se aproxima. A amostra vem com o nome
-   escrito ao lado, o que atenua. Abaixo disso não foi conferido.
+5. **Sem canal além da cor para quem não a distingue.** Ver "Por que a peça deixou de ter
+   textura", acima — decisão tomada, consequência medida, não é lacuna a fechar sem decidir de
+   novo o trade-off (contradiria o Jogo das Formas se virar ícone de forma).
 6. **Quantas cores no nível 3.** Com 8 cores o tabuleiro trava e precisa ser misturado 1,23
    vezes por partida; com 7 seriam 0,57. O jogo trata o travamento (mistura anunciada, com o
    cronômetro parado — ver REGRAS, seção 10-A), então isto não é defeito: é a pergunta
