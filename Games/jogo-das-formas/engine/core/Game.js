@@ -116,6 +116,9 @@ export class Game extends Emitter {
         this.stage.raiz.remover(this.cena);
         this.cena._desmontar();
         this.cena = null;
+        // A cena que sai leva o cenário dela; deixar o ponteiro vivo faria o
+        // `Stage` pintar as barras com um nó já desmontado.
+        this.stage.sangria = null;
       }
       // Tweens da cena anterior não podem sobreviver à troca.
       Tween.removerTodos();
@@ -127,6 +130,14 @@ export class Game extends Emitter {
       await cena.preload();
       cena.aoEntrar();
       this.stage.raiz.adicionar(cena);
+
+      // Quem cobre as barras do letterbox é o cenário desta cena.
+      //
+      // Achado por CAPACIDADE (`pintarSangria`) e não por tipo: assim o motor
+      // não importa `ui/Background` dentro do `core`, e um jogo pode oferecer o
+      // próprio cenário sem herdar dele. Só entre os filhos diretos, porque
+      // cenário que não é o primeiro plano da cena não é cenário.
+      this.stage.sangria = cena.filhos.find((f) => typeof f.pintarSangria === 'function') ?? null;
 
       this._definirEstado(cena.estado ?? nome);
       this.emit('cena', nome, cena);

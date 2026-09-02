@@ -682,6 +682,74 @@ async function principal() {
         medidas.escala > 0 && medidas.lc > 0 && medidas.ac > 0, JSON.stringify(medidas));
     }
 
+    // ------------------------------- 4b. as barras do letterbox, cobertas
+    //
+    // O jogo tem proporção fixa (1280×720), então num quadro de outra proporção
+    // sobram duas faixas. Elas apareciam como tarjas escuras em volta da tela —
+    // foi reclamação do humano olhando o jogo publicado.
+    //
+    // Agora o cenário da cena continua para dentro delas (`Stage.sangria`). Duas
+    // coisas são verificadas aqui, e a segunda é a que pega o defeito difícil:
+    //
+    //  1. a barra não é mais a cor lisa do letterbox;
+    //  2. **não há linha de emenda.** A borda do recorte sofre antialiasing e
+    //     misturava com a cor lisa por baixo, desenhando uma linha escura de 1 px
+    //     exatamente na junção — medida em 80% do brilho do céu. Olhar a captura
+    //     não bastava para julgar; medir o pixel, sim.
+    console.log('\n4b. As barras do letterbox, cobertas pelo cenário');
+    for (const [nome, l, a] of [['larga', 1280, 560], ['alta', 800, 720]]) {
+      await avaliar(`
+        (() => {
+          const m = document.getElementById('moldura');
+          m.style.width = '${l}px'; m.style.height = '${a}px';
+          return true;
+        })()
+      `);
+      await esperar(700);
+      const m = await avaliar(`
+        (() => {
+          const st = ${g}.stage;
+          const ctx = st.canvas.getContext('2d');
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const lum = (x, y) => {
+            const d = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
+            return 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2];
+          };
+          const hex = (x, y) => {
+            const d = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
+            return '#' + [d[0], d[1], d[2]].map((n) => n.toString(16).padStart(2, '0')).join('');
+          };
+          const horizontal = st.deslocX > 1;
+          const cw = st.canvas.clientWidth;
+          const ch = st.canvas.clientHeight;
+          // Amostra dentro da barra, andando até a borda. O último é o vizinho
+          // imediato da junção — onde a linha de emenda aparecia.
+          const luzes = [];
+          for (let d = 6; d >= 1; d--) {
+            luzes.push(horizontal ? lum(st.deslocX - d, ch / 2) : lum(cw / 2, st.deslocY - d));
+          }
+          return {
+            eixo: horizontal ? 'x' : 'y',
+            sangria: Math.round(horizontal ? st.sangriaX : st.sangriaY),
+            temPintor: !!st.sangria,
+            corBarra: horizontal ? hex(st.deslocX / 2, ch / 2) : hex(cw / 2, st.deslocY / 2),
+            luzes: luzes.map((v) => Math.round(v)),
+          };
+        })()
+      `);
+      const maior = Math.max(...m.luzes);
+      const menor = Math.min(...m.luzes);
+      checar(`letterbox ${nome} (${l}×${a}): há barra e há quem a pinte`,
+        m.sangria > 1 && m.temPintor === true, JSON.stringify(m));
+      checar(`letterbox ${nome}: a barra recebeu o cenário, não a cor lisa`,
+        m.corBarra !== '#0b1220', JSON.stringify(m));
+      // 10 em 255 é ~4%: passa uma variação de degradê e reprova a emenda, que
+      // custava 20% do brilho.
+      checar(`letterbox ${nome}: sem linha de emenda na junção`,
+        maior - menor <= 10, `luminâncias na barra: ${m.luzes.join(' ')}`);
+      await capturar(`08b-letterbox-${nome}`);
+    }
+
     // ------------------------------------------- 5. celular de pé: gira o jogo
     //
     // A seção que faltava. As de cima provam que o canvas não deforma em iframe

@@ -158,8 +158,38 @@ sozinho sem saber o tamanho do iframe do AVA.
 
 ```js
 stage.telaParaLogico(clientX, clientY);
-stage.escala;  // lógico → CSS
+stage.escala;      // lógico → CSS
+stage.areaTotal(); // o canvas INTEIRO em px lógicos, barras incluídas
 ```
+
+#### As barras do letterbox recebem o cenário
+
+Num quadro que não seja 16:9 sobram duas faixas, e elas apareciam como tarjas escuras em
+volta da tela. O `Stage` pinta essas faixas com o cenário da cena, num passe próprio antes de
+desenhar a cena recortada:
+
+```js
+stage.sangria;   // quem tem `pintarSangria(ctx, area)` — o Background da cena
+stage.sangriaX;  // a sobra de cada lado, em px LÓGICOS
+```
+
+Quem liga é o `Game`, a cada troca de tela, procurando entre os filhos diretos da cena **quem
+tem o método** — não quem é da classe `Background`. Assim o `core` não importa `ui`, e um jogo
+pode oferecer o próprio cenário sem herdar dele. Sem ninguém, as barras ficam na cor lisa de
+`config.corLetterbox`.
+
+**O que NÃO muda:** a área do jogo. A geometria lógica continua 1280×720, os alvos tocáveis
+continuam do mesmo tamanho e nada é cortado — só a moldura deixou de ser uma tarja. Quem
+procura ganhar espaço de jogo não vai achar aqui.
+
+Duas armadilhas que isto já pagou:
+
+- **o recorte é um ANEL** (`clip('evenodd')` com dois retângulos), e o buraco entra 1 px na
+  área do jogo. Sem esse 1 px a borda antialiasada mistura com a cor lisa por baixo e desenha
+  uma **linha escura de 1 px na junção** — medida em 20% do brilho do céu, e o teste em
+  navegador reprova por ela;
+- **só as camadas contínuas** vão para a barra (céu, colinas, piso). Sol, nuvens e peças são
+  sprites: repetidos ali, seriam dois sóis.
 
 ---
 
@@ -340,6 +370,17 @@ O tema `'formas'` aceita **`mostrarPecas`**. Com `true` (padrão) as quatro peç
 jogo flutuam no céu nas cores delas; a cena de partida passa **`false`**, porque
 atrás da grade elas competiriam com as peças que a criança precisa distinguir —
 o cenário não pode ensaiar o exercício.
+
+O desenho está partido em **camadas contínuas** (`_ceu`, `_chao` — degradês e faixas
+horizontais) e **sprites** (sol, nuvens, peças, prédios). A divisão não é organização: só as
+contínuas podem ser esticadas para dentro das barras do letterbox, e é o que `pintarSangria`
+faz (ver `Stage`). As duas recebem a sangria em px lógicos, e os degradês continuam definidos
+sobre a caixa LÓGICA — o canvas prolonga a última parada de cor, e é isso que faz a barra
+receber a continuação exata da borda em vez de um segundo degradê recalculado.
+
+Ao mexer aqui, o que precisa sobreviver: **a ordem**. As nuvens do tema `'campo'` passam
+ATRÁS das colinas, então `_chao` vai depois dos sprites; no `'construcao'` o piso cobre a base
+dos prédios pelo mesmo motivo.
 
 **Sucede:** `fundo.jpg`, `BG.jpg`, `fd.jpg` (um JPEG de fundo por jogo).
 

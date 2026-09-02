@@ -43,6 +43,24 @@ export class Stage {
     this.escala = 1;
     this.deslocX = 0;
     this.deslocY = 0;
+    /** A mesma sobra do letterbox, em px LÓGICOS de cada lado. */
+    this.sangriaX = 0;
+    this.sangriaY = 0;
+
+    /**
+     * Quem pinta as barras do letterbox, quando alguém pinta.
+     *
+     * Objeto com `pintarSangria(ctx, area)` — na prática o `Background` da cena,
+     * ligado aqui pelo `Game` a cada troca de tela. `null` deixa as barras na
+     * cor lisa de `corFundo`.
+     *
+     * O motivo de existir: com o jogo em proporção fixa, num monitor largo
+     * sobram duas faixas de cor morta nas laterais, e elas apareciam como duas
+     * tarjas escuras em volta da tela. Prolongar o cenário para dentro delas
+     * as faz desaparecer **sem cortar nada do jogo** e sem tocar na geometria
+     * lógica de 1280×720, que é medida e não pode mudar.
+     */
+    this.sangria = null;
 
     /**
      * Quarto de volta aplicado ao contêiner pelo CSS: 0, 90 ou -90 graus.
@@ -77,6 +95,11 @@ export class Stage {
     const alturaDesenho = this.alturaLogica * this.escala;
     this.deslocX = (larguraDisp - larguraDesenho) / 2;
     this.deslocY = (alturaDisp - alturaDesenho) / 2;
+
+    // A mesma sobra, medida em px LÓGICOS — é nessa unidade que o cenário
+    // desenha, e é o que `pintarSangria` recebe para cobrir as barras.
+    this.sangriaX = this.deslocX / this.escala;
+    this.sangriaY = this.deslocY / this.escala;
 
     // Limitar o DPR a 2 evita buffers gigantes (e queda de FPS) em celulares 3x
     // sem diferença visível para arte plana.
@@ -168,6 +191,21 @@ export class Stage {
     return x >= 0 && y >= 0 && x <= this.larguraLogica && y <= this.alturaLogica;
   }
 
+  /**
+   * O canvas INTEIRO em coordenadas lógicas — a área do jogo mais as barras.
+   *
+   * `x` e `y` são negativos ou zero, e é isso que o torna útil: quem desenha o
+   * cenário recebe a caixa maior sem precisar saber de escala nem de DPR.
+   */
+  areaTotal() {
+    return {
+      x: -this.sangriaX,
+      y: -this.sangriaY,
+      largura: this.larguraLogica + this.sangriaX * 2,
+      altura: this.alturaLogica + this.sangriaY * 2,
+    };
+  }
+
   atualizar(dt) {
     this.raiz.atualizar(dt);
   }
@@ -185,6 +223,41 @@ export class Stage {
       this.escala * dpr, 0, 0, this.escala * dpr,
       this.deslocX * dpr, this.deslocY * dpr,
     );
+
+    // As barras, cobertas pelo cenário — quando há barra e há quem a pinte.
+    //
+    // Passe próprio, recortado no ANEL de fora (regra even-odd: dois retângulos,
+    // e o interno abre um buraco). O recorte é o que permite reaproveitar o
+    // cenário sem desenhá-lo duas vezes por cima de si mesmo: aqui só o que cai
+    // fora da área lógica chega à tela.
+    if (this.sangria && (this.sangriaX > 0.5 || this.sangriaY > 0.5)) {
+      const area = this.areaTotal();
+      // O buraco entra 1 px lógico na área do jogo, e esse 1 não é chute.
+      //
+      // A borda do recorte sofre antialiasing: o último pixel do anel fica
+      // parcialmente coberto e mistura com a cor lisa por baixo, o que desenhava
+      // **uma linha escura de 1 px na emenda** — medido, 80% do brilho do céu
+      // (`#2e97c7` contra `#38bdf8`). Entrando 1 px, essa mistura cai onde o
+      // cenário da cena passa em seguida e a cobre.
+      const SOBREPOR = 1;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(area.x, area.y, area.largura, area.altura);
+      ctx.rect(
+        SOBREPOR, SOBREPOR,
+        this.larguraLogica - SOBREPOR * 2, this.alturaLogica - SOBREPOR * 2,
+      );
+      ctx.clip('evenodd');
+      try {
+        this.sangria.pintarSangria(ctx, area);
+      } catch (err) {
+        // Cenário é decoração: se ele falhar, o jogo segue com a barra lisa.
+        // Desligar depois do primeiro erro evita um console inundado a 60 Hz.
+        console.error('[motor] Stage: pintar a sangria falhou; barras ficam lisas.', err);
+        this.sangria = null;
+      }
+      ctx.restore();
+    }
 
     // Recorta na área lógica para nada vazar sobre as barras laterais.
     ctx.save();

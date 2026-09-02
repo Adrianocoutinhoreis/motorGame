@@ -103,6 +103,117 @@ export class Background extends Node {
     }
   }
 
+  /**
+   * Pinta o cenário PARA ALÉM da área lógica, cobrindo as barras do letterbox.
+   *
+   * O `Stage` chama isto num passe próprio, recortado só no anel de fora, antes
+   * de desenhar a cena recortada na área lógica. É o que faz as barras laterais
+   * desaparecerem sem cortar nada do jogo e sem mexer na geometria medida.
+   *
+   * **Só as camadas contínuas.** Céu e chão são degradê e faixa horizontal: não
+   * têm posição própria, então continuam. Sol, nuvens, peças e guindaste ficam
+   * de fora — um sol repetido na barra seriam dois sóis.
+   *
+   * **A costura não aparece porque os degradês continuam definidos sobre a caixa
+   * LÓGICA.** O canvas prolonga a última parada de cor para fora dela, então a
+   * barra recebe a continuação exata do que está na borda, e não uma segunda
+   * versão do degradê recalculada num tamanho maior.
+   *
+   * @param {object} area retângulo em px lógicos que cobre o canvas inteiro
+   */
+  pintarSangria(ctx, area) {
+    const sx = Math.max(0, -area.x);
+    const sy = Math.max(0, -area.y);
+    this._ceu(ctx, sx, sy);
+    this._chao(ctx, sx, sy);
+  }
+
+  /**
+   * O céu: degradê e, quando o tema tem, o halo de luz. Vai primeiro, sempre.
+   *
+   * `sx`/`sy` são a sangria em px lógicos de cada lado — 0 no desenho normal,
+   * porque o recorte do `Stage` já limita e pintar fora seria trabalho jogado
+   * fora a cada quadro.
+   */
+  _ceu(ctx, sx = 0, sy = 0) {
+    const l = this.largura;
+    const a = this.altura;
+    const px = -sx;
+    const py = -sy;
+    const pl = l + sx * 2;
+    const pa = a + sy * 2;
+
+    if (this.tema === 'formas') {
+      const ceu = ctx.createLinearGradient(0, 0, l * 0.4, a);
+      ceu.addColorStop(0, '#4338CA');
+      ceu.addColorStop(0.55, '#6366F1');
+      ceu.addColorStop(1, '#22D3EE');
+      ctx.fillStyle = ceu;
+      ctx.fillRect(px, py, pl, pa);
+
+      if (this.mostrarSol) {
+        const hx = l * 0.84;
+        const hy = a * 0.18;
+        const halo = ctx.createRadialGradient(hx, hy, 20, hx, hy, a * 0.55);
+        halo.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
+        halo.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = halo;
+        ctx.fillRect(px, py, pl, pa);
+      }
+      return;
+    }
+
+    const ceu = ctx.createLinearGradient(0, 0, 0, a * 0.85);
+    ceu.addColorStop(0, this.corCeuTopo);
+    ceu.addColorStop(1, this.corCeuBase);
+    ctx.fillStyle = ceu;
+    ctx.fillRect(px, py, pl, pa);
+  }
+
+  /**
+   * O chão: colinas, faixa de base ou piso, conforme o tema. Vai por ÚLTIMO
+   * entre as camadas contínuas — as nuvens do tema 'campo' passam ATRÁS das
+   * colinas, e trocar essa ordem mudaria o cenário.
+   */
+  _chao(ctx, sx = 0, sy = 0) {
+    const l = this.largura;
+    const a = this.altura;
+
+    if (this.tema === 'formas') {
+      // Faixa de base: silhueta, para o chão existir sem virar colina.
+      ctx.save();
+      ctx.fillStyle = 'rgba(30, 27, 75, 0.55)';
+      ctx.beginPath();
+      ctx.moveTo(-sx, a + sy);
+      ctx.lineTo(-sx, a * 0.84);
+      for (let x = -sx; x <= l + sx; x += 60) {
+        ctx.quadraticCurveTo(x + 30, a * 0.84 - 18 * Math.sin(x / 150), x + 60, a * 0.84);
+      }
+      ctx.lineTo(l + sx, a + sy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    if (this.tema === 'construcao') {
+      // Areia clara e dessaturada, não laranja — ver `_desenharCanteiroConstrucao`.
+      const topoChao = a * 0.82;
+      ctx.fillStyle = '#E8DDC7';
+      ctx.fillRect(-sx, topoChao, l + sx * 2, a + sy - topoChao);
+      ctx.fillStyle = '#CDBE9F'; // um passo mais escura, só para a borda do piso ler
+      ctx.fillRect(-sx, topoChao, l + sx * 2, 12);
+      return;
+    }
+
+    if (this.mostrarColinas) {
+      this._colina(ctx, a * 0.78, this.corColinaFundo, 0.9, sx, sy);
+      this._colina(ctx, a * 0.86, this.corColina, 1.15, sx, sy);
+      ctx.fillStyle = this.corColina;
+      ctx.fillRect(-sx, a * 0.92, l + sx * 2, a * 0.08 + sy);
+    }
+  }
+
   desenhar(ctx) {
     const l = this.largura;
     const a = this.altura;
@@ -115,12 +226,7 @@ export class Background extends Node {
       return;
     }
 
-    // Céu em degradê
-    const ceu = ctx.createLinearGradient(0, 0, 0, a * 0.85);
-    ceu.addColorStop(0, this.corCeuTopo);
-    ceu.addColorStop(1, this.corCeuBase);
-    ctx.fillStyle = ceu;
-    ctx.fillRect(0, 0, l, a);
+    this._ceu(ctx);
 
     // Sol radiante
     if (this.mostrarSol) {
@@ -147,14 +253,8 @@ export class Background extends Node {
       this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
     }
 
-    if (this.tema === 'construcao') {
-      this._desenharCanteiroConstrucao(ctx, l, a);
-    } else if (this.mostrarColinas) {
-      this._colina(ctx, a * 0.78, this.corColinaFundo, 0.9);
-      this._colina(ctx, a * 0.86, this.corColina, 1.15);
-      ctx.fillStyle = this.corColina;
-      ctx.fillRect(0, a * 0.92, l, a * 0.08);
-    }
+    if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
+    this._chao(ctx);
   }
 
   /**
@@ -174,22 +274,7 @@ export class Background extends Node {
    * para abandonar.
    */
   _desenharCeuGeometrico(ctx, l, a) {
-    const ceu = ctx.createLinearGradient(0, 0, l * 0.4, a);
-    ceu.addColorStop(0, '#4338CA');
-    ceu.addColorStop(0.55, '#6366F1');
-    ceu.addColorStop(1, '#22D3EE');
-    ctx.fillStyle = ceu;
-    ctx.fillRect(0, 0, l, a);
-
-    if (this.mostrarSol) {
-      const hx = l * 0.84;
-      const hy = a * 0.18;
-      const halo = ctx.createRadialGradient(hx, hy, 20, hx, hy, a * 0.55);
-      halo.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
-      halo.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, l, a);
-    }
+    this._ceu(ctx);
 
     for (const peca of this.pecasDistantes) this._peca(ctx, l, a, peca, '#FFFFFF');
 
@@ -199,19 +284,7 @@ export class Background extends Node {
       }
     }
 
-    // Faixa de base: silhueta, para o chão existir sem virar colina.
-    ctx.save();
-    ctx.fillStyle = 'rgba(30, 27, 75, 0.55)';
-    ctx.beginPath();
-    ctx.moveTo(0, a);
-    ctx.lineTo(0, a * 0.84);
-    for (let x = 0; x <= l; x += 60) {
-      ctx.quadraticCurveTo(x + 30, a * 0.84 - 18 * Math.sin(x / 150), x + 60, a * 0.84);
-    }
-    ctx.lineTo(l, a);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+    this._chao(ctx);
 
     if (this.mostrarPecas) {
       const friso = ['circulo', 'quadrado', 'triangulo', 'retangulo'];
@@ -328,17 +401,17 @@ export class Background extends Node {
     ctx.stroke();
     ctx.restore();
 
-    // 4. Chão do Canteiro de Obras
+    // 4. O chão do canteiro NÃO é desenhado aqui.
     //
-    // Areia clara e dessaturada, não laranja. O tom anterior (#F59E0B) era o
-    // mesmo valor de `cores.atencao` — saturação de cor de alerta ocupando o
-    // maior bloco de cor da tela, competindo por atenção com os botões e com os
-    // blocos coloridos que o aluno precisa olhar. O chão é o fundo: ele sustenta
-    // a cena, não disputa com ela.
-    ctx.fillStyle = '#E8DDC7'; // areia clara
-    ctx.fillRect(0, topoChao, l, a - topoChao);
-    ctx.fillStyle = '#CDBE9F'; // um passo mais escura, só para a borda do piso ler
-    ctx.fillRect(0, topoChao, l, 12); // faixa de destaque do piso
+    // Mora em `_chao`, junto das colinas e da faixa de base dos outros temas,
+    // porque é camada CONTÍNUA: precisa poder ser esticada para dentro das
+    // barras do letterbox. `desenhar` o chama logo depois desta função, então a
+    // ordem é a mesma de antes — o piso cobre a base dos prédios.
+    //
+    // A areia é clara e dessaturada, não laranja: o tom anterior (#F59E0B) era
+    // o mesmo valor de `cores.atencao`, saturação de cor de alerta ocupando o
+    // maior bloco de cor da tela e competindo com os botões e com os blocos
+    // coloridos que o aluno precisa olhar.
   }
 
   _nuvem(ctx, x, y, r) {
@@ -353,16 +426,19 @@ export class Background extends Node {
     ctx.restore();
   }
 
-  _colina(ctx, baseY, cor, amplitude) {
+  _colina(ctx, baseY, cor, amplitude, sx = 0, sy = 0) {
     const l = this.largura;
     const a = this.altura;
     ctx.fillStyle = cor;
     ctx.beginPath();
-    ctx.moveTo(0, a);
-    ctx.lineTo(0, baseY);
+    ctx.moveTo(-sx, a + sy);
+    ctx.lineTo(-sx, baseY);
+    // As curvas continuam ancoradas na caixa LÓGICA; a sangria só estica as
+    // pontas na horizontal, para a colina não terminar antes da barra.
     ctx.quadraticCurveTo(l * 0.25, baseY - 60 * amplitude, l * 0.5, baseY - 10 * amplitude);
     ctx.quadraticCurveTo(l * 0.75, baseY + 40 * amplitude, l, baseY - 30 * amplitude);
-    ctx.lineTo(l, a);
+    ctx.lineTo(l + sx, baseY - 30 * amplitude);
+    ctx.lineTo(l + sx, a + sy);
     ctx.closePath();
     ctx.fill();
   }
