@@ -39,6 +39,11 @@
 - [ ] **Seleção de nível** (se houver mais de um nível)
 - [ ] **Partida** com HUD legível (progresso, vidas/tempo, pausa)
 - [ ] **Pausa** com continuar / recomeçar / sair
+- [ ] **Ajuda** na partida (regra RE-05): o botão do HUD abre o tutorial POR CIMA do jogo,
+      a partida continua atrás e voltar a devolve intacta — placar, tempo e tabuleiro
+  - [ ] O tempo NÃO corre enquanto a ajuda está aberta (a partida tem de pausar de verdade)
+  - [ ] Os passos do `config.tutorial` fazem sentido para quem JÁ está jogando e travou, não
+        só para quem nunca viu o jogo — são os mesmos passos nas duas telas
 - [ ] **Resultado** para vitória **e** para derrota
 - [ ] Nenhum beco sem saída: de toda tela dá para voltar ao menu
 

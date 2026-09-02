@@ -37,9 +37,11 @@ Arte, áudio, licenças, tudo local.
 em outro servidor. E contra publicar áudio sem saber de onde veio.
 
 ### 3. Telas
-Menu, tutorial, seleção de nível, partida, pausa, resultado, e nenhum beco sem saída.
+Menu, tutorial, seleção de nível, partida, pausa, AJUDA, resultado, e nenhum beco sem saída.
 **Protege contra:** a criança ficar presa numa tela sem caminho de volta — situação em que,
-nos originais, a única saída era `window.close()`, que dentro do iframe não faz nada.
+nos originais, a única saída era `window.close()`, que dentro do iframe não faz nada. A ajuda
+protege contra um beco mais sutil: saber o que fazer e não ter como reler a regra sem perder a
+partida (regra RE-05).
 
 ### 4. Mecânica
 Regras, dificuldade real, feedback de acerto e de erro, reinício limpo.

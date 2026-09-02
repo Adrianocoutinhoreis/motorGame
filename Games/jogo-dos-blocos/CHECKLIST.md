@@ -58,6 +58,11 @@ e a validação jogando (seção 7.2).
       desperdício de tela medido caindo de 75% para 20%, e o toque conferido no pixel real
       com o palco girado. Continua pendente o alvo físico de 32–36 px em celular (`docs/STATES.md`)
 - [x] **Pausa** com continuar / começar de novo / sair
+- [ ] **Ajuda** na partida (regra RE-05): o botão do HUD abre o tutorial POR CIMA do jogo,
+      a partida continua atrás e voltar a devolve intacta — placar, tempo e tabuleiro
+  - [ ] O tempo NÃO corre enquanto a ajuda está aberta (a partida tem de pausar de verdade)
+  - [ ] Os passos do `config.tutorial` fazem sentido para quem JÁ está jogando e travou, não
+        só para quem nunca viu o jogo — são os mesmos passos nas duas telas
 - [x] **Resultado** para vitória **e** para derrota
 - [x] Nenhum beco sem saída: de toda tela dá para voltar ao menu
 

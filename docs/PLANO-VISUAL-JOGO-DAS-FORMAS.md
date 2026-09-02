@@ -199,7 +199,7 @@ Duas coisas mudaram de lugar em relação ao original desta seção, e as duas p
 mesma razão — o **celular**, medido:
 
 - **O HUD saiu do topo e virou coluna à esquerda.** A banda de 0 a 104 custava 14%
-  da altura para mostrar dois valores e dois botões, e em celular é a altura que
+  da altura para mostrar dois valores e os botões, e em celular é a altura que
   limita a escala. A coluna cabe no vão que o mascote deixou ao sair da partida.
 - **A célula subiu de 64 para 80 px**, o que só foi possível com o topo liberado.
   A grade passou de 448 para 560 px de altura, e o teto da pilha de `y: 216` para
@@ -212,16 +212,21 @@ mesma razão — o **celular**, medido:
 | `ScoreBar` dos pontos | topo da coluna, `largura × 40` | `icone: 'estrela'`, `mostrarNumeros: true`. Ligada por `acompanhar(placar)`: passa a se atualizar sozinha |
 | `TimerBar` | abaixo da ScoreBar, `largura × 40` | `icone: 'relogio'`, sem números — a criança não lê relógio, mas reconhece o mostrador |
 | `IconButton` pausa | coluna esquerda, 96×96 | `icone: 'pausa'` |
-| `SoundToggle` | ao lado da pausa, 96×96 | preferência persistida pelo `Storage` |
+| `IconButton` ajuda | ao lado da pausa, 96×96 | `icone: 'tutorial'`, o mesmo do "COMO JOGAR" do menu. Abre o tutorial POR CIMA da partida (regra RE-05) |
+| `SoundToggle` | ao lado da ajuda, 96×96 | preferência persistida pelo `Storage` |
 
 A `TimerBar` já faz sozinha o aviso que importa: **muda de cor a 35% e a 15% do tempo, e pulsa
 no trecho crítico**. Aviso que não depende de saber ler número, e que o original não tinha —
 lá o relógio era um ponteiro girando numa timeline.
 
-Os dois botões ficam a **96 px** de lado e a 20 px um do outro, acima do mínimo de
-`acessibilidade.espacoEntreAlvos`. Não são 64 por um motivo medido: 64 px lógicos viram 32
-físicos num celular de 360 px de altura, e estes são alvos **isolados** — errar um não faz
-nada. 96 dá 48 px físicos, acima do piso de 44 do WCAG 2.5.5.
+Os **três** botões ficam a 96 px de lado, e o vão entre eles é **16 px** — o piso de
+`acessibilidade.espacoEntreAlvos`. Era 20 quando eram dois; o terceiro (ajuda) só cabe com
+16: 96×3 + 16×2 = 320. A alternativa era uma segunda fileira, que comeria altura do painel
+"AS FORMAS" — e aquele painel é o objetivo pedagógico exposto, não decoração.
+
+O lado não são 64 por um motivo medido: 64 px lógicos viram 32 físicos num celular de 360 px
+de altura, e estes são alvos **isolados** — errar um não faz nada. 96 dá 48 px físicos, acima
+do piso de 44 do WCAG 2.5.5.
 
 ### 4.2 A grade
 
@@ -260,7 +265,7 @@ Sete linhas × 80 = **560** de altura. Base da pilha em `y: 700`; uma pilha chei
 `y: 140`.
 
 **O que pagou por esses 16 px de célula** foi o HUD sair do topo. Ele ocupava de 0 a 104 — 14%
-da altura — para mostrar dois valores e dois botões, e cada pixel de faixa horizontal no topo é
+da altura — para mostrar dois valores e os botões, e cada pixel de faixa horizontal no topo é
 pixel que a grade não tem. Virou coluna à esquerda, no vão que o mascote deixou (344 px em 6
 colunas, 384 em 5). Sem aquela tira livre, esta mudança não existiria.
 
@@ -323,7 +328,7 @@ três blocos, a carga chega perto da lança e a tela fica visivelmente apertada.
 A grade ocupa 480 dos 1280 px de largura — proporção próxima à do original (300 de 800). Sobram
 duas faixas de cerca de 344 px, e elas não ficam vazias:
 
-**Esquerda — a coluna do HUD.** Pontos, tempo e os dois botões, empilhados (seção 4.1).
+**Esquerda — a coluna do HUD.** Pontos, tempo e os três botões, empilhados (seção 4.1).
 
 **Esta faixa era do mascote, e a troca foi deliberada.** O operário ficava aqui, 300 px de
 altura, reagindo à partida — pulava no combo, inclinava com a pilha alta. Saiu por dois motivos.

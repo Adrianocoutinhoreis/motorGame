@@ -89,6 +89,15 @@ Trocar de cena destrói a árvore visual — a torre montada, o tabuleiro, o pla
 fosse cena, "pausar" seria "desistir". Por isso `PauseScreen` é um **Node sobreposto** que
 a cena de partida adiciona a si mesma: congela a lógica sem descartar nada.
 
+### E a AJUDA não é nem um estado
+
+O botão de ajuda abre o tutorial por cima da partida (`HelpScreen`), pelo mesmo motivo e um
+degrau mais fundo: ela não aparece no diagrama porque **o estado continua `JOGANDO`**. Não há
+transição, não há cena nova, e o `tempoSegundos` para porque a cena fica `pausada`.
+
+Se a ajuda fosse a cena `TUTORIAL`, reler a regra custaria a partida — e é justamente quem não
+entendeu a regra que não pode pagar esse preço (regra **RE-05**).
+
 ## Estados dentro da partida (interno de cada jogo)
 
 `JOGANDO` é um só estado para o motor, mas a cena tem seu próprio micro-ciclo. No Jogo dos
@@ -152,6 +161,7 @@ Legenda: **Pronto** (usado e validado) · **Parcial** (funciona, mas com limite 
 | `TutorialScreen` | Pronto | Passos narrados, ilustração animada, navegação |
 | `LevelSelectScreen` | Pronto | Aparece sozinha só quando há mais de um nível |
 | `PauseScreen` | Pronto | Camada sobreposta |
+| `HelpScreen` | Pronto | A AJUDA durante a partida: camada sobreposta que HOSPEDA o `TutorialScreen` em vez de redesenhar os passos — a ajuda é o tutorial, e duas versões da mesma explicação divergiriam. Pausa a partida, conta os pedidos (campo `ajuda` do AVA) e devolve o jogo como estava. Regra RE-05 |
 | `ResultScreen` | Pronto | Vitória e derrota; **cinco estrelas** pelo percentual da meta, calculadas pela própria tela (RE-04); placar na unidade (RE-03); cenário do tema do jogo |
 | Tela de créditos / objetivo | **Planejado** | Útil ao professor; não pedida ainda |
 

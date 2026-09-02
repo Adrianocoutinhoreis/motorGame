@@ -58,8 +58,16 @@ Para ver a mensagem do AVA saindo de verdade, use o host de teste:
 Ao terminar uma partida (vitória **ou** derrota), o jogo emite:
 
 ```js
-{ type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel, jogo: "jogo-das-formas" }
+{
+  type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel,
+  jogo: "jogo-das-formas",
+  vitoria, tempoSegundos, ajuda
+}
 ```
+
+> `vitoria`, `tempoSegundos` e `ajuda` vêm do MOTOR, não desta cena: atingiu a meta, tempo
+> JOGANDO (pausa e ajuda não contam) e quantas vezes a criança abriu a explicação. Ver
+> `docs/CONTRATO-AVA.md`, seções 1.1 a 1.3.
 
 Neste jogo:
 

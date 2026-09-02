@@ -86,6 +86,7 @@ engine/
 ├── screens/     as telas padrão que todo jogo ganha
 │   ├── LoadingScreen.js  MenuScreen.js  TutorialScreen.js
 │   ├── LevelSelectScreen.js  PauseScreen.js  ResultScreen.js
+│   └── HelpScreen.js     a ajuda na partida: o tutorial em camada (RE-05)
 ├── gameplay/    mecânicas reaproveitáveis
 │   ├── ScoreSystem.js       placar e fonte única dos números do AVA
 │   ├── GridBoard.js         grade, adjacência, combos, gravidade

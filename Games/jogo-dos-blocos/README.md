@@ -28,6 +28,7 @@ treina a coordenação de soltar no momento certo.
 | Escala para qualquer iframe | O original era `<canvas>` fixo em 800×600 |
 | Tempo por delta, com pausa automática | O original usava `setInterval`: a partida corria com a aba em segundo plano |
 | Menu, tutorial navegável, seleção de nível, pausa | O original abria direto na instrução e não tinha pausa |
+| Ajuda durante a partida | O original não tinha: reler a instrução exigia recarregar a página, perdendo a partida (regra RE-05) |
 | Base larga e tolerância generosa | Perder por milímetro aos 5 anos ensina a desistir |
 | Errar **não avança** o símbolo | O aluno repete o mesmo número/letra: o jogo ensina, não só mede |
 | Saída sem `window.close()` | Dentro do iframe do AVA aquilo não faz nada |
@@ -59,6 +60,9 @@ Ao terminar uma partida — **vitória ou derrota** — o jogo emite:
   totalPerguntas: 5,     // os blocos da torre = a meta da partida
   nivel: 1,              // 1 = números 1-5 · 2 = números 6-10 · 3 = vogais
   jogo: "jogo-dos-blocos",
+  vitoria: true,         // atingiu a meta (do motor)
+  tempoSegundos: 47,     // tempo JOGANDO: pausa e ajuda não contam (do motor)
+  ajuda: 0,              // quantas vezes abriu a explicação (do motor)
   conteudo: "Números 1 a 5",   // extra: viaja no payload do AVA
   blocosEmpilhados: 5
 }

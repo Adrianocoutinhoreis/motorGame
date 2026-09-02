@@ -34,6 +34,7 @@ quem deixa a pilha bater no teto.
 | Combo grande | bloco-estrela | **mantido** | É o único incentivo do jogo a não limpar sempre no mínimo de 3 |
 | Formas | 4 | **4** | `Blocolosango.png` existe nos assets, mas o `arrayFormas` do original tem quatro entradas e **não existe `losango.mp3`**. Ver seção 9 |
 | Tutorial | duas telas de imagem com locução | `TutorialScreen` navegável | Passos narrados, ilustração animada, ida e volta |
+| Reler a regra jogando | impossível — só recarregando a página | **botão de ajuda no HUD** | O tutorial abre por cima da partida, que continua atrás e é devolvida intacta. Quem não entendeu a regra não pode pagar a partida para reler (regra RE-05) |
 
 **O que NÃO muda:** a regra de combo, a grade, a gravidade, o ritmo da linha nova e a meta do
 Nível 3 são as do original, número por número. Uma refação que mudasse a mecânica não seria a

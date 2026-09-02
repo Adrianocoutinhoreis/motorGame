@@ -35,6 +35,7 @@ Público de referência: **Educação Infantil e 1º ano (4 a 7 anos)**.
 | [RE-02](#re-02--a-nota-da-partida-desconta-o-erro-na-vitória-nunca-na-derrota) | A nota da partida desconta o erro na vitória, nunca na derrota | **Vigente** | Todo jogo do motor |
 | [RE-03](#re-03--o-placar-do-fim-de-partida-diz-a-unidade-não-uma-fração-da-meta) | O placar do fim de partida diz a unidade, não uma fração da meta | **Vigente** | Todo jogo do motor |
 | [RE-04](#re-04--a-fileira-de-estrelas-tem-sempre-cinco-e-quem-a-calcula-é-a-tela) | A fileira de estrelas tem sempre cinco, e quem a calcula é a tela | **Vigente** | Todo jogo do motor |
+| [RE-05](#re-05--pedir-ajuda-nunca-custa-a-partida-nem-entra-na-conta) | Pedir ajuda nunca custa a partida nem entra na conta | **Vigente** | Todo jogo do motor |
 
 ---
 
@@ -392,6 +393,116 @@ aplica é preenchido com "não se aplica" e o motivo — nunca apagado.
 
 ---
 
+## RE-05 — Pedir ajuda nunca custa a partida nem entra na conta
+
+**Status:** Vigente · **Desde:** 2026-09-02
+**Aplica-se a:** todo jogo do motor
+
+### A regra
+
+**A explicação de como jogar fica alcançável DURANTE a partida**, por um botão no HUD, e
+alcançá-la:
+
+1. **não faz a criança perder a partida** — a ajuda é camada sobre o jogo, que continua vivo e
+   pausado, e fechar devolve o tabuleiro, o placar e o tempo como estavam;
+2. **não consome o tempo dela** — a partida pausa, então os segundos lendo não entram no
+   `tempoSegundos` reportado ao AVA;
+3. **não conta como erro** — o pedido é registrado como `ajuda` (quantas vezes), num campo
+   separado, e nunca em `erros`.
+
+A ajuda é **o mesmo tutorial** do menu, não uma segunda explicação escrita à parte.
+
+### Por quê
+
+**Quem pede ajuda é quem a atividade ainda não alcançou.** Numa faixa de 4 a 7 anos, a criança
+que não entendeu a regra não vai deduzi-la tentando — ela vai tocar em qualquer lugar até o
+tempo acabar. Se a única forma de reler a instrução for sair para o menu, o preço de perguntar é
+a partida inteira, e o jogo passa a medir quem chutou melhor.
+
+**Cobrar o tempo da leitura seria cobrar duas vezes.** A criança que lê a explicação está
+aprendendo o que a aula quer ensinar; contar esse tempo como tempo de jogo transformaria o ato de
+estudar a regra em desvantagem no relatório.
+
+**Contar como erro seria pior ainda.** `erros` alimenta a nota (RE-02); um pedido de ajuda ali
+baixaria o desempenho de quem fez a coisa certa. Por isso `ajuda` é campo próprio — e é
+**contagem, não sim/não**, porque três aberturas na mesma partida são um sinal diferente de uma.
+
+**O que o número mede é a ATIVIDADE, antes da criança.** Muitas ajudas numa turma dizem que a
+instrução não está funcionando, ou que o nível começa difícil demais. Quem lê o relatório precisa
+saber disso: `ajuda` alta não é aluno fraco.
+
+**Uma explicação só.** A ajuda hospeda o `TutorialScreen`, e não uma cópia dos passos. Duas
+versões da mesma instrução divergem: alguém corrige um passo no tutorial do menu e a ajuda dentro
+do jogo continua ensinando o jeito antigo — que é a mesma armadilha que a **RE-04** fechou para a
+nota, e o mesmo motivo por que o corte de som e a música passaram a ter dono único no motor.
+
+### Escopo — e o que a regra NÃO diz
+
+| Onde | Vale? | Motivo |
+|---|---|---|
+| Botão de ajuda no HUD da partida | **Sim** | É o caso da regra |
+| O tempo lido não entra no `tempoSegundos` | **Sim** | Garantido pela pausa, não por conta separada |
+| `ajuda` em campo próprio, nunca em `erros` | **Sim** | `erros` alimenta a nota (RE-02) |
+| A ajuda ser o mesmo tutorial do menu | **Sim** | Uma instrução, uma fonte |
+| Limitar quantas vezes a criança pode pedir | **Não** | A regra é o contrário: não há teto, e não há penalidade |
+| Abrir a ajuda sozinha quando a criança erra muito | **Não decidido** | Tentador e arriscado: interromper quem está tentando é atrapalhar. Ver "casos ainda não decididos" |
+| A ajuda contar como pausa no relatório | **Não** | São coisas diferentes: pausa é interrupção externa, ajuda é dúvida sobre a regra |
+| Tutorial obrigatório antes da primeira partida | **Não** | Continua opcional, pelo menu — a regra é sobre poder voltar a ele, não sobre ser forçado |
+
+A regra **não** diz que a ajuda tenha de ser lida até o fim, e **não** muda nenhum número de
+desempenho: `acertos`, `erros` e `totalPerguntas` ficam iguais.
+
+### Como aplicar
+
+Três linhas na cena de partida, e o template já nasce com elas:
+
+```js
+// no HUD, ícone `tutorial` — o mesmo do "COMO JOGAR" do menu
+this.adicionar(new IconButton({ icone: 'tutorial', /* … */ aoTocar: () => this.pedirAjuda() }));
+
+this.ajuda = new HelpScreen({
+  cena: this,
+  aoFechar: () => { this.pausada = false; this.tempo?.retomar(); },
+});
+this.adicionar(this.ajuda);
+
+pedirAjuda() {
+  if (this.placar.encerrado || this.pausada) return;
+  this.pausada = true;
+  this.tempo?.pausar();          // e o que mais a sua partida tiver de movimento
+  this.ajuda.abrir();
+}
+```
+
+Pause **de verdade** o que a partida tem de tempo e movimento: é `pausada` que faz o
+`tempoSegundos` do motor parar. A contagem de pedidos não é assunto do jogo — `HelpScreen.abrir()`
+chama `Game.registrarAjuda()`.
+
+E **escreva os passos do `config.tutorial` pensando nos dois públicos**: quem nunca viu o jogo, no
+menu, e quem já está jogando e travou.
+
+### Onde já está aplicado
+
+- **Jogo dos Blocos**, **Jogo das Formas** e **Jogo das Cores** — botão no HUD, ao lado da pausa
+  e do som, com vão de 16 px (piso de `acessibilidade.espacoEntreAlvos`);
+- **`templates/jogo-base`** — o próximo jogo nasce com o botão.
+
+Verificado em navegador com toque real no pixel do botão: a cena **não** é trocada, a torre e o
+placar sobrevivem, 1,5 s de ajuda aberta somam 0,00 s de tempo de jogo, e duas aberturas
+reportam `ajuda: 2`.
+
+### Casos ainda não decididos
+
+- **Abrir a ajuda sozinha** depois de N erros ou de M segundos sem acerto. Ajudaria quem não
+  descobre o botão, e atrapalharia quem está tentando — precisa ser visto com criança antes de
+  ser escrito como regra.
+- **Narração do passo ao abrir a ajuda no meio da partida.** Hoje o passo narra igual ao tutorial
+  do menu. Se a música de fundo estiver alta, a fala pode competir; ninguém mediu ainda.
+- **Ajuda por nível.** `config.tutorial` é uma lista só para o jogo inteiro. Um jogo cujos níveis
+  mudem a regra precisaria de passos por nível — nenhum dos três precisa.
+
+---
+
 ## Histórico
 
 | Data | ID | O que mudou | Jogos publicados precisam de ajuste? |
@@ -401,3 +512,4 @@ aplica é preenchido com "não se aplica" e o motivo — nunca apagado.
 | 2026-08-24 | RE-02 | Criada. A fileira de estrelas vinha do acerto bruto e enchia em toda vitória, porque vencer exige acertar a meta inteira: "5 de 5" com duas quedas era indistinguível de uma partida limpa. A nota passou a descontar a falha na vitória, e o mesmo número passou a ir para o AVA | **Sim** — muda o `score_percent` de vitórias com falha (100% → 60% no caso de 2 quedas em 5). Jogo dos Blocos atualizado e reverificado |
 | 2026-08-25 | RE-03 | Criada. A tela de resultado dizia "${acertos} de ${totalPerguntas}", e no Jogo das Formas isso produzia "13 de 12" — a pontuação passa da meta porque um combo resolve vários blocos e o bloco-estrela vale 2. O placar passou a ser dito na unidade ("13 PONTOS") e a linha que enumerava as falhas saiu da tela | Não — nenhum número mudou, só a forma de enunciá-lo. Os dois jogos atualizados e reverificados |
 | 2026-08-26 | RE-04 | Criada. A fileira tinha tamanho variável — uma estrela por pergunta até 6, caindo para três acima disso —, então o Jogo dos Blocos mostrava cinco e o Jogo das Formas três, e cada jogo com meta grande calculava a própria nota. Havia **duas fórmulas divergentes** de "quantas estrelas" no repo. A fileira passou a ter cinco fixas preenchidas pelo percentual da meta, calculadas pela tela; `ScoreSystem.estrelas` e `GameScene._notaEmEstrelas()` foram removidos | **Não para o AVA** — as estrelas nunca viajaram na mensagem. Na tela: Jogo das Formas muda (3 estrelas → 5, ex. 14 de 20 passa de ⭐⭐ para ⭐⭐⭐); Jogo dos Blocos **não muda**, porque na meta 5 um quinto da meta é um ponto. Os dois reverificados |
+| 2026-09-02 | RE-05 | Criada. A explicação de como jogar só existia no menu, então reler a regra custava a partida — e numa faixa de 4 a 7 anos a criança que não entendeu não deduz jogando, ela chuta até o tempo acabar. A ajuda passou a ser camada sobre a partida (o MESMO tutorial, hospedado), o tempo lendo não entra no `tempoSegundos` porque a partida pausa, e o pedido é reportado em campo próprio (`ajuda`, contagem) e nunca em `erros` | **Não** — nenhum número de desempenho muda. A mensagem do AVA ganha o campo `ajuda`, que o servidor grava no `payload` sem precisar de coluna. Os três jogos e o template atualizados e reverificados |

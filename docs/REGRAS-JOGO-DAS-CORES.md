@@ -36,6 +36,7 @@ crescer, é preciso comparar cada peça vizinha com a cor que se está seguindo.
 | Toque funciona | O original só ouvia mouse: injogável em tablet |
 | Tempo por delta | O original usava `setInterval`, que corre com a aba em segundo plano, e comparava `tempoAtual == maxTempo` com igualdade exata — um tique perdido e a partida nunca terminava |
 | Menu, tutorial navegável, seleção de nível, pausa, resultado | O original abria numa tela de instrução com dois botões e não tinha pausa |
+| **Ajuda durante a partida** | O original não tinha: reler a instrução exigia recarregar a página inteira, perdendo a partida. Aqui o tutorial abre por cima do jogo, que continua (regra RE-05) |
 | **Registro no AVA** | Não existia |
 | Tabuleiro retangular cheio | O original deixava os **quatro cantos vazios** (31 peças em vez de 35). O efeito é decorativo — arredondar o tabuleiro —, e a arte nova faz isso com uma moldura, sem o motor precisar do conceito de "célula bloqueada". Ver seção 3 |
 | Arte nova, obrigatoriamente | Único dos três originais **sem nenhum PNG de peça**: as peças eram vetor dentro de `JogoCores_visual.js` (344 KB) |

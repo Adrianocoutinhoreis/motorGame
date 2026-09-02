@@ -78,7 +78,7 @@ não decoração. Os 4 px físicos a mais não pagam as duas coisas.
  │ [★ 14/30        ]  │ ▨  ▨  ▨  ▨  ▨  ▨  ▨                              │  │ 40
  │ [⏱ ▓▓▓▓▓▓░░░░   ]  │                                                  │  │
  │                    │ ▨  ▨  ▨  ▨  ▨  ▨  ▨                              │  │
- │ [  ⏸  ]  [  🔊  ]  │                                                  │  │
+ │ [⏸] [💡] [🔊]      │                                                  │  │
  │                    │ ▨  ▨  ▨  ▨  ▨  ▨  ▨      7 × 5, célula 128       │  │
  │ ┌────────────────┐ │                                                  │  │
  │ │ AS CORES       │ │ ▨  ▨  ▨  ▨  ▨  ▨  ▨                              │  │
@@ -99,7 +99,8 @@ não decoração. Os 4 px físicos a mais não pagam as duas coisas.
 | `ScoreBar` | 324 × 44, `y: 40` | `icone: 'estrela'`, `mostrarNumeros: true` — "14/30" |
 | `TimerBar` | 324 × 44, `y: 104` | `icone: 'relogio'`, sem números |
 | `IconButton` pausa | 96 × 96, `y: 168` | 96 lógicos = 48 físicos, acima do piso |
-| `SoundToggle` | 96 × 96, ao lado | 20 px de folga entre os dois |
+| `IconButton` ajuda | 96 × 96, ao lado | `icone: 'tutorial'`, o mesmo do "COMO JOGAR" do menu. Abre o tutorial POR CIMA da partida (regra RE-05) |
+| `SoundToggle` | 96 × 96, ao lado | **16 px** de vão entre os três: 96×3 + 16×2 = 320, e a coluna tem 324. Era 20 quando eram dois botões; 16 é o piso de `acessibilidade.espacoEntreAlvos`, e a alternativa era roubar altura do painel "AS CORES", que é conteúdo |
 | Painel "AS CORES" | 324 de largura, de `y: 284` até `y: 680` | Legenda: amostra + nome. Seção 4.3 |
 
 Nada disso é escrito à mão na cena: a largura do HUD sai de `tabuleiroX`, que sai da célula e do
@@ -320,7 +321,7 @@ Não provam nada disto:
 | Tabuleiro, vizinhança de 8, gravidade | `GridBoard` — **pronto**, escrito prevendo este jogo |
 | O caminho | `PathSelector` — **pronto, 18 testes** |
 | Arrasto contínuo | `Input` emite `arrastar` no nó pressionado — **pronto** |
-| Barra de pontos, cronômetro, pausa, som | `ScoreBar`, `TimerBar`, `IconButton`, `SoundToggle` — **prontos** |
+| Barra de pontos, cronômetro, pausa, ajuda, som | `ScoreBar`, `TimerBar`, `IconButton`, `SoundToggle`, `HelpScreen` — **prontos** |
 | Painel lateral | `Panel` + `TextNode` — **pronto** |
 | Rede contra jogada travada | `Watchdog` — **pronto**, e este jogo precisa |
 | Linha do caminho e ponta numerada | desenho na cena — **a escrever** |
