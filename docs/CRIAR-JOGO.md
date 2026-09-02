@@ -70,6 +70,11 @@ Regras:
 - `meta` vira `totalPerguntas` e `id` vira `nivel` no contrato do AVA.
 - Campos extras dentro de um nível são livres: o seu jogo os lê como quiser.
 - Todo `src` é **relativo** e aponta para dentro de `assets/`.
+- **`musica` você só declara.** Quem a inicia é o `Game`, no primeiro gesto da criança, e ela
+  atravessa todas as trocas de tela sem recomeçar. Não chame `audio.musica()` nem
+  `audio.pararMusica()` na sua cena — foi assim que os três jogos ficaram desiguais.
+- **Som de tela você também não precisa encerrar.** O motor corta fala e efeito em toda troca
+  de cena; `aoSair` cuida de tween, timer e o que a sua cena criou.
 
 ## Passo 4 — Escrever a mecânica (`src/scenes/GameScene.js`)
 

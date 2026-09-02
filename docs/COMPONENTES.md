@@ -574,7 +574,7 @@ g.carregar(bloco); g.atualizar(dt); const solto = g.soltar();
 Três canais: `music`, `sfx` e **`speech`**.
 
 ```js
-audio.musica('somFundo');
+audio.musica('somFundo');   // quem chama é o Game — a cena não mexe nisto
 audio.efeito('nao');
 await audio.falar('tres', { texto: '3' });   // fila serializada
 audio.calar();          // corta a FALA (e esvazia a fila)
@@ -596,10 +596,27 @@ de derrota 5,5 s, e a criança que tocava MENU antes do fim ouvia o som da tela 
 `calar()` existia, mas silencia só a FALA — e o som de fim de partida é efeito. Com a correção
 desligada, o teste mede **três** efeitos atravessando para o menu.
 
-**A MÚSICA não é cortada, e isso é decisão, não esquecimento.** Ela é do jogo, não da tela:
-menu e partida pedem a mesma, e `musica(id)` é idempotente justamente para atravessar a troca.
+**A MÚSICA não é cortada, e isso é decisão, não esquecimento.** Ela é do jogo, não da tela.
 Cortar aqui faria a música recomeçar do zero a cada botão tocado. Há verificação para os dois
 lados — se alguém "consertar" cortando tudo, o teste reprova.
+
+#### A música tem um dono só: o `Game`
+
+Ela começa no **primeiro gesto** da criança (`Game` escuta `apertar`, destrava o contexto e
+pede `config.audio.musica`) e não para mais. **Nenhuma cena a comanda.**
+
+Antes eram quatro donos: o `MenuScreen` e a cena de partida de cada um dos três jogos pediam a
+música, e o Jogo das Formas ainda a parava ao sair da partida — então só nele a música
+recomeçava do zero ao voltar ao menu. Desigual entre jogos da mesma coleção.
+
+Começar no gesto também conserta uma coisa sutil: pedida no `aoEntrar` do menu, a música era
+iniciada sobre um contexto ainda suspenso e podia perder o próprio começo.
+
+O teste não conta fontes — música parada e reiniciada também contaria 1. Ele marca a fonte antes
+da troca e confere a **identidade** depois: tem de ser a mesma.
+
+> Escrevendo uma cena nova: **não chame `musica()` nem `pararMusica()`.** Declare
+> `config.audio.musica` e o motor faz o resto.
 
 Ainda cabe chamar `calar()` **dentro** da tela, e duas telas o fazem: o `PauseScreen` ao abrir,
 e o `TutorialScreen` ao virar de passo. Isso é silenciar no meio da tela, não na saída dela.

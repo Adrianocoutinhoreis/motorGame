@@ -395,8 +395,7 @@ export class GameScene extends Scene {
     this.placar.on('vitoria', () => this._terminar(true));
     this.placar.on('derrota', () => this._terminar(false));
 
-    if (config.audio?.musica) this.audio.musica(config.audio.musica);
-
+    // A música é comandada pelo Game, não pela cena.
     this._novoBloco();
   }
 

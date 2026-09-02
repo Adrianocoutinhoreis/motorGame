@@ -68,7 +68,27 @@ export class Game extends Emitter {
     // O áudio só pode começar depois de um gesto do usuário (política dos
     // navegadores). Sem isto, a narração dos jogos originais simplesmente não
     // toca em Chrome/Safari modernos.
-    this.input.on('apertar', () => this.audio.destravar());
+    //
+    // **A MÚSICA COMEÇA AQUI, e este é o único lugar que a comanda.**
+    //
+    // Antes eram quatro: o `MenuScreen` e a cena de partida de cada um dos três
+    // jogos pediam a música, e um deles ainda a parava ao sair. O resultado era
+    // desigual — no Jogo das Formas a música recomeçava do zero ao voltar ao
+    // menu, e nos outros dois não. É a mesma duplicação que o corte de som tinha:
+    // regra espalhada por cada tela é regra que uma tela nova vai contradizer.
+    //
+    // Começar no gesto, e não no `aoEntrar` do menu, também conserta uma coisa
+    // sutil: pedida antes do destravamento, a música era iniciada sobre um
+    // contexto suspenso e podia perder o próprio começo.
+    //
+    // `musica(id)` é idempotente, então repetir a cada toque é inofensivo — e é
+    // o que a mantém tocando sem talho por todas as trocas de tela.
+    this.input.on('apertar', async () => {
+      const destravado = await this.audio.destravar();
+      if (destravado && this.config.audio?.musica) {
+        this.audio.musica(this.config.audio.musica);
+      }
+    });
   }
 
   /** Registra ou substitui uma cena. */

@@ -322,7 +322,8 @@ export class MenuScreen extends Scene {
     }));
 
     // ------------------------------------------------------- áudio e narração
-    if (config.audio?.musica) this.audio.musica(config.audio.musica);
+    // A música NÃO é pedida aqui: quem a comanda é o Game, no primeiro gesto.
+    // Ver o construtor dele.
     if (config.audio?.abertura) {
       this.audio.falar(config.audio.abertura, { texto: config.titulo });
     }

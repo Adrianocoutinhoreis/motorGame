@@ -197,6 +197,7 @@ custou um defeito encontrado em jogo real em vez de em medição.
 | Destravamento por gesto | Pronto | Chamado no primeiro toque |
 | Todo som vindo de arquivo | Pronto | **Regra travada por teste.** O motor não sintetiza voz nem gera tom: faltando a gravação, a tela fica em silêncio e o console nomeia o arquivo que falta |
 | Nenhum som sobrevive à sua tela | Pronto | O `Game` corta fala e efeito em toda troca de cena (`AudioBus.encerrarDaTela`), e a MÚSICA não — ela é do jogo, não da tela. Cobre também a corrida do som pedido antes do corte que só ia começar depois. Verificado nos dois sentidos: com a correção desligada, três efeitos atravessam para o menu; cortando tudo, a música recomeçaria a cada botão e o teste reprova |
+| Música com um dono só | Pronto | Começa no primeiro gesto, comandada pelo `Game`, e nenhuma cena mexe nela. Eram QUATRO donos (o `MenuScreen` e a partida de cada jogo), e o Jogo das Formas ainda a parava ao sair — só nele a música recomeçava ao voltar ao menu, desigual entre jogos da mesma coleção. O teste compara a IDENTIDADE da fonte antes e depois da troca, porque contar fontes não distingue "continuou" de "recomeçou" |
 | Legenda do áudio narrado | **Planejado** | O evento `narracao` já entrega `{ id, texto }` a cada fala; falta só a camada visual |
 
 ## AVA

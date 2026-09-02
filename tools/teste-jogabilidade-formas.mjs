@@ -610,21 +610,31 @@ try {
   checar('o som da tela final NÃO continua no menu',
     noMenu.sfx === 0 && noMenu.speech === 0, JSON.stringify(noMenu));
 
-  // E a contrapartida: a MÚSICA atravessa a troca. Sem esta verificação, "cortar
-  // tudo na troca de tela" passaria — e a música recomeçaria do zero a cada
-  // botão tocado, um talho audível.
-  await esperar(600);
-  const musicaNoMenu = await aval('window.jogo.audio.sonsTocando');
-  if (musicaNoMenu.music > 0) {
-    await aval(`window.jogo.irPara('niveis')`);
-    await esperar(500);
-    const musicaDepois = await aval('window.jogo.audio.sonsTocando');
-    checar('a música NÃO é cortada na troca de tela',
-      musicaDepois.music > 0, `${JSON.stringify(musicaNoMenu)} -> ${JSON.stringify(musicaDepois)}`);
-  } else {
-    // Declarado em vez de silenciado: sem música tocando, não há o que verificar.
-    console.log('  (sem música tocando no menu — a contrapartida não foi verificada)');
-  }
+  // E a contrapartida: a MÚSICA atravessa a troca, e atravessa SEM RECOMEÇAR.
+  //
+  // Sem esta verificação, "cortar tudo na troca de tela" passaria. E contar
+  // fontes não bastaria: música parada e reiniciada também conta 1. Então o que
+  // se compara é a IDENTIDADE da fonte, marcada antes e conferida depois.
+  //
+  // É o que estava desigual entre os jogos: o Formas parava a música ao sair da
+  // partida e o Blocos não, então só no Formas ela recomeçava do zero ao voltar
+  // ao menu. Hoje quem comanda a música é o `Game`, num lugar só.
+  checar('a música toca na tela final (não é cortada ao fim da partida)',
+    noFim.music > 0, JSON.stringify(noFim));
+  checar('a música continua tocando no menu', noMenu.music > 0, JSON.stringify(noMenu));
+
+  await aval('window.__marcaMusica = window.jogo.audio._musicaAtual; true');
+  await aval(`window.jogo.irPara('niveis')`);
+  await esperar(500);
+  const mesma = await aval(`(() => {
+    const a = window.jogo.audio;
+    return {
+      mesmaFonte: a._musicaAtual === window.__marcaMusica && a._musicaAtual !== null,
+      tocando: a.sonsTocando,
+    };
+  })()`);
+  checar('a música NÃO recomeça na troca de tela — é a MESMA fonte',
+    mesma.mesmaFonte === true, JSON.stringify(mesma));
 
   const novasNaTelaFinal = mensagens.slice(mensagensDaPartida);
   const inesperadas = novasNaTelaFinal.filter((m) => !/narra|locu|áudio|audio/i.test(m));
