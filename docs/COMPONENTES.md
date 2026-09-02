@@ -191,6 +191,22 @@ Duas armadilhas que isto já pagou:
 - **só as camadas contínuas** vão para a barra (céu, colinas, piso). Sol, nuvens e peças são
   sprites: repetidos ali, seriam dois sóis.
 
+#### O jogo é alinhado à grade de pixels do aparelho
+
+`redimensionar()` arredonda a largura desenhada para baixo até um múltiplo de **16 px de
+dispositivo** (16 porque 1280 e 720 são ambos múltiplos dele, então a altura também fecha em
+inteiros e a escala continua única para os dois eixos), e o deslocamento para um número inteiro
+de px de dispositivo.
+
+Sem isso o jogo começa e termina no MEIO de um pixel físico, esse pixel recebe cobertura
+parcial, e **qualquer camada semitransparente na borda vira linha visível**: a faixa de base do
+tema `'formas'` tem 55% de opacidade e deixava a junção 7% mais clara. Custo do alinhamento: o
+jogo pode ficar até 16 px de dispositivo menor que o máximo — 1% num monitor comum.
+
+O teste verifica a **causa** (`bordaDev` inteiro), e não só o sintoma: medido, o desvio de cor
+que o desalinhamento produz fica em 3 unidades, indistinguível do ruído do degradê, que mede 1
+ou 2. Verificação de sintoma, ali, não reprovaria.
+
 ---
 
 ### `Loader`, `Storage`, `Rand`
@@ -381,6 +397,16 @@ receber a continuação exata da borda em vez de um segundo degradê recalculado
 Ao mexer aqui, o que precisa sobreviver: **a ordem**. As nuvens do tema `'campo'` passam
 ATRÁS das colinas, então `_chao` vai depois dos sprites; no `'construcao'` o piso cobre a base
 dos prédios pelo mesmo motivo.
+
+**E a FASE.** Desenho periódico (a onda da faixa de base do tema `'formas'`, em passos de 60 px)
+tem de ancorar os nós na grade da caixa LÓGICA, não no início da sangria. Ancorado em `-sx`, com
+sangria de 80, os nós caíam em −80, −20, 40, 100… de um lado e em 0, 60, 120… do outro: duas
+ondas de fase diferente, e **um degrau visível na silhueta exatamente na junção** — que foi como
+o defeito chegou, olhado no jogo publicado.
+
+Isso é verificado em `tools/testes.mjs`, sem navegador, com um `ctx` de mentira que anota as
+chamadas: todo nó do desenho normal tem de existir no mesmo lugar no desenho com sangria. É
+verificação de GEOMETRIA porque o defeito era geométrico — a medição de cor na junção passava.
 
 **Sucede:** `fundo.jpg`, `BG.jpg`, `fd.jpg` (um JPEG de fundo por jogo).
 

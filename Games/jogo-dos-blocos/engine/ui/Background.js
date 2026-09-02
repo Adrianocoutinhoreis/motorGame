@@ -181,15 +181,31 @@ export class Background extends Node {
 
     if (this.tema === 'formas') {
       // Faixa de base: silhueta, para o chão existir sem virar colina.
+      //
+      // **Os nós da onda são ancorados na grade de 60 px da caixa lógica**, e não
+      // no início da sangria. Foi o defeito que o humano viu como "uma pequena
+      // quebra no background": com sangria de 80, começar em -80 punha os nós em
+      // -80, -20, 40, 100…, enquanto a passada da cena os punha em 0, 60, 120… —
+      // duas ondas de FASE diferente, e um degrau visível de 1 px na silhueta,
+      // exatamente na junção. Ancorando, as duas passadas desenham a MESMA curva.
+      const PASSO = 60;
+      const inicio = Math.floor(-sx / PASSO) * PASSO;
+      const limite = l + sx;
+      let fim = inicio;
+
       ctx.save();
       ctx.fillStyle = 'rgba(30, 27, 75, 0.55)';
       ctx.beginPath();
-      ctx.moveTo(-sx, a + sy);
-      ctx.lineTo(-sx, a * 0.84);
-      for (let x = -sx; x <= l + sx; x += 60) {
-        ctx.quadraticCurveTo(x + 30, a * 0.84 - 18 * Math.sin(x / 150), x + 60, a * 0.84);
+      ctx.moveTo(inicio, a + sy);
+      ctx.lineTo(inicio, a * 0.84);
+      for (let x = inicio; x <= limite; x += PASSO) {
+        ctx.quadraticCurveTo(
+          x + PASSO / 2, a * 0.84 - 18 * Math.sin(x / 150),
+          x + PASSO, a * 0.84,
+        );
+        fim = x + PASSO;
       }
-      ctx.lineTo(l + sx, a + sy);
+      ctx.lineTo(fim, a + sy);
       ctx.closePath();
       ctx.fill();
       ctx.restore();

@@ -711,42 +711,70 @@ async function principal() {
           const st = ${g}.stage;
           const ctx = st.canvas.getContext('2d');
           const dpr = Math.min(window.devicePixelRatio || 1, 2);
-          const lum = (x, y) => {
-            const d = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
+          // Lido no BUFFER, em px de dispositivo: é lá que a emenda mora, e
+          // converter de CSS arredondaria justamente o pixel em disputa.
+          const lum = (bx, by) => {
+            const d = ctx.getImageData(bx, by, 1, 1).data;
             return 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2];
           };
-          const hex = (x, y) => {
-            const d = ctx.getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data;
+          const hex = (bx, by) => {
+            const d = ctx.getImageData(bx, by, 1, 1).data;
             return '#' + [d[0], d[1], d[2]].map((n) => n.toString(16).padStart(2, '0')).join('');
           };
           const horizontal = st.deslocX > 1;
-          const cw = st.canvas.clientWidth;
-          const ch = st.canvas.clientHeight;
-          // Amostra dentro da barra, andando até a borda. O último é o vizinho
-          // imediato da junção — onde a linha de emenda aparecia.
-          const luzes = [];
-          for (let d = 6; d >= 1; d--) {
-            luzes.push(horizontal ? lum(st.deslocX - d, ch / 2) : lum(cw / 2, st.deslocY - d));
+          const bordaDev = (horizontal ? st.deslocX : st.deslocY) * dpr;
+
+          // Atravessa a borda em VÁRIAS alturas, e as de baixo são as que
+          // importam: a primeira versão desta verificação amostrava só o céu, no
+          // meio da tela, e passou por cima de uma linha na faixa de base.
+          const faixas = [];
+          let pior = 0;
+          for (const frac of [0.30, 0.86, 0.92, 0.98]) {
+            const serie = [];
+            for (let d = -5; d <= 5; d++) {
+              const bx = horizontal
+                ? Math.round(bordaDev) + d
+                : Math.round(st.canvas.width * 0.3);
+              const by = horizontal
+                ? Math.round(st.canvas.height * frac)
+                : Math.round(bordaDev) + d;
+              if (bx < 0 || by < 0 || bx >= st.canvas.width || by >= st.canvas.height) continue;
+              serie.push(Math.round(lum(bx, by)));
+            }
+            // Desvio contra a MEDIANA: uma emenda é um pixel FORA da série, e não
+            // a variação suave do degradê, que sobe de um em um.
+            const ordenado = [...serie].sort((x, y) => x - y);
+            const mediana = ordenado[Math.floor(ordenado.length / 2)];
+            for (const v of serie) pior = Math.max(pior, Math.abs(v - mediana));
+            faixas.push('y=' + frac.toFixed(2) + ' [' + serie.join(' ') + ']');
           }
+
           return {
             eixo: horizontal ? 'x' : 'y',
             sangria: Math.round(horizontal ? st.sangriaX : st.sangriaY),
             temPintor: !!st.sangria,
-            corBarra: horizontal ? hex(st.deslocX / 2, ch / 2) : hex(cw / 2, st.deslocY / 2),
-            luzes: luzes.map((v) => Math.round(v)),
+            bordaDev,
+            alinhada: Math.abs(bordaDev - Math.round(bordaDev)) < 0.001,
+            corBarra: horizontal
+              ? hex(Math.round(bordaDev / 2), Math.round(st.canvas.height / 2))
+              : hex(Math.round(st.canvas.width / 2), Math.round(bordaDev / 2)),
+            pior, faixas,
           };
         })()
       `);
-      const maior = Math.max(...m.luzes);
-      const menor = Math.min(...m.luzes);
       checar(`letterbox ${nome} (${l}×${a}): há barra e há quem a pinte`,
         m.sangria > 1 && m.temPintor === true, JSON.stringify(m));
       checar(`letterbox ${nome}: a barra recebeu o cenário, não a cor lisa`,
         m.corBarra !== '#0b1220', JSON.stringify(m));
-      // 10 em 255 é ~4%: passa uma variação de degradê e reprova a emenda, que
-      // custava 20% do brilho.
-      checar(`letterbox ${nome}: sem linha de emenda na junção`,
-        maior - menor <= 10, `luminâncias na barra: ${m.luzes.join(' ')}`);
+      // A borda do jogo caindo em px de dispositivo INTEIRO é a causa raiz
+      // resolvida, e vale verificar direto: sem isso o pixel da junção recebe
+      // cobertura parcial e qualquer camada semitransparente vira linha.
+      checar(`letterbox ${nome}: a borda do jogo cai em pixel inteiro`,
+        m.alinhada === true, `bordaDev=${m.bordaDev}`);
+      // 4 em 255 passa o ruído do degradê (mede 1) e reprova a emenda, que media
+      // 20% antes da sobreposição e 7% antes do alinhamento.
+      checar(`letterbox ${nome}: sem linha de emenda, nem no céu nem na faixa`,
+        m.pior <= 4, `pior desvio ${m.pior} · ${m.faixas.join(' · ')}`);
       await capturar(`08b-letterbox-${nome}`);
     }
 

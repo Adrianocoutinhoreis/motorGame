@@ -89,23 +89,53 @@ export class Stage {
     const larguraDisp = Math.max(1, alvo.clientWidth || window.innerWidth);
     const alturaDisp = Math.max(1, alvo.clientHeight || window.innerHeight);
 
-    // "fit": cabe inteiro, sem cortar, mantendo proporção.
-    this.escala = Math.min(larguraDisp / this.larguraLogica, alturaDisp / this.alturaLogica);
-    const larguraDesenho = this.larguraLogica * this.escala;
-    const alturaDesenho = this.alturaLogica * this.escala;
-    this.deslocX = (larguraDisp - larguraDesenho) / 2;
-    this.deslocY = (alturaDisp - alturaDesenho) / 2;
-
-    // A mesma sobra, medida em px LÓGICOS — é nessa unidade que o cenário
-    // desenha, e é o que `pintarSangria` recebe para cobrir as barras.
-    this.sangriaX = this.deslocX / this.escala;
-    this.sangriaY = this.deslocY / this.escala;
-
     // Limitar o DPR a 2 evita buffers gigantes (e queda de FPS) em celulares 3x
     // sem diferença visível para arte plana.
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const larguraBuffer = Math.round(larguraDisp * dpr);
     const alturaBuffer = Math.round(alturaDisp * dpr);
+
+    // "fit": cabe inteiro, sem cortar, mantendo proporção — e ALINHADO à grade
+    // de pixels do aparelho.
+    //
+    // ## Por que o alinhamento não é preciosismo
+    //
+    // Sem ele o jogo começa e termina no MEIO de um pixel físico. Esse pixel
+    // recebe cobertura parcial, e aí basta uma camada semitransparente para o
+    // resultado divergir do vizinho: a faixa de base do tema 'formas' tem 55% de
+    // opacidade e, aplicada em cobertura parcial sobre conteúdo já escurecido,
+    // deixava **uma linha 7% mais clara na junção com a barra do letterbox**.
+    // Foi queixa do humano olhando o jogo publicado, e nenhuma captura minha
+    // acusava — só a medição do pixel.
+    //
+    // ## Como
+    //
+    // A largura desenhada é arredondada para BAIXO até um múltiplo de 16 px de
+    // dispositivo. 16 porque 1280 e 720 são ambos múltiplos dele: se a largura
+    // cabe em inteiros, a altura (9/16 dela) também cabe, e a escala continua
+    // ÚNICA para os dois eixos — escala separada por eixo deformaria a arte.
+    //
+    // Custo: o jogo pode ficar até 16 px de dispositivo menor que o máximo
+    // possível. Num monitor de 1600 px de área útil isso é 1%, e compra a
+    // ausência de artefato em qualquer escala e qualquer DPR.
+    const PASSO_ALINHAMENTO = 16;
+    const bruta = Math.min(larguraDisp / this.larguraLogica, alturaDisp / this.alturaLogica);
+    const larguraDev = Math.max(
+      PASSO_ALINHAMENTO,
+      Math.floor((this.larguraLogica * bruta * dpr) / PASSO_ALINHAMENTO) * PASSO_ALINHAMENTO,
+    );
+    const alturaDev = (larguraDev * this.alturaLogica) / this.larguraLogica;
+
+    this.escala = larguraDev / (this.larguraLogica * dpr);
+    // O deslocamento também em px de dispositivo inteiros: é ele que decide em
+    // que pixel a borda do jogo cai.
+    this.deslocX = Math.round((larguraBuffer - larguraDev) / 2) / dpr;
+    this.deslocY = Math.round((alturaBuffer - alturaDev) / 2) / dpr;
+
+    // A mesma sobra, medida em px LÓGICOS — é nessa unidade que o cenário
+    // desenha, e é o que `pintarSangria` recebe para cobrir as barras.
+    this.sangriaX = this.deslocX / this.escala;
+    this.sangriaY = this.deslocY / this.escala;
 
     if (this.canvas.width !== larguraBuffer || this.canvas.height !== alturaBuffer) {
       this.canvas.width = larguraBuffer;

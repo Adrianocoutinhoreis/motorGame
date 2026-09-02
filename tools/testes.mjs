@@ -21,6 +21,7 @@ import { PathSelector } from '../engine/gameplay/PathSelector.js';
 import { estrelasDoResultado } from '../engine/screens/ResultScreen.js';
 import { Watchdog } from '../engine/core/Watchdog.js';
 import { Stage } from '../engine/core/Stage.js';
+import { Background } from '../engine/ui/Background.js';
 import { Loader } from '../engine/core/Loader.js';
 import { AvaBridge } from '../engine/ava/AvaBridge.js';
 import { AudioBus } from '../engine/audio/AudioBus.js';
@@ -35,7 +36,22 @@ const falhas = [];
 
 function teste(nome, fn) {
   try {
-    fn();
+    // **Função assíncrona é recusada, não executada pela metade.**
+    //
+    // Este executor é síncrono: `fn()` numa `async` devolve uma promessa na hora,
+    // e o teste era contado como PASSOU antes de qualquer verificação rodar. Um
+    // erro dentro dela virava rejeição não tratada, calada.
+    //
+    // Aconteceu de verdade: quatro testes do `Background` escritos com
+    // `async` + `import()` dinâmico passaram até sabotados. Testes que nunca
+    // reprovam são piores que teste nenhum — eles fazem o caso parecer coberto.
+    if (fn.constructor?.name === 'AsyncFunction') {
+      throw new Error('teste assíncrono não é suportado: importe no topo e escreva o corpo síncrono');
+    }
+    const r = fn();
+    if (r && typeof r.then === 'function') {
+      throw new Error('o teste devolveu uma promessa; este executor é síncrono');
+    }
     passaram++;
     console.log(`  ok   ${nome}`);
   } catch (err) {
@@ -1280,6 +1296,92 @@ grupo('Stage — giro do contêiner em aparelho de pé', () => {
     // 45°: não é um quarto de volta, e o motor não sabe corrigir — melhor
     // devolver 0 e deixar o toque cru do que aplicar a correção errada.
     igual(Stage.giroDaMatriz('matrix(0.7071, 0.7071, -0.7071, 0.7071, 0, 0)'), 0, '45 graus:');
+  });
+});
+
+// --------------------------------------------- Background — a sangria casa
+//
+// Testado por GEOMETRIA, e não por cor, porque foi um defeito de geometria que
+// escapou: a medição de luminância na junção passava, e o humano viu no jogo
+// publicado "uma pequena quebra no background". Era a onda da faixa de base
+// desenhada com FASE diferente nas duas passadas.
+//
+// Aqui não há canvas: um ctx de mentira anota as chamadas. É o bastante, porque
+// o que precisa casar são os NÓS da curva, não os pixels.
+grupo('Background — a sangria casa com o desenho normal', () => {
+  const ctxFalso = () => {
+    const nos = [];
+    const alvo = {
+      nos,
+      save() {}, restore() {}, beginPath() {}, closePath() {}, fill() {}, stroke() {},
+      moveTo(x, y) { nos.push(['moveTo', x, y]); },
+      lineTo(x, y) { nos.push(['lineTo', x, y]); },
+      quadraticCurveTo(cx, cy, x, y) { nos.push(['curva', cx, cy, x, y]); },
+      fillRect(x, y, l, a) { nos.push(['fillRect', x, y, l, a]); },
+      arc() {}, roundRect() {},
+      createLinearGradient() { return { addColorStop() {} }; },
+      createRadialGradient() { return { addColorStop() {} }; },
+      set fillStyle(v) {}, set strokeStyle(v) {}, set lineWidth(v) {},
+      set font(v) {}, set textAlign(v) {}, set textBaseline(v) {},
+      set globalAlpha(v) {}, set shadowColor(v) {}, set shadowBlur(v) {},
+      set shadowOffsetY(v) {}, set lineJoin(v) {}, set lineCap(v) {},
+    };
+    return alvo;
+  };
+
+  teste('a onda da faixa de base tem os mesmos nós com e sem sangria', () => {
+    const fundo = new Background({ largura: 1280, altura: 720, tema: 'formas' });
+
+    const semSangria = ctxFalso();
+    fundo._chao(semSangria, 0, 0);
+    const comSangria = ctxFalso();
+    fundo._chao(comSangria, 80, 0);   // 80 NÃO é múltiplo de 60, de propósito
+
+    const curvas = (c) => c.nos.filter((n) => n[0] === 'curva');
+    const semNos = new Map(curvas(semSangria).map((n) => [n[3], n[4]]));
+    const comNos = new Map(curvas(comSangria).map((n) => [n[3], n[4]]));
+    ok(semNos.size > 10, `precisa haver curva para comparar (${semNos.size})`);
+
+    // Todo nó do desenho normal tem de existir, no MESMO lugar, no desenho com
+    // sangria. Era isto que falhava: os nós caíam em -80, -20, 40, 100… de um
+    // lado e em 0, 60, 120… do outro, e a silhueta dava um degrau na junção.
+    let comuns = 0;
+    for (const [x, y] of semNos) {
+      if (!comNos.has(x)) continue;
+      comuns++;
+      igual(comNos.get(x), y, `nó em x=${x}:`);
+    }
+    ok(comuns > 10, `os nós precisam coincidir, não só existir (${comuns} em comum)`);
+  });
+
+  teste('a sangria estica o desenho para fora da caixa lógica', () => {
+    const fundo = new Background({ largura: 1280, altura: 720, tema: 'formas' });
+
+    const ctx = ctxFalso();
+    fundo._ceu(ctx, 80, 40);
+    const retangulos = ctx.nos.filter((n) => n[0] === 'fillRect');
+    ok(retangulos.length > 0, 'o céu precisa pintar algo');
+    for (const [, x, y, l, a] of retangulos) {
+      igual([x, y, l, a], [-80, -40, 1440, 800], 'o céu com sangria:');
+    }
+  });
+
+  teste('sem sangria o céu não pinta fora da caixa — é trabalho jogado fora', () => {
+    const fundo = new Background({ largura: 1280, altura: 720, tema: 'formas' });
+    const ctx = ctxFalso();
+    fundo._ceu(ctx);
+    for (const [, x, y, l, a] of ctx.nos.filter((n) => n[0] === 'fillRect')) {
+      igual([x, y, l, a], [0, 0, 1280, 720], 'o céu sem sangria:');
+    }
+  });
+
+  teste('pintarSangria lê a sangria do retângulo que recebe', () => {
+    const fundo = new Background({ largura: 1280, altura: 720, tema: 'formas' });
+    const ctx = ctxFalso();
+    // O formato que `Stage.areaTotal()` devolve: x e y negativos.
+    fundo.pintarSangria(ctx, { x: -80, y: -40, largura: 1440, altura: 800 });
+    const primeiro = ctx.nos.find((n) => n[0] === 'fillRect');
+    igual([primeiro[1], primeiro[2]], [-80, -40], 'a origem da pintura:');
   });
 });
 

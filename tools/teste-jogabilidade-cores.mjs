@@ -22,6 +22,7 @@
  * ## O que ele cobre
  *
  *   1. o jogo abre, os 8 SVG carregam, a geometria é a do PLANO-VISUAL;
+ *  1b. a sangria do letterbox não deixa linha na junção, numa viewport torta;
  *   2. ARRASTO por três iguais pontua o tamanho do caminho, e o tabuleiro repõe;
  *   3. arrasto curto não pontua e NÃO conta erro (é tentativa cancelada);
  *   4. TOQUE sequencial monta o mesmo caminho e a espera o fecha sozinha;
@@ -199,6 +200,95 @@ try {
     geo.celula === 128 && geo.bx === 364 && geo.by === 40 && geo.hudW === 324,
     JSON.stringify(geo));
   await captura('02-partida');
+  // -------------------------------- a emenda da sangria, no tema 'formas'
+  //
+  // Vive aqui, e não no `teste-navegador.mjs`, porque a linha só aparece neste
+  // tema: a faixa de base tem 55% de opacidade, e é a camada semitransparente
+  // que transforma um pixel de cobertura parcial em linha visível. O jogo piloto
+  // usa o tema 'campo', de chão opaco — lá a sabotagem do alinhamento passa sem
+  // reprovar, e eu confirmei isso desligando-o.
+  //
+  // A queixa foi do humano, olhando o jogo publicado, sobre "uma pequena quebra
+  // na imagem no background". Media 7% na direção do céu.
+  //
+  // ## Qual das duas verificações abaixo guarda o defeito
+  //
+  // A do ALINHAMENTO. Medi: desligando o alinhamento nesta viewport, o desvio de
+  // luminância na junção fica em 3 — abaixo de qualquer limite que não reprove
+  // também o ruído do degradê, que mede 1 ou 2. A causa raiz é geométrica e é
+  // ela que se verifica direto.
+  //
+  // A medição de desvio fica porque cobre outra coisa: cenário que não chega à
+  // barra, degradê recalculado no tamanho maior, faixa de chão que termina antes
+  // da borda. Nenhuma dessas é sutil, e todas apareceriam aqui.
+  console.log('\n1b. A emenda da sangria não deixa linha na faixa de base');
+
+  // **Numa viewport TORTA, de propósito.** A janela normal deste teste
+  // (1280×860, dpr 1) dá geometria naturalmente inteira: 1280 já é múltiplo de
+  // 16 e a sobra vertical é 70 exatos. Medir ali não exercita nada — confirmei
+  // desligando o alinhamento e vendo tudo passar. Os números abaixo são
+  // escolhidos para NÃO fechar em pixel inteiro sem o alinhamento.
+  await cdp.enviar('Emulation.setDeviceMetricsOverride',
+    { width: 1207, height: 853, deviceScaleFactor: 1.25, mobile: false }, s);
+  await esperar(600);
+
+  const emenda = await aval(`(() => {
+    const st = window.jogo.stage;
+    const ctx = st.canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const lum = (bx, by) => {
+      const d = ctx.getImageData(bx, by, 1, 1).data;
+      return 0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2];
+    };
+    const bordas = [];
+    if (st.deslocY > 1) {
+      // Barras em cima e embaixo: a de BAIXO cruza a faixa de base.
+      bordas.push({ nome: 'baixo', dev: (st.deslocY + st.alturaLogica * st.escala) * dpr, eixo: 'y' });
+      bordas.push({ nome: 'cima', dev: st.deslocY * dpr, eixo: 'y' });
+    }
+    if (st.deslocX > 1) {
+      bordas.push({ nome: 'esquerda', dev: st.deslocX * dpr, eixo: 'x' });
+      bordas.push({ nome: 'direita', dev: (st.deslocX + st.larguraLogica * st.escala) * dpr, eixo: 'x' });
+    }
+    const relato = [];
+    let pior = 0;
+    for (const b of bordas) {
+      for (const frac of [0.25, 0.5, 0.75]) {
+        const serie = [];
+        for (let d = -5; d <= 5; d++) {
+          const bx = b.eixo === 'x' ? Math.round(b.dev) + d : Math.round(st.canvas.width * frac);
+          const by = b.eixo === 'y' ? Math.round(b.dev) + d : Math.round(st.canvas.height * frac);
+          if (bx < 0 || by < 0 || bx >= st.canvas.width || by >= st.canvas.height) continue;
+          serie.push(Math.round(lum(bx, by)));
+        }
+        if (serie.length < 5) continue;
+        const ord = [...serie].sort((x, y) => x - y);
+        const mediana = ord[Math.floor(ord.length / 2)];
+        for (const v of serie) pior = Math.max(pior, Math.abs(v - mediana));
+        relato.push(b.nome + '@' + frac + ' [' + serie.join(' ') + ']');
+      }
+    }
+    const alinhadas = bordas.every((b) => Math.abs(b.dev - Math.round(b.dev)) < 0.001);
+    return { bordas: bordas.length, alinhadas, pior, relato };
+  })()`);
+  console.log(`  bordas medidas: ${emenda.bordas} · pior desvio: ${emenda.pior}`);
+  checar('há barra para medir', emenda.bordas > 0, JSON.stringify(emenda.bordas));
+  checar('as quatro bordas do jogo caem em pixel inteiro', emenda.alinhadas === true);
+  checar('nenhuma linha na junção, em nenhuma borda',
+    emenda.pior <= 4, `pior ${emenda.pior} · ${emenda.relato.join(' · ')}`);
+
+  // Devolve a viewport, e CONFERE que voltou: as seções seguintes convertem
+  // coordenadas com a `geo` medida na seção 1, e uma viewport que não voltasse
+  // faria todas elas errarem o alvo sem dizer por quê.
+  await cdp.enviar('Emulation.clearDeviceMetricsOverride', {}, s);
+  await esperar(600);
+  const devolvida = await aval(`(() => {
+    const c = window.jogo.cena;
+    return { bx: c.tabuleiroX, by: c.tabuleiroY, celula: c.geo.celula, escala: window.jogo.stage.escala };
+  })()`);
+  checar('a viewport voltou ao tamanho das outras seções',
+    devolvida.bx === geo.bx && devolvida.by === geo.by, JSON.stringify(devolvida));
+
 
   // ---------------------------------------------------------------- arrasto
   console.log('\n2. ARRASTO: desenhar um caminho de 3 peças da mesma cor');
@@ -456,11 +546,15 @@ try {
   checar('a pausa abriu', await aval('!!window.jogo.cena.pausada'));
   await captura('05-pausa');
 
-  console.log('\n10. O cão de guarda não dispara numa sessão normal');
   checar('nenhum disparo do Watchdog', await aval('window.jogo.cena.guarda.disparos') === 0);
 
   const lacunas = mensagens.filter((m) => /narra/i.test(m));
-  const inesperadas = mensagens.filter((m) => !/narra/i.test(m));
+  // `willReadFrequently` é aviso do Chrome causado por ESTE ARQUIVO, não pelo
+  // jogo: a seção 1b lê pixels com `getImageData` para medir a emenda. Fica
+  // dispensado por nome, e não por um filtro largo, para não abrir a porta a
+  // aviso de verdade passar junto.
+  const doTeste = /willReadFrequently/;
+  const inesperadas = mensagens.filter((m) => !/narra/i.test(m) && !doTeste.test(m));
   console.log(`\n  lacunas de narração declaradas: ${lacunas.length}`);
   checar('nenhum erro no console além das lacunas de narração declaradas',
     inesperadas.length === 0, inesperadas.join(' | '));
