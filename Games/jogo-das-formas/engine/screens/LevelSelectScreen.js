@@ -196,7 +196,4 @@ export class LevelSelectScreen extends Scene {
     this.audio.falar(config.audio?.escolhaNivel ?? null, { texto: 'Escolha um nível' });
   }
 
-  aoSair() {
-    this.audio.calar();
-  }
 }

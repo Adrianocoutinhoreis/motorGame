@@ -1424,7 +1424,6 @@ export class GameScene extends Scene {
    * Sair para o menu no meio de uma jogada é exatamente esse caso.
    */
   aoSair() {
-    this.audio.calar();
     this.audio.pararMusica();
     Tween.removerTodos();
   }

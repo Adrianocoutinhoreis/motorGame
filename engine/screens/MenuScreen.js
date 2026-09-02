@@ -337,7 +337,4 @@ export class MenuScreen extends Scene {
     }
   }
 
-  aoSair() {
-    this.audio.calar();
-  }
 }

@@ -917,7 +917,6 @@ export class GameScene extends Scene {
    * menu no meio de uma resolução é exatamente esse caso.
    */
   aoSair() {
-    this.audio.calar();
     this._pararEsperaDoToque();
     Tween.removerTodos();
   }

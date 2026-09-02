@@ -579,6 +579,53 @@ try {
     }
   }
 
+  // ------------------------------------------------------------------------
+  // 8. Nenhum som sobrevive à sua tela
+  //
+  // Defeito relatado pelo humano: "o som da tela final continua rodando na tela
+  // de menu". É real e mede-se — o som de fim de partida deste jogo é
+  // `acertoSOS.wav`, com **4,55 s** (o de derrota, 5,5 s), e a criança que toca
+  // MENU antes disso levava o fim de partida para o menu.
+  //
+  // Este é o jogo em que dá para verificar: ele TEM os arquivos. No Jogo das
+  // Cores não há som nenhum ainda, e um teste ali passaria por vacuidade.
+  console.log('\n8. Nenhum som sobrevive à sua tela');
+
+  await aval(`window.jogo.irPara('resultado', ${JSON.stringify({
+    nivel: { id: 1 },
+    resultado: { acertos: 12, erros: 0, totalPerguntas: 12, nivel: 1, vitoria: true },
+  })})`);
+  await esperar(700);
+  const noFim = await aval('window.jogo.audio.sonsTocando');
+  console.log(`  na tela final: ${JSON.stringify(noFim)}`);
+  // Se isto vier 0, o teste não está provando nada — o arquivo tem 4,55 s e
+  // deveria estar no meio dele. Falha alto em vez de aprovar de graça.
+  checar('a tela final está de fato tocando som (senão o teste é vazio)',
+    noFim.sfx > 0, JSON.stringify(noFim));
+
+  await aval(`window.jogo.irPara('menu')`);
+  await esperar(500);
+  const noMenu = await aval('window.jogo.audio.sonsTocando');
+  console.log(`  já no menu:    ${JSON.stringify(noMenu)}`);
+  checar('o som da tela final NÃO continua no menu',
+    noMenu.sfx === 0 && noMenu.speech === 0, JSON.stringify(noMenu));
+
+  // E a contrapartida: a MÚSICA atravessa a troca. Sem esta verificação, "cortar
+  // tudo na troca de tela" passaria — e a música recomeçaria do zero a cada
+  // botão tocado, um talho audível.
+  await esperar(600);
+  const musicaNoMenu = await aval('window.jogo.audio.sonsTocando');
+  if (musicaNoMenu.music > 0) {
+    await aval(`window.jogo.irPara('niveis')`);
+    await esperar(500);
+    const musicaDepois = await aval('window.jogo.audio.sonsTocando');
+    checar('a música NÃO é cortada na troca de tela',
+      musicaDepois.music > 0, `${JSON.stringify(musicaNoMenu)} -> ${JSON.stringify(musicaDepois)}`);
+  } else {
+    // Declarado em vez de silenciado: sem música tocando, não há o que verificar.
+    console.log('  (sem música tocando no menu — a contrapartida não foi verificada)');
+  }
+
   const novasNaTelaFinal = mensagens.slice(mensagensDaPartida);
   const inesperadas = novasNaTelaFinal.filter((m) => !/narra|locu|áudio|audio/i.test(m));
   checar('a tela final não produz erro no console além das lacunas de narração',

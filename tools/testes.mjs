@@ -1602,6 +1602,146 @@ await (async () => {
   });
 })();
 
+// ----------------------------- Áudio — nenhum som sobrevive à sua tela
+//
+// Defeito relatado: a criança terminava a partida, tocava MENU antes de o som de
+// fim de partida acabar (4,55 s no Jogo das Formas, 5,5 s no de derrota) e ouvia
+// o fim de partida NA TELA DE MENU.
+//
+// `calar()` existia, mas silencia só o canal de FALA — e o som de fim de partida
+// é efeito. E havia um segundo furo, mais sutil: `tocar()` é assíncrono, então um
+// som pedido pouco antes do corte só nascia depois dele e escapava.
+grupo('Áudio — nenhum som sobrevive à sua tela', () => {
+  /** Fonte de mentira, só para a contabilidade do que está tocando. */
+  const fonteFalsa = () => {
+    const f = { parou: false, stop() { this.parou = true; } };
+    return f;
+  };
+
+  teste('pararEfeitos corta o canal de efeito e só ele', () => {
+    const audio = new AudioBus();
+    const efeito = fonteFalsa();
+    const fala = fonteFalsa();
+    const musica = fonteFalsa();
+    audio._tocando.sfx.add(efeito);
+    audio._tocando.speech.add(fala);
+    audio._tocando.music.add(musica);
+
+    audio.pararEfeitos();
+    ok(efeito.parou, 'o efeito tinha de parar');
+    ok(!fala.parou, 'a fala não é assunto de pararEfeitos');
+    ok(!musica.parou, 'a música não é assunto de pararEfeitos');
+    igual(audio.sonsTocando, { music: 1, sfx: 0, speech: 1 });
+  });
+
+  teste('encerrarDaTela corta fala e efeito, e DEIXA a música', () => {
+    // A música é do jogo, não da tela: menu e partida pedem a mesma, e
+    // `musica(id)` é idempotente para atravessar a troca sem talho. Parar aqui
+    // faria a música recomeçar do zero a cada botão tocado.
+    const audio = new AudioBus();
+    const efeito = fonteFalsa();
+    const fala = fonteFalsa();
+    const musica = fonteFalsa();
+    audio._tocando.sfx.add(efeito);
+    audio._tocando.speech.add(fala);
+    audio._tocando.music.add(musica);
+
+    audio.encerrarDaTela();
+    ok(efeito.parou && fala.parou, 'fala e efeito têm de parar');
+    ok(!musica.parou, 'a MÚSICA tem de continuar');
+    igual(audio.sonsTocando, { music: 1, sfx: 0, speech: 0 });
+  });
+
+  teste('encerrarDaTela esvazia a fila de fala que ainda não tocou', () => {
+    const audio = new AudioBus();
+    audio._filaFala.push({ id: 'x', texto: null, resolver: () => {} });
+    audio._filaFala.push({ id: 'y', texto: null, resolver: () => {} });
+    audio.encerrarDaTela();
+    igual(audio._filaFala.length, 0, 'a fila tinha de esvaziar:');
+  });
+
+  teste('cada corte avança a geração do seu canal, e só dele', () => {
+    // É a geração que resolve a corrida: `tocar` a fotografa antes dos `await` e
+    // desiste se ela mudou. Sem canal separado, calar a fala mataria um efeito
+    // que estava carregando — e o efeito não tem nada com isso.
+    const audio = new AudioBus();
+    const antes = { ...audio._geracao };
+    audio.calar();
+    igual(audio._geracao.speech, antes.speech + 1, 'calar avança a fala:');
+    igual(audio._geracao.sfx, antes.sfx, 'calar NÃO avança o efeito:');
+
+    audio.pararEfeitos();
+    igual(audio._geracao.sfx, antes.sfx + 1, 'pararEfeitos avança o efeito:');
+
+    audio.encerrarDaTela();
+    igual(
+      [audio._geracao.speech, audio._geracao.sfx],
+      [antes.speech + 2, antes.sfx + 2],
+      'encerrarDaTela avança os dois:',
+    );
+    igual(audio._geracao.music, antes.music, 'e nunca a música:');
+  });
+});
+
+await (async () => {
+  console.log('\nÁudio — som pedido antes do corte não nasce depois dele');
+
+  /** Contexto de mentira, o mínimo que `tocar` usa. */
+  const contextoFalso = () => {
+    const iniciadas = [];
+    return {
+      iniciadas,
+      state: 'running',
+      currentTime: 0,
+      destination: {},
+      createBufferSource() {
+        const f = {
+          buffer: null, loop: false, onended: null,
+          connect() {}, start() { iniciadas.push(f); }, stop() {},
+        };
+        return f;
+      },
+      createGain() { return { gain: { value: 1 }, connect() {} }; },
+    };
+  };
+
+  await testeAsync('o efeito que carregava quando a tela trocou NÃO começa', async () => {
+    const audio = new AudioBus();
+    const ctx = contextoFalso();
+    audio._garantirContexto = () => ctx;
+    audio._ganhos = { music: {}, sfx: {}, speech: {} };
+    audio._brutos.set('bum', new ArrayBuffer(8));
+
+    // A decodificação fica pendurada: é a janela em que o defeito vivia.
+    let liberar;
+    audio._decodificar = () => new Promise((ok) => { liberar = () => ok({ duration: 4.55 }); });
+
+    const promessa = audio.tocar('bum', { canal: 'sfx' });
+    audio.encerrarDaTela();   // a criança tocou MENU
+    liberar();                // e só agora o arquivo terminou de decodificar
+    const handle = await promessa;
+
+    igual(handle, null, 'não pode devolver som tocando:');
+    igual(ctx.iniciadas.length, 0, 'e não pode ter iniciado fonte nenhuma:');
+    igual(audio.sonsTocando.sfx, 0, 'nada tocando:');
+  });
+
+  await testeAsync('sem corte no meio, o mesmo som toca normalmente', async () => {
+    // A prova de que a guarda acima não está simplesmente bloqueando tudo.
+    const audio = new AudioBus();
+    const ctx = contextoFalso();
+    audio._garantirContexto = () => ctx;
+    audio._ganhos = { music: {}, sfx: {}, speech: {} };
+    audio._brutos.set('bum', new ArrayBuffer(8));
+    audio._decodificar = async () => ({ duration: 4.55 });
+
+    const handle = await audio.tocar('bum', { canal: 'sfx' });
+    ok(handle !== null, 'tinha de tocar');
+    igual(ctx.iniciadas.length, 1, 'uma fonte iniciada:');
+    igual(audio.sonsTocando.sfx, 1, 'e contabilizada:');
+  });
+})();
+
 // ------------------------------------------------------------------ resumo
 console.log(`\n${'-'.repeat(56)}`);
 console.log(`${passaram} passaram, ${falharam} falharam`);

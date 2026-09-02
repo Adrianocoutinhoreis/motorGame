@@ -577,9 +577,42 @@ Três canais: `music`, `sfx` e **`speech`**.
 audio.musica('somFundo');
 audio.efeito('nao');
 await audio.falar('tres', { texto: '3' });   // fila serializada
-audio.calar();
+audio.calar();          // corta a FALA (e esvazia a fila)
+audio.pararEfeitos();   // corta os EFEITOS
+audio.encerrarDaTela(); // os dois — o Game chama a cada troca de cena
+audio.sonsTocando;      // { music, sfx, speech } — para depurar e testar
 audio.alternarMudo();
 ```
+
+#### Nenhum som sobrevive à sua tela — e quem garante é o `Game`
+
+Em toda troca de cena o motor corta **fala e efeito**. Não é o `aoSair` de cada tela: regra
+que depende de cada tela lembrar é regra que uma tela nova vai esquecer. Por isso os
+`aoSair() { this.audio.calar(); }` que existiam em cinco telas foram REMOVIDOS — dois lugares
+definindo a mesma regra é como eles divergem.
+
+O defeito que trouxe isto: `acertoSOS.wav` (fim de partida do Jogo das Formas) tem **4,55 s**, o
+de derrota 5,5 s, e a criança que tocava MENU antes do fim ouvia o som da tela final no menu.
+`calar()` existia, mas silencia só a FALA — e o som de fim de partida é efeito. Com a correção
+desligada, o teste mede **três** efeitos atravessando para o menu.
+
+**A MÚSICA não é cortada, e isso é decisão, não esquecimento.** Ela é do jogo, não da tela:
+menu e partida pedem a mesma, e `musica(id)` é idempotente justamente para atravessar a troca.
+Cortar aqui faria a música recomeçar do zero a cada botão tocado. Há verificação para os dois
+lados — se alguém "consertar" cortando tudo, o teste reprova.
+
+Ainda cabe chamar `calar()` **dentro** da tela, e duas telas o fazem: o `PauseScreen` ao abrir,
+e o `TutorialScreen` ao virar de passo. Isso é silenciar no meio da tela, não na saída dela.
+
+#### Som pedido antes do corte não nasce depois dele
+
+`tocar()` é assíncrono — espera o contexto destravar e o arquivo decodificar — e nesse intervalo
+a fonte ainda não existe para ser parada. Sair da tela exatamente aí deixava o som nascer órfão
+já na tela seguinte, porque o corte não achou nada para cortar.
+
+Cada canal tem uma **geração**, que o corte incrementa; `tocar` a fotografa antes dos `await` e
+desiste se ela mudou. Gerações são por canal para `calar()` não matar um efeito que estava
+carregando — o efeito não tem nada com a fala.
 
 > **`falar()` é obrigatório para todo conteúdo narrado.** Os originais chamavam
 > `createjs.Sound.play()` direto e as falas se atropelavam — num jogo cujo conteúdo

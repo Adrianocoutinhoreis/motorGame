@@ -196,6 +196,7 @@ custou um defeito encontrado em jogo real em vez de em medição.
 | Canais music / sfx / speech | Pronto | Fila de narração serializada |
 | Destravamento por gesto | Pronto | Chamado no primeiro toque |
 | Todo som vindo de arquivo | Pronto | **Regra travada por teste.** O motor não sintetiza voz nem gera tom: faltando a gravação, a tela fica em silêncio e o console nomeia o arquivo que falta |
+| Nenhum som sobrevive à sua tela | Pronto | O `Game` corta fala e efeito em toda troca de cena (`AudioBus.encerrarDaTela`), e a MÚSICA não — ela é do jogo, não da tela. Cobre também a corrida do som pedido antes do corte que só ia começar depois. Verificado nos dois sentidos: com a correção desligada, três efeitos atravessam para o menu; cortando tudo, a música recomeçaria a cada botão e o teste reprova |
 | Legenda do áudio narrado | **Planejado** | O evento `narracao` já entrega `{ id, texto }` a cada fala; falta só a camada visual |
 
 ## AVA

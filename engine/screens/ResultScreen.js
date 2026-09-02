@@ -362,7 +362,4 @@ export class ResultScreen extends Scene {
     });
   }
 
-  aoSair() {
-    this.audio.calar();
-  }
 }

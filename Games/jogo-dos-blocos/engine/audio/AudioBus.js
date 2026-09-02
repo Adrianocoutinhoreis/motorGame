@@ -48,6 +48,21 @@ export class AudioBus extends Emitter {
     /** Fontes tocando agora, por canal. */
     this._tocando = { music: new Set(), sfx: new Set(), speech: new Set() };
 
+    /**
+     * Geração de cada canal, para cortar som que foi PEDIDO antes do corte e
+     * só ia começar depois dele.
+     *
+     * `tocar()` é assíncrono — espera o contexto destravar e o arquivo
+     * decodificar — e nesse intervalo a fonte ainda não existe para ser parada.
+     * Sem isto, sair da tela no instante em que uma fala começava deixava a fala
+     * tocando na tela seguinte: o corte não achava nada para cortar, e o som
+     * nascia órfão logo depois.
+     *
+     * Cada corte incrementa a geração do seu canal; `tocar` compara a geração de
+     * quando foi chamado com a de quando ia iniciar e desiste se mudou.
+     */
+    this._geracao = { music: 0, sfx: 0, speech: 0 };
+
     this.volumes = {
       music: opcoes.volumeMusica ?? 0.25,
       sfx: opcoes.volumeEfeitos ?? 0.8,
@@ -149,6 +164,8 @@ export class AudioBus extends Emitter {
    */
   async tocar(id, opcoes = {}) {
     const canal = opcoes.canal ?? 'sfx';
+    // Fotografada ANTES dos `await`. Ver `this._geracao`.
+    const geracaoNoPedido = this._geracao[canal] ?? 0;
     const ctx = this._garantirContexto();
     if (!ctx) return null;
     if (ctx.state === 'suspended') {
@@ -161,6 +178,11 @@ export class AudioBus extends Emitter {
 
     const buffer = await this._decodificar(id);
     if (!buffer) return null;
+
+    // O corte aconteceu enquanto este som carregava: ele já não pertence à tela
+    // que o pediu. Não começa — e devolve `null`, que os chamadores já tratam
+    // como "não tocou" (a fila de fala, por exemplo, segue para o item seguinte).
+    if ((this._geracao[canal] ?? 0) !== geracaoNoPedido) return null;
 
     const fonte = ctx.createBufferSource();
     fonte.buffer = buffer;
@@ -236,6 +258,7 @@ export class AudioBus extends Emitter {
 
   /** Interrompe a fala atual e esvazia a fila (ex.: aluno pulou a instrução). */
   calar() {
+    this._geracao.speech++;
     for (const fonte of this._tocando.speech) {
       try { fonte.stop(); } catch { /* já parou */ }
     }
@@ -243,6 +266,50 @@ export class AudioBus extends Emitter {
     for (const item of this._filaFala) item.resolver(false);
     this._filaFala.length = 0;
     this._falando = false;
+  }
+
+  /**
+   * Quantos sons estão tocando em cada canal.
+   *
+   * Existe para o teste poder AFIRMAR que nada sobreviveu à troca de tela — e
+   * para depurar de dentro do console do navegador, que é onde este tipo de
+   * defeito aparece primeiro.
+   */
+  get sonsTocando() {
+    return {
+      music: this._tocando.music.size,
+      sfx: this._tocando.sfx.size,
+      speech: this._tocando.speech.size,
+    };
+  }
+
+  /** Corta os efeitos em curso. Não mexe na fala nem na música. */
+  pararEfeitos() {
+    this._geracao.sfx++;
+    for (const fonte of this._tocando.sfx) {
+      try { fonte.stop(); } catch { /* já parou */ }
+    }
+    this._tocando.sfx.clear();
+    return this;
+  }
+
+  /**
+   * Encerra o som que pertence à TELA que está saindo: fala e efeito.
+   *
+   * Chamado pelo `Game` em toda troca de cena, e é o que garante a regra sem
+   * depender de cada tela lembrar. O defeito que trouxe isto: o som de fim de
+   * partida do Jogo das Formas tem 4,55 s (o de derrota, 5,5 s), e a criança que
+   * tocava MENU antes disso ouvia o fim de partida **na tela de menu**.
+   *
+   * **A MÚSICA FICA, e não é esquecimento.** Ela é do jogo, não da tela: menu e
+   * partida pedem a mesma (`config.audio.musica`), e `musica(id)` é idempotente
+   * justamente para atravessar a troca sem cortar. Parar aqui faria a música
+   * recomeçar do zero a cada tela — um talho audível a cada toque de botão.
+   */
+  encerrarDaTela() {
+    this.calar();
+    this.pararEfeitos();
+    return this;
   }
 
   async _processarFala() {

@@ -594,7 +594,6 @@ export class GameScene extends Scene {
   }
 
   aoSair() {
-    this.audio.calar();
     Tween.removerTodos();
   }
 }

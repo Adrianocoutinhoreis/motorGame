@@ -116,6 +116,16 @@ export class Game extends Emitter {
         this.stage.raiz.remover(this.cena);
         this.cena._desmontar();
         this.cena = null;
+
+        // **Nenhum som sobrevive à sua tela.** Fala e efeito são cortados aqui,
+        // no motor, e não em cada `aoSair` — porque uma regra que depende de
+        // cada tela lembrar é uma regra que uma tela nova vai esquecer.
+        //
+        // O defeito que trouxe isto: o som de fim de partida tem 4,55 s, e a
+        // criança que tocava MENU antes de ele acabar ouvia o fim de partida na
+        // tela de menu. A música NÃO para — é do jogo, não da tela. Ver
+        // `AudioBus.encerrarDaTela`.
+        this.audio.encerrarDaTela();
         // A cena que sai leva o cenário dela; deixar o ponteiro vivo faria o
         // `Stage` pintar as barras com um nó já desmontado.
         this.stage.sangria = null;

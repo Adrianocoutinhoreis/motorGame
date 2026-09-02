@@ -256,7 +256,4 @@ export class TutorialScreen extends Scene {
     else this.irPara('jogando', { nivel: niveis[0] ?? { id: 1 } });
   }
 
-  aoSair() {
-    this.audio.calar();
-  }
 }
