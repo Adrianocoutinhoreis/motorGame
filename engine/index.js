@@ -50,6 +50,7 @@ export { MenuScreen } from './screens/MenuScreen.js';
 export { TutorialScreen } from './screens/TutorialScreen.js';
 export { LevelSelectScreen } from './screens/LevelSelectScreen.js';
 export { PauseScreen } from './screens/PauseScreen.js';
+export { HelpScreen } from './screens/HelpScreen.js';
 export { ResultScreen } from './screens/ResultScreen.js';
 
 // ------------------------------------------------------------------ jogabilidade

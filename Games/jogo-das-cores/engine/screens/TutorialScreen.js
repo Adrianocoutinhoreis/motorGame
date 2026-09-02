@@ -68,7 +68,23 @@ export class TutorialScreen extends Scene {
     this.passos = config.tutorial ?? [];
     this.indice = 0;
 
-    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
+    /**
+     * MODO AJUDA: esta mesma tela, servida por cima de uma partida em curso.
+     *
+     * Quando `aoFecharAjuda` vem no contexto, o `HelpScreen` está hospedando
+     * este tutorial dentro do jogo (ver a classe dele). Três coisas mudam, e
+     * são só três — o resto é o mesmo tutorial, de propósito: duas versões da
+     * mesma explicação divergiriam com o tempo.
+     */
+    // `Scene` guarda o contexto inteiro em `this.ctx`, e é por ali que o campo
+    // chega sem precisar de parâmetro novo no construtor.
+    this.aoFecharAjuda = this.ctx?.aoFecharAjuda ?? null;
+
+    // Sem cenário no modo ajuda: o véu do `HelpScreen` já separa a camada, e um
+    // fundo opaco esconderia a partida que a criança precisa ver que continua lá.
+    if (!this.aoFecharAjuda) {
+      this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
+    }
 
     // ------------------------------------------------------------ cartão
     const larguraPainel = Math.min(980, L - espaco.xl * 2);
@@ -120,7 +136,10 @@ export class TutorialScreen extends Scene {
     // seja em 222; com este centro a luva termina em ~204. Em troca, uns 20 px do
     // braço esquerdo dele saem pela borda da tela — o que lê como alguém entrando
     // em cena para explicar, e é melhor que encolher a pessoa até caber.
-    this.mascote = mascoteVisivel(config, 'tutorial') ? new Mascot({
+    // No modo ajuda o mascote não entra: ele é um busto de 280 px que sai pela
+    // borda esquerda da tela, e sobre uma partida em curso taparia justamente a
+    // área de jogo que a criança está tentando entender.
+    this.mascote = (!this.aoFecharAjuda && mascoteVisivel(config, 'tutorial')) ? new Mascot({
       tamanho: 280,
       x: L * 0.5 - larguraPainel / 2 - 62,
       y: A * 0.62,
@@ -141,7 +160,10 @@ export class TutorialScreen extends Scene {
     // voltar por baixo da borda do botão verde.
     const yNav = A * 0.82;
     const tamanhoSeta = 84;
-    const larguraJogar = 260;
+    // 340 no modo ajuda: "VOLTAR AO JOGO" não cabe nos 260 de "JOGAR". E o
+    // rótulo é esse, e não "VOLTAR" sozinho, porque a seta de voltar PASSO fica
+    // ao lado — um botão dizendo só "voltar" ao lado dela é ambíguo.
+    const larguraJogar = this.aoFecharAjuda ? 340 : 260;
     const folgaNav = 40; // respiro entre o JOGAR e as setas, dos dois lados
     // Aresta interna das setas, medida a partir do centro da tela.
     const arestaSeta = larguraJogar / 2 + folgaNav;
@@ -168,8 +190,11 @@ export class TutorialScreen extends Scene {
       aoTocar: () => this.mostrarPasso(this.indice + 1),
     });
 
+    // No último passo: JOGAR começa a partida — ou, no modo ajuda, VOLTAR
+    // devolve a partida que já estava em curso. É o mesmo botão, no mesmo lugar,
+    // dizendo a verdade em cada caso.
     this.botaoJogar = new Button({
-      rotulo: 'JOGAR',
+      rotulo: this.aoFecharAjuda ? 'VOLTAR AO JOGO' : 'JOGAR',
       icone: 'jogar',
       largura: larguraJogar,
       altura: 88,
@@ -178,7 +203,7 @@ export class TutorialScreen extends Scene {
       variante: 'sucesso',
       audio: this.audio,
       somToque: config.audio?.clique,
-      aoTocar: () => this._comecar(),
+      aoTocar: () => (this.aoFecharAjuda ? this.aoFecharAjuda() : this._comecar()),
     });
     this.botaoJogar.visible = false;
 
@@ -186,20 +211,27 @@ export class TutorialScreen extends Scene {
       x: L / 2,
       y: yNav + 96,
       tamanho: tipografia.apoio,
-      cor: cores.tinta,
+      // No modo ajuda este texto cai sobre o VÉU escuro, não sobre o cenário
+      // claro do tutorial: em tinta escura ele quase desaparecia. Visto numa
+      // captura — nenhum teste julgaria contraste.
+      cor: this.aoFecharAjuda ? cores.superficie : cores.tinta,
       alinhamento: 'center',
     });
 
     this.adicionar(this.botaoAnterior, this.botaoProximo, this.botaoJogar, this.contador);
 
-    // Sair do tutorial: volta para de onde veio (menu, em geral).
+    // Sair do tutorial: volta para de onde veio (menu, em geral). No modo ajuda
+    // "sair" é fechar a camada — sair para o menu ali seria abandonar a partida,
+    // que é exatamente o que a ajuda existe para não fazer.
     this.adicionar(new IconButton({
-      icone: 'casa',
+      icone: this.aoFecharAjuda ? 'fechar' : 'casa',
       x: espaco.md,
       y: espaco.md,
       audio: this.audio,
       somToque: config.audio?.clique,
-      aoTocar: () => this.irPara(this.game.dados.voltarPara ?? 'menu'),
+      aoTocar: () => (this.aoFecharAjuda
+        ? this.aoFecharAjuda()
+        : this.irPara(this.game.dados.voltarPara ?? 'menu')),
     }));
 
     this.adicionar(new SoundToggle({

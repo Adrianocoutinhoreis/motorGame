@@ -78,6 +78,21 @@ export class Game extends Emitter {
      */
     this._tempoJogando = 0;
 
+    /**
+     * Quantas vezes a criança pediu AJUDA nesta partida — o campo `ajuda` do
+     * contrato do AVA.
+     *
+     * Contado pelo motor, e não por cada jogo, pelo mesmo motivo de sempre: um
+     * jogo novo esqueceria. Quem soma é `registrarAjuda()`, chamado pelo
+     * `HelpScreen` ao abrir.
+     *
+     * **É contagem, não sim/não**, por decisão do humano: abrir a ajuda três
+     * vezes na mesma partida é sinal diferente de abrir uma, e `> 0` continua
+     * respondendo "houve necessidade?". O caminho contrário não existe — de um
+     * booleano não se recupera a contagem depois.
+     */
+    this._ajudasPedidas = 0;
+
     this._aoMudarVisibilidade = () => {
       if (document.hidden) this.pausarLaco();
       else this.retomarLaco();
@@ -114,6 +129,19 @@ export class Game extends Emitter {
   registrarCena(nome, classe) {
     this.cenas.set(nome, classe);
     return this;
+  }
+
+  /**
+   * A criança pediu ajuda. Chamado pelo `HelpScreen` ao abrir.
+   *
+   * Público de propósito: é o motor que conta, e o jogo não precisa saber que
+   * existe contagem. Também não é o jogo que decide o que fazer com o número —
+   * ele vai para o AVA como `ajuda`, e só.
+   */
+  registrarAjuda() {
+    this._ajudasPedidas++;
+    this.emit('ajuda', this._ajudasPedidas);
+    return this._ajudasPedidas;
   }
 
   /** Contexto injetado em cada cena. */
@@ -215,9 +243,10 @@ export class Game extends Emitter {
     this.emit('estado', novo, anterior);
 
     if (novo === ESTADOS.JOGANDO) {
-      // Começa a contar AQUI, e zera: cada partida tem o seu tempo, e um replay
-      // não herda o da anterior.
+      // Começa a contar AQUI, e zera: cada partida tem o seu tempo e as suas
+      // ajudas, e um replay não herda os da anterior.
       this._tempoJogando = 0;
+      this._ajudasPedidas = 0;
     }
 
     if (novo === ESTADOS.RESULTADO) {
@@ -230,6 +259,7 @@ export class Game extends Emitter {
       // vez de o tempo disfarçar a falta com um objeto que parece preenchido.
       this.ava.concluir(this.dados.resultado ?? null, {
         tempoSegundos: Math.round(this._tempoJogando),
+        ajuda: this._ajudasPedidas,
       });
     } else if (anterior === ESTADOS.RESULTADO) {
       // Borda de DESCIDA: saiu do resultado → re-arma para a próxima partida.

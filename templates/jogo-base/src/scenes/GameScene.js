@@ -1,5 +1,5 @@
 import {
-  Scene, Node, ScoreSystem, ScoreBar, Lives, IconButton, PauseScreen,
+  Scene, Node, ScoreSystem, ScoreBar, Lives, IconButton, PauseScreen, HelpScreen,
   Background, Tween, Easing, ESTADOS, desenharIcone, cores, espaco, rand,
 } from '../../engine/index.js';
 
@@ -84,6 +84,18 @@ export class GameScene extends Scene {
       aoTocar: () => this.pausar(),
     }));
 
+    // AJUDA: o tutorial por cima da partida, sem perdê-la. O ícone é o mesmo do
+    // "COMO JOGAR" do menu, porque é a mesma explicação. Deixe este botão: a
+    // criança que travou não deveria precisar sair do jogo para reler a regra.
+    this.adicionar(new IconButton({
+      icone: 'tutorial',
+      x: L - 96 - 72 - 16,
+      y: espaco.md,
+      audio: this.audio,
+      somToque: config.audio?.clique,
+      aoTocar: () => this.pedirAjuda(),
+    }));
+
     // ---------------------------------------------------------------- pausa
     this.pausa = new PauseScreen({
       largura: L,
@@ -95,6 +107,15 @@ export class GameScene extends Scene {
       aoSair: () => this.irPara('menu'),
     });
     this.adicionar(this.pausa);
+
+    // ----------------------------------------------------------------- ajuda
+    // A contagem de pedidos vai ao AVA como `ajuda` sem o jogo fazer nada:
+    // quem conta é o motor. Ver `HelpScreen` em docs/COMPONENTES.md.
+    this.ajuda = new HelpScreen({
+      cena: this,
+      aoFechar: () => { this.pausada = false; },
+    });
+    this.adicionar(this.ajuda);
 
     // ----------------------------------------------------------- mecânica
     this.alvo = new Alvo({ tamanho: 130 });
@@ -142,6 +163,17 @@ export class GameScene extends Scene {
   }
 
   /**
+   * Pedir ajuda. Pause DE VERDADE aqui o que a sua partida tem de tempo e
+   * movimento: com `pausada` ligado o cronômetro do motor também para, e o
+   * `tempoSegundos` do AVA não soma o tempo lendo a explicação.
+   */
+  pedirAjuda() {
+    if (this.placar.encerrado || this.pausada) return;
+    this.pausada = true;
+    this.ajuda.abrir();
+  }
+
+  /**
    * Fim de partida. É AQUI que o registro no AVA acontece: ao entrar no estado
    * 'resultado', o motor chama o AvaBridge com este objeto — uma vez só.
    *
@@ -160,9 +192,11 @@ export class GameScene extends Scene {
   }
 
   atualizar(dt) {
-    // A pausa precisa continuar animando mesmo com a partida congelada.
+    // As camadas precisam continuar animando mesmo com a partida congelada. As
+    // DUAS: qualquer uma pode estar aberta, e a fechada é invisível e não desenha.
     if (this.pausada) {
       this.pausa.atualizar(dt);
+      this.ajuda.atualizar(dt);
       return;
     }
     super.atualizar(dt);

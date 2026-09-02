@@ -1415,7 +1415,7 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
     const { ponte, enviadas } = capturar();
     ponte.concluir(
       { acertos: 5, erros: 2, totalPerguntas: 5, nivel: 3, vitoria: true },
-      { tempoSegundos: 47 },
+      { tempoSegundos: 47, ajuda: 2 },
     );
     igual(enviadas[0], {
       type: 'JOGO_CONCLUIDO',
@@ -1426,6 +1426,7 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
       jogo: 'jogo-teste',
       vitoria: true,
       tempoSegundos: 47,
+      ajuda: 2,
     });
   });
 
@@ -1474,6 +1475,20 @@ grupo('AvaBridge (o contrato do METODO.md)', () => {
     const { ponte, enviadas } = capturar();
     ponte.concluir({ acertos: 1, erros: 0, totalPerguntas: 1, nivel: 1, vitoria: true });
     ok(!('tempoSegundos' in enviadas[0]), 'melhor ausente que zero falso');
+  });
+
+  teste('ajuda vai como CONTAGEM, e zero é resposta válida', () => {
+    // Zero não é omissão: é "não precisou". Por isso o campo tem de estar
+    // presente valendo 0, e não ausente — ausente e zero significam coisas
+    // diferentes num relatório, e só uma delas é o que aconteceu.
+    const { ponte: a, enviadas: semAjuda } = capturar();
+    a.concluir({ acertos: 5, erros: 0, totalPerguntas: 5, nivel: 1, vitoria: true }, { ajuda: 0 });
+    const { ponte: b, enviadas: comAjuda } = capturar();
+    b.concluir({ acertos: 5, erros: 0, totalPerguntas: 5, nivel: 1, vitoria: true }, { ajuda: 3 });
+
+    igual(semAjuda[0].ajuda, 0);
+    igual(comAjuda[0].ajuda, 3, 'três aberturas na mesma partida:');
+    igual(typeof semAjuda[0].ajuda, 'number');
   });
 
   teste('type é exatamente "JOGO_CONCLUIDO"', () => {

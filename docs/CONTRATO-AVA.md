@@ -26,7 +26,8 @@ window.parent.postMessage({
   nivel: 1,
   jogo: "jogo-dos-blocos",
   vitoria: true,            // acréscimo nosso — ver 1.1
-  tempoSegundos: 47         // acréscimo nosso, MEDIDO PELO MOTOR — ver 1.2
+  tempoSegundos: 47,        // acréscimo nosso, MEDIDO PELO MOTOR — ver 1.2
+  ajuda: 0                  // acréscimo nosso, CONTADO PELO MOTOR — ver 1.3
 }, "*");
 ```
 
@@ -62,13 +63,32 @@ O que ele NÃO conta:
 O `dt` é o mesmo que alimenta a barra de tempo na tela, então **o número reportado bate com o
 cronômetro que a criança viu**. Um relógio próprio aqui daria dois tempos para a mesma partida.
 
-> **Por que estes dois campos podem existir sem o METODO listá-los.** A seção A2.1 do METODO
+### 1.3 `ajuda` — quantas vezes a criança pediu socorro
+
+Inteiro, **contado pelo motor** (`Game._ajudasPedidas`), somado pelo `HelpScreen` a cada
+abertura. Zera ao entrar numa partida, então um replay não herda as ajudas da anterior.
+
+**É contagem, não sim/não**, por decisão: `> 0` já responde "houve necessidade?", e três
+aberturas na mesma partida são um sinal diferente de uma. O caminho contrário não existe — de um
+booleano não se recupera a contagem depois.
+
+`ajuda: 0` é resposta, não omissão: significa "não precisou". Por isso o campo está sempre
+presente, mesmo valendo zero — ausente e zero significam coisas diferentes num relatório, e só
+uma delas é o que aconteceu.
+
+**O que ela indica, e o que não indica.** Muitas ajudas numa turma dizem que a instrução do
+tutorial não está funcionando, ou que o nível começa difícil demais — é dado sobre a ATIVIDADE
+antes de ser sobre a criança. Pedir ajuda não é falha: é o comportamento que a tela oferece, e
+o tempo lendo a explicação **não** entra no `tempoSegundos` justamente para não punir quem
+perguntou.
+
+> **Por que estes campos podem existir sem o METODO listá-los.** A seção A2.1 do METODO
 > lista os campos que o AVA lê para colunas próprias; a **A4** diz que o servidor grava a
 > mensagem crua inteira em `payload`. Então campo extra fica registrado sem coluna — é o mesmo
 > mecanismo que já carrega `blocosEmpilhados`, `caminhosFeitos` e `misturas`.
 >
-> A diferença entre eles: `vitoria` e `tempoSegundos` valem para **todo** jogo do motor e vêm
-> do motor; os outros são de um jogo só e vêm da cena, por `extras`.
+> A diferença entre eles: `vitoria`, `tempoSegundos` e `ajuda` valem para **todo** jogo do
+> motor e vêm do motor; os outros são de um jogo só e vêm da cena, por `extras`.
 
 ---
 
@@ -82,6 +102,7 @@ cronômetro que a criança viu**. Um relógio próprio aqui daria dois tempos pa
 | Disparar uma vez e re-armar | `Game._definirEstado()`, nas bordas de `RESULTADO` |
 | Enviar o `postMessage` | `AvaBridge._enviar()` |
 | Medir `tempoSegundos` | `Game._tempoJogando`, acumulado no laço principal — **nenhuma cena mexe nisso** |
+| Contar `ajuda` | `Game.registrarAjuda()`, chamado pelo `HelpScreen` ao abrir — o jogo só põe o botão |
 | Declarar `vitoria` | `ScoreSystem.paraAva(venceu)`, e a cena decide o que é vencer |
 
 Um jogo faz **uma** chamada, e nada mais:
@@ -173,6 +194,8 @@ this.placar.paraAva(venceu, { conteudo: 'Números 1 a 5', blocosEmpilhados: 5 })
 | `vitoria` booleano de verdade | `AvaBridge.booleano()` — trata `0/1` e o traiçoeiro `"false"` | `AvaBridge` |
 | `tempoSegundos` inteiro e medido pelo motor | O motor vence campo de mesmo nome vindo do jogo | `AvaBridge.montarMensagem()` |
 | `tempoSegundos` não conta pausa | Verificado em navegador: 2 s de pausa somam 0,00 s | `tools/teste-navegador.mjs` |
+| `ajuda` conta as aberturas, e zero é resposta | Duas aberturas contam 2; o campo vai presente valendo 0 | `tools/testes.mjs` e `teste-navegador.mjs` |
+| Ler a ajuda não conta como tempo de jogo | A ajuda pausa a partida; 1,5 s de leitura somam 0,00 s | `tools/teste-navegador.mjs` |
 
 ---
 

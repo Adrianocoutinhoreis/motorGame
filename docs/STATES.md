@@ -208,6 +208,7 @@ custou um defeito encontrado em jogo real em vez de em medição.
 | Disparo por borda | Pronto | Sem duplicata; replay conta |
 | Registro de derrota | Pronto | Decisão do projeto: derrota também é tentativa |
 | `vitoria` na mensagem | Pronto | Booleano de verdade. Os quatro números não distinguiam "14 de 20" de "14 de 14" |
+| `ajuda` na mensagem | Pronto | Inteiro, CONTADO pelo motor a cada abertura da ajuda (`Game.registrarAjuda`), zerado a cada partida. Contagem e não sim/não: `> 0` responde "precisou?" e o número diz quanto. Ler a ajuda não entra no `tempoSegundos` — a ajuda pausa a partida |
 | `tempoSegundos` na mensagem | Pronto | Inteiro, medido pelo MOTOR (`Game._tempoJogando`) e por nenhum jogo. Conta tempo JOGANDO: pausa não conta (verificado — 2 s de pausa somam 0,00 s), aba escondida não conta, e zera a cada partida nova. Usa o mesmo `dt` da barra de tempo, então bate com o cronômetro que a criança viu |
 | Registro de abandono | **Planejado** | Hoje sair no meio não registra nada — igual ao original |
 

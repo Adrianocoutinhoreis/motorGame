@@ -675,6 +675,143 @@ async function principal() {
       JSON.stringify({ textos: telaComQuedas.textos, erros: m3.erros }));
 
     // ---------------------------------------------------- tamanhos de iframe
+    // ------------------------------------- 3d. o botão de AJUDA
+    //
+    // O que precisa ser verdade, e a segunda é a razão de a ajuda ser camada e
+    // não troca de tela: a explicação aparece, e **a partida sobrevive**.
+    //
+    // O toque é REAL, no pixel do botão: um `pedirAjuda()` chamado por dentro
+    // passaria mesmo com o botão fora da tela ou coberto por outro nó — que é
+    // exatamente o defeito que este arquivo existe para pegar.
+    console.log('\n3d. O botão de ajuda abre o tutorial SEM perder a partida');
+
+    await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
+    await esperar(900);
+
+    const antesDaAjuda = await avaliar(`
+      (() => {
+        const c = ${g}.cena;
+        return {
+          torre: c.torre?.length ?? null,
+          pontos: c.placar.acertos,
+          ajudas: ${g}._ajudasPedidas,
+          temBotao: !!c.filhos.find((f) => f.icone === 'tutorial'),
+        };
+      })()
+    `);
+    checar('a partida tem um botão de ajuda', antesDaAjuda.temBotao === true,
+      JSON.stringify(antesDaAjuda));
+
+    // Toca no botão de verdade, pelas coordenadas de tela dele.
+    // O jogo roda DENTRO de um iframe aqui: o ponto de tela soma o retângulo do
+    // QUADRO ao do canvas. É o mesmo cálculo do toque sobre a luva do mascote na
+    // seção 1 — e esquecer a primeira parcela erra o alvo em silêncio.
+    const pontoAjuda = await avaliar(`
+      (() => {
+        const q = document.getElementById('quadro');
+        const rq = q.getBoundingClientRect();
+        const jogo = q.contentWindow.jogo;
+        const b = jogo.cena.filhos.find((f) => f.icone === 'tutorial');
+        const m = b.matrizMundo;
+        const st = jogo.stage;
+        const rc = st.canvas.getBoundingClientRect();
+        const lx = m.tx + (b.largura ?? 72) / 2;
+        const ly = m.ty + (b.altura ?? 72) / 2;
+        return {
+          x: Math.round(rq.left + rc.left + lx * st.escala + st.deslocX),
+          y: Math.round(rq.top + rc.top + ly * st.escala + st.deslocY),
+        };
+      })()
+    `);
+    for (const type of ['mousePressed', 'mouseReleased']) {
+      await cdp.enviar('Input.dispatchMouseEvent', {
+        type,
+        x: pontoAjuda.x,
+        y: pontoAjuda.y,
+        button: 'left',
+        clickCount: 1,
+        pointerType: 'mouse',
+      }, sessionId);
+    }
+    await esperar(700);
+
+    const naAjuda = await avaliar(`
+      (() => {
+        const c = ${g}.cena;
+        const passos = c.ajuda?.tutorial?.passos?.length ?? 0;
+        return {
+          aberta: !!c.ajuda?.aberta,
+          pausada: !!c.pausada,
+          passos,
+          tituloVisivel: c.ajuda?.tutorial?.titulo?.texto ?? null,
+          // A CENA DE JOGO continua existindo, com o estado dela intacto:
+          estado: ${g}.estado,
+          cenaEhAPartida: ${g}.nomeCena === 'jogando',
+          torre: c.torre?.length ?? null,
+          pontos: c.placar.acertos,
+          ajudas: ${g}._ajudasPedidas,
+        };
+      })()
+    `);
+    console.log(`  na ajuda: ${JSON.stringify(naAjuda)}`);
+    await capturar('09-ajuda-sobre-a-partida');
+
+    checar('o toque no botão abriu a ajuda', naAjuda.aberta === true, JSON.stringify(naAjuda));
+    checar('a partida ficou pausada', naAjuda.pausada === true, JSON.stringify(naAjuda));
+    checar('a ajuda mostra os passos do tutorial do jogo',
+      naAjuda.passos > 0 && !!naAjuda.tituloVisivel,
+      `${naAjuda.passos} passos, título "${naAjuda.tituloVisivel}"`);
+    // O ponto central: NÃO houve troca de cena.
+    checar('continua NA PARTIDA — a cena não foi trocada',
+      naAjuda.estado === 'jogando' && naAjuda.cenaEhAPartida === true, JSON.stringify(naAjuda));
+    checar('a torre e o placar sobreviveram',
+      naAjuda.torre === antesDaAjuda.torre && naAjuda.pontos === antesDaAjuda.pontos,
+      `${JSON.stringify(antesDaAjuda)} -> ${JSON.stringify(naAjuda)}`);
+    checar('o motor contou o pedido de ajuda',
+      naAjuda.ajudas === antesDaAjuda.ajudas + 1, `${antesDaAjuda.ajudas} -> ${naAjuda.ajudas}`);
+
+    // O tempo de leitura da ajuda não é tempo de jogo.
+    const tempoAoAbrir = await avaliar(`${g}._tempoJogando`);
+    await esperar(1500);
+    const tempoLendo = await avaliar(`${g}._tempoJogando`);
+    checar('o tempo NÃO corre enquanto a ajuda está aberta',
+      tempoLendo - tempoAoAbrir < 0.15,
+      `cresceu ${(tempoLendo - tempoAoAbrir).toFixed(2)} s em 1,5 s de ajuda`);
+
+    // Fechar devolve a partida.
+    await avaliar(`(() => { ${g}.cena.ajuda.fechar(); return true; })()`);
+    await esperar(400);
+    const depoisDaAjuda = await avaliar(`
+      (() => {
+        const c = ${g}.cena;
+        return { aberta: !!c.ajuda.aberta, pausada: !!c.pausada, torre: c.torre?.length ?? null };
+      })()
+    `);
+    checar('fechar a ajuda devolve a partida', depoisDaAjuda.aberta === false
+      && depoisDaAjuda.pausada === false, JSON.stringify(depoisDaAjuda));
+    checar('e a torre continua de pé', depoisDaAjuda.torre === antesDaAjuda.torre,
+      `${antesDaAjuda.torre} -> ${depoisDaAjuda.torre}`);
+
+    // Duas aberturas contam duas: é contagem, não sim/não.
+    await avaliar(`(() => { ${g}.cena.pedirAjuda(); return true; })()`);
+    await esperar(300);
+    const duasVezes = await avaliar(`${g}._ajudasPedidas`);
+    checar('duas aberturas contam duas', duasVezes === antesDaAjuda.ajudas + 2,
+      `ajudas=${duasVezes}`);
+    await avaliar(`(() => { ${g}.cena.ajuda.fechar(); return true; })()`);
+    await esperar(300);
+
+    // E o número chega ao AVA na mensagem desta partida.
+    const antesDoFim = (await avaliar('window.__recebidas')).length;
+    await avaliar(`(() => { ${g}.cena._terminar(false); return true; })()`);
+    await esperar(900);
+    const comAjuda = await avaliar('window.__recebidas');
+    checar('a mensagem do AVA leva o campo ajuda',
+      comAjuda.length === antesDoFim + 1 && comAjuda[comAjuda.length - 1].ajuda === 2,
+      JSON.stringify(comAjuda[comAjuda.length - 1] ?? null));
+    await avaliar(`(() => { ${g}.irPara('menu'); return true; })()`);
+    await esperar(500);
+
     // ------------------------------ 3c. tempoSegundos é tempo JOGANDO
     //
     // A decisão do humano: o campo mede o esforço da criança, não o relógio de

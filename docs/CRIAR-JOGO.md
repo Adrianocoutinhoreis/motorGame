@@ -75,6 +75,12 @@ Regras:
   `audio.pararMusica()` na sua cena — foi assim que os três jogos ficaram desiguais.
 - **Som de tela você também não precisa encerrar.** O motor corta fala e efeito em toda troca
   de cena; `aoSair` cuida de tween, timer e o que a sua cena criou.
+- **`tutorial` serve a DUAS telas.** Os mesmos passos aparecem no "COMO JOGAR" do menu e na
+  AJUDA dentro da partida (`HelpScreen`). Escreva-os pensando em quem já está jogando e
+  travou, não só em quem nunca viu o jogo.
+- **Ponha o botão de ajuda no HUD** (ícone `tutorial`) e um `HelpScreen` na cena — três linhas,
+  e a criança deixa de precisar sair da partida para reler a instrução. A contagem de pedidos
+  vai ao AVA como `ajuda` sem você fazer nada. Ver `COMPONENTES.md`.
 
 ## Passo 4 — Escrever a mecânica (`src/scenes/GameScene.js`)
 

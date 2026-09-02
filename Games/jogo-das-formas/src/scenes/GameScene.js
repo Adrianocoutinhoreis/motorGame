@@ -1,6 +1,6 @@
 import {
   Scene, Node, TextNode, ScoreSystem, ScoreBar, TimerBar, IconButton, SoundToggle,
-  PauseScreen, Panel, Background, Mascot, GridBoard, CraneController,
+  PauseScreen, HelpScreen, Panel, Background, Mascot, GridBoard, CraneController,
   Tween, Easing, ESTADOS, desenharIcone, cores, tipografia, espaco, raio,
   sombras, movimento, rand, mascoteVisivel, ParticleSystem, criarEstrelaVoadora, Watchdog,
 } from '../../engine/index.js';
@@ -658,8 +658,13 @@ export class GameScene extends Scene {
 
     this.adicionar(this.barra, this.tempo);
 
-    // Os dois botões lado a lado, abaixo das barras.
+    // TRÊS botões lado a lado, abaixo das barras. O vão é 16 (piso de
+    // `acessibilidade.espacoEntreAlvos`) e não 20: 96×3 + 16×2 = 320 é o que cabe
+    // na coluna. A alternativa era uma segunda fileira, que comeria altura do
+    // painel "AS FORMAS" — e aquele painel é o objetivo pedagógico exposto.
     const yBotoes = espaco.md + (40 + espaco.md) * 2 + espaco.sm;
+    const vaoBotoes = 16;
+    const passoBotao = ladoBotao + vaoBotoes;
 
     this.adicionar(new IconButton({
       icone: 'pausa',
@@ -671,9 +676,22 @@ export class GameScene extends Scene {
       aoTocar: () => this.pausar(),
     }));
 
+    // AJUDA — o tutorial por cima da partida, sem perdê-la. Ícone `tutorial`, o
+    // mesmo do "COMO JOGAR" do menu: é a mesma explicação, e a criança que já viu
+    // aquele botão reconhece este.
+    this.adicionar(new IconButton({
+      icone: 'tutorial',
+      tamanho: ladoBotao,
+      x: colunaX + passoBotao,
+      y: yBotoes,
+      audio: this.audio,
+      somToque: config.audio?.clique,
+      aoTocar: () => this.pedirAjuda(),
+    }));
+
     this.adicionar(new SoundToggle({
       tamanho: ladoBotao,
-      x: colunaX + ladoBotao + espaco.md,
+      x: colunaX + passoBotao * 2,
       y: yBotoes,
       audio: this.audio,
     }));
@@ -809,6 +827,16 @@ export class GameScene extends Scene {
       aoSair: () => this.irPara('menu'),
     });
     this.adicionar(this.pausa);
+
+    // A AJUDA é o tutorial por cima da partida. Ver `HelpScreen`.
+    this.ajuda = new HelpScreen({
+      cena: this,
+      aoFechar: () => {
+        this.pausada = false;
+        if (!this.placar.encerrado) this.tempo.retomar();
+      },
+    });
+    this.adicionar(this.ajuda);
     this.pausa.paraFrente();
   }
 
@@ -1353,6 +1381,20 @@ export class GameScene extends Scene {
   }
 
   /**
+   * Pedir ajuda: pausa a partida e abre o tutorial por cima dela.
+   *
+   * Pausa de verdade: com `pausada` o cronômetro para, o cão de guarda não conta
+   * o tempo como travamento, e o `tempoSegundos` do AVA não soma o tempo lendo a
+   * explicação — ler a ajuda não é jogar.
+   */
+  pedirAjuda() {
+    if (this.placar.encerrado || this.pausada) return;
+    this.pausada = true;
+    this.tempo.pausar();
+    this.ajuda.abrir();
+  }
+
+  /**
    * Fim de partida. É AQUI que o registro no AVA acontece: ao ENTRAR no estado
    * 'resultado' o motor chama o `AvaBridge` com este objeto, uma vez só.
    *
@@ -1382,8 +1424,10 @@ export class GameScene extends Scene {
 
   atualizar(dt) {
     if (this.pausada) {
-      // A pausa continua animando com a partida congelada.
+      // As camadas continuam animando com a partida congelada. As duas, porque
+      // qualquer uma pode estar aberta — a fechada é invisível e não desenha.
       this.pausa.atualizar(dt);
+      this.ajuda.atualizar(dt);
       return;
     }
     super.atualizar(dt);

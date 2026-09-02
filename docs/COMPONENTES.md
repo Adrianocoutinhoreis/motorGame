@@ -648,6 +648,49 @@ console, que sem ele não saberia nomear a gravação ausente. Registre a pendê
 
 ## AVA
 
+### `HelpScreen`
+A **ajuda durante a partida**: o tutorial, em camada por cima do jogo.
+
+```js
+this.ajuda = new HelpScreen({
+  cena: this,
+  aoFechar: () => { this.pausada = false; this.tempo.retomar(); },
+});
+this.adicionar(this.ajuda);
+
+// no botão do HUD (ícone `tutorial`, o mesmo do "COMO JOGAR" do menu):
+pedirAjuda() {
+  if (this.placar.encerrado || this.pausada) return;
+  this.pausada = true;
+  this.tempo.pausar();
+  this.ajuda.abrir();
+}
+```
+
+**Camada, e não troca de tela**, pelo mesmo motivo do `PauseScreen`: trocar de cena destruiria
+o tabuleiro, o placar e o tempo, e "pedir ajuda" viraria "desistir". A criança que não entendeu
+o que fazer é justamente quem não pode ser punida por perguntar.
+
+**Ela HOSPEDA o `TutorialScreen`** em vez de redesenhar os passos — a ajuda *é* o tutorial.
+Recriar aqui o cartão, a ilustração, as setas e o contador daria duas definições da mesma
+explicação, e alguém consertaria um passo no tutorial do menu enquanto a ajuda dentro do jogo
+continuaria ensinando o jeito antigo. Uma `Scene` é um `Node`, então ela compõe.
+
+No modo ajuda o `TutorialScreen` muda três coisas, e só três: sem cenário de fundo (o véu daqui
+já separa, e um fundo opaco esconderia a partida que a criança precisa ver que continua lá), sem
+mascote (o busto de 280 px taparia a área de jogo), e o botão do último passo volta ao jogo em
+vez de começar partida nova. O contador ganha cor clara, porque ali ele cai sobre o véu.
+
+**A contagem não é assunto do jogo**: `abrir()` chama `Game.registrarAjuda()`, e o número vai ao
+AVA como `ajuda`. Um jogo não tem como esquecer de contar. E como a ajuda pausa a partida, o
+tempo lendo a explicação não entra no `tempoSegundos` — ler a ajuda não é jogar.
+
+Ao usar, duas obrigações da cena: atualizar a camada quando pausada
+(`if (this.pausada) { this.pausa.atualizar(dt); this.ajuda.atualizar(dt); return; }`) e retomar
+em `aoFechar` o que `pedirAjuda` pausou.
+
+---
+
 ### `AvaBridge`
 Implementa o contrato. **Um jogo nunca o instancia nem o chama** — quem faz isso é o `Game`,
 nas bordas do estado `resultado`. Ver [`CONTRATO-AVA.md`](CONTRATO-AVA.md).

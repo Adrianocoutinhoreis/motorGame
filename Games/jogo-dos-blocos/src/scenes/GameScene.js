@@ -1,6 +1,6 @@
 import {
   Scene, Node, Sprite, TextNode, ScoreSystem, ScoreBar, Lives, IconButton,
-  PauseScreen, Background, CraneController, Tween, Easing, ESTADOS, Watchdog,
+  PauseScreen, HelpScreen, Background, CraneController, Tween, Easing, ESTADOS, Watchdog,
   cores, tipografia, espaco, texto as aplicarCaixa,
 } from '../../engine/index.js';
 
@@ -379,17 +379,45 @@ export class GameScene extends Scene {
       aoTocar: () => this.pausar(),
     }));
 
+    // AJUDA — o tutorial por cima da partida, sem perdê-la. Ícone `tutorial`, o
+    // mesmo do "COMO JOGAR" do menu: é a mesma explicação, e a criança que já viu
+    // aquele botão reconhece este. Aqui cabe ao lado da pausa (o alvo é 72, e o
+    // vão de 16 é o piso de `acessibilidade.espacoEntreAlvos`).
+    this.adicionar(new IconButton({
+      icone: 'tutorial',
+      x: L - 96 - 72 - 16,
+      y: espaco.md,
+      audio: this.audio,
+      somToque: config.audio?.clique,
+      aoTocar: () => this.pedirAjuda(),
+    }));
+
     // ---------------------------------------------------------------- pausa
     this.pausa = new PauseScreen({
       largura: L,
       altura: A,
       audio: this.audio,
       config,
-      aoContinuar: () => { this.pausada = false; },
+      // `controle.retomar()` estava FALTANDO, e era defeito: `pausar()` para o
+      // guindaste (`ativo = false`) e nada o reativava. Continuar depois da pausa
+      // deixava o guindaste PARADO até a criança soltar o bloco — e guindaste
+      // parado torna a mira trivial, então a pausa mudava a dificuldade do jogo.
+      // Achado ao ligar a ajuda, que precisa retomar do mesmo jeito.
+      aoContinuar: () => { this.pausada = false; this.controle.retomar(); },
       aoReiniciar: () => this.irPara('jogando', { nivel: this.nivel }),
       aoSair: () => this.irPara('menu'),
     });
     this.adicionar(this.pausa);
+
+    // A AJUDA é o tutorial por cima da partida. Ver `HelpScreen`.
+    this.ajuda = new HelpScreen({
+      cena: this,
+      aoFechar: () => {
+        this.pausada = false;
+        if (!this.placar.encerrado) this.controle.retomar();
+      },
+    });
+    this.adicionar(this.ajuda);
 
     // --------------------------------------------------------------- placar
     this.placar.on('vitoria', () => this._terminar(true));
@@ -550,6 +578,20 @@ export class GameScene extends Scene {
   }
 
   /**
+   * Pedir ajuda: pausa a partida e abre o tutorial por cima dela.
+   *
+   * Pausa de verdade: o guindaste para, o cão de guarda não conta o tempo como
+   * travamento, e o `tempoSegundos` do AVA não soma o tempo lendo a explicação —
+   * ler a ajuda não é jogar.
+   */
+  pedirAjuda() {
+    if (this.placar.encerrado || this.pausada) return;
+    this.pausada = true;
+    this.controle.pausar();
+    this.ajuda.abrir();
+  }
+
+  /**
    * A cena não passa nota de estrelas: a fileira da `ResultScreen` tem cinco e
    * a preenche pelo percentual da meta (regra RE-04). Passava
    * `placar.estrelas`, uma nota de 0 a 3 derivada dos erros — e ela já era
@@ -572,7 +614,10 @@ export class GameScene extends Scene {
 
   atualizar(dt) {
     if (this.pausada) {
+      // As DUAS camadas: qualquer uma pode estar aberta, e a fechada é invisível
+      // e não desenha.
       this.pausa.atualizar(dt);
+      this.ajuda.atualizar(dt);
       return;
     }
 
