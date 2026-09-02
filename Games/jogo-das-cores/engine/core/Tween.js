@@ -274,6 +274,16 @@ export class Tween {
     return false;
   }
 
+  /** Pausa todos os tweens ativos (sem descartá-los). */
+  static pausarTodos() {
+    for (const t of Tween._ativos) t.pausado = true;
+  }
+
+  /** Retoma todos os tweens pausados. */
+  static retomarTodos() {
+    for (const t of Tween._ativos) t.pausado = false;
+  }
+
   /** Cancela todos os tweens de um alvo (ex.: bloco removido do tabuleiro). */
   static removerDe(alvo) {
     for (const t of [...Tween._ativos]) if (t.alvo === alvo) t.parar();

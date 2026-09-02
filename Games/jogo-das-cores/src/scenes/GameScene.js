@@ -129,9 +129,16 @@ export class GameScene extends Scene {
     this._montarTabuleiro();
     this._montarHud();
     this._montarPainelCores();
-    this._montarPausa();
     this._montarGesto();
     this._montarAviso();
+    // As CAMADAS por último, e a ordem aqui é funcional, não estética: quem
+    // recebe o toque é o nó mais ao topo. Com a pausa montada antes de
+    // `_montarGesto`, a área de gesto — que cobre o tabuleiro, e o tabuleiro
+    // cobre o painel da pausa — ficava por cima dos botões dela: a pausa abria
+    // e CONTINUAR, SAIR e a ajuda não respondiam a nada. O motor agora também se
+    // protege (`PauseScreen.abrir` e `HelpScreen.abrir` sobem a própria camada),
+    // mas montar na ordem certa é o que deixa o desenho e o toque coerentes.
+    this._montarPausa();
     this._montarGuarda();
 
     /** 'livre' = aceita gesto · 'movendo' = resolvendo um caminho. */
@@ -398,6 +405,7 @@ export class GameScene extends Scene {
       aoContinuar: () => {
         this.pausada = false;
         this.tempo.retomar();
+        Tween.retomarTodos();
       },
       aoReiniciar: () => this.irPara('jogando', { nivel: this.nivel }),
       aoSair: () => this.irPara('menu'),
@@ -411,6 +419,7 @@ export class GameScene extends Scene {
       aoFechar: () => {
         this.pausada = false;
         if (!this.placar.encerrado) this.tempo.retomar();
+        Tween.retomarTodos();
       },
     });
     this.adicionar(this.ajuda);
@@ -430,6 +439,7 @@ export class GameScene extends Scene {
     this.tempo.pausar();
     this._pararEsperaDoToque();
     this.caminho.cancelar();
+    Tween.pausarTodos();
     this.ajuda.abrir();
   }
 
@@ -914,6 +924,7 @@ export class GameScene extends Scene {
     this.tempo.pausar();
     this._pararEsperaDoToque();
     this.caminho.cancelar();
+    Tween.pausarTodos();
     this.pausa.abrir();
   }
 

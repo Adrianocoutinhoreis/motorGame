@@ -105,10 +105,16 @@ export class PauseScreen extends Node {
   abrir() {
     this.visible = true;
     this.interativo = true;
+    // A camada SOBE ao abrir, e isto não é enfeite visual: a ordem dos filhos é
+    // quem decide o toque, porque o `Input` procura de cima para baixo. Uma cena
+    // que adicione qualquer nó interativo DEPOIS da pausa — a área de gesto do
+    // Jogo das Cores foi o caso real — enterra estes botões, e o resultado é a
+    // pausa que abre e não fecha: a criança fica presa e precisa recarregar a
+    // página. Subir aqui torna a ordem de montagem do jogo irrelevante.
+    this.paraFrente();
     this.painel.scaleX = this.painel.scaleY = 0.9;
-    this.painel.alpha = 0;
     Tween.removerDe(this.painel);
-    Tween.para(this.painel, { scaleX: 1, scaleY: 1, alpha: 1 }, 240, Easing.costasSaida);
+    Tween.para(this.painel, { scaleX: 1, scaleY: 1 }, 240, Easing.costasSaida);
     this.audio?.calar();
     this.emit('abriu');
     return this;
