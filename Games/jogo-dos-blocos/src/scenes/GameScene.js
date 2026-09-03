@@ -380,20 +380,6 @@ export class GameScene extends Scene {
       aoTocar: () => this.pausar(),
     }));
 
-    // AJUDA — o tutorial por cima da partida, sem perdê-la. Ícone `tutorial`, o
-    // mesmo do "COMO JOGAR" do menu: é a mesma explicação, e a criança que já viu
-    // aquele botão reconhece este. Aqui cabe ao lado da pausa (o alvo é 72, e o
-    // vão de 16 é o piso de `acessibilidade.espacoEntreAlvos`).
-    this.adicionar(new IconButton({
-      icone: 'tutorial',
-      variante: 'suaveAzul',
-      x: L - 96 - 72 - 16,
-      y: espaco.md,
-      audio: this.audio,
-      somToque: config.audio?.clique,
-      aoTocar: () => this.pedirAjuda(),
-    }));
-
     // ---------------------------------------------------------------- pausa
     this.pausa = new PauseScreen({
       largura: L,
@@ -579,20 +565,6 @@ export class GameScene extends Scene {
     this.pausada = true;
     this.controle.pausar();
     this.pausa.abrir();
-  }
-
-  /**
-   * Pedir ajuda: pausa a partida e abre o tutorial por cima dela.
-   *
-   * Pausa de verdade: o guindaste para, o cão de guarda não conta o tempo como
-   * travamento, e o `tempoSegundos` do AVA não soma o tempo lendo a explicação —
-   * ler a ajuda não é jogar.
-   */
-  pedirAjuda() {
-    if (this.placar.encerrado || this.pausada) return;
-    this.pausada = true;
-    this.controle.pausar();
-    this.ajuda.abrir();
   }
 
   /**

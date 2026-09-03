@@ -82,8 +82,10 @@ jogo-das-cores/
 | `audio/somFundo.mp3` | MP3, 228 KB | Aula original 870296 — Educandus. É o mesmo arquivo dos outros dois jogos |
 
 **A peça não tem arquivo.** É desenhada em `Peca.desenhar()` (`src/scenes/GameScene.js`):
-retângulo de canto arredondado, cor sólida, uma sombra suave. Antes de 02/09/2026 havia oito
-SVG (17 KB somados) com uma textura própria em cada — ver por que saíram, abaixo.
+retângulo de canto arredondado, cor sólida, sem sombra própria (removida em 03/09/2026 — 35
+peças sempre visíveis, cada uma com `shadowBlur`, pesava no celular; medido, ver
+`docs/PLANO-VISUAL-JOGO-DAS-CORES.md` seção 3.1). Antes de 02/09/2026 havia oito SVG (17 KB
+somados) com uma textura própria em cada — ver por que saíram, abaixo.
 
 ### Por que a peça deixou de ter textura — e o que isso custa
 

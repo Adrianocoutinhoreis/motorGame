@@ -124,9 +124,20 @@ o dedo passa, e vão grande faria o tabuleiro parecer uma grade de botões em ve
 **A peça é desenhada em `Peca.desenhar()` (`src/scenes/GameScene.js`), sem arquivo.** Duas
 camadas:
 
-1. **corpo** — a cor da paleta lúdica, canto `raio.md`, uma sombra suave (`sombras.suave`);
+1. **corpo** — a cor da paleta lúdica, canto `raio.md`, **sem sombra própria** (removida em
+   03/09/2026 — ver a nota de desempenho logo abaixo);
 2. **contorno interno** — preto a 16%, 3 px, para uma peça se separar da vizinha da MESMA cor.
    Sem ele, três azuis lado a lado viram um bloco azul só e o caminho fica ilegível.
+
+> **Por que a sombra saiu.** Cada peça desenhava `shadowBlur` própria, e este é o único dos três
+> jogos com um tabuleiro SEMPRE CHEIO de 35 peças (7×5) — 35 sombras por quadro, redesenhadas
+> mesmo com o tabuleiro parado. `shadowBlur` é a operação mais cara de um canvas 2D e mal
+> acelerada por GPU em boa parte dos celulares; um perfil real (CPU emulada 4× mais lenta) mediu
+> o pior quadro caindo de 134 ms para 117 ms só desligando a sombra, e o ganho de tela cheia foi
+> maior ainda — cerca de 30% mais quadros por segundo. Conferido depois num tabuleiro real (nível
+> 3, 8 cores): sem a sombra, a grade continua legível e as cores continuam se distinguindo — o
+> vão de 16 px entre peças é estreito e a sombra (desfoque 10) não era o que separava uma peça da
+> outra; quem faz esse trabalho é o contorno interno (item 2, que continua).
 
 Fica de fora, de propósito: o **aro de seleção** do caminho, que é **estado** e não arte — muda
 a cada movimento do dedo.

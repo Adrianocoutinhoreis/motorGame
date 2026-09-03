@@ -47,6 +47,11 @@ export class PauseScreen extends Node {
     const A = this.altura;
     const larguraPainel = Math.min(560, L - espaco.xl * 2);
     const alturaPainel = 440;
+    // Distância dos ícones de som/ajuda até a borda do painel. Eram 8 (quase
+    // colados na borda), afastados do título "Pausa" por um vão vazio grande
+    // demais — pedido do humano para aproximá-los do nome.
+    const insetIcones = 88;
+    const tamanhoIconeTopo = 64;
 
     this.painel = new Panel({
       largura: larguraPainel,
@@ -91,9 +96,9 @@ export class PauseScreen extends Node {
 
     this.painel.adicionar(new SoundToggle({
       audio: this.audio,
-      x: larguraPainel - 80,
+      x: larguraPainel - insetIcones - tamanhoIconeTopo,
       y: 8,
-      tamanho: 64,
+      tamanho: tamanhoIconeTopo,
       somToque: this.config.audio?.clique,
     }));
 
@@ -107,9 +112,9 @@ export class PauseScreen extends Node {
       this.painel.adicionar(new IconButton({
         icone: 'tutorial',
         variante: 'suaveAzul',
-        x: 8,
+        x: insetIcones,
         y: 8,
-        tamanho: 64,
+        tamanho: tamanhoIconeTopo,
         audio: this.audio,
         somToque: this.config.audio?.clique,
         aoTocar: () => this._chamar(this.aoAjuda),

@@ -1,6 +1,6 @@
 {
   "nome": "Motor Educandus",
-  "versao": "1.3.4",
+  "versao": "1.3.5",
   "data": "2026-09-03",
-  "notas": "PauseScreen ganhou um botao de ajuda opcional (opcoes.aoAjuda), no canto OPOSTO ao do som. Pedido do humano, com referencia visual: quem pausa para pedir ajuda nao deveria precisar CONTINUAR a partida antes para so entao conseguir abrir a ajuda - e era isso que acontecia, porque o unico \"?\" ficava atras do veu da pausa, e pedirAjuda() do jogo se recusa a agir com a partida ja pausada (evita duas camadas abertas ao mesmo tempo), entao aquele icone ficava visivel e morto enquanto a pausa estava aberta. Tocar no novo botao fecha a pausa SEM continuar (fechar(false), a mesma trilha de aoReiniciar/aoSair) e chama aoAjuda, que os tres jogos ligam a `this.ajuda.abrir()`. Opcional de proposito: sem aoAjuda no construtor, o botao nao nasce - joga que ainda nao tem HelpScreen no pausa continua igual. Na 1.3.3: novo variante de Button 'suaveAzul' (icone e contorno na cor do SoundToggle), aplicado nos botoes de pausa e ajuda do HUD dos tres jogos."
+  "notas": "PauseScreen: os icones de som e ajuda no topo do painel ficaram mais proximos do titulo \"Pausa\" - pedido do humano, com referencia visual, depois de ver os dois quase colados nas bordas do painel. Novo const insetIcones=88 (era 8 de um lado e larguraPainel-80 do outro) substitui os dois numeros soltos por um so, com o mesmo valor medido dos dois lados do titulo. Na 1.3.4: PauseScreen ganhou o botao de ajuda opcional (aoAjuda), no canto oposto ao do som, para nao depender mais de um \"?\" atras do veu da pausa que nao respondia a nada."
 }

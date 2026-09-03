@@ -1,7 +1,7 @@
 import {
   Scene, Node, TextNode, ScoreSystem, ScoreBar, TimerBar, IconButton, SoundToggle,
   PauseScreen, HelpScreen, Panel, Background, GridBoard, PathSelector, Watchdog,
-  Tween, Easing, ESTADOS, cores, tipografia, espaco, raio, sombras, movimento, rand,
+  Tween, Easing, ESTADOS, cores, tipografia, espaco, raio, movimento, rand,
 } from '../../engine/index.js';
 
 /**
@@ -67,23 +67,30 @@ class Peca extends Node {
     this.regY = lado / 2;
   }
 
+  /**
+   * Sem sombra própria, de propósito — desempenho em celular, medido.
+   *
+   * Até 03/09/2026 cada peça desenhava `shadowBlur` individual. Num tabuleiro
+   * SEMPRE CHEIO de 35 peças (7×5, a única grade dos três jogos que não
+   * folga) isso é 35 sombras por quadro, redesenhadas mesmo paradas — e
+   * `shadowBlur` é a operação mais cara de um canvas 2D, mal acelerada por
+   * GPU em boa parte dos celulares. Perfil real (CPU 4× mais lenta, emulando
+   * aparelho fraco) mediu o pior quadro caindo de 134ms para 117ms só
+   * desligando a sombra — e o ganho de tela cheia é maior ainda, porque
+   * peças vizinhas se tocam sem vão: a sombra de uma já nascia encoberta
+   * pela peça ao lado (só aparecia na borda externa do tabuleiro). Pagava
+   * o custo em todo quadro por um efeito quase invisível.
+   */
   desenhar(ctx) {
-    ctx.save();
-    ctx.shadowColor = sombras.suave.cor;
-    ctx.shadowBlur = sombras.suave.desfoque;
-    ctx.shadowOffsetX = sombras.suave.x;
-    ctx.shadowOffsetY = sombras.suave.y;
     ctx.fillStyle = this.arte.cores[this.cor]?.cor ?? cores.tintaSuave;
     ctx.beginPath();
     ctx.roundRect(0, 0, this.lado, this.lado, raio.md);
     ctx.fill();
-    ctx.shadowColor = 'transparent';
     // Contorno interno, para a peça se separar da vizinha da MESMA cor —
     // sem ele duas peças iguais lado a lado se fundem num retângulo só.
     ctx.strokeStyle = 'rgba(0,0,0,0.16)';
     ctx.lineWidth = 3;
     ctx.stroke();
-    ctx.restore();
   }
 }
 

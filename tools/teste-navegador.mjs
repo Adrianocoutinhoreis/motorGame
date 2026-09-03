@@ -674,16 +674,21 @@ async function principal() {
       !telaComQuedas.textos.some((x) => x.includes('tentativa')) && m3.erros === 2,
       JSON.stringify({ textos: telaComQuedas.textos, erros: m3.erros }));
 
-    // ---------------------------------------------------- tamanhos de iframe
     // ------------------------------------- 3d. o botão de AJUDA
     //
     // O que precisa ser verdade, e a segunda é a razão de a ajuda ser camada e
     // não troca de tela: a explicação aparece, e **a partida sobrevive**.
     //
-    // O toque é REAL, no pixel do botão: um `pedirAjuda()` chamado por dentro
-    // passaria mesmo com o botão fora da tela ou coberto por outro nó — que é
-    // exatamente o defeito que este arquivo existe para pegar.
-    console.log('\n3d. O botão de ajuda abre o tutorial SEM perder a partida');
+    // O toque é REAL, no pixel do botão: um `HelpScreen.abrir()` chamado por
+    // dentro passaria mesmo com o botão fora da tela ou coberto por outro nó —
+    // que é exatamente o defeito que este arquivo existe para pegar.
+    //
+    // Desde 03/09/2026 o Jogo dos Blocos não tem mais um "?" solto no HUD da
+    // partida: ele ficava visível atrás do véu da pausa e não fazia nada ali
+    // (o jogo se recusava a pedir ajuda com a partida já pausada). O único
+    // caminho para a ajuda agora é de DENTRO da pausa — então o teste abre a
+    // pausa primeiro, pelo mesmo gesto real que um dedo faria.
+    console.log('\n3d. O botão de ajuda (dentro da pausa) abre o tutorial SEM perder a partida');
 
     await avaliar(`${g}.irPara('jogando', { nivel: ${g}.config.niveis[0] })`);
     await esperar(900);
@@ -691,16 +696,14 @@ async function principal() {
     const antesDaAjuda = await avaliar(`
       (() => {
         const c = ${g}.cena;
-        return {
-          torre: c.torre?.length ?? null,
-          pontos: c.placar.acertos,
-          ajudas: ${g}._ajudasPedidas,
-          temBotao: !!c.filhos.find((f) => f.icone === 'tutorial'),
-        };
+        return { torre: c.torre?.length ?? null, pontos: c.placar.acertos, ajudas: ${g}._ajudasPedidas };
       })()
     `);
-    checar('a partida tem um botão de ajuda', antesDaAjuda.temBotao === true,
-      JSON.stringify(antesDaAjuda));
+
+    await avaliar(`(() => { ${g}.cena.pausar(); return true; })()`);
+    await esperar(400);
+    const temBotao = await avaliar(`!!${g}.cena.pausa.painel.filhos.find((f) => f.icone === 'tutorial')`);
+    checar('o painel da pausa tem um botão de ajuda', temBotao === true, `temBotao=${temBotao}`);
 
     // Toca no pixel de um nó DENTRO do iframe, achado por expressão (onde
     // `jogo` é o Game do quadro). Existe porque abrir por toque e fechar por
@@ -744,37 +747,11 @@ async function principal() {
       return achado;
     })()`;
 
-    // Toca no botão de verdade, pelas coordenadas de tela dele.
-    // O jogo roda DENTRO de um iframe aqui: o ponto de tela soma o retângulo do
-    // QUADRO ao do canvas. É o mesmo cálculo do toque sobre a luva do mascote na
-    // seção 1 — e esquecer a primeira parcela erra o alvo em silêncio.
-    const pontoAjuda = await avaliar(`
-      (() => {
-        const q = document.getElementById('quadro');
-        const rq = q.getBoundingClientRect();
-        const jogo = q.contentWindow.jogo;
-        const b = jogo.cena.filhos.find((f) => f.icone === 'tutorial');
-        const m = b.matrizMundo;
-        const st = jogo.stage;
-        const rc = st.canvas.getBoundingClientRect();
-        const lx = m.tx + (b.largura ?? 72) / 2;
-        const ly = m.ty + (b.altura ?? 72) / 2;
-        return {
-          x: Math.round(rq.left + rc.left + lx * st.escala + st.deslocX),
-          y: Math.round(rq.top + rc.top + ly * st.escala + st.deslocY),
-        };
-      })()
-    `);
-    for (const type of ['mousePressed', 'mouseReleased']) {
-      await cdp.enviar('Input.dispatchMouseEvent', {
-        type,
-        x: pontoAjuda.x,
-        y: pontoAjuda.y,
-        button: 'left',
-        clickCount: 1,
-        pointerType: 'mouse',
-      }, sessionId);
-    }
+    // Toca no botão de verdade, pelo pixel dele — dentro do painel da pausa,
+    // que já está aberta. `tocarNoJogo` soma o retângulo do QUADRO ao do
+    // canvas (mesmo cálculo da luva do mascote na seção 1) e usa `matrizMundo`,
+    // que já compõe a posição através de painel → pausa → cena.
+    await tocarNoJogo(noJogo('jogo.cena.pausa.painel', 'icone', 'tutorial'));
     await esperar(700);
 
     const naAjuda = await avaliar(`
@@ -852,8 +829,11 @@ async function principal() {
     checar('e a torre continua de pé', depoisDaAjuda.torre === antesDaAjuda.torre,
       `${antesDaAjuda.torre} -> ${depoisDaAjuda.torre}`);
 
-    // Duas aberturas contam duas: é contagem, não sim/não.
-    await avaliar(`(() => { ${g}.cena.pedirAjuda(); return true; })()`);
+    // Duas aberturas contam duas: é contagem, não sim/não. De novo pela pausa,
+    // gesto real — o único caminho que existe até a ajuda neste jogo.
+    await avaliar(`(() => { ${g}.cena.pausar(); return true; })()`);
+    await esperar(400);
+    await tocarNoJogo(noJogo('jogo.cena.pausa.painel', 'icone', 'tutorial'));
     await esperar(300);
     const duasVezes = await avaliar(`${g}._ajudasPedidas`);
     checar('duas aberturas contam duas', duasVezes === antesDaAjuda.ajudas + 2,
