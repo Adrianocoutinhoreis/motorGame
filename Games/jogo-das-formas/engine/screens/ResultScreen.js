@@ -149,25 +149,54 @@ export class ResultScreen extends Scene {
     const resultado = this.game.dados.resultado ?? {
       acertos: 0, erros: 0, totalPerguntas: 0, nivel: 1, vitoria: false,
     };
-    const venceu = !!resultado.vitoria;
+    /**
+     * Empate — terceiro estado, além de vitória/derrota.
+     *
+     * O contrato do AVA continua BINÁRIO: `vitoria` nunca ganha um terceiro
+     * valor (docs/CONTRATO-AVA.md). Um jogo com adversário (o Jogo da Velha é
+     * o primeiro) manda `vitoria: false` mais `extras.empate: true` — é só
+     * esse sinalizador, dentro do `payload` cru que já carrega campos por
+     * jogo (`blocosEmpilhados` etc.), que esta tela lê para escolher entre
+     * "perdeu" e "empatou". Nenhum jogo hoje manda `extras.empate`, então
+     * este ramo nunca é tomado por eles — comportamento inalterado.
+     */
+    const empatou = !!resultado.extras?.empate;
+    const venceu = !empatou && !!resultado.vitoria;
 
     // Mesmo canteiro de obras do menu e da partida, em vez de um céu vazio.
     // A tela de resultado é a última coisa que a criança vê da atividade; com
     // céu limpo e nada mais, ela parecia pertencer a outro jogo. Com a cidade,
     // o chão e os andaimes atrás, ela fecha o lugar onde a torre foi construída.
     //
-    // O céu segue distinguindo vitória de derrota — na derrota fica encoberto,
-    // não cinza-morto: perder não pode parecer castigo (docs/DESIGN.md).
+    // O céu segue distinguindo os três desfechos — na derrota fica encoberto,
+    // não cinza-morto: perder não pode parecer castigo (docs/DESIGN.md). No
+    // empate o céu é claro, como na vitória, mas SEM sol: nem festa, nem
+    // tempestade — um empate contra a CPU não é um fracasso.
+    //
+    // **Exceto no tema 'quadro'**: o azul de vitória/o cinza de derrota são o
+    // vocabulário de um céu ao ar livre (campo, canteiro de obras), e um jogo
+    // de quadro-negro não tem céu — trocar para ele na tela final quebraria a
+    // continuidade com o verde-quadro do menu e da partida. Ali o `Background`
+    // usa o PRÓPRIO verde-quadro nos três desfechos (é o padrão dele para o
+    // tema, sem passar `corCeuTopo`/`corCeuBase`), e quem segue diferenciando
+    // vitória de derrota é o título, a cor dele e as estrelas. O sol NÃO
+    // entra aqui: o `Background` recusa o sol no tema 'quadro' mesmo quando
+    // `mostrarSol: true` é passado (pedido do humano) — uma sala de aula não
+    // tem sol, nem na vitória.
+    const temaQuadro = (config.tema ?? 'construcao') === 'quadro';
     this.adicionar(new Background({
       largura: L,
       altura: A,
       // Também estava cravado: a última tela da atividade voltava ao canteiro
       // de obras mesmo num jogo de outro tema.
       tema: config.tema ?? 'construcao',
-      corCeuTopo: venceu ? cores.ceuProfundo : '#94A3B8',
-      corCeuBase: venceu ? cores.ceu : '#CBD5E1',
-      // Sol só na vitória: sol a pino com glow amarelo sobre céu encoberto era
-      // uma contradição visual — o céu dizia uma coisa e a luz dizia outra.
+      ...(temaQuadro ? {} : {
+        corCeuTopo: (venceu || empatou) ? cores.ceuProfundo : '#94A3B8',
+        corCeuBase: (venceu || empatou) ? cores.ceu : '#CBD5E1',
+      }),
+      // Sol só na vitória: sol a pino com glow amarelo sobre céu encoberto (ou
+      // sobre um empate) era uma contradição visual — o céu dizia uma coisa e
+      // a luz dizia outra.
       mostrarSol: venceu,
     }));
 
@@ -194,12 +223,18 @@ export class ResultScreen extends Scene {
     const ALTURA_BLOCO = PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 1.3;
     const yTitulo = (alturaPainel - ALTURA_BLOCO) / 2;
 
-    painel.adicionar(new TextNode(venceu ? 'Muito bem!' : 'Quase lá!', {
+    const titulo = empatou ? 'Empatou!' : (venceu ? 'Muito bem!' : 'Quase lá!');
+    painel.adicionar(new TextNode(titulo, {
       x: larguraPainel / 2,
       y: yTitulo,
       tamanho: tipografia.titulo,
       peso: tipografia.pesoForte,
-      cor: venceu ? cores.acerto : cores.primaria,
+      // Âmbar para o empate, e não mais um segundo azul quase igual ao da
+      // derrota (`cores.primariaEscura` × `cores.primaria` só divergiam no
+      // código-fonte, não no olho). Com o tema 'quadro' também tirando a
+      // diferença de céu entre os dois (ver acima), a cor do título passou a
+      // ser a única pista visual restante — precisa realmente destoar.
+      cor: empatou ? cores.atencao : (venceu ? cores.acerto : cores.primaria),
       alinhamento: 'center',
     }));
 
@@ -293,7 +328,7 @@ export class ResultScreen extends Scene {
       tamanho: tamanhoMascote,
       x: L / 2 - larguraPainel / 2 - 24,
       y: A * 0.82 - tamanhoMascote / 2,
-      expressao: venceu ? 'comemorando' : 'triste',
+      expressao: empatou ? 'pensando' : (venceu ? 'comemorando' : 'triste'),
       imagem: this.loader.imagem(config.mascote?.asset),
     }) : null;
     if (this.mascote) this.adicionar(this.mascote);
@@ -352,14 +387,19 @@ export class ResultScreen extends Scene {
     }
 
     // ------------------------------------------------------------- áudio
-    const somFim = venceu ? config.audio?.vitoria : config.audio?.derrota;
+    const somFim = empatou
+      ? config.audio?.empate
+      : (venceu ? config.audio?.vitoria : config.audio?.derrota);
     if (somFim) this.audio.efeito(somFim);
-    const falaFim = venceu ? config.audio?.falaVitoria : config.audio?.falaDerrota;
-    // Sem `falaVitoria`/`falaDerrota` no config, a tela fica em silêncio: o
-    // efeito de vitória/derrota acima já toca, e o motor não sintetiza voz.
-    this.audio.falar(falaFim ?? null, {
-      texto: venceu ? 'Muito bem! Você conseguiu!' : 'Quase! Vamos tentar de novo?',
-    });
+    const falaFim = empatou
+      ? config.audio?.falaEmpate
+      : (venceu ? config.audio?.falaVitoria : config.audio?.falaDerrota);
+    // Sem fala declarada no config, a tela fica em silêncio: o efeito acima
+    // já toca (quando existir), e o motor não sintetiza voz.
+    const textoFala = empatou
+      ? 'Empatou! Foi por pouco!'
+      : (venceu ? 'Muito bem! Você conseguiu!' : 'Quase! Vamos tentar de novo?');
+    this.audio.falar(falaFim ?? null, { texto: textoFala });
   }
 
 }

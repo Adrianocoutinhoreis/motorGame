@@ -16,12 +16,18 @@ export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas'
-    this.corCeuTopo = opcoes.corCeuTopo ?? (this.tema === 'construcao' ? '#38BDF8' : cores.ceuProfundo);
-    this.corCeuBase = opcoes.corCeuBase ?? (this.tema === 'construcao' ? '#BAE6FD' : cores.ceu);
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro'
+    this.corCeuTopo = opcoes.corCeuTopo
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : cores.ceuProfundo);
+    this.corCeuBase = opcoes.corCeuBase
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
-    this.mostrarSol = opcoes.mostrarSol ?? true;
+    // Tema 'quadro': cenário de sala de aula — sem sol nem nuvem no céu por
+    // padrão (não tem lógica um quadro-negro debaixo de um céu ensolarado).
+    // A ResultScreen ainda pode religar o sol explicitamente na vitória
+    // (`mostrarSol: venceu`), e é assim que os outros temas já funcionam.
+    this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro');
     this.mostrarColinas = opcoes.mostrarColinas ?? true;
 
     /**
@@ -222,6 +228,31 @@ export class Background extends Node {
       return;
     }
 
+    if (this.tema === 'quadro') {
+      // A bandeja de giz do quadro-negro, não uma colina — é o chão de uma
+      // sala de aula, não de um campo. Faixa de madeira com o pó de giz
+      // ACUMULADO nela, sempre nas mesmas posições (determinístico: nada de
+      // `Math.random()` aqui, ou a sangria pintaria um pó DIFERENTE do da
+      // passada normal, como o comentário da onda do tema 'formas' já explica
+      // para o caso dele).
+      const topoBandeja = a * 0.9;
+      ctx.fillStyle = '#8B6239';
+      ctx.fillRect(-sx, topoBandeja, l + sx * 2, a + sy - topoBandeja);
+      ctx.fillStyle = '#5B3F26'; // friso mais escuro no topo da bandeja
+      ctx.fillRect(-sx, topoBandeja, l + sx * 2, 8);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      const inicio = Math.floor(-sx / 40) * 40;
+      const limite = l + sx;
+      for (let x = inicio; x <= limite; x += 40) {
+        ctx.beginPath();
+        ctx.arc(x + 6, topoBandeja + 18, 1.6, 0, Math.PI * 2);
+        ctx.arc(x + 24, topoBandeja + 24, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+
     if (this.mostrarColinas) {
       this._colina(ctx, a * 0.78, this.corColinaFundo, 0.9, sx, sy);
       this._colina(ctx, a * 0.86, this.corColina, 1.15, sx, sy);
@@ -244,8 +275,11 @@ export class Background extends Node {
 
     this._ceu(ctx);
 
-    // Sol radiante
-    if (this.mostrarSol) {
+    // Sol radiante — nunca no tema 'quadro': é uma sala de aula, não um céu
+    // aberto, e não existe debaixo de um quadro-negro em hipótese nenhuma,
+    // nem quando quem chama (a `ResultScreen`, na vitória) pede `mostrarSol`.
+    // O tema é quem decide isso, não o chamador — ver o padrão do construtor.
+    if (this.mostrarSol && this.tema !== 'quadro') {
       const sx = l * 0.88;
       const sy = a * 0.14;
       const brilho = ctx.createRadialGradient(sx, sy, 10, sx, sy, a * 0.28);
@@ -264,13 +298,64 @@ export class Background extends Node {
       ctx.fill();
     }
 
-    // Nuvens dinâmicas
-    for (const nuvem of this.nuvens) {
-      this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
+    // Nuvens dinâmicas — não no tema 'quadro': é uma sala de aula, não um céu
+    // aberto, e nuvem ali seria a mesma mistura de vocabulário que o comentário
+    // do sol evita.
+    if (this.tema !== 'quadro') {
+      for (const nuvem of this.nuvens) {
+        this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
+      }
     }
 
     if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
+    if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
     this._chao(ctx);
+  }
+
+  /**
+   * Tema 'quadro' — o quadro-negro do Jogo da Velha.
+   *
+   * Tabuleiros 3x3 e círculos gigantes, em giz branco desbotado (alfa baixo),
+   * espalhados pelo céu-quadro. É o MESMO motivo do jogo (a grade, o O),
+   * repetido em escala grande demais para ler como conteúdo — decoração, não
+   * ensaio do exercício, a mesma regra que o Jogo das Cores já segue para as
+   * próprias peças no fundo do menu.
+   */
+  _desenharDecoracoesQuadro(ctx, l, a) {
+    const doodles = [
+      { x: 0.12, y: 0.22, tam: 210, alfa: 0.08, giro: -8, tipo: 'grade' },
+      { x: 0.87, y: 0.62, tam: 240, alfa: 0.07, giro: 10, tipo: 'grade' },
+      { x: 0.90, y: 0.16, tam: 110, alfa: 0.12, tipo: 'o' },
+      { x: 0.07, y: 0.68, tam: 130, alfa: 0.10, tipo: 'o' },
+    ];
+    for (const d of doodles) {
+      ctx.save();
+      ctx.globalAlpha = d.alfa;
+      ctx.translate(d.x * l, d.y * a);
+      if (d.giro) ctx.rotate((d.giro * Math.PI) / 180);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = d.tam * 0.06;
+      ctx.lineCap = 'round';
+
+      if (d.tipo === 'o') {
+        ctx.beginPath();
+        ctx.arc(0, 0, d.tam / 2, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const passo = d.tam / 3;
+        for (let i = 1; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-d.tam / 2 + i * passo, -d.tam / 2);
+          ctx.lineTo(-d.tam / 2 + i * passo, d.tam / 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-d.tam / 2, -d.tam / 2 + i * passo);
+          ctx.lineTo(d.tam / 2, -d.tam / 2 + i * passo);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
   }
 
   /**

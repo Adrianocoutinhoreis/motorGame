@@ -251,9 +251,14 @@
     botao.setAttribute('aria-selected', 'false');
     botao.textContent = jogo.titulo;
     botao.title = jogo.slug; // o slug é o que vai no campo `jogo` do AVA
+    // `dir` é o caminho da PASTA (relativo a Games/) — usado na URL. Divide de
+    // `slug` (o identificador do AVA, no tooltip acima) só quando o jogo mora
+    // numa coleção, ex.: Games/numerandus/jogo-da-velha-novo/. Jogo direto tem
+    // os dois iguais, então `?? jogo.slug` cobre quem ainda não manda `dir`.
+    const dir = jogo.dir ?? jogo.slug;
     // Relativo à página (que está em /tools/), como o valor inicial do campo:
     // assim o host funciona igual se o projeto for servido sob um prefixo.
-    botao.dataset.url = `../Games/${jogo.slug}/index.html`;
+    botao.dataset.url = `../Games/${dir}/index.html`;
     botao.addEventListener('click', () => {
       caminho.value = botao.dataset.url;
       carregar();
@@ -283,8 +288,11 @@
    *     links, e o título de cada um sai do `<title>` do próprio `index.html`.
    *
    * A regra do que É um jogo é a MESMA das duas vias, e a mesma do servidor:
-   * subpasta de `Games/` **que tenha um `index.html`**. Na via 2 isso é
-   * verificado buscando o arquivo — pasta sem ele não vira aba.
+   * subpasta de `Games/` **que tenha um `index.html`**, OU — sem `index.html`
+   * próprio — uma pasta de COLEÇÃO cujas subpastas SÃO jogos (um nível de
+   * aninhamento, ex.: `Games/numerandus/jogo-da-velha-novo/`). Na via 2 isso é
+   * verificado buscando o arquivo — pasta sem ele, nos dois níveis, não vira
+   * aba.
    */
   async function descobrirJogos() {
     // 1ª via: a rota do serve.mjs.
@@ -295,33 +303,63 @@
       // Sem rota aqui: a listagem ainda pode existir. Segue para a 2ª via.
     }
 
-    // 2ª via: a listagem de diretório.
-    const listagem = await fetch('../Games/');
-    if (!listagem.ok) {
-      throw new Error(`sem /__jogos.json e sem listagem de ../Games/ (HTTP ${listagem.status})`);
+    // 2ª via: a listagem de diretório (Live Server, http-server, autoindex).
+    const linksDe = async (url) => {
+      const resposta = await fetch(url);
+      if (!resposta.ok) return null;
+      const doc = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+      const rotaDeItem = new RegExp('([^/?#]+)/?$');
+      return [...new Set(
+        [...doc.querySelectorAll('a[href]')]
+          .map((a) => a.getAttribute('href').match(rotaDeItem)?.[1])
+          // Sem ponto no nome: link para ARQUIVO não é pasta.
+          .filter((nome) => nome && !nome.includes('.')),
+      )];
+    };
+
+    const topo = await linksDe('../Games/');
+    if (!topo) throw new Error('sem /__jogos.json e sem listagem de ../Games/');
+
+    const candidatos = []; // { dir }
+    for (const nome of topo) {
+      const indiceDireto = await fetch(`../Games/${nome}/index.html`);
+      if (indiceDireto.ok) {
+        candidatos.push({ dir: nome });
+        continue;
+      }
+      // Sem index.html direto: talvez seja uma pasta de coleção.
+      const subitens = await linksDe(`../Games/${nome}/`);
+      for (const sub of subitens ?? []) {
+        const indiceAninhado = await fetch(`../Games/${nome}/${sub}/index.html`);
+        if (indiceAninhado.ok) candidatos.push({ dir: `${nome}/${sub}` });
+      }
     }
 
-    const doc = new DOMParser().parseFromString(await listagem.text(), 'text/html');
-    const rotaDeJogo = new RegExp('(?:^|/)Games/([^/?#]+)/?$');
-    const slugs = [...new Set(
-      [...doc.querySelectorAll('a[href]')]
-        .map((a) => a.getAttribute('href').match(rotaDeJogo)?.[1])
-        // Sem ponto no nome: link para ARQUIVO dentro de Games/ não é jogo.
-        .filter((slug) => slug && !slug.includes('.')),
-    )];
-
     const jogos = [];
-    for (const slug of slugs) {
+    for (const { dir } of candidatos) {
       let html;
       try {
-        const indice = await fetch(`../Games/${slug}/index.html`);
+        const indice = await fetch(`../Games/${dir}/index.html`);
         if (!indice.ok) continue; // pasta sem index.html não é jogo publicável
         html = await indice.text();
       } catch {
         continue;
       }
       const titulo = html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim();
-      jogos.push({ slug, titulo: titulo || slug });
+
+      // O slug ESTÁVEL do AVA sai do texto de src/config.js, não do caminho da
+      // pasta — os dois só coincidem para um jogo direto (ver `slugDoJogo` em
+      // tools/serve.mjs, mesma ideia).
+      let slug = dir;
+      try {
+        const configResp = await fetch(`../Games/${dir}/src/config.js`);
+        if (configResp.ok) {
+          const config = await configResp.text();
+          slug = config.match(/slug:\s*'([^']+)'/)?.[1] ?? dir;
+        }
+      } catch { /* sem config legível: usa o caminho como aproximação */ }
+
+      jogos.push({ dir, slug, titulo: titulo || dir });
     }
     jogos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
     return { jogos, via: 'listagem de ../Games/' };

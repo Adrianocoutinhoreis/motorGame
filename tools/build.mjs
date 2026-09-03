@@ -32,18 +32,41 @@ async function versaoDoMotor() {
   }
 }
 
+/**
+ * Cada jogo direto em `Games/<pasta>/`, MAIS cada jogo dentro de uma pasta de
+ * COLEÇÃO (`Games/<colecao>/<pasta>/`) — mesma descoberta de um nível de
+ * `serve.mjs`/`pages-index.mjs`/`verificar-independencia.mjs`. O caminho
+ * devolvido é sempre relativo a `Games/`, e é o que `copiarMotor` usa para
+ * montar `Games/<caminho>/engine/`.
+ */
 async function listarJogos() {
   if (!existsSync(PASTA_JOGOS)) return [];
   const entradas = await readdir(PASTA_JOGOS, { withFileTypes: true });
   const jogos = [];
   for (const entrada of entradas) {
     if (!entrada.isDirectory()) continue;
+    const base = path.join(PASTA_JOGOS, entrada.name);
     // Uma pasta só é um jogo se tiver index.html — evita copiar o motor para
     // dentro de pastas de apoio criadas por engano.
-    if (existsSync(path.join(PASTA_JOGOS, entrada.name, 'index.html'))) {
+    if (existsSync(path.join(base, 'index.html'))) {
       jogos.push(entrada.name);
+      continue;
+    }
+    // Sem index.html próprio: pode ser uma pasta de COLEÇÃO — olha um nível
+    // a mais, em vez de avisar de cara que "não tem index.html".
+    let subentradas = [];
+    try {
+      subentradas = await readdir(base, { withFileTypes: true });
+    } catch {
+      subentradas = [];
+    }
+    const subjogos = subentradas.filter(
+      (sub) => sub.isDirectory() && existsSync(path.join(base, sub.name, 'index.html')),
+    );
+    if (subjogos.length > 0) {
+      for (const sub of subjogos) jogos.push(`${entrada.name}/${sub.name}`);
     } else {
-      console.warn(`  aviso: "${entrada.name}" não tem index.html; ignorando.`);
+      console.warn(`  aviso: "${entrada.name}" não tem index.html (nem como coleção); ignorando.`);
     }
   }
   return jogos;

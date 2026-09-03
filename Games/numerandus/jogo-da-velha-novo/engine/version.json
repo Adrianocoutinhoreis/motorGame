@@ -1,0 +1,6 @@
+{
+  "nome": "Motor Educandus",
+  "versao": "1.3.5",
+  "data": "2026-09-03",
+  "notas": "PauseScreen: os icones de som e ajuda no topo do painel ficaram mais proximos do titulo \"Pausa\" - pedido do humano, com referencia visual, depois de ver os dois quase colados nas bordas do painel. Novo const insetIcones=88 (era 8 de um lado e larguraPainel-80 do outro) substitui os dois numeros soltos por um so, com o mesmo valor medido dos dois lados do titulo. Na 1.3.4: PauseScreen ganhou o botao de ajuda opcional (aoAjuda), no canto oposto ao do som, para nao depender mais de um \"?\" atras do veu da pausa que nao respondia a nada."
+}

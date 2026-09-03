@@ -258,6 +258,31 @@ function imprimir(rel) {
   }
 }
 
+/**
+ * Sem alvo explícito: todo jogo direto em `Games/<pasta>/index.html`, MAIS
+ * todo jogo dentro de uma pasta de COLEÇÃO (`Games/<colecao>/<pasta>/`, sem
+ * `index.html` na própria coleção) — um nível de aninhamento, igual à
+ * descoberta de `serve.mjs`/`pages-index.mjs`. O `slug` passado a
+ * `verificarJogo` continua sendo o caminho da pasta relativo a `Games/`.
+ */
+async function listarTodosOsCaminhos() {
+  const caminhos = [];
+  for (const e of await readdir(PASTA_JOGOS, { withFileTypes: true })) {
+    if (!e.isDirectory()) continue;
+    const base = path.join(PASTA_JOGOS, e.name);
+    if (existsSync(path.join(base, 'index.html'))) {
+      caminhos.push(e.name);
+      continue;
+    }
+    for (const sub of await readdir(base, { withFileTypes: true })) {
+      if (sub.isDirectory() && existsSync(path.join(base, sub.name, 'index.html'))) {
+        caminhos.push(`${e.name}/${sub.name}`);
+      }
+    }
+  }
+  return caminhos;
+}
+
 async function principal() {
   const alvo = process.argv[2];
   let slugs = [];
@@ -265,9 +290,7 @@ async function principal() {
   if (alvo) {
     slugs = [alvo];
   } else if (existsSync(PASTA_JOGOS)) {
-    for (const e of await readdir(PASTA_JOGOS, { withFileTypes: true })) {
-      if (e.isDirectory() && existsSync(path.join(PASTA_JOGOS, e.name, 'index.html'))) slugs.push(e.name);
-    }
+    slugs = await listarTodosOsCaminhos();
   }
 
   if (slugs.length === 0) {

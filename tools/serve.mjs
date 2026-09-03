@@ -16,6 +16,7 @@
  */
 import { createServer } from 'node:http';
 import { readdir, readFile, stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,7 +44,31 @@ const TIPOS = {
 };
 
 /**
- * Os jogos que existem: cada subpasta de `Games/` que tenha um `index.html`.
+ * O slug ESTÁVEL do contrato do AVA (`config.slug`), lido do texto de
+ * `src/config.js` sem importar o módulo (não há navegador aqui — mesmo truque
+ * que `pages-index.mjs` já usa para ler `subtitulo`/`aulaOriginal`).
+ *
+ * Existe porque `dir` (o caminho da pasta, usado nas URLs) e `slug` divergem
+ * quando o jogo mora numa pasta de COLEÇÃO (`Games/numerandus/<slug>/`): o
+ * caminho carrega o nome da coleção, o slug do AVA não. Sem isto, `dir`
+ * cairia como aproximação do slug em todo lugar que mostra o identificador
+ * do AVA (ex.: a aba do `ava-teste.html`), e mentiria sobre o campo `jogo`
+ * que a mensagem `JOGO_CONCLUIDO` de verdade envia.
+ */
+async function slugDoJogo(pastaDoJogo, dirFallback) {
+  try {
+    const config = await readFile(path.join(pastaDoJogo, 'src', 'config.js'), 'utf8');
+    return config.match(/slug:\s*'([^']+)'/)?.[1] ?? dirFallback;
+  } catch {
+    return dirFallback;
+  }
+}
+
+/**
+ * Os jogos que existem: cada subpasta de `Games/` que tenha um `index.html`
+ * DIRETO dentro dela, OU — quando a subpasta não tem `index.html` próprio —
+ * uma pasta de COLEÇÃO (ex.: `Games/numerandus/`), cujas subpastas SÃO jogos.
+ * Um nível de aninhamento, não mais que isso.
  *
  * **Medida a cada chamada, nunca mantida à mão.** Um jogo criado por
  * `new-game.mjs` aparece sem ninguém precisar lembrar de registrá-lo em lugar
@@ -53,6 +78,11 @@ const TIPOS = {
  *
  * O nome de exibição sai do `<title>` do próprio `index.html` do jogo, que é
  * onde ele já está escrito. Sem `<title>`, cai para o slug.
+ *
+ * Cada jogo carrega DOIS campos, não um só: `dir` (caminho relativo a
+ * `Games/`, usado em toda URL) e `slug` (o identificador do AVA — ver
+ * `slugDoJogo`). Para um jogo direto os dois são o mesmo texto (é a
+ * convenção: a pasta batiza o slug); só divergem dentro de uma coleção.
  */
 async function listarJogos() {
   const pasta = path.join(RAIZ, 'Games');
@@ -63,19 +93,39 @@ async function listarJogos() {
     return [];
   }
 
-  const jogos = [];
+  const candidatos = [];
   for (const entrada of entradas) {
     if (!entrada.isDirectory()) continue;
-    let html;
-    try {
-      html = await readFile(path.join(pasta, entrada.name, 'index.html'), 'utf8');
-    } catch {
-      continue; // pasta sem index.html não é um jogo publicável
+    const base = path.join(pasta, entrada.name);
+    if (existsSync(path.join(base, 'index.html'))) {
+      candidatos.push({ dir: entrada.name, pastaDoJogo: base });
+      continue;
     }
+    // Sem index.html próprio: talvez seja uma pasta de coleção — olha um
+    // nível a mais dentro dela.
+    let subentradas;
+    try {
+      subentradas = await readdir(base, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const sub of subentradas) {
+      if (!sub.isDirectory()) continue;
+      const subBase = path.join(base, sub.name);
+      if (existsSync(path.join(subBase, 'index.html'))) {
+        candidatos.push({ dir: `${entrada.name}/${sub.name}`, pastaDoJogo: subBase });
+      }
+    }
+  }
+
+  const jogos = [];
+  for (const { dir, pastaDoJogo } of candidatos) {
+    const html = await readFile(path.join(pastaDoJogo, 'index.html'), 'utf8');
     jogos.push({
-      slug: entrada.name,
-      titulo: html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim() || entrada.name,
-      url: `/Games/${entrada.name}/index.html`,
+      dir,
+      slug: await slugDoJogo(pastaDoJogo, dir),
+      titulo: html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim() || dir,
+      url: `/Games/${dir}/index.html`,
     });
   }
   return jogos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));

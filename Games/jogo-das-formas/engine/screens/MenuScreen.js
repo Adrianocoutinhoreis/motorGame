@@ -90,6 +90,81 @@ class PlacaTituloLimpa extends Node {
 }
 
 /**
+ * PlacaTituloQuadro — placa em forma de mini quadro-negro, para jogos do tema
+ * 'quadro' (Jogo da Velha). Moldura de madeira como a de um quadro de sala de
+ * aula de verdade, superfície verde-escura e o título em "giz" branco — o
+ * mesmo vocabulário visual do `Background` deste tema, e não a placa de
+ * madeira do canteiro de obras nem o cartão liso das Formas.
+ */
+class PlacaTituloQuadro extends Node {
+  constructor(titulo, subtitulo, opcoes = {}) {
+    super({ largura: 740, altura: 170, ...opcoes });
+    this.titulo = titulo;
+    this.subtitulo = subtitulo;
+    this.regX = 370;
+    this.regY = 85;
+  }
+
+  desenhar(ctx) {
+    const l = this.largura;
+    const a = this.altura;
+    const alturaQuadro = a * 0.78;
+    const m = 10; // margem da moldura até a superfície verde
+
+    ctx.save();
+
+    // Moldura de madeira
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.32)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 7;
+    ctx.fillStyle = '#7C5A3A';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, l, alturaQuadro, 14);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    // Superfície verde-quadro
+    const grad = ctx.createLinearGradient(0, m, 0, alturaQuadro - m);
+    grad.addColorStop(0, '#1B5E44');
+    grad.addColorStop(1, '#123D2E');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(m, m, l - m * 2, alturaQuadro - m * 2, 8);
+    ctx.fill();
+
+    // Título em giz branco (RE-01: CAIXA ALTA)
+    const txtTitulo = aplicarCaixa(this.titulo);
+    ctx.font = `${tipografia.pesoForte} 50px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillText(txtTitulo, l / 2, alturaQuadro * 0.42);
+
+    // Faixa de giz amarelo para o subtítulo — o mesmo amarelo do destaque de
+    // vitória no tabuleiro (ver Games/numerandus/jogo-da-velha-novo), para a
+    // capa e a partida usarem a mesma cor de "acerto".
+    if (this.subtitulo) {
+      const txtSub = aplicarCaixa(this.subtitulo);
+      ctx.font = `${tipografia.pesoForte} 20px ${tipografia.familia}`;
+      const bh = 38;
+      const by = alturaQuadro * 0.66;
+      const bw = Math.min(l * 0.82, ctx.measureText(txtSub).width + espaco.xl);
+      const bx = (l - bw) / 2;
+
+      ctx.fillStyle = '#FACC15';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 8);
+      ctx.fill();
+
+      ctx.fillStyle = '#123D2E';
+      ctx.fillText(txtSub, l / 2, by + bh / 2 + 1);
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
  * PlacaTituloMadeira — Placa estilizada de madeira 3D para a capa do jogo.
  */
 class PlacaTituloMadeira extends Node {
@@ -201,7 +276,9 @@ export class MenuScreen extends Scene {
     // A placa segue o tema, e não uma chave própria: tema É a linguagem visual
     // do jogo, e placa de madeira com parafusos é vocabulário de canteiro de
     // obras. Quem não declara tema continua com a de madeira, como o piloto.
-    const Placa = (config.tema === 'formas') ? PlacaTituloLimpa : PlacaTituloMadeira;
+    const Placa = config.tema === 'formas' ? PlacaTituloLimpa
+      : config.tema === 'quadro' ? PlacaTituloQuadro
+      : PlacaTituloMadeira;
     this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',
       config.subtitulo ?? 'EMPILHE OS BLOCOS NA ORDEM CERTA!',

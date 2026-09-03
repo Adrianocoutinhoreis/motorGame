@@ -28,12 +28,23 @@
  * gerado — para ninguém editá-lo à mão e perder a edição na próxima geração.
  */
 import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Mesma regra do `serve.mjs`: subpasta de Games/ com index.html. */
+/**
+ * Mesma regra do `serve.mjs`: subpasta de `Games/` com `index.html` DIRETO
+ * dentro, OU — sem `index.html` próprio — uma pasta de COLEÇÃO (ex.:
+ * `Games/numerandus/`), cujas subpastas SÃO jogos. Um nível de aninhamento,
+ * não mais que isso.
+ *
+ * `dir` é o caminho relativo a `Games/` (vai no `href` do card); `slug` é o
+ * identificador ESTÁVEL do contrato do AVA (`config.slug`, lido do texto de
+ * `src/config.js`, sem importar o módulo — não há navegador aqui). Para um
+ * jogo direto os dois são o mesmo texto; só divergem dentro de uma coleção.
+ */
 async function listarJogos() {
   const pasta = path.join(RAIZ, 'Games');
   let entradas;
@@ -43,29 +54,53 @@ async function listarJogos() {
     return [];
   }
 
-  const jogos = [];
+  const candidatos = [];
   for (const entrada of entradas) {
     if (!entrada.isDirectory()) continue;
-    let html;
+    const base = path.join(pasta, entrada.name);
+    if (existsSync(path.join(base, 'index.html'))) {
+      candidatos.push({ dir: entrada.name, pastaDoJogo: base });
+      continue;
+    }
+    let subentradas;
     try {
-      html = await readFile(path.join(pasta, entrada.name, 'index.html'), 'utf8');
+      subentradas = await readdir(base, { withFileTypes: true });
     } catch {
       continue;
     }
-    const titulo = html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim() || entrada.name;
+    for (const sub of subentradas) {
+      if (!sub.isDirectory()) continue;
+      const subBase = path.join(base, sub.name);
+      if (existsSync(path.join(subBase, 'index.html'))) {
+        candidatos.push({ dir: `${entrada.name}/${sub.name}`, pastaDoJogo: subBase });
+      }
+    }
+  }
 
-    // Subtítulo e aula saem do config do jogo, sem importar o módulo (o config
-    // depende do motor, e aqui não há navegador). Leitura textual, e o valor
-    // ausente simplesmente não aparece na capa.
+  const jogos = [];
+  for (const { dir, pastaDoJogo } of candidatos) {
+    let html;
+    try {
+      html = await readFile(path.join(pastaDoJogo, 'index.html'), 'utf8');
+    } catch {
+      continue;
+    }
+    const titulo = html.match(new RegExp('<title>([^<]*)</title>', 'i'))?.[1]?.trim() || dir;
+
+    // Slug, subtítulo e aula saem do config do jogo, sem importar o módulo (o
+    // config depende do motor, e aqui não há navegador). Leitura textual, e o
+    // valor ausente simplesmente não aparece na capa.
+    let slug = dir;
     let subtitulo = '';
     let aula = '';
     try {
-      const config = await readFile(path.join(pasta, entrada.name, 'src', 'config.js'), 'utf8');
+      const config = await readFile(path.join(pastaDoJogo, 'src', 'config.js'), 'utf8');
+      slug = config.match(/slug:\s*'([^']+)'/)?.[1] ?? dir;
       subtitulo = config.match(/subtitulo:\s*'([^']*)'/)?.[1] ?? '';
       aula = config.match(/aulaOriginal:\s*'([^']*)'/)?.[1] ?? '';
     } catch { /* jogo sem config legível: a capa mostra só o título */ }
 
-    jogos.push({ slug: entrada.name, titulo, subtitulo, aula });
+    jogos.push({ dir, slug, titulo, subtitulo, aula });
   }
   return jogos.sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
 }
@@ -78,7 +113,7 @@ const escapar = (t) => String(t)
 
 const jogos = await listarJogos();
 
-const cartoes = jogos.map((jogo) => `      <a class="jogo" href="./Games/${escapar(jogo.slug)}/">
+const cartoes = jogos.map((jogo) => `      <a class="jogo" href="./Games/${escapar(jogo.dir)}/">
         <span class="nome">${escapar(jogo.titulo)}</span>
         ${jogo.subtitulo ? `<span class="sub">${escapar(jogo.subtitulo)}</span>` : ''}
         ${jogo.aula ? `<span class="aula">aula ${escapar(jogo.aula)}</span>` : ''}
@@ -175,4 +210,4 @@ ${cartoes}
 
 await writeFile(path.join(RAIZ, 'index.html'), html, 'utf8');
 console.log(`index.html gerado com ${jogos.length} jogo(s):`);
-for (const jogo of jogos) console.log(`  ${jogo.titulo}  ->  ./Games/${jogo.slug}/`);
+for (const jogo of jogos) console.log(`  ${jogo.titulo}  ->  ./Games/${jogo.dir}/`);

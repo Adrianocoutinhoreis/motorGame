@@ -1,0 +1,347 @@
+import { Emitter } from './Emitter.js';
+import { Stage } from './Stage.js';
+import { Input } from './Input.js';
+import { Loader } from './Loader.js';
+import { Storage } from './Storage.js';
+import { Tween } from './Tween.js';
+import { AudioBus } from '../audio/AudioBus.js';
+import { AvaBridge } from '../ava/AvaBridge.js';
+import { ESTADOS, transicaoValida } from './Estados.js';
+
+/**
+ * Game — o orquestrador. Um jogo instancia isto e registra suas cenas.
+ *
+ * Junta Stage + Input + AudioBus + Loader + Storage + AvaBridge e roda o laço
+ * principal. Três coisas que os jogos originais não faziam e que estão aqui:
+ *
+ * 1. **Tempo por delta.** O `setInterval(atualizaTempo, 1000)` dos originais
+ *    continuava correndo com a aba em segundo plano — o aluno voltava e já
+ *    tinha perdido. Aqui o laço é rAF, pausa sozinho e o `dt` é limitado.
+ * 2. **Troca de cena de verdade.** Nada de esconder `MovieClip` e limpar array
+ *    na mão: a cena sai, seus nós somem e seus ouvintes são desfeitos.
+ * 3. **Registro no AVA** por um único ponto (entrada em RESULTADO).
+ */
+export class Game extends Emitter {
+  /**
+   * @param {object} opcoes
+   *   canvas: HTMLCanvasElement
+   *   config: objeto de configuração do jogo (src/config.js)
+   *   cenas: { [nome]: classe de Scene }
+   *   cenaInicial: nome da cena a abrir depois do carregamento
+   */
+  constructor(opcoes = {}) {
+    super();
+    this.config = opcoes.config ?? {};
+    this.cenas = new Map(Object.entries(opcoes.cenas ?? {}));
+    this.cenaInicial = opcoes.cenaInicial ?? 'menu';
+
+    this.stage = new Stage(opcoes.canvas, {
+      larguraLogica: this.config.largura ?? 1280,
+      alturaLogica: this.config.altura ?? 720,
+      corFundo: this.config.corLetterbox ?? '#0B1220',
+    });
+    this.input = new Input(this.stage);
+    this.loader = new Loader();
+    this.storage = new Storage(this.config.slug ?? 'motor');
+    this.audio = new AudioBus({ storage: this.storage });
+    this.ava = new AvaBridge({
+      jogo: this.config.slug,
+      registrarDerrota: this.config.registrarDerrota ?? true,
+    });
+
+    /** @type {import('./Scene.js').Scene|null} */
+    this.cena = null;
+    this.nomeCena = null;
+    this.estado = ESTADOS.BOOT;
+    this.rodando = false;
+    this._ultimoTempo = 0;
+    this._quadro = 0;
+    /** Dados passados de uma cena para a próxima (nível escolhido, resultado…). */
+    this.dados = {};
+
+    /**
+     * Segundos que a criança passou JOGANDO nesta partida — o `tempoSegundos`
+     * do contrato do AVA.
+     *
+     * Medido pelo motor, e não por cada jogo, pelo mesmo motivo do corte de som
+     * e da música: regra que depende de cada cena lembrar é regra que uma cena
+     * nova vai esquecer. Vale também para jogos sem barra de tempo.
+     *
+     * **É tempo JOGANDO, não relógio de parede**, e a diferença é o que torna o
+     * número honesto:
+     *
+     *  - a tela de PAUSA não conta (`cena.pausada`);
+     *  - a aba escondida não conta, de graça: o laço nem roda (`pausarLaco`);
+     *  - o `dt` é o MESMO que alimenta a barra de tempo na tela, então o número
+     *    reportado bate com o cronômetro que a criança viu. Um relógio próprio
+     *    aqui daria dois tempos diferentes para a mesma partida.
+     */
+    this._tempoJogando = 0;
+
+    /**
+     * Quantas vezes a criança pediu AJUDA nesta partida — o campo `ajuda` do
+     * contrato do AVA.
+     *
+     * Contado pelo motor, e não por cada jogo, pelo mesmo motivo de sempre: um
+     * jogo novo esqueceria. Quem soma é `registrarAjuda()`, chamado pelo
+     * `HelpScreen` ao abrir.
+     *
+     * **É contagem, não sim/não**, por decisão do humano: abrir a ajuda três
+     * vezes na mesma partida é sinal diferente de abrir uma, e `> 0` continua
+     * respondendo "houve necessidade?". O caminho contrário não existe — de um
+     * booleano não se recupera a contagem depois.
+     */
+    this._ajudasPedidas = 0;
+
+    this._aoMudarVisibilidade = () => {
+      if (document.hidden) this.pausarLaco();
+      else this.retomarLaco();
+    };
+    document.addEventListener('visibilitychange', this._aoMudarVisibilidade);
+
+    // O áudio só pode começar depois de um gesto do usuário (política dos
+    // navegadores). Sem isto, a narração dos jogos originais simplesmente não
+    // toca em Chrome/Safari modernos.
+    //
+    // **A MÚSICA COMEÇA AQUI, e este é o único lugar que a comanda.**
+    //
+    // Antes eram quatro: o `MenuScreen` e a cena de partida de cada um dos três
+    // jogos pediam a música, e um deles ainda a parava ao sair. O resultado era
+    // desigual — no Jogo das Formas a música recomeçava do zero ao voltar ao
+    // menu, e nos outros dois não. É a mesma duplicação que o corte de som tinha:
+    // regra espalhada por cada tela é regra que uma tela nova vai contradizer.
+    //
+    // Começar no gesto, e não no `aoEntrar` do menu, também conserta uma coisa
+    // sutil: pedida antes do destravamento, a música era iniciada sobre um
+    // contexto suspenso e podia perder o próprio começo.
+    //
+    // `musica(id)` é idempotente, então repetir a cada toque é inofensivo — e é
+    // o que a mantém tocando sem talho por todas as trocas de tela.
+    this.input.on('apertar', async () => {
+      const destravado = await this.audio.destravar();
+      if (destravado && this.config.audio?.musica) {
+        this.audio.musica(this.config.audio.musica);
+      }
+    });
+  }
+
+  /** Registra ou substitui uma cena. */
+  registrarCena(nome, classe) {
+    this.cenas.set(nome, classe);
+    return this;
+  }
+
+  /**
+   * A criança pediu ajuda. Chamado pelo `HelpScreen` ao abrir.
+   *
+   * Público de propósito: é o motor que conta, e o jogo não precisa saber que
+   * existe contagem. Também não é o jogo que decide o que fazer com o número —
+   * ele vai para o AVA como `ajuda`, e só.
+   */
+  registrarAjuda() {
+    this._ajudasPedidas++;
+    this.emit('ajuda', this._ajudasPedidas);
+    return this._ajudasPedidas;
+  }
+
+  /** Contexto injetado em cada cena. */
+  _contexto(nome) {
+    return {
+      nome,
+      game: this,
+      stage: this.stage,
+      input: this.input,
+      audio: this.audio,
+      loader: this.loader,
+      storage: this.storage,
+      config: this.config,
+      largura: this.stage.larguraLogica,
+      altura: this.stage.alturaLogica,
+    };
+  }
+
+  /**
+   * Troca de cena. Assíncrono porque a cena nova pode precisar pré-carregar.
+   * @param {string} nome
+   * @param {object} dados repassados à cena nova via `this.dados`
+   */
+  async irPara(nome, dados = {}) {
+    const Classe = this.cenas.get(nome);
+    if (!Classe) {
+      console.error(`[motor] cena "${nome}" não registrada. Cenas: ${[...this.cenas.keys()].join(', ')}`);
+      return;
+    }
+
+    // Evita reentrância: dois botões clicados no mesmo quadro trocariam duas vezes.
+    if (this._trocando) return;
+    this._trocando = true;
+
+    try {
+      this.dados = { ...this.dados, ...dados };
+
+      if (this.cena) {
+        this.stage.raiz.remover(this.cena);
+        this.cena._desmontar();
+        this.cena = null;
+
+        // **Nenhum som sobrevive à sua tela.** Fala e efeito são cortados aqui,
+        // no motor, e não em cada `aoSair` — porque uma regra que depende de
+        // cada tela lembrar é uma regra que uma tela nova vai esquecer.
+        //
+        // O defeito que trouxe isto: o som de fim de partida tem 4,55 s, e a
+        // criança que tocava MENU antes de ele acabar ouvia o fim de partida na
+        // tela de menu. A música NÃO para — é do jogo, não da tela. Ver
+        // `AudioBus.encerrarDaTela`.
+        this.audio.encerrarDaTela();
+        // A cena que sai leva o cenário dela; deixar o ponteiro vivo faria o
+        // `Stage` pintar as barras com um nó já desmontado.
+        this.stage.sangria = null;
+      }
+      // Tweens da cena anterior não podem sobreviver à troca.
+      Tween.removerTodos();
+
+      const cena = new Classe(this._contexto(nome));
+      this.cena = cena;
+      this.nomeCena = nome;
+
+      await cena.preload();
+      cena.aoEntrar();
+      this.stage.raiz.adicionar(cena);
+
+      // Quem cobre as barras do letterbox é o cenário desta cena.
+      //
+      // Achado por CAPACIDADE (`pintarSangria`) e não por tipo: assim o motor
+      // não importa `ui/Background` dentro do `core`, e um jogo pode oferecer o
+      // próprio cenário sem herdar dele. Só entre os filhos diretos, porque
+      // cenário que não é o primeiro plano da cena não é cenário.
+      this.stage.sangria = cena.filhos.find((f) => typeof f.pintarSangria === 'function') ?? null;
+
+      this._definirEstado(cena.estado ?? nome);
+      this.emit('cena', nome, cena);
+    } catch (err) {
+      console.error(`[motor] falha ao entrar na cena "${nome}":`, err);
+    } finally {
+      this._trocando = false;
+    }
+  }
+
+  /**
+   * Muda o estado lógico e aciona o contrato do AVA nas bordas de RESULTADO.
+   * Este é o único lugar do motor que fala com o AvaBridge.
+   */
+  _definirEstado(novo) {
+    const anterior = this.estado;
+    if (novo === anterior) return;
+
+    if (!transicaoValida(anterior, novo)) {
+      // Não bloqueia (um jogo pode ter um fluxo legítimo fora do padrão), mas
+      // avisa alto: transição inesperada costuma ser bug de navegação.
+      console.warn(`[motor] transição de estado incomum: ${anterior} → ${novo}`);
+    }
+
+    this.estado = novo;
+    this.emit('estado', novo, anterior);
+
+    if (novo === ESTADOS.JOGANDO) {
+      // Começa a contar AQUI, e zera: cada partida tem o seu tempo e as suas
+      // ajudas, e um replay não herda os da anterior.
+      this._tempoJogando = 0;
+      this._ajudasPedidas = 0;
+    }
+
+    if (novo === ESTADOS.RESULTADO) {
+      // Borda de SUBIDA: fim de uma partida → registra uma vez.
+      //
+      // O tempo vai como SEGUNDO argumento, e não misturado no resultado do
+      // jogo, porque a origem do dado importa: este número é medido pelo motor.
+      // Manter separado também preserva a guarda de honestidade do `AvaBridge` —
+      // `concluir(null)` continua avisando que o jogo não entregou resultado, em
+      // vez de o tempo disfarçar a falta com um objeto que parece preenchido.
+      this.ava.concluir(this.dados.resultado ?? null, {
+        tempoSegundos: Math.round(this._tempoJogando),
+        ajuda: this._ajudasPedidas,
+      });
+    } else if (anterior === ESTADOS.RESULTADO) {
+      // Borda de DESCIDA: saiu do resultado → re-arma para a próxima partida.
+      this.ava.rearmar();
+    }
+  }
+
+  /** Inicia o laço principal. */
+  iniciar() {
+    if (this.rodando) return this;
+    this.rodando = true;
+    this._ultimoTempo = performance.now();
+    this._laco = (agora) => {
+      if (!this.rodando) return;
+      // Limita o dt: uma aba que volta do segundo plano entregaria um salto de
+      // vários segundos e teleportaria tudo que está animando.
+      const dt = Math.min((agora - this._ultimoTempo) / 1000, 0.1);
+      this._ultimoTempo = agora;
+      this._quadro++;
+
+      // `tempoSegundos` do contrato do AVA, acumulado aqui e em nenhum outro
+      // lugar. Ver `_tempoJogando`.
+      if (this.estado === ESTADOS.JOGANDO && !this.cena?.pausada) {
+        this._tempoJogando += dt;
+      }
+
+      // Animações e cena em blocos SEPARADOS, e isso não é estilo.
+      //
+      // Estava tudo num `try` só, e a consequência era grave: uma exceção nos
+      // tweens pulava `stage.atualizar(dt)` no mesmo quadro. Como um tween
+      // quebrado costuma quebrar todo quadro, a cena parava de atualizar para
+      // sempre — inclusive o `Watchdog`, que é justamente quem deveria perceber
+      // a jogada travada. A rede de segurança morria junto com o que ela vigia.
+      try {
+        Tween.atualizarTodos(dt);
+      } catch (err) {
+        console.error('[motor] erro nos tweens:', err);
+      }
+
+      try {
+        this.stage.atualizar(dt);
+        this.emit('quadro', dt, this._quadro);
+      } catch (err) {
+        console.error('[motor] erro no update da cena:', err);
+      }
+
+      try {
+        this.stage.renderizar();
+      } catch (err) {
+        console.error('[motor] erro no render:', err);
+      }
+
+      this._id = requestAnimationFrame(this._laco);
+    };
+    this._id = requestAnimationFrame(this._laco);
+    return this;
+  }
+
+  pausarLaco() {
+    if (!this.rodando) return;
+    this.rodando = false;
+    cancelAnimationFrame(this._id);
+    this.audio.pausarTudo();
+    this.emit('lacoPausado');
+  }
+
+  retomarLaco() {
+    if (this.rodando) return;
+    this.rodando = true;
+    this._ultimoTempo = performance.now();
+    this._id = requestAnimationFrame(this._laco);
+    this.audio.retomarTudo();
+    this.emit('lacoRetomado');
+  }
+
+  destruir() {
+    this.pausarLaco();
+    document.removeEventListener('visibilitychange', this._aoMudarVisibilidade);
+    this.cena?._desmontar();
+    this.input.destruir();
+    this.stage.destruir();
+    this.audio.destruir();
+    this.offAll();
+  }
+}
