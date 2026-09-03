@@ -208,15 +208,29 @@ export class GameScene extends Scene {
     // tinha 31 peças, não 35). Assim o `GridBoard` não precisa do conceito de
     // célula bloqueada, que mexeria em gravidade e reposição por um ganho
     // puramente visual. REGRAS, seção 3.1.
+    //
+    // **Branco sólido, decisão de acessibilidade de 02/09/2026.** Era um
+    // véu de 10% — o degradê índigo→ciano do cenário passava quase inteiro por
+    // baixo das peças, e a matiz do meio daquele degradê (`#6366F1`) é quase a
+    // mesma do `ludica.roxo`: a peça roxa se camuflava nele. O branco fica
+    // LIMITADO à área do tabuleiro — não ao cenário inteiro, que continua o
+    // mesmo — igual ao cartão do painel "AS CORES" ao lado (`Panel`, também
+    // `cores.superficie`): as oito cores da paleta lúdica precisam de fundo
+    // neutro para se destacar, e branco não compete com nenhuma delas.
+    //
+    // **Sem sombra, de propósito** — diferente do `Panel`. A borda direita da
+    // moldura fica a só 8 px da borda do palco (`bx+bw+12` = 1272 de 1280), e o
+    // `sombras.cartao` tem 18 px de desfoque: a sombra vazava para além da caixa
+    // lógica, na área que `pintarSangria` desenha à parte sem saber da moldura —
+    // e como só o INTERIOR ganhava o escurecimento, nascia uma emenda visível
+    // bem na junção do letterbox. Pegou no teste de 1b (`teste-jogabilidade-
+    // cores.mjs`), que existe exatamente para isto.
     this.moldura.desenhar = (ctx) => {
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+      ctx.fillStyle = cores.superficie;
       ctx.beginPath();
       ctx.roundRect(bx - 12, by - 12, bw + 24, bh + 24, 44);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.30)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
       ctx.restore();
     };
     this.adicionar(this.moldura);
