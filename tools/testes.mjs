@@ -1996,6 +1996,57 @@ grupo('Camadas sobre a partida — a que abre fica por cima', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PauseScreen: botão de ajuda no canto oposto ao do som
+// ---------------------------------------------------------------------------
+//
+// Pedido do humano em 03/09/2026: quem pausa para pedir ajuda não deveria
+// precisar CONTINUAR a partida antes para só então conseguir abrir a ajuda —
+// e era exatamente isso que acontecia, porque o único "?" continuava atrás
+// do véu da pausa, e `pedirAjuda()` se recusa a agir com a partida já
+// pausada. Um botão de ajuda dentro do próprio painel da pausa, simétrico ao
+// de som, resolve sem duplicar a explicação em outro lugar.
+grupo('PauseScreen: botão de ajuda opcional, no canto oposto ao som', () => {
+  const achatar = (no, saida = []) => {
+    saida.push(no);
+    for (const f of no.filhos ?? []) achatar(f, saida);
+    return saida;
+  };
+  const audioFalso = () => ({
+    mudo: false, on: () => () => {}, alternarMudo: () => false, efeito: () => {}, falar: () => {}, calar: () => {},
+  });
+
+  teste('sem aoAjuda, a pausa não ganha um botão de ajuda', () => {
+    const pausa = new PauseScreen({ audio: audioFalso() });
+    const achou = achatar(pausa.painel).some((n) => n.icone === 'tutorial');
+    igual(achou, false, 'nenhum filho do painel deveria ter icone "tutorial":');
+  });
+
+  teste('com aoAjuda, o botão nasce no canto oposto ao do som', () => {
+    const pausa = new PauseScreen({ audio: audioFalso(), aoAjuda: () => {} });
+    const filhos = achatar(pausa.painel);
+    const botaoAjuda = filhos.find((n) => n.icone === 'tutorial');
+    const botaoSom = filhos.find((n) => n.icone === 'som');
+    igual(!!botaoAjuda, true, 'o botão de ajuda tem de existir:');
+    // "Oposto" medido de verdade: o som fica perto da borda DIREITA do painel
+    // (SoundToggle.x = larguraPainel - 80), a ajuda perto da ESQUERDA (x: 8).
+    igual(botaoAjuda.x < pausa.painel.largura / 2, true,
+      `ajuda tem de estar na metade esquerda: x=${botaoAjuda.x}`);
+    igual(botaoSom.x > pausa.painel.largura / 2, true,
+      `som tem de estar na metade direita: x=${botaoSom.x}`);
+  });
+
+  teste('tocar no botão de ajuda fecha a pausa (sem continuar) e chama aoAjuda', () => {
+    let chamadas = 0;
+    const pausa = new PauseScreen({ audio: audioFalso(), aoAjuda: () => { chamadas++; } });
+    pausa.abrir();
+    const botaoAjuda = achatar(pausa.painel).find((n) => n.icone === 'tutorial');
+    botaoAjuda.emit('toque');
+    igual(pausa.aberta, false, 'a pausa tem de fechar:');
+    igual(chamadas, 1, `aoAjuda tem de ser chamado exatamente uma vez: ${chamadas}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // HelpScreen não narra sozinha ao nascer
 // ---------------------------------------------------------------------------
 //

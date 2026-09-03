@@ -2,7 +2,7 @@ import { Node } from '../core/Node.js';
 import { TextNode } from '../core/TextNode.js';
 import { Tween, Easing } from '../core/Tween.js';
 import { Panel } from '../ui/Panel.js';
-import { Button } from '../ui/Button.js';
+import { Button, IconButton } from '../ui/Button.js';
 import { SoundToggle } from '../ui/SoundToggle.js';
 import { cores, tipografia, espaco } from '../theme/tokens.js';
 
@@ -19,9 +19,13 @@ import { cores, tipografia, espaco } from '../theme/tokens.js';
  * troca de atividade), isso é uma falha de uso, não um detalhe.
  *
  * Uso, dentro da cena de jogo:
- *   this.pausa = new PauseScreen({ ...contexto, aoContinuar, aoReiniciar, aoSair });
+ *   this.pausa = new PauseScreen({ ...contexto, aoContinuar, aoReiniciar, aoSair, aoAjuda });
  *   this.adicionar(this.pausa);
  *   this.pausa.abrir();
+ *
+ * `aoAjuda` é opcional: só faz sentido se a cena também tiver um `HelpScreen`.
+ * Quando presente, um botão "?" nasce no canto oposto ao do som — pedir ajuda
+ * não deveria exigir continuar a partida primeiro para então pedir ajuda.
  */
 export class PauseScreen extends Node {
   constructor(opcoes = {}) {
@@ -37,6 +41,7 @@ export class PauseScreen extends Node {
     this.aoContinuar = opcoes.aoContinuar ?? null;
     this.aoReiniciar = opcoes.aoReiniciar ?? null;
     this.aoSair = opcoes.aoSair ?? null;
+    this.aoAjuda = opcoes.aoAjuda ?? null;
 
     const L = this.largura;
     const A = this.altura;
@@ -91,6 +96,25 @@ export class PauseScreen extends Node {
       tamanho: 64,
       somToque: this.config.audio?.clique,
     }));
+
+    // AJUDA, no canto OPOSTO ao som — a criança que pausou para pedir ajuda
+    // não deveria precisar continuar a partida primeiro. Antes disto, o único
+    // "?" na tela era o do HUD por trás do véu, e ele não fazia nada aqui: o
+    // `pedirAjuda()` do jogo se recusa a abrir a ajuda com a partida já
+    // pausada (evita as duas camadas abertas ao mesmo tempo) — um ícone
+    // visível e morto. Opcional: só aparece se o jogo passar `aoAjuda`.
+    if (this.aoAjuda) {
+      this.painel.adicionar(new IconButton({
+        icone: 'tutorial',
+        variante: 'suaveAzul',
+        x: 8,
+        y: 8,
+        tamanho: 64,
+        audio: this.audio,
+        somToque: this.config.audio?.clique,
+        aoTocar: () => this._chamar(this.aoAjuda),
+      }));
+    }
   }
 
   _chamar(fn) {

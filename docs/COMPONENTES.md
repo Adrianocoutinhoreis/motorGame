@@ -695,6 +695,13 @@ verdade depois de um `await`, e o corte muda a geração do canal antes disso (v
 `AudioBus._geracao`) — a fala nasce cancelada, não interrompida no meio. `abrir()` chama
 `mostrarPasso(0)` de novo, e essa narração é real.
 
+**Da pausa direto para a ajuda.** `PauseScreen` aceita um `aoAjuda` opcional; quando presente,
+nasce um botão "?" no canto oposto ao do `SoundToggle` (pedido do humano, 03/09/2026, com
+referência visual). Sem ele, o único "?" era o do HUD atrás do véu da pausa — e `pedirAjuda()`
+do jogo se recusa a agir com a partida já pausada, então aquele ícone ficava visível e morto.
+Tocar no botão da pausa fecha ela SEM continuar (mesma trilha de `aoReiniciar`/`aoSair`) e chama
+`aoAjuda`, que os três jogos ligam a `this.ajuda.abrir()`.
+
 Ao usar, duas obrigações da cena: atualizar a camada quando pausada
 (`if (this.pausada) { this.pausa.atualizar(dt); this.ajuda.atualizar(dt); return; }`) e retomar
 em `aoFechar` o que `pedirAjuda` pausou.

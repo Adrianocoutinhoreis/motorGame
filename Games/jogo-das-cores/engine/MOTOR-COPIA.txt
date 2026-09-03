@@ -1,6 +1,6 @@
 ESTA PASTA É UMA CÓPIA GERADA. NÃO EDITE NADA AQUI.
 
-Motor:   Motor Educandus v1.3.3
+Motor:   Motor Educandus v1.3.4
 Jogo:    jogo-das-cores
 
 Para alterar o motor, edite `engine/` na raiz do projeto e rode:

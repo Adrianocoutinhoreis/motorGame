@@ -408,6 +408,8 @@ export class GameScene extends Scene {
       aoContinuar: () => { this.pausada = false; this.controle.retomar(); },
       aoReiniciar: () => this.irPara('jogando', { nivel: this.nivel }),
       aoSair: () => this.irPara('menu'),
+      // Da pausa direto para a ajuda, sem continuar a partida no meio do caminho.
+      aoAjuda: () => this.ajuda.abrir(),
     });
     this.adicionar(this.pausa);
 
