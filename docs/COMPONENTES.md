@@ -685,6 +685,16 @@ vez de começar partida nova. O contador ganha cor clara, porque ali ele cai sob
 AVA como `ajuda`. Um jogo não tem como esquecer de contar. E como a ajuda pausa a partida, o
 tempo lendo a explicação não entra no `tempoSegundos` — ler a ajuda não é jogar.
 
+**Nascer não é abrir.** O construtor monta o `TutorialScreen` hospedado chamando `aoEntrar()` com
+antecedência — para a ajuda abrir instantaneamente quando pedida, sem montar nada na hora. Mas
+`aoEntrar()` termina em `mostrarPasso(0)`, que **narra** o passo 1; sem cortar isso, todo início de
+partida narrava o passo 1 sozinho, com a camada ainda invisível — defeito relatado em 03/09/2026,
+presente nos três jogos porque a causa é daqui, não de cada um. O construtor corta com
+`cena.audio?.calar()` logo depois de montar: a corrida funciona porque `falar()` só toca de
+verdade depois de um `await`, e o corte muda a geração do canal antes disso (ver
+`AudioBus._geracao`) — a fala nasce cancelada, não interrompida no meio. `abrir()` chama
+`mostrarPasso(0)` de novo, e essa narração é real.
+
 Ao usar, duas obrigações da cena: atualizar a camada quando pausada
 (`if (this.pausada) { this.pausa.atualizar(dt); this.ajuda.atualizar(dt); return; }`) e retomar
 em `aoFechar` o que `pedirAjuda` pausou.

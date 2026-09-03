@@ -190,7 +190,8 @@ sempre** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-cores"` · derrota também
 | Célula de 128 px | ✅ **medida**: 64 px físicos no pior celular, 45% acima do piso do WCAG 2.5.5 — o primeiro jogo do motor a passar sem ressalva |
 | Cena, arte, tutorial | ✅ feitos |
 | Os 8 nomes de cor narrados + fichas de transcrição | ✅ **ligados** (02/09/2026) — narração nova, nenhuma confirmada ouvindo |
-| Resto da voz (instrução, níveis, vitória/derrota, "Misturei as cores!") | 📋 a fazer |
+| Som de vitória (`acertoSOS`, padrão da coleção) | ✅ **ligado** (03/09/2026) |
+| Resto da voz (instrução, níveis, derrota, "Misturei as cores!") | 📋 a fazer |
 
 ---
 

@@ -119,9 +119,11 @@ preço medido desta decisão, e fica aqui para quem revisitar o assunto não pre
    fichas em `assets/audio-transcricao/` estão com status 🟡 INFERIDA, apoiadas no nome do
    arquivo e na duração; a de `marrom` merece atenção redobrada porque o arquivo chegou com o
    nome trocado (`marron.mp3`, grafia em espanhol) e foi renomeado antes de entrar no config.
+   **O som de vitória chegou** (03/09/2026): `acertoSOS.wav`, o mesmo efeito sem fala já
+   reaproveitado no Jogo das Formas e no Jogo dos Blocos (`config.audio.vitoria`).
    **Ainda falta o resto:** a instrução do tutorial, os dois áudios de nível (que nem servem —
    dizem "fácil"/"difícil" e este jogo tem três níveis com outros nomes), o feedback de
-   vitória/derrota, e uma frase que a aula de 2013 não tem: **"Misturei as cores!"** (ver 6). Até
+   derrota, e uma frase que a aula de 2013 não tem: **"Misturei as cores!"** (ver 6). Até
    chegarem, o motor fica em silêncio nesses pontos e diz no console o que a voz deveria falar.
 2. **O visual é emprestado do Jogo das Formas**, por decisão do humano, até este jogo ganhar
    identidade própria. A troca é um campo só: `config.tema`.

@@ -587,8 +587,8 @@ try {
   // `acertoSOS.wav`, com **4,55 s** (o de derrota, 5,5 s), e a criança que toca
   // MENU antes disso levava o fim de partida para o menu.
   //
-  // Este é o jogo em que dá para verificar: ele TEM os arquivos. No Jogo das
-  // Cores não há som nenhum ainda, e um teste ali passaria por vacuidade.
+  // O mesmo teste existe em `teste-jogabilidade-cores.mjs` desde que aquele
+  // jogo ganhou `config.audio.vitoria` (03/09/2026, mesmo arquivo).
   console.log('\n8. Nenhum som sobrevive à sua tela');
 
   await aval(`window.jogo.irPara('resultado', ${JSON.stringify({

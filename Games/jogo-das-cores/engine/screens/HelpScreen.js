@@ -80,6 +80,18 @@ export class HelpScreen extends Node {
       aoFecharAjuda: () => this.fechar(),
     });
     this.tutorial.aoEntrar();
+    // `aoEntrar()` termina em `mostrarPasso(0)`, que NARRA o passo 1 — correto
+    // quando é o `MenuScreen` entrando de verdade no tutorial, errado aqui: esta
+    // camada nasce ESCONDIDA (`visible: false`), montada de antemão só para abrir
+    // rápido quando a criança pedir ajuda. Sem este corte, todo início de partida
+    // tocava sozinho o áudio do passo 1, sem ninguém ter tocado no "?" — em
+    // TODOS os jogos, porque a montagem antecipada é daqui, não de cada jogo.
+    // `calar()` chega a tempo por ser síncrono: `falar()` só toca de verdade
+    // depois de um `await` (destravar/decodificar), e o corte muda a geração do
+    // canal ANTES disso — a narração nasce cancelada, não interrompida no meio.
+    // O texto e a ilustração do passo continuam montados, prontos para quando
+    // `abrir()` narrar de novo (esse, sim, o pedido real de ajuda).
+    this.cena.audio?.calar();
     this.adicionar(this.tutorial);
   }
 

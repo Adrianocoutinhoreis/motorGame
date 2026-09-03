@@ -751,6 +751,38 @@ try {
   }
   await esperar(600);
 
+  // ------------------------------------------------------- 9e. o som de vitória
+  //
+  // `config.audio.vitoria` chegou em 03/09/2026 (`acertoSOS.wav`, o mesmo
+  // efeito sem fala já usado no Jogo das Formas e no Jogo dos Blocos). Mesmo
+  // teste de lá ("nenhum som sobrevive à sua tela"): prova que o efeito TOCA
+  // na tela de resultado e some ao trocar de tela, sem levar a música junto.
+  // A partir de 'jogando' (transição válida) — não de 'menu', que geraria o
+  // aviso "transição de estado incomum" do próprio motor.
+  console.log('\n9e. O som de vitória não sobrevive à sua tela');
+  await aval(`window.jogo.irPara('resultado', ${JSON.stringify({
+    nivel: { id: 1 },
+    resultado: { acertos: 12, erros: 0, totalPerguntas: 12, nivel: 1, vitoria: true },
+  })})`);
+  await esperar(700);
+  const noFimCores = await aval('window.jogo.audio.sonsTocando');
+  checar('a tela final está de fato tocando som (senão o teste é vazio)',
+    noFimCores.sfx > 0, JSON.stringify(noFimCores));
+  checar('a música toca na tela final (não é cortada ao fim da partida)',
+    noFimCores.music > 0, JSON.stringify(noFimCores));
+
+  await aval(`window.jogo.irPara('menu')`);
+  await esperar(500);
+  const noMenuCores = await aval('window.jogo.audio.sonsTocando');
+  checar('o som da tela final NÃO continua no menu',
+    noMenuCores.sfx === 0 && noMenuCores.speech === 0, JSON.stringify(noMenuCores));
+  checar('a música continua tocando no menu', noMenuCores.music > 0, JSON.stringify(noMenuCores));
+
+  // Volta a 'jogando' (MENU → JOGANDO também é válida) para a seção seguinte,
+  // que precisa de uma partida real em andamento para abrir a pausa.
+  await aval(`window.jogo.irPara('jogando', { nivel: window.jogo.config.niveis[0] })`);
+  await esperar(500);
+
   // ------------------------------------------------- 11. sair pela pausa
   //
   // Por último, porque leva embora a partida: o SAIR tem de trocar de cena de

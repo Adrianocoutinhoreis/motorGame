@@ -16,8 +16,12 @@ import { Node } from '../core/Node.js';
 export const ICONES = {
   jogar: { preencher: ['M8 5v14l11-7z'] },
   pausa: { preencher: ['M6 5h4v14H6z', 'M14 5h4v14h-4z'] },
+  // Interrogação num círculo, não a lâmpada de antes: "ideia" é metáfora (exige
+  // inferir que luz = insight = ajuda), e para autismo/TDAH a orientação de
+  // acessibilidade cognitiva (WCAG COGA) é preferir o sinal mais literal e sem
+  // ambiguidade — "?" já É o símbolo universal de ajuda, sem tradução.
   tutorial: {
-    preencher: ['M9.5 21h5v-1.5h-5zM12 2a7 7 0 00-4.2 12.6V17h8.4v-2.4A7 7 0 0012 2z'],
+    tracar: ['M12 3a9 9 0 0 1 0 18a9 9 0 0 1 0 -18', 'M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3', 'M12 16.6v0.2'],
   },
   som: {
     preencher: ['M3 10v4h4l5 4V6L7 10z'],

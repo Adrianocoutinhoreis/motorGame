@@ -1995,6 +1995,67 @@ grupo('Camadas sobre a partida — a que abre fica por cima', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// HelpScreen não narra sozinha ao nascer
+// ---------------------------------------------------------------------------
+//
+// Defeito relatado pelo humano em 03/09/2026, jogando o Jogo dos Blocos: ao
+// iniciar QUALQUER partida, a narração do passo 1 do tutorial tocava sozinha,
+// sem ninguém abrir a ajuda. Estava nos TRÊS jogos, porque a causa é do motor:
+// o construtor do `HelpScreen` chama `TutorialScreen.aoEntrar()` para montar o
+// tutorial hospedado com antecedência — e `aoEntrar()` termina chamando
+// `mostrarPasso(0)`, que narra. A camada nasce invisível (`visible: false`),
+// mas o áudio não olha para isso.
+grupo('HelpScreen não narra sozinha ao nascer — só quando abrir()', () => {
+  const cenaComAudio = (audio) => ({
+    largura: 1280,
+    altura: 720,
+    game: null,
+    stage: null,
+    input: { on: () => () => {} },
+    audio,
+    loader: { imagem: () => null, audio: () => null },
+    storage: { obter: () => null, definir: () => {} },
+    config: {
+      audio: {},
+      tutorial: [
+        { titulo: 'Um', texto: 'primeiro passo' },
+        { titulo: 'Dois', texto: 'segundo passo' },
+      ],
+    },
+  });
+
+  /** AudioBus de mentira que REGISTRA a ordem das chamadas, para provar a corrida. */
+  const audioInstrumentado = (chamadas) => ({
+    mudo: false,
+    on: () => () => {},
+    alternarMudo: () => false,
+    efeito: () => {},
+    falar: (id) => { chamadas.push(`falar:${id}`); },
+    calar: () => { chamadas.push('calar'); },
+  });
+
+  teste('nascer NÃO deixa a narração do passo 1 como última palavra', () => {
+    const chamadas = [];
+    new HelpScreen({ cena: cenaComAudio(audioInstrumentado(chamadas)) });
+    // Se isto vier vazio, o teste não prova nada — teria de existir um pedido
+    // de fala para o corte ter o que cortar. Falha alto em vez de aprovar à toa.
+    igual(chamadas.includes('falar:null'), true,
+      `mostrarPasso(0) tinha de pedir a narração: ${JSON.stringify(chamadas)}`);
+    igual(chamadas[chamadas.length - 1], 'calar',
+      `o corte tem de vir DEPOIS e ser a última palavra: ${JSON.stringify(chamadas)}`);
+  });
+
+  teste('abrir() de verdade continua narrando — o corte é só na montagem antecipada', () => {
+    const chamadas = [];
+    const ajuda = new HelpScreen({ cena: cenaComAudio(audioInstrumentado(chamadas)) });
+    chamadas.length = 0; // zera o que aconteceu ao nascer; só interessa o abrir()
+    ajuda.abrir();
+    igual(chamadas.includes('falar:null'), true,
+      `um pedido de ajuda de verdade tem de narrar o passo 1: ${JSON.stringify(chamadas)}`);
+  });
+});
+
 // ------------------------------------------------------------------ resumo
 console.log(`\n${'-'.repeat(56)}`);
 console.log(`${passaram} passaram, ${falharam} falharam`);

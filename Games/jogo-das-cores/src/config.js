@@ -329,10 +329,11 @@ export default {
    *
    * **Os OITO NOMES DE COR chegaram** em 02/09/2026 — narração NOVA, não os
    * arquivos de 2013 (formato e tamanho são outros; ver as fichas em
-   * `assets/audio-transcricao/`). Ainda faltam: a instrução do tutorial, os
-   * dois áudios de nível (que nem servem — são "fácil"/"difícil" e este jogo
-   * tem três níveis com outros nomes), o feedback de vitória/derrota e a fala
-   * nova "Misturei as cores!". Essas continuam em
+   * `assets/audio-transcricao/`). **O som de vitória chegou em 03/09/2026**
+   * (ver `acertoSOS` abaixo). Ainda faltam: a instrução do tutorial, os dois
+   * áudios de nível (que nem servem — são "fácil"/"difícil" e este jogo tem
+   * três níveis com outros nomes), o feedback de derrota e a fala nova
+   * "Misturei as cores!". Essas continuam em
    * `Aulas para Refazer/Jogo das Cores/sons/`, e até chegarem o motor toca
    * silêncio e diz no console qual arquivo falta e o que ele deveria falar.
    */
@@ -354,6 +355,13 @@ export default {
     // tinha uma música só, e manter isso é o que faz as três aulas soarem como
     // a mesma coleção.
     { id: 'somFundo', src: './assets/audio/somFundo.mp3' },
+
+    // O efeito de vitória padrão do motor — MESMO arquivo (SHA-256 idêntico)
+    // do Jogo das Formas e do Jogo dos Blocos: é o componente `FeedbackSOS`
+    // compartilhado das aulas originais, sem fala (ver a ficha). Até este
+    // jogo ganhar um som próprio, reaproveitar o padrão da coleção é melhor
+    // que a tela de vitória ficar muda.
+    { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
   ],
 
   /**
@@ -367,7 +375,7 @@ export default {
     clique: null,
     acerto: null,
     erro: null,
-    vitoria: null,
+    vitoria: 'acertoSOS',
     derrota: null,
     abertura: null,
     falaVitoria: null,
