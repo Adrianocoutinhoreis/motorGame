@@ -76,6 +76,10 @@ export class Button extends Node {
     secundario: { fundo: '#7C3AED', texto: '#FFFFFF', borda: '#5B21B6' },
     dourado: { fundo: '#F59E0B', texto: '#FFFFFF', borda: '#B45309' },
     suave: { fundo: '#FFFFFF', texto: '#1E293B', borda: '#334155' },
+    // Mesmo fundo branco do `suave`, mas ícone e contorno na cor do `SoundToggle`
+    // (`primariaEscura`) — para o HUD de partida (pausa, ajuda) ler como um
+    // conjunto com o botão de som, e não como dois estilos diferentes.
+    suaveAzul: { fundo: '#FFFFFF', texto: cores.primariaEscura, borda: cores.primariaEscura },
     perigo: { fundo: cores.erro, texto: '#FFFFFF', borda: '#991B1B' },
     sucesso: { fundo: '#22C55E', texto: '#FFFFFF', borda: '#15803D' },
   };

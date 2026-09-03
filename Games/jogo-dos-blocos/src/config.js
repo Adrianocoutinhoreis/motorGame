@@ -212,7 +212,15 @@ export default {
     erro: 'nao',
     vitoria: 'acertoSOS',
     derrota: 'erroSOS',
-    abertura: 'abertura',
+    // Desligado em 03/09/2026, por pedido do humano: narrava sozinho, assim
+    // que o menu abria, sem ninguém pedir. O arquivo (`abertura.mp3`) já
+    // estava sinalizado como pendência antes disso — foi TROCADO em algum
+    // momento e ninguém ouviu o que ficou (ficha 🔴 NÃO VERIFICADA, ver
+    // `assets/audio-transcricao/abertura/transcricao.md`). Tocar um arquivo
+    // que ninguém revisou para a criança, sozinho, é pior que o silêncio: é
+    // uma falha disfarçada de conteúdo. Volta a `'abertura'` quando alguém
+    // ouvir e confirmar a ficha.
+    abertura: null,
 
     // Narração sem gravação. Enquanto estiver `null`, a tela fica em SILÊNCIO e
     // o motor avisa no console — ele não sintetiza voz para tapar o buraco.

@@ -372,6 +372,7 @@ export class GameScene extends Scene {
 
     this.adicionar(new IconButton({
       icone: 'pausa',
+      variante: 'suaveAzul',
       x: L - 96,
       y: espaco.md,
       audio: this.audio,
@@ -385,6 +386,7 @@ export class GameScene extends Scene {
     // vão de 16 é o piso de `acessibilidade.espacoEntreAlvos`).
     this.adicionar(new IconButton({
       icone: 'tutorial',
+      variante: 'suaveAzul',
       x: L - 96 - 72 - 16,
       y: espaco.md,
       audio: this.audio,

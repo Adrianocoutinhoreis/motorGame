@@ -41,7 +41,9 @@ que moram os erros que chegam ao aluno.
 - [x] Música de fundo ligada (`audio.musica` → `somFundo`)
 - [x] Som de erro ligado (`audio.erro` → `nao`)
 - [x] Sons de fim ligados (`audio.vitoria` → `acertoSOS`, `audio.derrota` → `erroSOS`)
-- [x] Abertura do menu ligada (`audio.abertura`)
+- [ ] Abertura do menu ligada (`audio.abertura`) — **desligada em 03/09/2026**: narrava
+      sozinha assim que o menu abria, sem a criança pedir, e o conteúdo é o mesmo não
+      verificado da seção 3. Volta a `'abertura'` quando alguém ouvir e confirmar a ficha
 - [x] **Narração dos 3 passos do tutorial ligada** (`tutorial[].fala`) — feito em 21/08/2026
 - [ ] Narração da tela de níveis ligada (`audio.escolhaNivel`) — **falta gravar**
 - [ ] Narração de vitória ligada (`audio.falaVitoria`) — **falta gravar**

@@ -329,6 +329,7 @@ export class GameScene extends Scene {
 
     this.adicionar(new IconButton({
       icone: 'pausa',
+      variante: 'suaveAzul',
       tamanho: lado,
       x,
       y: yBotoes,
@@ -342,6 +343,7 @@ export class GameScene extends Scene {
     // aquele botão reconhece este.
     this.adicionar(new IconButton({
       icone: 'tutorial',
+      variante: 'suaveAzul',
       tamanho: lado,
       x: x + passoBotao,
       y: yBotoes,
