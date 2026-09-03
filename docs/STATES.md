@@ -146,7 +146,7 @@ Onde o que falta é uma DECISÃO e não código, a linha diz **Não decidido** �
 
 | Peça | Estado | Observação |
 |---|---|---|
-| `tokens.js` / `tokens.css` | Pronto | Fonte única compartilhada entre canvas e DOM |
+| `tokens.js` / `tokens.css` | Pronto | Fonte única compartilhada entre canvas e DOM. Paleta `ludica` ajustada (03/09/2026): rosa `#EC4899` → `#F9A8D4` e roxo `#8B5CF6` → `#A78BFA` para aumentar a separação visual entre vermelho/rosa e azul/roxo |
 | `icons.js` | Pronto | 16 ícones; ampliar conforme necessidade |
 | `Button` / `IconButton` | Pronto | Alvo mínimo de 64px garantido no construtor |
 | `Panel`, `ScoreBar`, `TimerBar`, `Lives` | Pronto | `TimerBar` estreou no Jogo das Formas: 120 s por delta, cor mudando a 35% e a 15% e pulso no trecho crítico |

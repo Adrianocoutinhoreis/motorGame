@@ -48,8 +48,8 @@ export const cores = {
     verde: '#22C55E',
     turquesa: '#14B8A6',
     azul: '#3B82F6',
-    roxo: '#8B5CF6',
-    rosa: '#EC4899',
+    roxo: '#A78BFA',
+    rosa: '#F9A8D4',
     marrom: '#A16207',
   },
 
