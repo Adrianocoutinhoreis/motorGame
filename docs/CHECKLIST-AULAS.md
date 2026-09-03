@@ -191,7 +191,8 @@ sempre** · `nivel` = 1 \| 2 \| 3 · `jogo: "jogo-das-cores"` · derrota também
 | Cena, arte, tutorial | ✅ feitos |
 | Os 8 nomes de cor narrados + fichas de transcrição | ✅ **ligados** (02/09/2026) — narração nova, nenhuma confirmada ouvindo |
 | Som de vitória (`acertoSOS`, padrão da coleção) | ✅ **ligado** (03/09/2026) |
-| Resto da voz (instrução, níveis, derrota, "Misturei as cores!") | 📋 a fazer |
+| Os 3 passos do tutorial narrados (`tutorial_tela1/2/3`) | ✅ **ligados** (03/09/2026) — narração nova, nenhuma confirmada ouvindo |
+| Resto da voz (níveis, derrota, "Misturei as cores!") | 📋 a fazer |
 
 ---
 

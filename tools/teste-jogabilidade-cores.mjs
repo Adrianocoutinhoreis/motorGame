@@ -644,6 +644,19 @@ try {
   const pecasAntes = await aval('window.jogo.cena.grade.todas().length');
   const acertosAntes = await aval('window.jogo.cena.placar.acertos');
   const pedidasAntes = await aval('window.jogo._ajudasPedidas');
+
+  // Instrumenta `falar()` para provar que CADA passo narra o arquivo certo —
+  // `tutorial_tela1/2/3`, ligados em 03/09/2026. Não basta "narrou algo": o
+  // `AudioBus.falar` instrumentado registra o id pedido, e comparar com o
+  // esperado pega tanto um passo mudo quanto dois arquivos trocados de lugar.
+  await aval(`(() => {
+    window.__falas = [];
+    const audio = window.jogo.audio;
+    if (!audio.__falarOriginal) audio.__falarOriginal = audio.falar.bind(audio);
+    audio.falar = (id, opcoes) => { window.__falas.push(id); return audio.__falarOriginal(id, opcoes); };
+    return true;
+  })()`);
+
   await tocarNo(AJUDA);
   await esperar(500);
   let a = await aval(`(() => { const c = window.jogo.cena;
@@ -655,14 +668,20 @@ try {
   checar('o cronômetro parou com a ajuda aberta', a.rodando === false, JSON.stringify(a));
   checar('o motor contou o pedido de ajuda',
     a.pedidas === pedidasAntes + 1, `pedidas ${pedidasAntes}->${a.pedidas}`);
+  checar('o passo 1 narra tutorial_tela1',
+    (await aval('window.__falas')).includes('tutorial_tela1'), JSON.stringify(await aval('window.__falas')));
   await captura('06-ajuda');
 
   const passos = await aval('window.jogo.cena.ajuda.tutorial.passos.length');
   for (let i = 1; i < passos; i++) {
+    await aval('window.__falas.length = 0; true');
     await tocarNo(dentroDe('window.jogo.cena.ajuda.tutorial', 'icone', 'setaDireita'));
     await esperar(350);
     const indice = await aval('window.jogo.cena.ajuda.tutorial.indice');
     checar(`a seta avançou para o passo ${i + 1} de ${passos}`, indice === i, `indice=${indice}`);
+    const falasDoPasso = await aval('window.__falas');
+    checar(`o passo ${i + 1} narra tutorial_tela${i + 1}`,
+      falasDoPasso.includes(`tutorial_tela${i + 1}`), JSON.stringify(falasDoPasso));
   }
 
   await tocarNo(dentroDe('window.jogo.cena.ajuda.tutorial', 'rotulo', 'VOLTAR AO JOGO'));

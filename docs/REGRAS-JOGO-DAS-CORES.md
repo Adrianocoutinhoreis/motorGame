@@ -250,9 +250,10 @@ transforma discriminação visual em vocabulário.
 | Id | Arquivo | Quando toca |
 |---|---|---|
 | `vermelho` … `marrom` | as 8 locuções — **narração NOVA**, entregue em 02/09/2026, não os arquivos de 2013. Ligadas, nenhuma confirmada ouvindo (🟡 INFERIDA) | ao fechar um caminho daquela cor |
-| `instrucao` | `instrucao.mp3` — **ainda não trazido** | tutorial |
+| `tutorial_tela1` / `_tela2` / `_tela3` | um arquivo por passo, **entregues em 03/09/2026** — não um `instrucao.mp3` único como se previa antes. Ligados, nenhum confirmado ouvindo (🟡 INFERIDA) | "COMO JOGAR" do menu e botão de ajuda dentro da partida, um passo por vez |
 | `facil` / `dificil` | `facil.mp3`, `dificil.mp3` — **ainda não trazidos** | cartões de nível — **ver pendência** |
-| `acertoSOS` / `erroSOS` | os dois `.wav` — **ainda não trazidos** | vitória / derrota |
+| `acertoSOS` | o `.wav` — **entregue e ligado em 03/09/2026**, mesmo arquivo do Jogo das Formas e do Jogo dos Blocos (🟡 INFERIDA por herança — já ✅ confirmada nas Formas) | vitória |
+| `erroSOS` | o `.wav` — **ainda não trazido** | derrota |
 | `somFundo` | `somFundo.mp3` | **em laço, durante todo o jogo** — volume 0,25 contra 1,0 da fala. Ver a nota abaixo |
 
 ### A música de fundo: decisão revertida em 02/09/2026

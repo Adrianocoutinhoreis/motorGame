@@ -173,6 +173,7 @@ export default {
       titulo: 'Ligue as cores iguais',
       texto: 'Aperte numa cor e arraste o dedo para as vizinhas iguais. '
         + 'Pode ir de lado, para cima, para baixo e na diagonal.',
+      fala: 'tutorial_tela1',
       desenho: (ctx, l, a, t) => {
         const lado = 74;
         const passo = 92;
@@ -236,6 +237,7 @@ export default {
       titulo: 'Três ou mais',
       texto: 'O caminho vale a partir de três peças. O número na ponta conta '
         + 'quantas você já ligou.',
+      fala: 'tutorial_tela2',
       desenho: (ctx, l, a, t) => {
         const cx = l / 2;
         const cy = a / 2;
@@ -264,6 +266,7 @@ export default {
       titulo: 'Para desfazer, volte',
       texto: 'Sem soltar o dedo, arraste de volta por onde veio. O caminho '
         + 'encurta e você tenta outro.',
+      fala: 'tutorial_tela3',
       desenho: (ctx, l, a, t) => {
         const lado = 74;
         const passo = 92;
@@ -330,10 +333,11 @@ export default {
    * **Os OITO NOMES DE COR chegaram** em 02/09/2026 — narração NOVA, não os
    * arquivos de 2013 (formato e tamanho são outros; ver as fichas em
    * `assets/audio-transcricao/`). **O som de vitória chegou em 03/09/2026**
-   * (ver `acertoSOS` abaixo). Ainda faltam: a instrução do tutorial, os dois
-   * áudios de nível (que nem servem — são "fácil"/"difícil" e este jogo tem
-   * três níveis com outros nomes), o feedback de derrota e a fala nova
-   * "Misturei as cores!". Essas continuam em
+   * (ver `acertoSOS` abaixo). **Os três passos do tutorial também chegaram**,
+   * no mesmo dia (`tutorial_tela1/2/3`, ligados em `config.tutorial[i].fala`).
+   * Ainda faltam: os dois áudios de nível (que nem servem — são
+   * "fácil"/"difícil" e este jogo tem três níveis com outros nomes), o
+   * feedback de derrota e a fala nova "Misturei as cores!". Essas continuam em
    * `Aulas para Refazer/Jogo das Cores/sons/`, e até chegarem o motor toca
    * silêncio e diz no console qual arquivo falta e o que ele deveria falar.
    */
@@ -362,6 +366,12 @@ export default {
     // jogo ganhar um som próprio, reaproveitar o padrão da coleção é melhor
     // que a tela de vitória ficar muda.
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
+
+    // Os três passos do tutorial, um arquivo por tela — narração nova,
+    // nenhuma transcrição CONFIRMADA ouvindo ainda; ver as fichas.
+    { id: 'tutorial_tela1', src: './assets/audio/tutorial_tela1.mp3' },
+    { id: 'tutorial_tela2', src: './assets/audio/tutorial_tela2.mp3' },
+    { id: 'tutorial_tela3', src: './assets/audio/tutorial_tela3.mp3' },
   ],
 
   /**
