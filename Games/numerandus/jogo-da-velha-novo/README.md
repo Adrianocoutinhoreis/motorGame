@@ -85,6 +85,9 @@ jogo-da-velha-novo/
 |---|---|---|
 | `assets/img/x.png` | imagem (marca vermelha, id `pecaVermelha`) | Reaproveitado sem alteração de `Aulas para Refazer/Jogo_da_velha/assets/x.png` — arte original do protótipo de 2013, acervo interno Educandus. |
 | `assets/img/o.png` | imagem (marca azul, id `pecaAzul`) | Reaproveitado sem alteração de `Aulas para Refazer/Jogo_da_velha/assets/0.png` — arte original do protótipo de 2013, acervo interno Educandus. |
+| `assets/audio/tutorial_tela1.wav` | narração (passo 1 do tutorial, id `tutorial_tela1`) | **A confirmar** — fornecido pelo humano nesta sessão, sem registro de quem gravou/gerou nem de licença. Ficha: `assets/audio-transcricao/tutorial_tela1/transcricao.md`. |
+| `assets/audio/tutorial_tela2.wav` | narração (passo 2 do tutorial, id `tutorial_tela2`) | **A confirmar** — idem acima. Ficha: `assets/audio-transcricao/tutorial_tela2/transcricao.md`. |
+| `assets/audio/tutorial_tela3.wav` | narração (passo 3 do tutorial, id `tutorial_tela3`) | **A confirmar** — idem acima. Ficha: `assets/audio-transcricao/tutorial_tela3/transcricao.md`. |
 
 Os nomes de ARQUIVO continuam `x.png`/`o.png` (não vale renomear um arquivo só porque o jogo
 mudou de vocabulário), mas os **ids** que o jogo usa para pedi-los ao `Loader` já são pela cor
@@ -99,9 +102,16 @@ desenhados no canvas pelo próprio motor — nenhum outro arquivo de imagem.
 > provisória, mecânica a confirmar. É melhor uma entrega com pendência declarada
 > do que uma que aparenta estar pronta.
 
-- **Nenhum áudio gravado.** Todos os campos de `config.audio` (música, cliques,
-  vitória/derrota/empate, narração do tutorial) estão `null` nesta entrega — o jogo abre em
-  silêncio, e o console nomeia o que falta. A regra do motor é todo som vir de arquivo
+- **Tutorial narrado, origem do áudio a confirmar.** Os 3 passos do tutorial (`config.tutorial`)
+  já têm narração (`assets/audio/tutorial_tela1/2/3.wav`) — as fichas em
+  `assets/audio-transcricao/` estão como 🟡 INFERIDA (transcrição deduzida do texto da tela +
+  duração, não ouvida) e a origem/licença do arquivo como **a confirmar**, porque foi entregue
+  já pronto, sem essa informação. Falta: alguém ouvir os 3 arquivos e confirmar a transcrição,
+  e registrar quem gravou/gerou e a licença.
+- **Sem áudio no restante do jogo.** Música, cliques, vitória/derrota/empate e a fala da
+  escolha de cor (`config.audio.musica/clique/acerto/erro/vitoria/derrota/empate/falaVitoria/
+  falaDerrota/falaEmpate/escolhaCor`) continuam `null` — o jogo fica em silêncio fora do
+  tutorial, e o console nomeia o que falta. A regra do motor é todo som vir de arquivo
   gravado, nunca sintetizado; falta produzir e revisar essas gravações.
 
 ## Atualizar o motor neste jogo

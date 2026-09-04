@@ -41,16 +41,23 @@
       original (`assets/img/x.png`/`o.png`, ids `pecaVermelha`/`pecaAzul` — o jogo não fala em
       X/O em lugar nenhum, nem no fallback vetorial quando a imagem falha: é sempre um círculo
       chapado na cor certa, nunca um traço em forma de X ou O)
-- [ ] ~~Áudio de narração presente para **todo** conteúdo falado do jogo~~ — **pendente**:
-      nenhuma gravação nesta entrega (ver `README.md`)
+- [x] Áudio de narração do **tutorial** presente (3 passos, `tutorial_tela1/2/3.wav`) — o
+      resto do conteúdo falado do jogo (música, cliques, vitória/derrota/empate, escolha de
+      cor) continua **pendente**, sem gravação nesta entrega (ver `README.md`)
 - [ ] ~~Efeitos de acerto, erro e clique presentes~~ — **pendente**, mesmo motivo
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
-- [x] Origem/licença de cada asset registrada no `README.md`
-- [ ] ~~Ficha de transcrição criada para cada áudio~~ — não se aplica: nenhum áudio existe
-      ainda para transcrever
-- [ ] ~~Transcrições confirmadas ouvindo~~ — não se aplica, mesmo motivo
-- [x] Pendências de áudio ainda não gravado listadas explicitamente no `README.md`
+- [ ] ~~Origem/licença de cada asset registrada no `README.md`~~ — **parcialmente pendente**:
+      os 3 áudios do tutorial estão na tabela, mas com origem/licença marcadas "a confirmar"
+      (chegaram prontos nesta sessão, sem essa informação) — falta perguntar/registrar quem
+      gravou e a licença
+- [x] Ficha de transcrição criada para cada áudio existente (`assets/audio-transcricao/
+      tutorial_tela1/2/3/transcricao.md`) — conferido com `node tools/audio-info.mjs
+      numerandus/jogo-da-velha-novo` (APROVADO: tudo declarado, tudo com ficha, hash batendo)
+- [ ] ~~Transcrições confirmadas ouvindo~~ — **pendente**: as 3 fichas estão como 🟡 INFERIDA
+      (deduzidas do texto da tela + duração/ritmo de fala, não ouvidas) — falta alguém ouvir e
+      confirmar, ou corrigir
+- [x] Pendências de áudio ainda não gravado/confirmado listadas explicitamente no `README.md`
 
 ## 3. Telas
 
@@ -58,24 +65,43 @@
       quadro-negro, `PlacaTituloQuadro` em `engine/screens/MenuScreen.js`), **sem mascote**
       (pedido do humano: `mascote: { telas: [] }` tira a coruja vetorial padrão de TODAS as
       telas, não só do menu) — conferido em captura de tela nesta sessão
-- [x] **Tutorial** com passos ilustrados e puláveis — **narração pendente** (ver seção 2): os 3
-      passos existem e desenham o tabuleiro de exemplo, mas ficam em silêncio até haver gravação.
+- [x] **Tutorial** com passos ilustrados, puláveis e **narrados** — os 3 passos (`config.tutorial[n].fala:
+      'tutorial_telaN'`) tocam `assets/audio/tutorial_tela1/2/3.wav` via `TutorialScreen`
+      (também na AJUDA dentro da partida, regra RE-05, que reusa a mesma lista de passos).
+      Conferido nesta sessão via CDP: o evento `narracao` do `AudioBus` dispara na ordem certa
+      (`tutorial_tela1`, `tutorial_tela2`, `tutorial_tela3`) ao avançar os 3 passos, sem nenhum
+      aviso de "narração ausente" no console. **Transcrição inferida, não ouvida** (fichas em
+      `assets/audio-transcricao/tutorial_telaN/`, status 🟡) e **origem/licença do arquivo a
+      confirmar** (ver README.md) — pendências reais, não falta de narração.
       Reescrito para nunca mencionar X ou O (fala em "sua cor"/"a cor do computador", sem cravar
       qual é qual — a cor do aluno só é decidida na partida) e para "EM UMA" em vez de "NUMA"
       (pedido do humano)
 - [x] **Seleção de nível** (`LevelSelectScreen`, herdada do motor) — três cartões (Fácil/verde,
-      Médio/âmbar, Difícil/vermelho), conferida em captura de tela nesta sessão; a descrição do
-      nível Fácil precisou ser encurtada porque estourava para dentro do cartão do Médio — o
-      componente não quebra linha nem corta texto sozinho, então a descrição tem de caber
+      Médio/âmbar, Difícil/vermelho), conferida em captura de tela nesta sessão. Sem `descricao`
+      (pedido do humano): só o número e o nome, nada de subtítulo explicando a CPU — a
+      explicação de cada nível vive no tutorial, não repetida em cada cartão. (Uma versão
+      anterior tinha `descricao`, e uma delas estourava para dentro do cartão vizinho, porque o
+      componente não quebra linha nem corta texto sozinho — deixou de ser problema ao remover o
+      campo por inteiro). Sem `descricao` sobrava um vão vazio abaixo do nome do nível; a próxima
+      sessão fez `NivelCard.desenhar()` (`engine/screens/LevelSelectScreen.js`, motor na raiz)
+      usar uma fonte maior (`tipografia.subtitulo`, 34px) e mais centrada no espaço livre
+      (`a * 0.76`, em vez de `a * 0.68`) quando o nível não tem `descricao` — jogos que ainda têm
+      `descricao` (Blocos/Formas/Cores) continuam exatamente como antes, porque o ramo só troca
+      quando o campo está ausente. Conferido lado a lado por captura de tela (este jogo e o Jogo
+      dos Blocos) nesta sessão, mais `node tools/testes.mjs` e
+      `node tools/verificar-independencia.mjs` (todos os 4 jogos, motor reconstruído sem
+      argumento).
 - [x] **Escolha sua cor** (`EscolhaCorScreen`, própria deste jogo — não é tela padrão do motor):
       dois cartões, vermelho e azul, entre a seleção de nível e a partida. `GameScene.aoEntrar()`
       redireciona para cá quando `this.game.dados.corAluno` ainda não existe, e volta para
       'jogando' já com a cor escolhida — nem `MenuScreen` nem `LevelSelectScreen` precisaram
       mudar. Um "jogar de novo" reaproveita a cor da partida anterior, sem perguntar de novo
       (mesmo comportamento que o nível já tem)
-- [x] **Partida** com HUD legível: indicador de vez ("SUA VEZ"/"VEZ DO COMPUTADOR") em texto
-      grande, ícones de pausa/ajuda — sem barra de progresso (a partida tem um resultado só, não
-      pontuação corrente) e sem cronômetro (decisão de layout, ver seção 6)
+- [x] **Partida** com HUD legível: indicador de vez ("SUA VEZ"/"VEZ DO VERMELHO" ou "VEZ DO
+      AZUL", conforme a cor da CPU — pedido do humano, para não dizer "computador" e sim a cor
+      que a criança já reconhece na tela) em texto grande, ícones de pausa/ajuda — sem barra de
+      progresso (a partida tem um resultado só, não pontuação corrente) e sem cronômetro
+      (decisão de layout, ver seção 6)
 - [x] **Pausa** com continuar / recomeçar / sair (herdada do `PauseScreen` padrão)
 - [x] **Ajuda** na partida (regra RE-05): o botão do HUD abre o tutorial POR CIMA do jogo,
       a partida continua atrás e voltar a devolve intacta — placar e tabuleiro
@@ -174,7 +200,7 @@ Mapeamento semântico **deste** jogo:
       (a arte já tem duas expressões de rosto ligeiramente diferentes entre si, mas não foi
       desenhada pensando nisso)
 - [ ] ~~Nenhuma ação exige saber ler: tudo tem ícone e narração~~ — **parcialmente pendente**:
-      o indicador de vez ("SUA VEZ"/"VEZ DO COMPUTADOR") é só texto, sem narração (áudio
+      o indicador de vez ("SUA VEZ"/"VEZ DO VERMELHO"/"VEZ DO AZUL") é só texto, sem narração (áudio
       pendente) nem ícone equivalente; ver seção 2
 - [ ] ~~Som pode ser desligado, e a preferência é lembrada~~ — herdado do `SoundToggle` do
       motor (mesmo em todo jogo), mas sem música/efeito ainda gravado não há o que silenciar

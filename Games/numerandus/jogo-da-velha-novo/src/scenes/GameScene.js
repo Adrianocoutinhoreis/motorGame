@@ -327,7 +327,7 @@ export class GameScene extends Scene {
 
     this.travado = true;
     this._vezDaCPU = true;
-    this.textoVez.texto = 'VEZ DO COMPUTADOR';
+    this.textoVez.texto = `VEZ DO ${this.corCPU.toUpperCase()}`;
     // Espera visível antes da CPU jogar: dá tempo de a criança ver a própria
     // jogada antes que a tela mude de novo (sem cronômetro nem pressa).
     Tween.de(this).esperar(550).chamar(() => this._jogadaComputador());

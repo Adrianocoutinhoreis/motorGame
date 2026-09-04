@@ -67,14 +67,14 @@ export default {
    *
    * Sem `amostra`: nos outros jogos ela prevê o CONTEÚDO do nível ("1 2 3 4
    * 5", "A E I O U"), e aqui o conteúdo não muda entre níveis — só a força da
-   * CPU, que já está dita em `descricao`. Uma amostra que não mostra nada de
-   * diferente entre os três cartões seria decoração vazia.
+   * CPU. Sem `descricao` também (pedido do humano): só o nome — Fácil, Médio,
+   * Difícil já diz o suficiente, e a explicação de cada um vive no tutorial,
+   * não repetida em cada cartão.
    */
   niveis: [
     {
       id: 1,
       nome: 'Fácil',
-      descricao: 'A CPU erra bastante',
       cor: '#16A34A',
       meta: 10,
       vidas: 1,
@@ -83,7 +83,6 @@ export default {
     {
       id: 2,
       nome: 'Médio',
-      descricao: 'A CPU joga com atenção',
       cor: '#F59E0B',
       meta: 10,
       vidas: 1,
@@ -92,7 +91,6 @@ export default {
     {
       id: 3,
       nome: 'Difícil',
-      descricao: 'A CPU quase não erra',
       cor: '#DC2626',
       meta: 10,
       vidas: 1,
@@ -117,18 +115,21 @@ export default {
       titulo: 'Escolha sua cor e toque em uma casa vazia',
       texto: 'No começo da partida, você escolhe sua cor. Depois, toque em uma casa vazia '
         + 'do tabuleiro para marcar sua jogada.',
+      fala: 'tutorial_tela1',
       desenho: (ctx, l, a, t, loader) => desenharTabuleiroExemplo(ctx, l, a, { corA: [4] }, loader),
     },
     {
       titulo: 'O computador joga com a outra cor',
       texto: 'Depois da sua vez, o computador pensa um pouquinho e marca uma casa com a cor '
         + 'dele.',
+      fala: 'tutorial_tela2',
       desenho: (ctx, l, a, t, loader) => desenharTabuleiroExemplo(ctx, l, a, { corA: [4], corB: [0] }, loader),
     },
     {
       titulo: 'Três da mesma cor em linha vence',
       texto: 'Três marcas da MESMA cor, em uma linha, coluna ou diagonal, vencem. Se o '
         + 'tabuleiro encher sem ninguém conseguir, é empate.',
+      fala: 'tutorial_tela3',
       desenho: (ctx, l, a, t, loader) => desenharTabuleiroExemplo(ctx, l, a, {
         corA: [0, 4, 8], corB: [1, 2],
         linhaVencedora: [0, 4, 8],
@@ -147,6 +148,13 @@ export default {
   assets: [
     { id: 'pecaVermelha', src: './assets/img/x.png' },
     { id: 'pecaAzul', src: './assets/img/o.png' },
+    // Narração do tutorial, um arquivo por passo (`config.tutorial[n].fala`),
+    // tocada pelo `TutorialScreen` do motor — não confundir com
+    // falaVitoria/falaDerrota/falaEmpate, que são da ResultScreen. Ficha em
+    // assets/audio-transcricao/tutorial_telaN/.
+    { id: 'tutorial_tela1', src: './assets/audio/tutorial_tela1.wav' },
+    { id: 'tutorial_tela2', src: './assets/audio/tutorial_tela2.wav' },
+    { id: 'tutorial_tela3', src: './assets/audio/tutorial_tela3.wav' },
   ],
 
   /**
