@@ -59,6 +59,7 @@ motorGame/
 | [`docs/CONTRATO-AVA.md`](docs/CONTRATO-AVA.md) | O METODO.md aplicado a este motor |
 | [`docs/CHECKLIST-JOGO.md`](docs/CHECKLIST-JOGO.md) | O modelo de checklist que cada jogo recebe |
 | [`docs/CHECKLIST-AULAS.md`](docs/CHECKLIST-AULAS.md) | Inventário e status das aulas a refazer |
+| [`docs/METODO-JOGOS-NUMERANDUS.md`](docs/METODO-JOGOS-NUMERANDUS.md) | Guia de criação e inventário da coleção Numerandus (`Games/numerandus/`) |
 
 Especificação por jogo (mecânica e layout, com o porquê de cada número):
 
@@ -78,6 +79,13 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 | [Jogo dos Blocos](Games/jogo-dos-blocos/) | `870294` | ✅ refeito (piloto) |
 | [Jogo das Formas](Games/jogo-das-formas/) | `870298` | 🚧 jogável, [pendências declaradas](Games/jogo-das-formas/README.md#pendências-conhecidas) |
 | Jogo das Cores | `870296` | 📋 planejado |
+
+Coleção **Numerandus** (`Games/numerandus/`) — ver [`docs/METODO-JOGOS-NUMERANDUS.md`](docs/METODO-JOGOS-NUMERANDUS.md):
+
+| Jogo | Aula | Status |
+|---|---|---|
+| [Jogo da Velha](Games/numerandus/jogo-da-velha-novo/) | — | ✅ jogável |
+| [Bingo da Adição e Subtração](Games/numerandus/bingo-da-adicao-e-subtracao/) | — | ✅ jogável |
 
 ---
 
