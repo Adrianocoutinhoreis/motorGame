@@ -260,6 +260,81 @@ class PlacaTituloMadeira extends Node {
 }
 
 /**
+ * PlacaTituloBingo — placa temática no estilo de cartão de bingo moderno,
+ * com friso superior brilhante em 4 cores, painel branco limpo, sombra suave
+ * e subtítulo em pílula destacada.
+ */
+class PlacaTituloBingo extends Node {
+  constructor(titulo, subtitulo, opcoes = {}) {
+    super({ largura: 780, altura: 170, ...opcoes });
+    this.titulo = titulo;
+    this.subtitulo = subtitulo;
+    this.regX = 390;
+    this.regY = 85;
+  }
+
+  desenhar(ctx) {
+    const l = this.largura;
+    const a = this.altura;
+    const alturaPainel = a * 0.78;
+
+    ctx.save();
+
+    // Sombra do painel
+    ctx.shadowColor = 'rgba(2, 6, 23, 0.45)';
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 10;
+
+    // Fundo do cartão de bingo
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, l, alturaPainel, 20);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    // Borda superior colorida (estilo cartão de bingo)
+    const friso = ctx.createLinearGradient(0, 0, l, 0);
+    friso.addColorStop(0, '#0284C7'); // Azul
+    friso.addColorStop(0.33, '#EA580C'); // Coral
+    friso.addColorStop(0.66, '#059669'); // Verde
+    friso.addColorStop(1, '#7C3AED'); // Roxo
+    ctx.fillStyle = friso;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, l, 8, [20, 20, 0, 0]);
+    ctx.fill();
+
+    // Título
+    const txtTitulo = aplicarCaixa(this.titulo);
+    ctx.font = `${tipografia.pesoForte} 42px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#0F172A';
+    ctx.fillText(txtTitulo, l / 2, alturaPainel * 0.38);
+
+    // Subtítulo
+    if (this.subtitulo) {
+      const txtSub = aplicarCaixa(this.subtitulo);
+      const bh = 34;
+      const by = alturaPainel * 0.62;
+      ctx.font = `${tipografia.pesoForte} 18px ${tipografia.familia}`;
+      const bw = Math.min(l * 0.88, ctx.measureText(txtSub).width + 36);
+      const bx = (l - bw) / 2;
+
+      ctx.fillStyle = '#F1F5F9';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 18);
+      ctx.fill();
+
+      ctx.fillStyle = '#475569';
+      ctx.fillText(txtSub, l / 2, by + bh / 2 + 1);
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
  * MenuScreen — a capa do jogo: JOGAR e TUTORIAL.
  */
 export class MenuScreen extends Scene {
@@ -278,6 +353,7 @@ export class MenuScreen extends Scene {
     // obras. Quem não declara tema continua com a de madeira, como o piloto.
     const Placa = config.tema === 'formas' ? PlacaTituloLimpa
       : config.tema === 'quadro' ? PlacaTituloQuadro
+      : config.tema === 'bingo' ? PlacaTituloBingo
       : PlacaTituloMadeira;
     this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',

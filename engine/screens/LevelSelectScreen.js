@@ -102,14 +102,18 @@ class NivelCard extends Node {
       ctx.fillText(aplicarCaixa(this.nivel.amostra), cx, a * 0.44);
     }
 
-    // Nome do nível
+    // Nome do nível. Sem descricao, o cartão sobra vazio da faixa colorida
+    // (0.52) até a base — a palavra usa esse espaço todo (fonte maior, mais
+    // centrada) em vez de ficar pequena e alta como quando há uma legenda
+    // embaixo dela.
+    const temDescricao = !!this.nivel.descricao;
     ctx.fillStyle = cores.tinta;
-    ctx.font = `${tipografia.pesoForte} ${tipografia.corpo}px ${tipografia.familia}`;
+    ctx.font = `${tipografia.pesoForte} ${temDescricao ? tipografia.corpo : tipografia.subtitulo}px ${tipografia.familia}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(aplicarCaixa(this.nivel.nome ?? `Nível ${this.indice + 1}`), cx, a * 0.68);
+    ctx.fillText(aplicarCaixa(this.nivel.nome ?? `Nível ${this.indice + 1}`), cx, a * (temDescricao ? 0.68 : 0.76));
 
-    if (this.nivel.descricao) {
+    if (temDescricao) {
       ctx.fillStyle = cores.tintaSuave;
       ctx.font = `${tipografia.pesoNormal} ${tipografia.apoio}px ${tipografia.familia}`;
       ctx.textAlign = 'center';

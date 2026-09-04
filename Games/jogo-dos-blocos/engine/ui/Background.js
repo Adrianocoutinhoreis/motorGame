@@ -16,19 +16,16 @@ export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
-    // Tema 'quadro': cenário de sala de aula — sem sol nem nuvem no céu por
-    // padrão (não tem lógica um quadro-negro debaixo de um céu ensolarado).
-    // A ResultScreen ainda pode religar o sol explicitamente na vitória
-    // (`mostrarSol: venceu`), e é assim que os outros temas já funcionam.
-    this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro');
-    this.mostrarColinas = opcoes.mostrarColinas ?? true;
+    // Tema 'quadro' e 'bingo': sem sol aberto nem nuvem de céu ensolarado por padrão
+    this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro' && this.tema !== 'bingo');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo');
 
     /**
      * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
@@ -169,6 +166,24 @@ export class Background extends Node {
       return;
     }
 
+    if (this.tema === 'bingo') {
+      const ceu = ctx.createLinearGradient(0, 0, l * 0.2, a);
+      ceu.addColorStop(0, '#0F172A');
+      ceu.addColorStop(0.5, '#1E1B4B');
+      ceu.addColorStop(1, '#0F172A');
+      ctx.fillStyle = ceu;
+      ctx.fillRect(px, py, pl, pa);
+
+      const hx = l * 0.5;
+      const hy = a * 0.35;
+      const halo = ctx.createRadialGradient(hx, hy, 40, hx, hy, a * 0.65);
+      halo.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
+      halo.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(px, py, pl, pa);
+      return;
+    }
+
     const ceu = ctx.createLinearGradient(0, 0, 0, a * 0.85);
     ceu.addColorStop(0, this.corCeuTopo);
     ceu.addColorStop(1, this.corCeuBase);
@@ -253,6 +268,18 @@ export class Background extends Node {
       return;
     }
 
+    if (this.tema === 'bingo') {
+      const topoChao = a * 0.88;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+      ctx.fillRect(-sx, topoChao, l + sx * 2, a + sy - topoChao);
+      ctx.fillStyle = '#38BDF8';
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(-sx, topoChao, l + sx * 2, 4);
+      ctx.restore();
+      return;
+    }
+
     if (this.mostrarColinas) {
       this._colina(ctx, a * 0.78, this.corColinaFundo, 0.9, sx, sy);
       this._colina(ctx, a * 0.86, this.corColina, 1.15, sx, sy);
@@ -275,11 +302,8 @@ export class Background extends Node {
 
     this._ceu(ctx);
 
-    // Sol radiante — nunca no tema 'quadro': é uma sala de aula, não um céu
-    // aberto, e não existe debaixo de um quadro-negro em hipótese nenhuma,
-    // nem quando quem chama (a `ResultScreen`, na vitória) pede `mostrarSol`.
-    // O tema é quem decide isso, não o chamador — ver o padrão do construtor.
-    if (this.mostrarSol && this.tema !== 'quadro') {
+    // Sol radiante — nunca nos temas 'quadro' e 'bingo'
+    if (this.mostrarSol && this.tema !== 'quadro' && this.tema !== 'bingo') {
       const sx = l * 0.88;
       const sy = a * 0.14;
       const brilho = ctx.createRadialGradient(sx, sy, 10, sx, sy, a * 0.28);
@@ -298,10 +322,8 @@ export class Background extends Node {
       ctx.fill();
     }
 
-    // Nuvens dinâmicas — não no tema 'quadro': é uma sala de aula, não um céu
-    // aberto, e nuvem ali seria a mesma mistura de vocabulário que o comentário
-    // do sol evita.
-    if (this.tema !== 'quadro') {
+    // Nuvens dinâmicas — não nos temas 'quadro' e 'bingo'
+    if (this.tema !== 'quadro' && this.tema !== 'bingo') {
       for (const nuvem of this.nuvens) {
         this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
       }
@@ -309,7 +331,53 @@ export class Background extends Node {
 
     if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
     if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
+    if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
     this._chao(ctx);
+  }
+
+  /**
+   * Tema 'bingo' — o cenário acolhedor e dinâmico do Bingo da Adição e Subtração.
+   *
+   * Fichas circulares com símbolos matemáticos (+, -, =) e números flutuam
+   * suavemente nas margens da tela com baixa opacidade (0.08 a 0.14), dando vida
+   * ao cenário sem poluir visualmente nem disputar a atenção de crianças neurodivergentes.
+   */
+  _desenharDecoracoesBingo(ctx, l, a) {
+    const itens = [
+      { x: 0.11, y: 0.22, tam: 64, alfa: 0.12, txt: '+', cor: '#38BDF8', periodo: 6.0, balanco: 8, fase: 0 },
+      { x: 0.88, y: 0.24, tam: 72, alfa: 0.14, txt: 'B', cor: '#F472B6', periodo: 7.2, balanco: 10, fase: 1.5 },
+      { x: 0.90, y: 0.68, tam: 68, alfa: 0.12, txt: '-', cor: '#FBBF24', periodo: 5.8, balanco: 9, fase: 3.2 },
+      { x: 0.09, y: 0.72, tam: 60, alfa: 0.10, txt: '7', cor: '#34D399', periodo: 6.5, balanco: 7, fase: 4.8 },
+      { x: 0.84, y: 0.48, tam: 52, alfa: 0.09, txt: '3', cor: '#A78BFA', periodo: 8.0, balanco: 8, fase: 2.1 },
+    ];
+
+    for (const item of itens) {
+      const bal = item.periodo
+        ? Math.sin((this._t / item.periodo) * Math.PI * 2 + item.fase) * item.balanco
+        : 0;
+      ctx.save();
+      ctx.globalAlpha = item.alfa;
+      ctx.translate(item.x * l, item.y * a + bal);
+
+      // Círculo da ficha com borda suave
+      ctx.fillStyle = item.cor;
+      ctx.beginPath();
+      ctx.arc(0, 0, item.tam / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Símbolo central
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${Math.round(item.tam * 0.48)}px Outfit, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.txt, 0, 1);
+
+      ctx.restore();
+    }
   }
 
   /**
