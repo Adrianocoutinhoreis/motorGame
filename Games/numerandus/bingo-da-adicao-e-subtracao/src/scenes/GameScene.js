@@ -8,8 +8,7 @@ import {
  * Temas visuais das 2 cartelas de bingo (Jogador vs CPU).
  */
 const TEMA_JOGADOR = { id: 'azul', nome: 'VOCÊ', primary: '#0284C7', light: '#E0F2FE', dark: '#0369A1', chip: 'rgba(2, 132, 199, 0.35)', glow: 'rgba(56, 189, 248, 0.7)' };
-const TEMA_CPU = { id: 'cpu', nome: 'COMPUTADOR', primary: '#DC2626', light: '#FEE2E2', dark: '#B91C1C', chip: 'rgba(220, 38, 38, 0.35)', glow: 'rgba(248, 113, 113, 0.7)' };
-const TEMAS_CARTELAS = [TEMA_JOGADOR, TEMA_CPU];
+const TEMA_CPU = { id: 'cpu', nome: 'COMPUTADOR', primary: '#64748B', light: '#EEF1F4', dark: '#475569', chip: 'rgba(100, 116, 139, 0.35)', glow: 'rgba(148, 163, 184, 0.7)' };
 
 /**
  * Célula individual de uma Cartela de Bingo 4x4.
@@ -174,17 +173,31 @@ export class GameScene extends Scene {
     this._jogadorMarcouNesteTurno = false;
     this._cpuMarcouNesteTurno = false;
     this._timerTurno = null;
-    this._timerCpu = null;
+    // Decisões da CPU rodam em paralelo (uma por rodada, podem se acumular
+    // se o aluno passar rápido) — precisam de todas canceladas no fim do jogo.
+    this._timersCpuPendentes = new Set();
     this._aguardandoProximaConta = false;
     this._ultimaContaEnviada = null;
     this._resultadoAtual = null;
     this._existeNaCpu = false;
+
+    // Cartela do CPU começa virada (verso) a cada rodada — só revela quando
+    // o próprio aluno pede (botão "ver cartela do CPU"), por um tempo curto
+    // e visível (barrinha), no próprio ritmo dele.
+    this._cpuVirada = true;
+    this._espiandoCpu = false;
+    this._espiaCpuEstado = { progresso: 1 };
+    this._ESPIA_CPU_DURACAO_MS = 4000;
 
     // Configurações da CPU baseadas no nível
     const configCpu = config.competicao?.niveisCpu?.[this.nivel.id] ?? { chanceAcerto: 0.7, tempoReacaoMs: [2000, 3500] };
     this._cpuChanceAcerto = configCpu.chanceAcerto;
     this._cpuTempoMin = configCpu.tempoReacaoMs[0];
     this._cpuTempoMax = configCpu.tempoReacaoMs[1];
+
+    // Layout em 3 colunas (desafio+controle / cartela do jogador / CPU+contador),
+    // calculado uma vez e compartilhado por todas as funções _construir*.
+    this._layout = this._calcularLayout();
 
     // Gerar cartelas e desafios
     this._gerar2CartelasEDesafios();
@@ -265,6 +278,55 @@ export class GameScene extends Scene {
     }
   }
 
+  /**
+   * Layout em 3 colunas (mesmo desenho validado no mockup "Cartela em Foco"):
+   * desafio+controle à esquerda, cartela do jogador grande no centro,
+   * CPU+contador à direita — cada coluna centralizada na mesma faixa
+   * vertical, pra folga nunca virar uma sobra de espaço de um lado só.
+   */
+  _calcularLayout() {
+    const MARGEM = 32;
+    const GAP = 16;
+    const vTopo = 80;
+    const vBase = 720 - 40;
+    const vAltura = vBase - vTopo;
+
+    const colEsqX = MARGEM;
+    const colEsqW = 340;
+    const desafioH = 310;
+    const controleBarraH = 46;
+    const botaoPassarH = 38;
+    const grupoEsqH = desafioH + GAP + controleBarraH + 12 + botaoPassarH;
+    const grupoEsqY = vTopo + (vAltura - grupoEsqH) / 2;
+
+    const desafio = { x: colEsqX, y: grupoEsqY, w: colEsqW, h: desafioH };
+    const controleBarra = { x: colEsqX, y: desafio.y + desafio.h + GAP, w: colEsqW, h: controleBarraH };
+    const botaoPassar = { x: colEsqX, y: controleBarra.y + controleBarra.h + 12, w: colEsqW, h: botaoPassarH };
+
+    const colDirW = 260;
+    const cpuH = 270;
+    const chipH = 48;
+    const colDirX = 1280 - MARGEM - colDirW;
+    const grupoDirH = cpuH + GAP + chipH;
+    const grupoDirY = vTopo + (vAltura - grupoDirH) / 2;
+
+    const cpu = { x: colDirX, y: grupoDirY, w: colDirW, h: cpuH };
+    const cpuChip = { x: colDirX, y: cpu.y + cpu.h + GAP, w: colDirW, h: chipH };
+
+    const faixaEsquerda = colEsqX + colEsqW + MARGEM;
+    const faixaDireita = colDirX - MARGEM;
+    const faixaLargura = faixaDireita - faixaEsquerda;
+    const tamanhoJogador = Math.min(480, faixaLargura, vAltura);
+    const player = {
+      x: faixaEsquerda + (faixaLargura - tamanhoJogador) / 2,
+      y: vTopo + (vAltura - tamanhoJogador) / 2,
+      w: tamanhoJogador,
+      h: tamanhoJogador,
+    };
+
+    return { desafio, controleBarra, botaoPassar, cpu, cpuChip, player };
+  }
+
   _construirCenario() {
     const { largura: L, altura: A } = this;
     const nodeFundo = new Node({ largura: L, altura: A });
@@ -341,25 +403,30 @@ export class GameScene extends Scene {
       somToque: config.audio?.clique,
     }));
 
-    // Banner central de instrução
-    this.bannerFeedback = new TextNode('RESOLVA A CONTA E TOQUE NO NÚMERO!', {
-      x: L / 2,
-      y: 42,
-      tamanho: tipografia.corpo,
+    // Banner de instrução — bem em cima da cartela do jogador, não mais
+    // espalhado no topo da tela inteira (ela é o centro das atenções agora).
+    const { player } = this._layout;
+    this.bannerFeedback = new TextNode('TOQUE NO NÚMERO CERTO AQUI ▾', {
+      x: player.x + player.w / 2,
+      y: player.y - 10,
+      tamanho: tipografia.apoio,
       peso: tipografia.pesoForte,
       cor: '#38BDF8',
       alinhamento: 'center',
+      linhaBase: 'bottom',
     });
     this.adicionar(this.bannerFeedback);
   }
 
   _adicionarBotaoPassar() {
-    // Botão Passar (abaixo da barra de tempo, no controle do aluno)
+    // Botão Passar — elemento à parte, solto logo abaixo da barra de
+    // progresso (não divide mais o mesmo painel com ela).
+    const { botaoPassar } = this._layout;
     this.botaoPassar = new Node({
-      x: 30 + 180,
-      y: 450 + 80,
-      largura: 360,
-      altura: 44,
+      x: botaoPassar.x,
+      y: botaoPassar.y,
+      largura: botaoPassar.w,
+      altura: botaoPassar.h,
       visible: false,
       interativo: true,
     });
@@ -398,128 +465,274 @@ export class GameScene extends Scene {
   }
 
   _construir2Cartelas() {
-    const cardSize = 360;
-    const gapCartelas = 30;
-    const gridStartX = 30;
-    const gridStartY = 70;
-
-    const padding = 16;
-    const gapCell = 8;
-    const nomeSpace = 40; // Espaço para o nome do jogador
-    const cellSize = (cardSize - padding * 2 - gapCell * 3 - nomeSpace) / 4; // ~61px
+    const { player, cpu, cpuChip } = this._layout;
 
     this.todasCelulasPorCartela = [[], []];
     this.cartelasNodes = [];
 
-    for (let ci = 0; ci < 2; ci++) {
-      const tema = TEMAS_CARTELAS[ci];
-      const cardX = gridStartX + ci * (cardSize + gapCartelas);
-      const cardY = gridStartY;
+    this._construirCartelaVisual(0, player, TEMA_JOGADOR, 44);
+    this._construirCartelaVisual(1, cpu, TEMA_CPU, 28);
 
-      // Node da Cartela Individual
-      const cardNode = new Node({
-        x: cardX,
-        y: cardY,
-        largura: cardSize,
-        altura: cardSize,
-      });
+    // Verso da cartela do CPU — cobre a cartela (ci=1) enquanto _cpuVirada
+    // for verdadeiro. Fica por cima das células, mas nunca intercepta toque.
+    this.cpuVersoNode = new Node({ x: cpu.x, y: cpu.y, largura: cpu.w, altura: cpu.h });
+    this.cpuVersoNode.escalaVerso = 1;
 
-      cardNode.desenhar = (ctx) => {
-        ctx.save();
-        // Sombra
-        ctx.shadowColor = 'rgba(2, 6, 23, 0.4)';
-        ctx.shadowBlur = 18;
-        ctx.shadowOffsetY = 6;
+    this.cpuVersoNode.desenhar = (ctx) => {
+      if (!this._cpuVirada) return;
+      const l = cpu.w;
+      const a = cpu.h;
+      const escala = Math.max(0.02, Math.abs(this.cpuVersoNode.escalaVerso));
 
-        // Fundo da cartela
-        ctx.fillStyle = '#FFFFFF';
+      ctx.save();
+      ctx.shadowColor = 'rgba(2, 6, 23, 0.4)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
+      ctx.translate(l / 2, a / 2);
+      ctx.scale(escala, 1);
+      ctx.translate(-l / 2, -a / 2);
+
+      const grad = ctx.createLinearGradient(0, 0, l, a);
+      grad.addColorStop(0, TEMA_CPU.dark);
+      grad.addColorStop(1, TEMA_CPU.primary);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, l, a, 18);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.beginPath();
+      ctx.arc(l / 2, a * 0.42, l * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `800 ${Math.round(l * 0.16)}px ${tipografia.familia}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', l / 2, a * 0.42 + 2);
+
+      ctx.font = `700 ${Math.max(12, Math.round(l * 0.06))}px ${tipografia.familia}`;
+      ctx.fillText('CARTELA VIRADA', l / 2, a * 0.72);
+      ctx.restore();
+    };
+
+    this.adicionar(this.cpuVersoNode);
+
+    // Selo abaixo da cartela do CPU — três estados: em repouso mostra só o
+    // contador; com o turno ativo vira um botão "ver cartela do CPU"; ao
+    // tocar, espia por um tempo curto E VISÍVEL (barrinha), depois volta
+    // a virar sozinha — sem susto, porque o aluno vê o tempo acabando.
+    this.chipCpu = new Node({ x: cpuChip.x, y: cpuChip.y, largura: cpuChip.w, altura: cpuChip.h, interativo: true });
+    this.chipCpu.desenhar = (ctx) => {
+      const l = cpuChip.w;
+      const a = cpuChip.h;
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, l, a, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      if (this._espiandoCpu) {
+        const padX = 10;
+        const barW = l - padX * 2;
+        const barH = 4;
+        const barY = 8;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.beginPath();
-        ctx.roundRect(0, 0, cardSize, cardSize, 18);
+        ctx.roundRect(padX, barY, barW, barH, 2);
         ctx.fill();
-        ctx.shadowColor = 'transparent';
-
-        // Friso superior da cartela com cor temática
-        ctx.fillStyle = tema.primary;
+        ctx.fillStyle = TEMA_CPU.primary;
         ctx.beginPath();
-        ctx.roundRect(0, 0, cardSize, 10, [18, 18, 0, 0]);
+        ctx.roundRect(padX, barY, barW * this._espiaCpuEstado.progresso, barH, 2);
         ctx.fill();
 
-        // Nome do jogador no topo
-        ctx.fillStyle = tema.primary;
-        ctx.font = `bold 16px ${tipografia.familia}`;
+        ctx.fillStyle = '#E2E8F0';
+        ctx.font = `700 ${Math.max(11, Math.round(a * 0.26))}px ${tipografia.familia}`;
         ctx.textAlign = 'center';
-        ctx.fillText(tema.nome, cardSize / 2, 28);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('TOQUE PRA ESCONDER', l / 2, a / 2 + 9);
+      } else if (this._turnoAtivo) {
+        ctx.fillStyle = '#E2E8F0';
+        ctx.font = `700 ${Math.max(12, Math.round(a * 0.3))}px ${tipografia.familia}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ESPIAR CARTELA DO CPU', l / 2, a / 2);
+      } else {
+        ctx.fillStyle = TEMA_CPU.primary;
+        ctx.beginPath();
+        ctx.arc(18, a / 2, 5, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Linha vencedora animada se esta cartela venceu
-        if (this._cartelaVencedoraIndex === ci && this._linhaVencedoraAtiva && this._progressoLinha > 0) {
-          const [p1, , , p4] = this._linhaVencedoraAtiva;
-          const celulasDaCartela = this.todasCelulasPorCartela[ci];
-          const c1 = celulasDaCartela[p1];
-          const c4 = celulasDaCartela[p4];
-          if (c1 && c4) {
-            const x1 = c1.x - cardX;
-            const y1 = c1.y - cardY;
-            const x2 = c4.x - cardX;
-            const y2 = c4.y - cardY;
+        ctx.fillStyle = '#CBD5E1';
+        ctx.font = `600 ${Math.max(11, Math.round(a * 0.3))}px ${tipografia.familia}`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`CPU · ${this._acertosCpu} acertos`, 32, a / 2 + 1);
+      }
+      ctx.restore();
+    };
 
-            const cx = x1 + (x2 - x1) * this._progressoLinha;
-            const cy = y1 + (y2 - y1) * this._progressoLinha;
+    this.chipCpu.contemPontoLocal = (x, y) => x >= 0 && y >= 0 && x <= cpuChip.w && y <= cpuChip.h;
+    this.chipCpu.on('toque', () => {
+      if (this._fimResolvido || !this._turnoAtivo) return;
+      if (this._espiandoCpu) this._encerrarEspiadaCpu();
+      else this._iniciarEspiadaCpu();
+    });
 
-            ctx.save();
-            ctx.strokeStyle = '#FACC15';
-            ctx.lineWidth = 8;
-            ctx.lineCap = 'round';
-            ctx.shadowColor = 'rgba(250, 204, 21, 0.9)';
-            ctx.shadowBlur = 16;
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(cx, cy);
-            ctx.stroke();
-            ctx.restore();
-          }
+    this.adicionar(this.chipCpu);
+  }
+
+  /** Inicia a espiada com tempo visível (barrinha) — o aluno controla quando abrir. */
+  _iniciarEspiadaCpu() {
+    if (this._espiandoCpu) return;
+    this._revelarCpu();
+    this._espiandoCpu = true;
+    this._espiaCpuEstado.progresso = 1;
+    Tween.removerDe(this._espiaCpuEstado);
+    Tween.de(this._espiaCpuEstado)
+      .entao({ progresso: 0 }, this._ESPIA_CPU_DURACAO_MS, Easing.linear)
+      .chamar(() => this._encerrarEspiadaCpu());
+  }
+
+  /** Encerra a espiada (tempo esgotado ou o aluno tocou de novo pra fechar). */
+  _encerrarEspiadaCpu() {
+    Tween.removerDe(this._espiaCpuEstado);
+    this._espiandoCpu = false;
+    this._virarCpu();
+  }
+
+  /**
+   * Constrói uma cartela (jogador ou CPU) num retângulo qualquer — o
+   * tamanho de célula é derivado da LARGURA do retângulo (células
+   * quadradas), então uma cartela mais alta que larga (caso do CPU) só
+   * sobra um respiro embaixo da grade, nunca deforma os números.
+   */
+  _construirCartelaVisual(ci, rect, tema, nomeSpace) {
+    const { x: cardX, y: cardY, w: cardW, h: cardH } = rect;
+    const padding = 16;
+    const gapCell = 8;
+    const cellSize = (cardW - padding * 2 - gapCell * 3 - nomeSpace) / 4;
+
+    const cardNode = new Node({ x: cardX, y: cardY, largura: cardW, altura: cardH });
+
+    cardNode.desenhar = (ctx) => {
+      ctx.save();
+      ctx.shadowColor = 'rgba(2, 6, 23, 0.4)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, cardW, cardH, 18);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+
+      ctx.fillStyle = tema.primary;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, cardW, 10, [18, 18, 0, 0]);
+      ctx.fill();
+
+      ctx.fillStyle = tema.primary;
+      ctx.font = `bold ${Math.round(Math.min(18, cardW * 0.05))}px ${tipografia.familia}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(tema.nome, cardW / 2, Math.max(24, nomeSpace * 0.62));
+
+      if (this._cartelaVencedoraIndex === ci && this._linhaVencedoraAtiva && this._progressoLinha > 0) {
+        const [p1, , , p4] = this._linhaVencedoraAtiva;
+        const celulasDaCartela = this.todasCelulasPorCartela[ci];
+        const c1 = celulasDaCartela[p1];
+        const c4 = celulasDaCartela[p4];
+        if (c1 && c4) {
+          const x1 = c1.x - cardX;
+          const y1 = c1.y - cardY;
+          const x2 = c4.x - cardX;
+          const y2 = c4.y - cardY;
+
+          const cx = x1 + (x2 - x1) * this._progressoLinha;
+          const cy = y1 + (y2 - y1) * this._progressoLinha;
+
+          ctx.save();
+          ctx.strokeStyle = '#FACC15';
+          ctx.lineWidth = 8;
+          ctx.lineCap = 'round';
+          ctx.shadowColor = 'rgba(250, 204, 21, 0.9)';
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(cx, cy);
+          ctx.stroke();
+          ctx.restore();
         }
+      }
 
-        ctx.restore();
-      };
+      ctx.restore();
+    };
 
-      this.adicionar(cardNode);
-      this.cartelasNodes.push(cardNode);
+    this.adicionar(cardNode);
+    this.cartelasNodes.push(cardNode);
 
-      // Células 4x4 da cartela
-      const numerosDaCartela = this.cartelasNumeros[ci];
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-          const cellIdx = r * 4 + c;
-          const num = numerosDaCartela[cellIdx];
-          const cellX = cardX + padding + c * (cellSize + gapCell);
-          const cellY = cardY + nomeSpace + padding + r * (cellSize + gapCell);
+    const numerosDaCartela = this.cartelasNumeros[ci];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const cellIdx = r * 4 + c;
+        const num = numerosDaCartela[cellIdx];
+        const cellX = cardX + padding + c * (cellSize + gapCell);
+        const cellY = cardY + nomeSpace + padding + r * (cellSize + gapCell);
 
-          const celula = new BingoCellNode(num, cellIdx, ci, tema, {
-            x: cellX,
-            y: cellY,
-            tamanho: cellSize,
-            audio: this.audio,
-            somToque: this.config.audio?.clique,
-            aoTocarNumero: (cell) => this._aoTocarCelula(cell),
-          });
+        const celula = new BingoCellNode(num, cellIdx, ci, tema, {
+          x: cellX,
+          y: cellY,
+          tamanho: cellSize,
+          audio: this.audio,
+          somToque: this.config.audio?.clique,
+          aoTocarNumero: (cell) => this._aoTocarCelula(cell),
+        });
 
-          this.todasCelulasPorCartela[ci].push(celula);
-          this.adicionar(celula);
-        }
+        this.todasCelulasPorCartela[ci].push(celula);
+        this.adicionar(celula);
       }
     }
   }
 
+  /**
+   * Esconde a cartela do CPU de novo — instantâneo. Sempre cancela também
+   * uma espiada em andamento (se o aluno tivesse aberto), pra nunca sobrar
+   * um timer rodando escondido depois que a rodada já virou de página.
+   */
+  _virarCpu() {
+    Tween.removerDe(this.cpuVersoNode);
+    Tween.removerDe(this._espiaCpuEstado);
+    this._espiandoCpu = false;
+    this.cpuVersoNode.escalaVerso = 1;
+    this._cpuVirada = true;
+  }
+
+  /** Revela a cartela do CPU (fim de rodada) — com um flip curto. */
+  _revelarCpu() {
+    if (!this._cpuVirada) return;
+    Tween.removerDe(this.cpuVersoNode);
+    Tween.de(this.cpuVersoNode)
+      .entao({ escalaVerso: 0 }, 200, Easing.suaveEntrada)
+      .chamar(() => {
+        this._cpuVirada = false;
+      });
+  }
+
   _construirAreaDesafio() {
-    const { largura: L, altura: A } = this;
-    const deckX = 780;
-    const deckY = 70;
-    const deckW = 470;
-    const deckH = 530;
+    const { desafio } = this._layout;
+    const deckW = desafio.w;
+    const deckH = desafio.h;
 
     this.painelDesafio = new Node({
-      x: deckX,
-      y: deckY,
+      x: desafio.x,
+      y: desafio.y,
       largura: deckW,
       altura: deckH,
     });
@@ -527,6 +740,8 @@ export class GameScene extends Scene {
     this.cardRotacaoY = 0;
     this.cardShowFront = false;
 
+    // Card compacto (340×310) — todas as proporções em fração de l/a, não
+    // em px fixos, pra caber sem apertar quando o container encolhe.
     this.painelDesafio.desenhar = (ctx) => {
       const l = deckW;
       const a = deckH;
@@ -536,19 +751,19 @@ export class GameScene extends Scene {
       ctx.strokeStyle = 'rgba(51, 65, 85, 0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(0, 0, l, a, 24);
+      ctx.roundRect(0, 0, l, a, 16);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#94A3B8';
-      ctx.font = `bold 20px ${tipografia.familia}`;
+      ctx.font = `bold ${Math.max(12, Math.round(l * 0.045))}px ${tipografia.familia}`;
       ctx.textAlign = 'center';
-      ctx.fillText('CARTA SORTEADA', l / 2, 48);
+      ctx.fillText('CARTA SORTEADA', l / 2, Math.round(a * 0.12));
 
-      const cw = 340;
-      const ch = 280;
+      const cw = l * 0.8;
+      const ch = a * 0.64;
       const cx = l / 2;
-      const cy = a / 2 - 10;
+      const cy = a * 0.48;
 
       ctx.save();
       ctx.translate(cx, cy);
@@ -557,93 +772,58 @@ export class GameScene extends Scene {
       ctx.scale(Math.abs(cosVal) || 0.01, 1);
 
       ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-      ctx.shadowBlur = 20;
-      ctx.shadowOffsetY = 10;
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 6;
 
       if (this.cardShowFront) {
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.roundRect(-cw / 2, -ch / 2, cw, ch, 24);
+        ctx.roundRect(-cw / 2, -ch / 2, cw, ch, 14);
         ctx.fill();
         ctx.shadowColor = 'transparent';
 
         ctx.fillStyle = '#0284C7';
         ctx.beginPath();
-        ctx.roundRect(-cw / 2, -ch / 2, cw, 12, [24, 24, 0, 0]);
+        ctx.roundRect(-cw / 2, -ch / 2, cw, 8, [14, 14, 0, 0]);
         ctx.fill();
 
         ctx.fillStyle = '#64748B';
-        ctx.font = `bold 18px ${tipografia.familia}`;
+        ctx.font = `bold ${Math.max(10, Math.round(cw * 0.075))}px ${tipografia.familia}`;
         ctx.textAlign = 'center';
-        ctx.fillText('CALCULE A CONTA:', 0, -ch / 2 + 56);
+        ctx.fillText('CALCULE A CONTA:', 0, -ch / 2 + Math.round(ch * 0.28));
 
         ctx.fillStyle = '#0F172A';
-        ctx.font = `bold 64px ${tipografia.familia}`;
+        ctx.font = `bold ${Math.max(20, Math.round(cw * 0.24))}px ${tipografia.familia}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.desafioAtual ? `${this.desafioAtual.expressao}` : '...', 0, 10);
-
-        ctx.fillStyle = '#E0F2FE';
-        ctx.beginPath();
-        ctx.roundRect(-50, ch / 2 - 64, 100, 40, 20);
-        ctx.fill();
-
-        ctx.fillStyle = '#0284C7';
-        ctx.font = `bold 24px ${tipografia.familia}`;
-        ctx.fillText('=  ?', 0, ch / 2 - 44);
+        ctx.fillText(this.desafioAtual ? `${this.desafioAtual.expressao}` : '...', 0, ch * 0.08);
       } else {
         const backGrad = ctx.createLinearGradient(-cw / 2, -ch / 2, cw / 2, ch / 2);
         backGrad.addColorStop(0, '#0284C7');
         backGrad.addColorStop(1, '#0369A1');
         ctx.fillStyle = backGrad;
         ctx.beginPath();
-        ctx.roundRect(-cw / 2, -ch / 2, cw, ch, 24);
+        ctx.roundRect(-cw / 2, -ch / 2, cw, ch, 14);
         ctx.fill();
         ctx.shadowColor = 'transparent';
 
         ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.beginPath();
-        ctx.arc(0, 0, 56, 0, Math.PI * 2);
+        ctx.arc(0, 0, cw * 0.16, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3;
         ctx.stroke();
 
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = `bold 52px ${tipografia.familia}`;
+        ctx.font = `bold ${Math.round(cw * 0.15)}px ${tipografia.familia}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('?', 0, 2);
       }
 
       ctx.restore();
-
-      const placarY = a - 100;
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = `bold 16px ${tipografia.familia}`;
-      ctx.textAlign = 'center';
-      ctx.fillText('PLACAR', l / 2, placarY);
-
-      ctx.fillStyle = TEMA_JOGADOR.primary;
-      ctx.font = `bold 28px ${tipografia.familia}`;
-      ctx.fillText(`${this._acertosJogador}`, l / 2 - 60, placarY + 35);
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = `12px ${tipografia.familia}`;
-      ctx.fillText('VOCÊ', l / 2 - 60, placarY + 55);
-
-      ctx.fillStyle = TEMA_CPU.primary;
-      ctx.font = `bold 28px ${tipografia.familia}`;
-      ctx.fillText(`${this._acertosCpu}`, l / 2 + 60, placarY + 35);
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = `12px ${tipografia.familia}`;
-      ctx.fillText('CPU', l / 2 + 60, placarY + 55);
-
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = `${tipografia.pesoMedio} 16px ${tipografia.familia}`;
-      ctx.textAlign = 'center';
-      ctx.fillText(`Desafio ${this.desafioIndex} de ${this.desafios.length}`, l / 2, a - 24);
-
       ctx.restore();
     };
 
@@ -651,17 +831,19 @@ export class GameScene extends Scene {
   }
 
   _construirControleAluno() {
-    const ctrlX = 30;
-    const ctrlY = 450;
-    const ctrlW = 720;
-    const ctrlH = 150;
+    const { controleBarra } = this._layout;
+    const ctrlW = controleBarra.w;
+    const ctrlH = controleBarra.h;
 
     this._barraTempoProgresso = 1;
     this._barraTempoAtiva = false;
 
+    // Só a barra de progresso agora — o botão PRÓXIMA virou um elemento à
+    // parte, solto logo abaixo (ver _adicionarBotaoPassar), sem dividir o
+    // mesmo painel.
     this.controleAluno = new Node({
-      x: ctrlX,
-      y: ctrlY,
+      x: controleBarra.x,
+      y: controleBarra.y,
       largura: ctrlW,
       altura: ctrlH,
     });
@@ -675,25 +857,19 @@ export class GameScene extends Scene {
       ctx.strokeStyle = 'rgba(51, 65, 85, 0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(0, 0, l, a, 18);
+      ctx.roundRect(0, 0, l, a, 14);
       ctx.fill();
       ctx.stroke();
 
-      const tema = TEMAS_CARTELAS[0];
-      ctx.fillStyle = tema.primary;
-      ctx.font = `bold 16px ${tipografia.familia}`;
-      ctx.textAlign = 'left';
-      ctx.fillText('SEU CONTROLE', 20, 30);
-
       if (this._barraTempoAtiva) {
         const barraX = 20;
-        const barraY = 50;
         const barraLargura = l - 40;
-        const barraAltura = 20;
+        const barraAltura = 14;
+        const barraY = a - barraAltura - 10;
 
         ctx.fillStyle = 'rgba(51, 65, 85, 0.6)';
         ctx.beginPath();
-        ctx.roundRect(barraX, barraY, barraLargura, barraAltura, 10);
+        ctx.roundRect(barraX, barraY, barraLargura, barraAltura, 8);
         ctx.fill();
 
         const larguraPreenchida = barraLargura * this._barraTempoProgresso;
@@ -709,13 +885,13 @@ export class GameScene extends Scene {
 
         ctx.fillStyle = corBarra;
         ctx.beginPath();
-        ctx.roundRect(barraX, barraY, larguraPreenchida, barraAltura, 10);
+        ctx.roundRect(barraX, barraY, larguraPreenchida, barraAltura, 8);
         ctx.fill();
 
         ctx.fillStyle = '#94A3B8';
-        ctx.font = `bold 14px ${tipografia.familia}`;
-        ctx.textAlign = 'center';
-        ctx.fillText('PENSANDO...', l / 2, barraY - 6);
+        ctx.font = `500 11px ${tipografia.familia}`;
+        ctx.textAlign = 'left';
+        ctx.fillText('PENSANDO…', barraX, barraY - 6);
       }
 
       ctx.restore();
@@ -726,6 +902,8 @@ export class GameScene extends Scene {
 
   _mostrarProximaConta() {
     if (this._fimResolvido || this._aguardandoProximaConta) return;
+
+    this._virarCpu();
 
     if (this.desafioIndex >= this.desafios.length) {
       this.desafios.sort(() => Math.random() - 0.5);
@@ -777,8 +955,10 @@ export class GameScene extends Scene {
   _iniciarTurnoComTempo(existeNaJogador, existeNaCpu) {
     const resultado = this.desafioAtual.numero;
 
-    // Guardar estado para a CPU reagir DEPOIS do aluno decidir
+    // Guardar estado para a CPU reagir DEPOIS do aluno decidir, e pra saber
+    // se dava pra acertar — usado na mensagem de transição, sem punição.
     this._resultadoAtual = resultado;
+    this._existeNaJogador = existeNaJogador;
     this._existeNaCpu = existeNaCpu;
 
     // Tempo que o aluno tem para pensar e marcar (configurável por nível)
@@ -803,66 +983,60 @@ export class GameScene extends Scene {
       this._reagirCpuEAvancar();
     }, tempoParaPensar);
 
-    // Informar o aluno
-    if (existeNaJogador && existeNaCpu) {
-      this.bannerFeedback.texto = 'AMBOS TÊM ESSE NÚMERO! MARQUE E CLIQUE PRÓXIMA!';
-      this.bannerFeedback.cor = '#A78BFA';
-    } else if (existeNaJogador) {
-      this.bannerFeedback.texto = 'VOCÊ TEM ESSE NÚMERO! MARQUE E CLIQUE PRÓXIMA!';
-      this.bannerFeedback.cor = '#38BDF8';
-    } else {
-      this.bannerFeedback.texto = 'SÓ O COMPUTADOR TEM ESSE NÚMERO! CLIQUE PRÓXIMA.';
-      this.bannerFeedback.cor = '#F97316';
-    }
+    // Sem dica de quem tem o número — o aluno resolve a conta e confere na
+    // própria cartela, sem saber de antemão se vai achar ou não.
+    this.bannerFeedback.texto = 'TOQUE NO NÚMERO CERTO AQUI ▾';
+    this.bannerFeedback.cor = '#38BDF8';
   }
 
   /**
-   * CPU reage (marca ou não) e depois avança o turno.
-   * Chamado DEPOIS do aluno decidir (marcar ou clicar PRÓXIMA).
+   * Avança direto para a próxima conta — a CPU decide (marca ou não) em
+   * PARALELO, num timer independente, sem segurar a próxima pergunta.
+   *
+   * Antes, o aluno esperava a "reação" inteira da CPU (até 4,5s no nível
+   * fácil) só pra ver a próxima conta aparecer — um delay que só existia
+   * pra sincronizar uma revelação automática que nem existe mais (agora é
+   * a cartela virada por padrão + espiada manual). Sem essa revelação,
+   * não há mais motivo pra prender o aluno esperando.
    */
   _reagirCpuEAvancar() {
     if (this._fimResolvido || !this._turnoAtivo) return;
 
-    // Limpar timers do turno
     clearTimeout(this._timerTurno);
-    clearTimeout(this._timerCpu);
     Tween.removerDe(this);
     this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
 
-    // Esconder botão durante a animação da CPU
+    // Esconder botão — e virar a cartela de volta na hora, caso o aluno
+    // tivesse espiado (o "próxima" sempre vira a cartela e cancela a
+    // espiada, mesmo se ainda estava contando).
     this.botaoPassar.visible = false;
+    this._virarCpu();
 
-    // CPU reage com seu tempo de reação
+    // Agenda a decisão da CPU num timer à parte — captura o resultado
+    // DESTA rodada agora, porque this._resultadoAtual já vai ter mudado
+    // quando o timer disparar (a próxima pergunta já estará em andamento).
     if (this._existeNaCpu) {
+      const resultadoDaRodada = this._resultadoAtual;
       const tempoReacaoCpu = this._cpuTempoMin + Math.random() * (this._cpuTempoMax - this._cpuTempoMin);
-
-      this._timerCpu = setTimeout(() => {
-        if (this._fimResolvido || !this._turnoAtivo) return;
-        this._cpuMarcarSeTiver(this._resultadoAtual);
-        // Depois que a CPU marcou (ou não), avança
-        this._avancarAposDecisaoCpu();
+      const idTimer = setTimeout(() => {
+        this._timersCpuPendentes.delete(idTimer);
+        if (this._fimResolvido) return;
+        this._cpuMarcarSeTiver(resultadoDaRodada);
       }, tempoReacaoCpu);
-    } else {
-      // CPU não tem o número — avança direto
-      this._avancarAposDecisaoCpu();
+      this._timersCpuPendentes.add(idTimer);
     }
-  }
 
-  /**
-   * Avança para a próxima conta após a decisão da CPU.
-   */
-  _avancarAposDecisaoCpu() {
-    if (this._fimResolvido || !this._turnoAtivo) return;
     this._finalizarTurno();
   }
 
   /**
-   * CPU tenta marcar o número na sua cartela.
-   * NÃO avança o turno - apenas marca se tiver o número.
+   * CPU tenta marcar o número na sua cartela — roda em paralelo, pode
+   * disparar com a próxima pergunta já em andamento (por isso não olha
+   * mais para _turnoAtivo, só para _fimResolvido).
    */
   _cpuMarcarSeTiver(resultado) {
-    if (this._fimResolvido || !this._turnoAtivo) return;
+    if (this._fimResolvido) return;
 
     const celulasCpu = this.todasCelulasPorCartela[1];
     const celulaAlvo = celulasCpu.find(c => c.numero === resultado && !c.marcado);
@@ -877,7 +1051,6 @@ export class GameScene extends Scene {
     // CPU ACERTOU - marca na cartela
     celulaAlvo.marcarComAnimacao();
     this._acertosCpu++;
-    this._cpuMarcouNesteTurno = true;
 
     if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
 
@@ -885,12 +1058,9 @@ export class GameScene extends Scene {
     const vitoriaCpu = this._verificarLinhaVencedora(1);
     if (vitoriaCpu) {
       this._comemorarBingoCpu(vitoriaCpu.linha);
-      return;
     }
-
-    // Informar que a CPU marcou (mas NÃO avança turno)
-    this.bannerFeedback.texto = 'O COMPUTADOR MARCOU! VOCÊ TAMBÉM PODE MARCAR!';
-    this.bannerFeedback.cor = '#F97316';
+    // Sem banner de "a CPU marcou" — ela decide fora de vista; o placar no
+    // selo (e a espiada, se o aluno quiser) já contam essa história.
   }
 
   /**
@@ -900,9 +1070,13 @@ export class GameScene extends Scene {
     if (!this._turnoAtivo) return;
     this._turnoAtivo = false;
 
-    // Limpar todos os timers e cancelar Tweens
+    // A cartela do CPU já foi virada de volta no clique do PRÓXIMA
+    // (ver _reagirCpuEAvancar) — quem quisesse ver o que ele decidiu já
+    // teve a chance de espiar antes disso, no próprio ritmo.
+
+    // Limpar timer e cancelar Tweens (a decisão da CPU tem seu próprio
+    // timer independente agora — não é cancelada aqui, ver _reagirCpuEAvancar)
     clearTimeout(this._timerTurno);
-    clearTimeout(this._timerCpu);
     Tween.removerDe(this);
     this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
@@ -911,16 +1085,24 @@ export class GameScene extends Scene {
     this._jogadorMarcouNesteTurno = false;
     this._cpuMarcouNesteTurno = false;
 
-    // Esconder botão Passar
+    // Esconder botão
     this.botaoPassar.visible = false;
 
-    // Avançar para próxima conta
+    // Avançar para próxima conta — pausa curta só de transição. Se o
+    // número nem existia na cartela do aluno, a mensagem tranquiliza em
+    // vez de simplesmente sumir: não é erro, só não calhou dessa vez.
+    const semChanceDeAcertar = !this._existeNaJogador;
     this._aguardandoProximaConta = true;
     Tween.de(this)
-      .esperar(1200)
+      .esperar(500)
       .chamar(() => {
-        this.bannerFeedback.texto = 'TOQUE NO NÚMERO E CLIQUE PASSAR!';
-        this.bannerFeedback.cor = '#38BDF8';
+        if (semChanceDeAcertar) {
+          this.bannerFeedback.texto = 'TUDO BEM! ESSE NÚMERO NÃO ESTAVA NA SUA CARTELA.';
+          this.bannerFeedback.cor = '#94A3B8';
+        } else {
+          this.bannerFeedback.texto = 'TOQUE NO NÚMERO E CLIQUE PASSAR!';
+          this.bannerFeedback.cor = '#38BDF8';
+        }
         this._aguardandoProximaConta = false;
         this._mostrarProximaConta();
       });
@@ -935,13 +1117,12 @@ export class GameScene extends Scene {
     this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
     this.botaoPassar.visible = false;
-    clearTimeout(this._timerCpu);
     this._jogadorMarcouNesteTurno = false;
     this._cpuMarcouNesteTurno = false;
 
     this._aguardandoProximaConta = true;
     Tween.de(this)
-      .esperar(1500)
+      .esperar(800)
       .chamar(() => {
         this.bannerFeedback.texto = 'TOQUE NO NÚMERO E CLIQUE PASSAR!';
         this.bannerFeedback.cor = '#38BDF8';
@@ -1047,6 +1228,7 @@ export class GameScene extends Scene {
   }
 
   _comemorarBingoJogador(linha) {
+    this._revelarCpu();
     this._cartelaVencedoraIndex = 0;
     this._linhaVencedoraAtiva = linha;
 
@@ -1061,6 +1243,7 @@ export class GameScene extends Scene {
   }
 
   _comemorarBingoCpu(linha) {
+    this._revelarCpu();
     this._cartelaVencedoraIndex = 1;
     this._linhaVencedoraAtiva = linha;
 
@@ -1078,8 +1261,10 @@ export class GameScene extends Scene {
     if (this._fimResolvido) return;
     this._fimResolvido = true;
 
-    // Limpar timer de turno
+    // Limpar timer de turno e qualquer decisão de CPU ainda pendente em paralelo
     clearTimeout(this._timerTurno);
+    this._timersCpuPendentes.forEach((id) => clearTimeout(id));
+    this._timersCpuPendentes.clear();
     this._turnoAtivo = false;
 
     this.irPara('resultado', {
