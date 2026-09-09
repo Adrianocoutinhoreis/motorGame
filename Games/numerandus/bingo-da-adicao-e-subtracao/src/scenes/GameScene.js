@@ -1,6 +1,6 @@
 import {
   Scene, Node, TextNode, Tween, Easing, ESTADOS, ScoreSystem,
-  IconButton, SoundToggle, PauseScreen, HelpScreen,
+  IconButton, SoundToggle, PauseScreen, HelpScreen, ParticleSystem,
   cores, tipografia, espaco, raio, sombras, alvoAcessivel, texto as aplicarCaixa,
 } from '../../engine/index.js';
 
@@ -23,6 +23,10 @@ class BingoCellNode extends Node {
     this.cartelaIndex = cartelaIndex;
     this.tema = tema;
     this.marcado = false;
+    // "errado" é um estado PROVISÓRIO e reversível — o toque errado fica
+    // marcado em âmbar até o aluno corrigir (tocando de novo pra desfazer,
+    // ou acertando) ou até a rodada acabar, quando aí sim vira erro contado.
+    this.errado = false;
     this.aoTocarNumero = opcoes.aoTocarNumero ?? null;
     this.audio = opcoes.audio ?? null;
     this.somToque = opcoes.somToque ?? null;
@@ -31,6 +35,9 @@ class BingoCellNode extends Node {
     this.regY = tamanho / 2;
     this.x += tamanho / 2;
     this.y += tamanho / 2;
+    // Posição de repouso, fixa — o tremor de "errado" sempre parte e volta
+    // pra cá, nunca do `x` atual (que pode estar em pleno tremor).
+    this.xBase = this.x;
 
     this.escalaFicha = 0;
     this.opacidadeFicha = 0;
@@ -54,6 +61,7 @@ class BingoCellNode extends Node {
 
   marcarComAnimacao() {
     this.marcado = true;
+    this.errado = false;
     this.escalaFicha = 2.8;
     this.opacidadeFicha = 0.2;
     this.escalaRipple = 1.0;
@@ -63,15 +71,33 @@ class BingoCellNode extends Node {
     Tween.para(this, { escalaRipple: 2.2, opacidadeRipple: 0 }, 400, Easing.suaveSaida);
   }
 
+  /** Marca a tentativa errada (provisória) — treme, mas não é definitiva. */
+  marcarErrado() {
+    this.errado = true;
+    Tween.removerDe(this);
+    // Sempre relativo à posição de repouso (`xBase`), nunca ao `x` atual —
+    // tocar de novo no meio de um tremor não pode acumular deslocamento e
+    // fazer a célula "andar" pra fora do lugar.
+    Tween.de(this)
+      .entao({ x: this.xBase - 6 }, 45)
+      .entao({ x: this.xBase + 6 }, 45)
+      .entao({ x: this.xBase }, 45);
+  }
+
+  /** Desfaz a marca de errado — tocar de novo nela, ou acertar, limpa. */
+  desmarcarErrado() {
+    this.errado = false;
+  }
+
   desenhar(ctx) {
-    const { largura: l, altura: a, tema, numero, marcado } = this;
+    const { largura: l, altura: a, tema, numero, marcado, errado } = this;
 
     ctx.save();
 
-    // Fundo da célula
-    ctx.fillStyle = marcado ? tema.light : '#FFFFFF';
-    ctx.strokeStyle = marcado ? tema.primary : '#E2E8F0';
-    ctx.lineWidth = marcado ? 2.5 : 1.5;
+    // Fundo da célula — âmbar quando errada (provisório), tema quando certa
+    ctx.fillStyle = marcado ? tema.light : errado ? '#FEF3C7' : '#FFFFFF';
+    ctx.strokeStyle = marcado ? tema.primary : errado ? '#F59E0B' : '#E2E8F0';
+    ctx.lineWidth = marcado || errado ? 2.5 : 1.5;
     ctx.beginPath();
     ctx.roundRect(0, 0, l, a, 10);
     ctx.fill();
@@ -114,7 +140,7 @@ class BingoCellNode extends Node {
     }
 
     // Número no centro da célula
-    ctx.fillStyle = marcado ? tema.primary : '#1E293B';
+    ctx.fillStyle = marcado ? tema.primary : errado ? '#92400E' : '#1E293B';
     ctx.font = `${tipografia.pesoForte} ${Math.round(l * 0.42)}px ${tipografia.familia}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -153,6 +179,10 @@ export class GameScene extends Scene {
     // NÃO escutar eventos de vitoria/derrota do ScoreSystem — controlamos manualmente
 
     this._fimResolvido = false;
+    // Liga assim que QUALQUER lado faz BINGO — bem antes de `_fimResolvido`
+    // (que só liga uns 5s depois, dentro de `_terminar`). É o que impede a
+    // comemoração de disparar duas vezes na janela entre as duas.
+    this._celebracaoIniciada = false;
     this._linhasVencedoras = [
       // Horizontais
       [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15],
@@ -169,6 +199,10 @@ export class GameScene extends Scene {
     // Estado da competição (Jogador vs CPU)
     this._acertosJogador = 0;
     this._acertosCpu = 0;
+    // Erro REAL do aluno — só conta se uma marca errada (âmbar) ainda
+    // estiver lá quando a rodada termina (ver _reagirCpuEAvancar/_terminar).
+    this._errosJogador = 0;
+    this._celulaErradaAtual = null;
     this._turnoAtivo = false;
     this._jogadorMarcouNesteTurno = false;
     this._cpuMarcouNesteTurno = false;
@@ -209,6 +243,77 @@ export class GameScene extends Scene {
     this._construirControleAluno();
     this._construirAreaDesafio();
     this._adicionarBotaoPassar();
+
+    // Confete do BINGO — por último, pra desenhar por cima de tudo.
+    // Brilho da vitória começa "desligado" (0).
+    this._brilhoVitoria = 0;
+    this.particulas = new ParticleSystem();
+    this.adicionar(this.particulas);
+
+    // ------------------------------------------------------ destaque (vitória da CPU)
+    // Quando o computador vence, em vez do painel escuro genérico, a cartela
+    // dele aparece ampliada e centralizada, com o resto da tela borrada atrás
+    // — pra o olhar ir direto pro que aconteceu (a linha marcada), não pra um
+    // texto solto no meio da tela. Ver `_mostrarDestaqueCpu`.
+    this._mostrarBlurCpu = false;
+    this._fundoBlurCpuImg = null;
+    this.blurFundoCpu = new Node({ x: 0, y: 0, largura: this.largura, altura: this.altura });
+    this.blurFundoCpu.desenhar = (ctx) => {
+      if (this._mostrarBlurCpu && this._fundoBlurCpuImg) ctx.drawImage(this._fundoBlurCpuImg, 0, 0);
+    };
+    this.adicionar(this.blurFundoCpu);
+
+    this._destaqueCpu = { ativo: false, escala: 0, numeros: null, marcados: null, linha: null };
+    this.destaqueCartelaCpu = new Node({ x: 0, y: 0, largura: this.largura, altura: this.altura });
+    this.destaqueCartelaCpu.desenhar = (ctx) => this._desenharDestaqueCpu(ctx);
+    this.adicionar(this.destaqueCartelaCpu);
+
+    // Selo de fim de jogo — o ÚLTIMO nó adicionado, pra ficar na frente de
+    // TUDO (cartelas, brilho, confete). Sem isso, quem não estivesse com o
+    // olho no texto pequeno acima da cartela podia nem perceber quem venceu.
+    this._overlayFim = { escala: 0, ativo: false, titulo: '', subtitulo: '', cor: '#FACC15' };
+    this.overlayFim = new Node({ x: 0, y: 0, largura: this.largura, altura: this.altura });
+    this.overlayFim.desenhar = (ctx) => {
+      const o = this._overlayFim;
+      if (!o.ativo || o.escala <= 0.01) return;
+
+      const panelW = 860;
+      const panelH = 200;
+      const cx = this.largura / 2;
+      const cy = this.altura / 2;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(o.escala, o.escala);
+      ctx.translate(-panelW / 2, -panelH / 2);
+
+      ctx.shadowColor = o.cor;
+      ctx.shadowBlur = 40;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, panelW, panelH, 28);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+
+      ctx.strokeStyle = o.cor;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      ctx.fillStyle = o.cor;
+      ctx.font = `800 ${o.subtitulo ? 52 : 58}px ${tipografia.familia}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(o.titulo, panelW / 2, panelH / 2 - (o.subtitulo ? 24 : 0));
+
+      if (o.subtitulo) {
+        ctx.fillStyle = '#CBD5E1';
+        ctx.font = `600 22px ${tipografia.familia}`;
+        ctx.fillText(o.subtitulo, panelW / 2, panelH / 2 + 36);
+      }
+
+      ctx.restore();
+    };
+    this.adicionar(this.overlayFim);
 
     // Iniciar primeira carta sorteada
     this._mostrarProximaConta();
@@ -295,7 +400,9 @@ export class GameScene extends Scene {
     const colEsqW = 340;
     const desafioH = 310;
     const controleBarraH = 46;
-    const botaoPassarH = 38;
+    // Botões maiores — legibilidade e alvo de toque em aparelhos móveis
+    // (o motor reescala a cena inteira a ~0,5× num celular girado).
+    const botaoPassarH = 72;
     const grupoEsqH = desafioH + GAP + controleBarraH + 12 + botaoPassarH;
     const grupoEsqY = vTopo + (vAltura - grupoEsqH) / 2;
 
@@ -305,7 +412,7 @@ export class GameScene extends Scene {
 
     const colDirW = 260;
     const cpuH = 270;
-    const chipH = 48;
+    const chipH = 76; // maior, pelo mesmo motivo do botaoPassar acima
     const colDirX = 1280 - MARGEM - colDirW;
     const grupoDirH = cpuH + GAP + chipH;
     const grupoDirY = vTopo + (vAltura - grupoDirH) / 2;
@@ -316,7 +423,7 @@ export class GameScene extends Scene {
     const faixaEsquerda = colEsqX + colEsqW + MARGEM;
     const faixaDireita = colDirX - MARGEM;
     const faixaLargura = faixaDireita - faixaEsquerda;
-    const tamanhoJogador = Math.min(480, faixaLargura, vAltura);
+    const tamanhoJogador = Math.min(520, faixaLargura, vAltura);
     const player = {
       x: faixaEsquerda + (faixaLargura - tamanhoJogador) / 2,
       y: vTopo + (vAltura - tamanhoJogador) / 2,
@@ -403,10 +510,10 @@ export class GameScene extends Scene {
       somToque: config.audio?.clique,
     }));
 
-    // Banner de instrução — bem em cima da cartela do jogador, não mais
-    // espalhado no topo da tela inteira (ela é o centro das atenções agora).
+    // Banner só pra anunciar BINGO (vitória/derrota) — sem texto de
+    // instrução no dia a dia; a marcação nas células já fala por si.
     const { player } = this._layout;
-    this.bannerFeedback = new TextNode('TOQUE NO NÚMERO CERTO AQUI ▾', {
+    this.bannerFeedback = new TextNode('', {
       x: player.x + player.w / 2,
       y: player.y - 10,
       tamanho: tipografia.apoio,
@@ -447,7 +554,7 @@ export class GameScene extends Scene {
       ctx.stroke();
 
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = `bold 20px ${tipografia.familia}`;
+      ctx.font = `bold ${Math.round(a * 0.36)}px ${tipografia.familia}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('PRÓXIMA', l / 2, a / 2);
@@ -540,10 +647,10 @@ export class GameScene extends Scene {
       ctx.stroke();
 
       if (this._espiandoCpu) {
-        const padX = 10;
+        const padX = 12;
         const barW = l - padX * 2;
-        const barH = 4;
-        const barY = 8;
+        const barH = 6;
+        const barY = Math.round(a * 0.16);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.beginPath();
         ctx.roundRect(padX, barY, barW, barH, 2);
@@ -557,25 +664,17 @@ export class GameScene extends Scene {
         ctx.font = `700 ${Math.max(11, Math.round(a * 0.26))}px ${tipografia.familia}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('TOQUE PRA ESCONDER', l / 2, a / 2 + 9);
+        ctx.fillText('TOQUE PRA ESCONDER', l / 2, a * 0.62);
       } else if (this._turnoAtivo) {
         ctx.fillStyle = '#E2E8F0';
         ctx.font = `700 ${Math.max(12, Math.round(a * 0.3))}px ${tipografia.familia}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('ESPIAR CARTELA DO CPU', l / 2, a / 2);
-      } else {
-        ctx.fillStyle = TEMA_CPU.primary;
-        ctx.beginPath();
-        ctx.arc(18, a / 2, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#CBD5E1';
-        ctx.font = `600 ${Math.max(11, Math.round(a * 0.3))}px ${tipografia.familia}`;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`CPU · ${this._acertosCpu} acertos`, 32, a / 2 + 1);
+        ctx.fillText('ESPIAR CARTELA', l / 2, a / 2);
       }
+      // Em repouso (passando pra próxima conta), o selo fica só com o
+      // contorno vazio — sem "CPU · N acertos": esse texto não tinha função
+      // nenhuma aqui (o selo só reage a toque com o turno ativo).
       ctx.restore();
     };
 
@@ -644,6 +743,23 @@ export class GameScene extends Scene {
       ctx.textAlign = 'center';
       ctx.fillText(tema.nome, cardW / 2, Math.max(24, nomeSpace * 0.62));
 
+      // Brilho pulsante na cartela inteira do vencedor — dourado pro
+      // aluno (festa), ardósia pra CPU (sem tom de comemoração nem de
+      // punição), mas com a MESMA força/visibilidade nos dois casos.
+      if (this._cartelaVencedoraIndex === ci && this._brilhoVitoria > 0) {
+        const corBrilho = ci === 0 ? '250, 204, 21' : '148, 163, 184';
+        const pulso = (0.6 + 0.4 * Math.sin(Date.now() / 120)) * this._brilhoVitoria;
+        ctx.save();
+        ctx.shadowColor = `rgba(${corBrilho}, 0.9)`;
+        ctx.shadowBlur = 34 * pulso;
+        ctx.strokeStyle = `rgba(${corBrilho}, ${0.85 * pulso})`;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.roundRect(-4, -4, cardW + 8, cardH + 8, 22);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       if (this._cartelaVencedoraIndex === ci && this._linhaVencedoraAtiva && this._progressoLinha > 0) {
         const [p1, , , p4] = this._linhaVencedoraAtiva;
         const celulasDaCartela = this.todasCelulasPorCartela[ci];
@@ -658,11 +774,12 @@ export class GameScene extends Scene {
           const cx = x1 + (x2 - x1) * this._progressoLinha;
           const cy = y1 + (y2 - y1) * this._progressoLinha;
 
+          const corLinha = ci === 0 ? '#FACC15' : '#94A3B8';
           ctx.save();
-          ctx.strokeStyle = '#FACC15';
+          ctx.strokeStyle = corLinha;
           ctx.lineWidth = 8;
           ctx.lineCap = 'round';
-          ctx.shadowColor = 'rgba(250, 204, 21, 0.9)';
+          ctx.shadowColor = ci === 0 ? 'rgba(250, 204, 21, 0.9)' : 'rgba(148, 163, 184, 0.7)';
           ctx.shadowBlur = 16;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
@@ -691,7 +808,9 @@ export class GameScene extends Scene {
           y: cellY,
           tamanho: cellSize,
           audio: this.audio,
-          somToque: this.config.audio?.clique,
+          // Só a cartela do ALUNO (ci === 0) toca ao escolher um número — a
+          // do CPU não é tocável pelo jogador, não faz sentido ter som ali.
+          somToque: ci === 0 ? 'cliqueCartela' : null,
           aoTocarNumero: (cell) => this._aoTocarCelula(cell),
         });
 
@@ -983,10 +1102,9 @@ export class GameScene extends Scene {
       this._reagirCpuEAvancar();
     }, tempoParaPensar);
 
-    // Sem dica de quem tem o número — o aluno resolve a conta e confere na
-    // própria cartela, sem saber de antemão se vai achar ou não.
-    this.bannerFeedback.texto = 'TOQUE NO NÚMERO CERTO AQUI ▾';
-    this.bannerFeedback.cor = '#38BDF8';
+    // Sem dica de quem tem o número, e sem texto de instrução — o aluno
+    // resolve a conta e confere na própria cartela; a marcação (âmbar se
+    // errar, cor do tema se acertar) já fala por si.
   }
 
   /**
@@ -1006,6 +1124,15 @@ export class GameScene extends Scene {
     Tween.removerDe(this);
     this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
+
+    // A rodada está terminando — SÓ AGORA uma marca errada vira erro
+    // contado de verdade. Se o aluno corrigiu antes (acertou ou desfez),
+    // this._celulaErradaAtual já está null e nada é contado.
+    if (this._celulaErradaAtual) {
+      this._errosJogador++;
+      this._celulaErradaAtual.desmarcarErrado();
+      this._celulaErradaAtual = null;
+    }
 
     // Esconder botão — e virar a cartela de volta na hora, caso o aluno
     // tivesse espiado (o "próxima" sempre vira a cartela e cancela a
@@ -1088,21 +1215,11 @@ export class GameScene extends Scene {
     // Esconder botão
     this.botaoPassar.visible = false;
 
-    // Avançar para próxima conta — pausa curta só de transição. Se o
-    // número nem existia na cartela do aluno, a mensagem tranquiliza em
-    // vez de simplesmente sumir: não é erro, só não calhou dessa vez.
-    const semChanceDeAcertar = !this._existeNaJogador;
+    // Avançar para próxima conta — pausa curta só de transição.
     this._aguardandoProximaConta = true;
     Tween.de(this)
       .esperar(500)
       .chamar(() => {
-        if (semChanceDeAcertar) {
-          this.bannerFeedback.texto = 'TUDO BEM! ESSE NÚMERO NÃO ESTAVA NA SUA CARTELA.';
-          this.bannerFeedback.cor = '#94A3B8';
-        } else {
-          this.bannerFeedback.texto = 'TOQUE NO NÚMERO E CLIQUE PASSAR!';
-          this.bannerFeedback.cor = '#38BDF8';
-        }
         this._aguardandoProximaConta = false;
         this._mostrarProximaConta();
       });
@@ -1112,8 +1229,6 @@ export class GameScene extends Scene {
    * Pular conta quando o resultado não existe em nenhuma cartela.
    */
   _pularContaSemResultado() {
-    this.bannerFeedback.texto = 'ESSE NÚMERO NÃO ESTÁ EM NENHUMA CARTELA! PRÓXIMA...';
-    this.bannerFeedback.cor = '#94A3B8';
     this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
     this.botaoPassar.visible = false;
@@ -1124,8 +1239,6 @@ export class GameScene extends Scene {
     Tween.de(this)
       .esperar(800)
       .chamar(() => {
-        this.bannerFeedback.texto = 'TOQUE NO NÚMERO E CLIQUE PASSAR!';
-        this.bannerFeedback.cor = '#38BDF8';
         this._aguardandoProximaConta = false;
         this._mostrarProximaConta();
       });
@@ -1144,6 +1257,12 @@ export class GameScene extends Scene {
     return null;
   }
 
+  /**
+   * Toque na cartela do aluno. Errar não é definitivo: fica marcado em
+   * âmbar (provisório) até ele corrigir — tocando de novo nela pra desfazer,
+   * ou acertando. Só vira erro CONTADO se ainda estiver errado quando a
+   * rodada terminar (ver _reagirCpuEAvancar) — nunca por um toque isolado.
+   */
   _aoTocarCelula(celula) {
     if (this._fimResolvido || !this.desafioAtual) return;
 
@@ -1158,15 +1277,17 @@ export class GameScene extends Scene {
     const resultadoEsperado = this.desafioAtual.numero;
 
     if (celula.numero === resultadoEsperado) {
-      // JOGADOR ACERTOU!
+      // JOGADOR ACERTOU! Qualquer tentativa errada anterior é perdoada.
+      if (this._celulaErradaAtual) {
+        this._celulaErradaAtual.desmarcarErrado();
+        this._celulaErradaAtual = null;
+      }
+
       celula.marcarComAnimacao();
       this._acertosJogador++;
       this._jogadorMarcouNesteTurno = true;
 
       if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
-
-      this.bannerFeedback.texto = 'MUITO BEM! CLIQUE PRÓXIMA PARA AVANÇAR!';
-      this.bannerFeedback.cor = '#4ADE80';
 
       // Verificar se o JOGADOR fez BINGO
       const vitoriaJogador = this._verificarLinhaVencedora(0);
@@ -1184,27 +1305,17 @@ export class GameScene extends Scene {
 
       // NÃO finaliza turno - aluno pode marcar mais números se quiser
       // ou clicar PRÓXIMA para avançar
+    } else if (celula === this._celulaErradaAtual) {
+      // Tocou de novo na MESMA célula errada — desfaz (volta atrás).
+      celula.desmarcarErrado();
+      this._celulaErradaAtual = null;
     } else {
-      // ERRO (amigável e não punitivo)
+      // Tentativa errada (provisória) — marca em âmbar, some a anterior se houver.
+      if (this._celulaErradaAtual) this._celulaErradaAtual.desmarcarErrado();
+      celula.marcarErrado();
+      this._celulaErradaAtual = celula;
+
       if (this.config.audio?.erro) this.audio.efeito(this.config.audio.erro);
-
-      this.bannerFeedback.texto = 'TENTE DE NOVO! PENSE COM CALMA.';
-      this.bannerFeedback.cor = '#FBBF24';
-
-      Tween.removerDe(celula);
-      Tween.de(celula)
-        .entao({ x: celula.x - 6 }, 50)
-        .entao({ x: celula.x + 6 }, 50)
-        .entao({ x: celula.x }, 50);
-
-      Tween.de(this)
-        .esperar(1400)
-        .chamar(() => {
-          if (this._turnoAtivo) {
-            this.bannerFeedback.texto = 'TOQUE NO NÚMERO E CLIQUE PRÓXIMA!';
-            this.bannerFeedback.cor = '#38BDF8';
-          }
-        });
     }
   }
 
@@ -1227,13 +1338,294 @@ export class GameScene extends Scene {
     return null;
   }
 
+  /**
+   * Abre o selo grande de fim de jogo — na frente de tudo (cartelas,
+   * brilho, confete), pra quem não estivesse olhando o texto pequeno do
+   * banner não deixar de perceber quem venceu.
+   */
+  _abrirOverlayFim(titulo, subtitulo, cor) {
+    const o = this._overlayFim;
+    o.ativo = true;
+    o.titulo = titulo;
+    o.subtitulo = subtitulo;
+    o.cor = cor;
+    o.escala = 0;
+    Tween.removerDe(o);
+    Tween.de({})
+      .esperar(150)
+      .chamar(() => Tween.para(o, { escala: 1 }, 400, Easing.costasSaida));
+  }
+
+  /**
+   * Congela e borra o quadro atual do jogo, pra servir de fundo atrás da
+   * cartela ampliada da vitória da CPU. Feito UMA VEZ (não a cada quadro):
+   * neste ponto o jogo já parou (fim de partida), então o fundo não muda mais
+   * — recalcular o blur a cada frame seria custo à toa.
+   *
+   * O truque: copiar o canvas atual pra fora, e desenhar essa cópia DE VOLTA
+   * com `ctx.filter = 'blur(...)'` ligado — o filtro do canvas 2D borra
+   * qualquer coisa que ele desenhe, inclusive uma imagem já pronta.
+   */
+  _capturarFundoBorradoCpu() {
+    const canvasReal = this.stage?.canvas;
+    if (!canvasReal) return;
+    const L = this.largura;
+    const A = this.altura;
+
+    const bruto = document.createElement('canvas');
+    bruto.width = L;
+    bruto.height = A;
+    bruto.getContext('2d').drawImage(canvasReal, 0, 0, L, A);
+
+    const borrado = document.createElement('canvas');
+    borrado.width = L;
+    borrado.height = A;
+    const ctxBorrado = borrado.getContext('2d');
+    ctxBorrado.filter = 'blur(9px)';
+    ctxBorrado.drawImage(bruto, 0, 0);
+    ctxBorrado.filter = 'none';
+    // Escurece por cima do blur — o mesmo véu escuro do resto do motor
+    // (PauseScreen/HelpScreen), pra cartela ampliada se destacar de verdade.
+    ctxBorrado.fillStyle = 'rgba(10, 14, 26, 0.55)';
+    ctxBorrado.fillRect(0, 0, L, A);
+
+    this._fundoBlurCpuImg = borrado;
+  }
+
+  /**
+   * Mostra a cartela do CPU ampliada e centralizada, com o resto da tela
+   * borrado atrás — chamado depois que a linha de BINGO termina de se
+   * desenhar na cartela pequena (ver `_comemorarBingoCpu`), então a cartela
+   * grande já nasce mostrando a linha completa, sem repetir a animação.
+   */
+  _mostrarDestaqueCpu(linha) {
+    this._capturarFundoBorradoCpu();
+    this._mostrarBlurCpu = true;
+
+    const d = this._destaqueCpu;
+    d.numeros = this.cartelasNumeros[1];
+    d.marcados = this.todasCelulasPorCartela[1].map((c) => c.marcado);
+    d.linha = linha;
+    d.escala = 0;
+    d.ativo = true;
+
+    Tween.removerDe(d);
+    Tween.para(d, { escala: 1 }, 450, Easing.costasSaida);
+  }
+
+  /** Desenha a cartela ampliada + título, chamado pelo `desenhar` do nó dedicado. */
+  _desenharDestaqueCpu(ctx) {
+    const d = this._destaqueCpu;
+    if (!d.ativo || d.escala <= 0.01 || !d.numeros) return;
+
+    const cardW = 440;
+    const cardH = 440;
+    const nomeSpace = 44;
+    const padding = 18;
+    const gapCell = 10;
+    const cellSize = (cardW - padding * 2 - gapCell * 3 - nomeSpace) / 4;
+    const cardX = (this.largura - cardW) / 2;
+    // Centraliza o CONJUNTO inteiro (título + cartela + legenda) na tela, não
+    // só a cartela sozinha — um `cardY` fixo deixava tudo puxado pra baixo,
+    // porque o título ocupa espaço ACIMA e a legenda ABAIXO da cartela.
+    const espacoTitulo = 70;
+    const espacoLegenda = 51;
+    const alturaConjunto = espacoTitulo + cardH + espacoLegenda;
+    const cardY = (this.altura - alturaConjunto) / 2 + espacoTitulo;
+    const tema = TEMA_CPU;
+
+    ctx.save();
+    ctx.translate(cardX + cardW / 2, cardY + cardH / 2);
+    ctx.scale(d.escala, d.escala);
+    ctx.translate(-cardW / 2, -cardH / 2);
+
+    // Brilho pulsante ao redor da cartela — igual ao da cartela pequena.
+    const pulso = 0.6 + 0.4 * Math.sin(Date.now() / 120);
+    ctx.shadowColor = 'rgba(148, 163, 184, 0.9)';
+    ctx.shadowBlur = 40 * pulso;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, cardW, cardH, 20);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+
+    ctx.strokeStyle = `rgba(148, 163, 184, ${0.85 * pulso})`;
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.roundRect(-4, -4, cardW + 8, cardH + 8, 22);
+    ctx.stroke();
+
+    ctx.fillStyle = tema.primary;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, cardW, 12, [20, 20, 0, 0]);
+    ctx.fill();
+
+    ctx.fillStyle = tema.primary;
+    ctx.font = `bold 22px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tema.nome, cardW / 2, nomeSpace / 2 + 6);
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const idx = r * 4 + c;
+        const cx = padding + c * (cellSize + gapCell);
+        const cy = nomeSpace + padding + r * (cellSize + gapCell);
+        const marcado = d.marcados[idx];
+
+        ctx.fillStyle = marcado ? tema.light : '#FFFFFF';
+        ctx.strokeStyle = marcado ? tema.primary : '#E2E8F0';
+        ctx.lineWidth = marcado ? 3 : 2;
+        ctx.beginPath();
+        ctx.roundRect(cx, cy, cellSize, cellSize, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        if (marcado) {
+          ctx.fillStyle = tema.chip;
+          ctx.strokeStyle = tema.primary;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(cx + cellSize / 2, cy + cellSize / 2, cellSize / 2 - 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = marcado ? tema.primary : '#1E293B';
+        ctx.font = `${tipografia.pesoForte} ${Math.round(cellSize * 0.4)}px ${tipografia.familia}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(d.numeros[idx], cx + cellSize / 2, cy + cellSize / 2 + 1);
+      }
+    }
+
+    // Linha dourada... ardósia: destaca a linha vencedora, já completa.
+    if (d.linha) {
+      const [p1, , , p4] = d.linha;
+      const col1 = p1 % 4;
+      const row1 = Math.floor(p1 / 4);
+      const col4 = p4 % 4;
+      const row4 = Math.floor(p4 / 4);
+      const x1 = padding + col1 * (cellSize + gapCell) + cellSize / 2;
+      const y1 = nomeSpace + padding + row1 * (cellSize + gapCell) + cellSize / 2;
+      const x2 = padding + col4 * (cellSize + gapCell) + cellSize / 2;
+      const y2 = nomeSpace + padding + row4 * (cellSize + gapCell) + cellSize / 2;
+
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 10;
+      ctx.lineCap = 'round';
+      ctx.shadowColor = 'rgba(148, 163, 184, 0.9)';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.shadowColor = 'transparent';
+    }
+
+    ctx.restore();
+
+    // Título — logo acima da cartela, não solto no meio da tela. Branco (não
+    // ardósia): o texto fica sobre o fundo escuro borrado, e o cinza médio
+    // usado antes tinha contraste baixo demais pra criança ler — o brilho ao
+    // redor é que carrega o tom neutro da CPU, não o texto.
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, d.escala * 1.3);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `800 40px ${tipografia.familia}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(148, 163, 184, 0.6)';
+    ctx.shadowBlur = 16;
+    ctx.fillText('O COMPUTADOR VENCEU', this.largura / 2, cardY - 50);
+    ctx.shadowColor = 'transparent';
+
+    ctx.fillStyle = '#F1F5F9';
+    ctx.font = `600 22px ${tipografia.familia}`;
+    ctx.fillText('CONTINUE TENTANDO!', this.largura / 2, cardY + cardH + 40);
+    ctx.restore();
+  }
+
+  /**
+   * Toca o som de fim de partida (vitória/derrota) UMA SÓ VEZ, no instante do
+   * BINGO — e deixa que ele continue tocando por cima da transição para a
+   * tela de resultado, em vez de cortar e a ResultScreen tocar de novo por
+   * cima (o som "se repetia": uma vez aqui, outra vez lá).
+   *
+   * Por isso usa o canal `music`, não `sfx`: `Game.irPara` corta `sfx` e
+   * `speech` em toda troca de cena (`AudioBus.encerrarDaTela`), mas a música
+   * atravessa de propósito — é assim que o som sobrevive até a tela seguinte.
+   * `config.audio.vitoria/derrota` ficam `null` por causa disso: se
+   * estivessem preenchidos, a ResultScreen tocaria o mesmo som outra vez ao
+   * entrar.
+   *
+   * E porque nada corta o canal `music` sozinho, este método também arma um
+   * ouvinte no `Game` (persiste além desta cena) que para o som assim que o
+   * aluno sair da tela de resultado — pro som não seguir tocando no menu.
+   *
+   * O canal `music` tem volume padrão bem mais baixo que o `sfx` (0.25 contra
+   * 0.8 — ver `AudioBus.volumes`): sem compensar, o efeito tocaria uns 3x mais
+   * baixo do que antes, e SOAVA ERRADO. `volume` aqui multiplica o ganho DESTE
+   * som por cima do ganho do canal, então a proporção sfx/music restaura o
+   * volume original mesmo tocando pelo canal `music`.
+   */
+  _tocarSomFimEPersistirAteResultado(id) {
+    const volumesCanal = this.audio.volumes ?? {};
+    const compensacao = (volumesCanal.sfx ?? 0.8) / (volumesCanal.music ?? 0.25);
+    this.audio.tocar(id, { canal: 'music', volume: compensacao }).then((handle) => {
+      if (!handle) return;
+      const desligar = this.game.on('cena', (nome) => {
+        if (nome === 'resultado') return; // ainda na tela de resultado, deixa tocar
+        handle.parar();
+        desligar();
+      });
+    });
+  }
+
   _comemorarBingoJogador(linha) {
+    // `_fimResolvido` só liga uns 5s depois (dentro de `_terminar`), então
+    // sem esta trava um segundo toque certo do aluno (ou uma segunda checagem
+    // da CPU) nessa janela repetia a comemoração inteira — som, brilho e
+    // destaque de novo, com um "atraso" que era na verdade a SEGUNDA vez
+    // começando por cima da primeira ainda tocando.
+    if (this._celebracaoIniciada) return;
+    this._celebracaoIniciada = true;
+    this._turnoAtivo = false;
+
     this._revelarCpu();
     this._cartelaVencedoraIndex = 0;
     this._linhaVencedoraAtiva = linha;
 
     this.bannerFeedback.texto = '🎉 BINGO! VOCÊ VENCEU! 🎉';
     this.bannerFeedback.cor = '#FACC15';
+    this._abrirOverlayFim('🎉 VOCÊ VENCEU! 🎉', '', '#FACC15');
+
+    this._tocarSomFimEPersistirAteResultado('acertoSOS');
+
+    // Brilho pulsante na cartela (ver cardNode.desenhar) + confete saindo
+    // dos 4 cantos da linha vencedora, em pequenas explosões escalonadas.
+    Tween.para(this, { _brilhoVitoria: 1 }, 200, Easing.suaveSaida);
+
+    const celulasDaCartela = this.todasCelulasPorCartela[0];
+    const pontosLinha = linha.map((idx) => celulasDaCartela[idx]).filter(Boolean);
+    pontosLinha.forEach((celula, i) => {
+      const cx = celula.x + celula.largura / 2;
+      const cy = celula.y + celula.altura / 2;
+      Tween.de({})
+        .esperar(i * 120)
+        .chamar(() => {
+          this.particulas.disparar({
+            x: cx,
+            y: cy,
+            cor: ['#FACC15', '#FDE047', '#4ADE80', '#38BDF8'][i % 4],
+            quantidade: 16,
+            tamanhoMin: 8,
+            tamanhoMax: 16,
+            velocidade: 180,
+            duracao: 0.8,
+          });
+        });
+    });
 
     // Anima o raio de vitória
     Tween.de(this)
@@ -1243,6 +1635,14 @@ export class GameScene extends Scene {
   }
 
   _comemorarBingoCpu(linha) {
+    // Mesma trava contra reentrada de `_comemorarBingoJogador` — aqui é ainda
+    // mais fácil de disparar duas vezes: a CPU tem VÁRIOS timers pendentes em
+    // paralelo (`_timersCpuPendentes`), e cada um checa BINGO por conta
+    // própria em `_cpuMarcarSeTiver`.
+    if (this._celebracaoIniciada) return;
+    this._celebracaoIniciada = true;
+    this._turnoAtivo = false;
+
     this._revelarCpu();
     this._cartelaVencedoraIndex = 1;
     this._linhaVencedoraAtiva = linha;
@@ -1250,10 +1650,23 @@ export class GameScene extends Scene {
     this.bannerFeedback.texto = '😵 O COMPUTADOR FEZ BINGO! VOCÊ PERDEU!';
     this.bannerFeedback.cor = '#EF4444';
 
-    // Anima o raio de vitória na cartela da CPU
+    this._tocarSomFimEPersistirAteResultado('erroSOS');
+
+    // Mesmo brilho pulsante do aluno, mas em ardósia (ver cardNode.desenhar)
+    // — bem visível, sem tom de festa nem de punição. Sem confete: a
+    // comemoração fica reservada pra vitória de verdade do aluno.
+    Tween.para(this, { _brilhoVitoria: 1 }, 200, Easing.suaveSaida);
+
+    // A vitória da CPU pode surgir do nada, no meio de outra pergunta, sem
+    // nenhum aquecimento — por isso fica mais tempo na tela antes de ir pro
+    // resultado: a criança precisa de uma folga real pra perceber o que
+    // aconteceu E LER "O COMPUTADOR VENCEU", não só um instante. A linha
+    // termina de se desenhar na cartela pequena, e só ENTÃO a cartela
+    // ampliada e borrada assume — ela já nasce mostrando a linha completa.
     Tween.de(this)
-      .entao({ _progressoLinha: 1 }, 600, Easing.suaveSaida)
-      .esperar(1500)
+      .entao({ _progressoLinha: 1 }, 900, Easing.suaveSaida)
+      .chamar(() => this._mostrarDestaqueCpu(linha))
+      .esperar(4200)
       .chamar(() => this._terminar(false));
   }
 
@@ -1267,11 +1680,23 @@ export class GameScene extends Scene {
     this._timersCpuPendentes.clear();
     this._turnoAtivo = false;
 
+    // Se o jogo acabou (bingo) com uma marca errada ainda pendente, conta —
+    // mesma regra de qualquer outra transição de rodada.
+    if (this._celulaErradaAtual) {
+      this._errosJogador++;
+      this._celulaErradaAtual = null;
+    }
+
     this.irPara('resultado', {
       nivel: this.nivel,
       resultado: {
+        // Revertido: "X PONTOS" e o `acertos` do AVA são o MESMO campo — a
+        // ResultScreen (motor, cópia gerada) lê `resultado.acertos` pras duas
+        // coisas, e o AvaBridge manda esse valor cru pro AVA. Não dá pra tela
+        // dizer 80 e o relatório dizer 8 sem editar esse arquivo compartilhado
+        // (usado por todos os jogos). Valor real: honesto na tela E no AVA.
         acertos: this._acertosJogador,
-        erros: this._acertosCpu, // CPU acertos são "erros" do jogador
+        erros: this._errosJogador, // erros REAIS do aluno (marca errada não corrigida)
         totalPerguntas: this.desafioIndex,
         nivel: this.nivel.id,
         vitoria: venceu,
