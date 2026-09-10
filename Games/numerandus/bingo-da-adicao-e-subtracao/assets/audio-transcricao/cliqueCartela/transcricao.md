@@ -32,11 +32,12 @@ a pendência de origem/licença, que é uma questão separada.
 
 ## Onde é usado no jogo
 
-Canal `sfx`, toca a cada toque numa célula da cartela do **aluno** (índice 0),
-independente de acertar ou errar — é o feedback de "sua escolha foi registrada",
-não um julgamento de certo/errado (isso já é feito pela cor da célula). A
-cartela do computador (índice 1) não tem esse som: o jogador não pode tocar
-nela, então não faz sentido nenhum som ali (ver `GameScene._construirCartelaVisual`).
+Canal `sfx`, via `config.audio.acerto`: toca quando o aluno acerta um número
+na própria cartela (`GameScene._aoTocarCelula`). NÃO toca junto com o som de
+erro (`erroCartela`) — os dois são mutuamente exclusivos, cada toque dispara
+no máximo um. Também não toca ao desfazer uma marca errada (tocar de novo na
+mesma célula errada) nem em nenhuma célula da cartela do computador — o
+jogador não pode tocar nela.
 
 ---
 

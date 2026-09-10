@@ -26,6 +26,11 @@ import { cores, tipografia, espaco } from '../theme/tokens.js';
  * `aoAjuda` é opcional: só faz sentido se a cena também tiver um `HelpScreen`.
  * Quando presente, um botão "?" nasce no canto oposto ao do som — pedir ajuda
  * não deveria exigir continuar a partida primeiro para então pedir ajuda.
+ *
+ * `mostrarSom` é opcional (padrão `true`, comportamento de sempre): quando o
+ * jogo já tem um controle de som sempre visível no HUD por trás do véu (fora
+ * da pausa), repetir o ícone aqui é redundante — `mostrarSom: false` tira o
+ * ícone SÓ deste painel, o som continua controlável pelo HUD.
  */
 export class PauseScreen extends Node {
   constructor(opcoes = {}) {
@@ -42,6 +47,7 @@ export class PauseScreen extends Node {
     this.aoReiniciar = opcoes.aoReiniciar ?? null;
     this.aoSair = opcoes.aoSair ?? null;
     this.aoAjuda = opcoes.aoAjuda ?? null;
+    this.mostrarSom = opcoes.mostrarSom ?? true;
 
     const L = this.largura;
     const A = this.altura;
@@ -94,13 +100,15 @@ export class PauseScreen extends Node {
       this.painel.adicionar(botao);
     });
 
-    this.painel.adicionar(new SoundToggle({
-      audio: this.audio,
-      x: larguraPainel - insetIcones - tamanhoIconeTopo,
-      y: 8,
-      tamanho: tamanhoIconeTopo,
-      somToque: this.config.audio?.clique,
-    }));
+    if (this.mostrarSom) {
+      this.painel.adicionar(new SoundToggle({
+        audio: this.audio,
+        x: larguraPainel - insetIcones - tamanhoIconeTopo,
+        y: 8,
+        tamanho: tamanhoIconeTopo,
+        somToque: this.config.audio?.clique,
+      }));
+    }
 
     // AJUDA, no canto OPOSTO ao som — a criança que pausou para pedir ajuda
     // não deveria precisar continuar a partida primeiro. Antes disto, o único

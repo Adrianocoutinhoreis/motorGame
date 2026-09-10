@@ -320,6 +320,11 @@ export class GameScene extends Scene {
     if (this.pausada || this.travado || this._fimResolvido) return;
     if (this.tabuleiro[indice]) return;
 
+    // Som da jogada — só a do ALUNO (reaproveitado do Bingo, onde tocava ao
+    // escolher um número na cartela). A jogada da CPU fica muda, mesmo
+    // espírito de lá: o jogador não "escolhe" a jogada dela.
+    this.audio?.efeito('cliqueJogada');
+
     this.tabuleiro[indice] = this.corAluno;
     this.celulas[indice].marcar(this.corAluno);
 

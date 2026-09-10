@@ -14,6 +14,11 @@ export default {
   objetivo: 'Calcular operações de adição e subtração mentalmente e marcar o resultado na sua cartela antes do computador fazer BINGO.',
   faixaEtaria: '5 a 8 anos',
 
+  // O Bingo soma respostas CERTAS, não pontos por combo/bônus — "X acertos"
+  // é o nome honesto do número na tela final (ResultScreen, motor). Não afeta
+  // a mensagem pro AVA, só a palavra escrita na tela do aluno.
+  unidadePlacar: { singular: 'acerto', plural: 'acertos' },
+
   // -------------------------------------------------------------- exibição
   largura: 1280,
   altura: 720,
@@ -117,6 +122,9 @@ export default {
     // tocável). Arquivo fornecido pelo humano. Ficha em
     // assets/audio-transcricao/cliqueCartela/.
     { id: 'cliqueCartela', src: './assets/audio/discord_ping_sound_effect.mp3' },
+    // Toque errado (provisório) na cartela do aluno. Arquivo fornecido pelo
+    // humano. Ficha em assets/audio-transcricao/erroCartela/.
+    { id: 'erroCartela', src: './assets/audio/error.mp3' },
   ],
 
   mascote: { telas: [] },
@@ -124,8 +132,10 @@ export default {
   audio: {
     musica: null,
     clique: null,
-    acerto: null,
-    erro: null,
+    // acerto/erro tocam na cartela do aluno, mutuamente exclusivos — nunca
+    // os dois juntos (ver GameScene._aoTocarCelula e BingoCellNode).
+    acerto: 'cliqueCartela',
+    erro: 'erroCartela',
     // Ficam null DE PROPÓSITO: a ResultScreen tocaria este som de novo ao
     // entrar, dobrando com o que o próprio Bingo já toca no instante do BINGO
     // (ver GameScene._tocarSomFimEPersistirAteResultado). Os arquivos

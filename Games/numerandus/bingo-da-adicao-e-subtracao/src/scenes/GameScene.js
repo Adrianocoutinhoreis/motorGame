@@ -28,8 +28,6 @@ class BingoCellNode extends Node {
     // ou acertando) ou até a rodada acabar, quando aí sim vira erro contado.
     this.errado = false;
     this.aoTocarNumero = opcoes.aoTocarNumero ?? null;
-    this.audio = opcoes.audio ?? null;
-    this.somToque = opcoes.somToque ?? null;
 
     this.regX = tamanho / 2;
     this.regY = tamanho / 2;
@@ -47,10 +45,11 @@ class BingoCellNode extends Node {
     this.on('apertar', () => this._pressao(true));
     this.on('soltar', () => this._pressao(false));
     this.on('sair', () => this._pressao(false));
-    this.on('toque', () => {
-      if (this.somToque) this.audio?.efeito(this.somToque);
-      this.aoTocarNumero?.(this);
-    });
+    // Sem som automático aqui: certo e errado tocam efeitos DIFERENTES e
+    // MUTUAMENTE EXCLUSIVOS (ver `GameScene._aoTocarCelula`) — um clique
+    // genérico em toda célula tocaria junto com o som de erro, e a criança
+    // ouviria "acerto + erro" ao mesmo tempo numa tentativa errada.
+    this.on('toque', () => this.aoTocarNumero?.(this));
   }
 
   _pressao(ativo) {
@@ -206,10 +205,22 @@ export class GameScene extends Scene {
     this._turnoAtivo = false;
     this._jogadorMarcouNesteTurno = false;
     this._cpuMarcouNesteTurno = false;
-    this._timerTurno = null;
+
+    // Relógio da rodada e decisão da CPU — movidos a QUADRO (`atualizar`),
+    // não por `setTimeout`. Um `setTimeout` corre em tempo de relógio real,
+    // por fora do jogo: Pausa e Ajuda são só um véu por cima da cena, então
+    // o tempo esgotava e a CPU "decidia" por baixo dele — a rodada mudava
+    // sozinha enquanto a criança lia a ajuda. `_pausadoProfundo` (ligado
+    // enquanto Pausa OU Ajuda estiverem abertas) trava os dois ao mesmo
+    // tempo (ver `atualizar`, `_abrirPausaProfunda`/`_fecharPausaProfunda`).
+    this._pausadoProfundo = false;
+    this._turnoRodando = false;
+    this._turnoTempoRestante = 0;
+    this._turnoTempoTotal = 0;
     // Decisões da CPU rodam em paralelo (uma por rodada, podem se acumular
-    // se o aluno passar rápido) — precisam de todas canceladas no fim do jogo.
-    this._timersCpuPendentes = new Set();
+    // se o aluno passar rápido) — cada uma é {restante, resultado}, em
+    // segundos, decrementada a quadro junto com o relógio da rodada.
+    this._cpuDecisoesPendentes = [];
     this._aguardandoProximaConta = false;
     this._ultimaContaEnviada = null;
     this._resultadoAtual = null;
@@ -317,6 +328,52 @@ export class GameScene extends Scene {
 
     // Iniciar primeira carta sorteada
     this._mostrarProximaConta();
+  }
+
+  /**
+   * Avança o relógio da rodada e as decisões pendentes da CPU — a quadro,
+   * `dt` em segundos. Congela por inteiro enquanto `_pausadoProfundo` (Pausa
+   * OU Ajuda abertas): nada aqui decrementa, e por isso nada expira por
+   * baixo do véu. Ver o comentário em `aoEntrar` sobre por que isto substitui
+   * `setTimeout`.
+   */
+  atualizar(dt) {
+    super.atualizar(dt);
+    if (this._pausadoProfundo || this._fimResolvido) return;
+
+    if (this._turnoRodando) {
+      this._turnoTempoRestante = Math.max(0, this._turnoTempoRestante - dt);
+      this._barraTempoProgresso = this._turnoTempoTotal > 0
+        ? this._turnoTempoRestante / this._turnoTempoTotal
+        : 0;
+      if (this._turnoTempoRestante <= 0) {
+        this._turnoRodando = false;
+        this._reagirCpuEAvancar();
+      }
+    }
+
+    if (this._cpuDecisoesPendentes.length > 0) {
+      const restantes = [];
+      for (const decisao of this._cpuDecisoesPendentes) {
+        decisao.restante -= dt;
+        if (decisao.restante <= 0) this._cpuMarcarSeTiver(decisao.resultado);
+        else restantes.push(decisao);
+      }
+      this._cpuDecisoesPendentes = restantes;
+    }
+  }
+
+  /** Liga ao abrir a Pausa OU a Ajuda — trava o relógio da rodada, as
+   * decisões da CPU (ver `atualizar`) e qualquer Tween em andamento. */
+  _abrirPausaProfunda() {
+    this._pausadoProfundo = true;
+    Tween.pausarTodos();
+  }
+
+  /** Desliga ao fechar — devolve o jogo exatamente de onde parou. */
+  _fecharPausaProfunda() {
+    this._pausadoProfundo = false;
+    Tween.retomarTodos();
   }
 
   _gerar2CartelasEDesafios() {
@@ -437,22 +494,33 @@ export class GameScene extends Scene {
   _construirCenario() {
     const { largura: L, altura: A } = this;
     const nodeFundo = new Node({ largura: L, altura: A });
-    nodeFundo.desenhar = (ctx) => {
-      // Fundo suave índigo/slate escuro
+
+    // Pinta o mesmo fundo numa área qualquer (`area`) — os gradientes ficam
+    // ANCORADOS na área LÓGICA (0,0 a L,A), nunca na área pintada, pra a
+    // barra do letterbox nunca aparecer como um retângulo à parte: é a
+    // mesma pintura, só maior, terminando na mesma cor sólida das bordas.
+    const pintarFundo = (ctx, area) => {
       const grad = ctx.createLinearGradient(0, 0, L * 0.3, A);
       grad.addColorStop(0, '#0F172A');
       grad.addColorStop(0.5, '#1E1B4B');
       grad.addColorStop(1, '#0F172A');
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, L, A);
+      ctx.fillRect(area.x, area.y, area.largura, area.altura);
 
-      // Halo sutil no centro
+      // Halo sutil no centro do JOGO, não da tela larga.
       const halo = ctx.createRadialGradient(L * 0.5, A * 0.4, 20, L * 0.5, A * 0.4, A * 0.6);
       halo.addColorStop(0, 'rgba(56, 189, 248, 0.12)');
       halo.addColorStop(1, 'rgba(15, 23, 42, 0)');
       ctx.fillStyle = halo;
-      ctx.fillRect(0, 0, L, A);
+      ctx.fillRect(area.x, area.y, area.largura, area.altura);
     };
+
+    nodeFundo.desenhar = (ctx) => pintarFundo(ctx, { x: 0, y: 0, largura: L, altura: A });
+    // Estende o mesmo cenário para dentro das barras do letterbox (monitor
+    // mais largo que 16:9) — em vez de deixar duas tarjas lisas e sem graça
+    // nas laterais. Ver `Stage.pintarSangria`/`Stage.renderizar` no motor.
+    nodeFundo.pintarSangria = (ctx, area) => pintarFundo(ctx, area);
+
     this.adicionar(nodeFundo);
   }
 
@@ -460,26 +528,35 @@ export class GameScene extends Scene {
     const { largura: L, config } = this;
 
     // Botão de Ajuda / Tutorial no HUD (RE-05)
-    this.telaAjuda = new HelpScreen({
-      cena: this,
-      aoFechar: () => {
-        this.pausada = false;
-      },
-    });
+    this.telaAjuda = new HelpScreen({ cena: this });
     this.adicionar(this.telaAjuda);
 
+    // Sem `aoAjuda` nem `mostrarSom` aqui de propósito: o HUD por trás do véu
+    // já tem os dois ícones sempre visíveis (pausa/ajuda no canto esquerdo,
+    // som no direito) — repeti-los dentro do painel de pausa era redundante.
     this.telaPausa = new PauseScreen({
       audio: this.audio,
       config,
       somToque: config.audio?.clique,
-      aoAjuda: () => {
-        this.telaPausa.fechar();
-        this.telaAjuda.abrir();
-      },
+      mostrarSom: false,
       aoReiniciar: () => this.irPara('jogando'),
       aoSair: () => this.irPara('menu'),
     });
     this.adicionar(this.telaPausa);
+
+    // RE-05: pedir ajuda (ou pausar) não pode consumir o tempo da rodada nem
+    // deixar a CPU decidir por baixo do véu. `_pausadoProfundo` trava o
+    // relógio da rodada e as decisões da CPU (ver `atualizar`), e
+    // `Tween.pausarTodos/retomarTodos` cuida de qualquer outra animação em
+    // curso (tremor de erro, brilho, flip de carta) — o mesmo par que o
+    // Jogo das Cores já usa para o mesmo problema.
+    //
+    // Pausar ANTES de abrir, nunca depois: `abrir()` já dispara a própria
+    // animação de entrada do painel (escala/alpha), e pausar DEPOIS pausaria
+    // essa animação também — o painel "travaria" a meio caminho da entrada.
+    // Retomar ao fechar não tem esse risco, por isso fica no evento.
+    this.telaAjuda.on('fechou', () => this._fecharPausaProfunda());
+    this.telaPausa.on('fechou', () => this._fecharPausaProfunda());
 
     // Botão Pausa (Canto Superior Esquerdo)
     this.adicionar(new IconButton({
@@ -488,7 +565,10 @@ export class GameScene extends Scene {
       y: espaco.md,
       audio: this.audio,
       somToque: config.audio?.clique,
-      aoTocar: () => this.telaPausa.abrir(),
+      aoTocar: () => {
+        this._abrirPausaProfunda();
+        this.telaPausa.abrir();
+      },
     }));
 
     // Botão Ajuda / Tutorial (Canto Superior Esquerdo ao lado da pausa)
@@ -498,7 +578,10 @@ export class GameScene extends Scene {
       y: espaco.md,
       audio: this.audio,
       somToque: config.audio?.clique,
-      aoTocar: () => this.telaAjuda.abrir(),
+      aoTocar: () => {
+        this._abrirPausaProfunda();
+        this.telaAjuda.abrir();
+      },
     }));
 
     // Botão Som (Canto Superior Direito)
@@ -738,10 +821,16 @@ export class GameScene extends Scene {
       ctx.roundRect(0, 0, cardW, 10, [18, 18, 0, 0]);
       ctx.fill();
 
-      ctx.fillStyle = tema.primary;
-      ctx.font = `bold ${Math.round(Math.min(18, cardW * 0.05))}px ${tipografia.familia}`;
-      ctx.textAlign = 'center';
-      ctx.fillText(tema.nome, cardW / 2, Math.max(24, nomeSpace * 0.62));
+      // "VOCÊ" saiu da cartela do aluno — ela já é a grande, centralizada,
+      // óbvia sem precisar de rótulo. "COMPUTADOR" continua na cartela dele
+      // (menor, à direita, normalmente virada), onde o rótulo ainda ajuda a
+      // identificar de quem é ao espiar.
+      if (ci !== 0) {
+        ctx.fillStyle = tema.primary;
+        ctx.font = `bold ${Math.round(Math.min(18, cardW * 0.05))}px ${tipografia.familia}`;
+        ctx.textAlign = 'center';
+        ctx.fillText(tema.nome, cardW / 2, Math.max(24, nomeSpace * 0.62));
+      }
 
       // Brilho pulsante na cartela inteira do vencedor — dourado pro
       // aluno (festa), ardósia pra CPU (sem tom de comemoração nem de
@@ -807,10 +896,9 @@ export class GameScene extends Scene {
           x: cellX,
           y: cellY,
           tamanho: cellSize,
-          audio: this.audio,
-          // Só a cartela do ALUNO (ci === 0) toca ao escolher um número — a
-          // do CPU não é tocável pelo jogador, não faz sentido ter som ali.
-          somToque: ci === 0 ? 'cliqueCartela' : null,
+          // Som de acerto/erro é decidido em `_aoTocarCelula` (mutuamente
+          // exclusivos), não aqui — só a cartela do ALUNO chega lá de
+          // verdade (a da CPU não é tocável, `_aoTocarCelula` sai cedo).
           aoTocarNumero: (cell) => this._aoTocarCelula(cell),
         });
 
@@ -955,7 +1043,6 @@ export class GameScene extends Scene {
     const ctrlH = controleBarra.h;
 
     this._barraTempoProgresso = 1;
-    this._barraTempoAtiva = false;
 
     // Só a barra de progresso agora — o botão PRÓXIMA virou um elemento à
     // parte, solto logo abaixo (ver _adicionarBotaoPassar), sem dividir o
@@ -980,7 +1067,7 @@ export class GameScene extends Scene {
       ctx.fill();
       ctx.stroke();
 
-      if (this._barraTempoAtiva) {
+      if (this._turnoRodando) {
         const barraX = 20;
         const barraLargura = l - 40;
         const barraAltura = 14;
@@ -1080,27 +1167,17 @@ export class GameScene extends Scene {
     this._existeNaJogador = existeNaJogador;
     this._existeNaCpu = existeNaCpu;
 
-    // Tempo que o aluno tem para pensar e marcar (configurável por nível)
-    const tempoParaPensar = this.nivel.tempoPensarMs || 60000;
+    // Tempo que o aluno tem para pensar e marcar (configurável por nível) —
+    // relógio próprio a quadro (ver `atualizar`), não Tween nem setTimeout:
+    // os dois correm em tempo real, por fora da Pausa/Ajuda.
+    const tempoParaPensarSeg = (this.nivel.tempoPensarMs || 60000) / 1000;
+    this._turnoTempoTotal = tempoParaPensarSeg;
+    this._turnoTempoRestante = tempoParaPensarSeg;
     this._barraTempoProgresso = 1;
-    this._barraTempoAtiva = true;
+    this._turnoRodando = true;
 
     // Botão aparece imediatamente — aluno decide primeiro
     this.botaoPassar.visible = true;
-
-    // Iniciar animação da barra de tempo
-    Tween.de(this)
-      .entao({ _barraTempoProgresso: 0 }, tempoParaPensar, Easing.linear)
-      .chamar(() => {
-        this._barraTempoAtiva = false;
-      });
-
-    // Timer para quando o tempo do aluno acabar
-    this._timerTurno = setTimeout(() => {
-      if (this._fimResolvido || !this._turnoAtivo) return;
-      // Tempo esgotou — CPU reage e depois avança
-      this._reagirCpuEAvancar();
-    }, tempoParaPensar);
 
     // Sem dica de quem tem o número, e sem texto de instrução — o aluno
     // resolve a conta e confere na própria cartela; a marcação (âmbar se
@@ -1120,9 +1197,8 @@ export class GameScene extends Scene {
   _reagirCpuEAvancar() {
     if (this._fimResolvido || !this._turnoAtivo) return;
 
-    clearTimeout(this._timerTurno);
+    this._turnoRodando = false;
     Tween.removerDe(this);
-    this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
 
     // A rodada está terminando — SÓ AGORA uma marca errada vira erro
@@ -1140,18 +1216,15 @@ export class GameScene extends Scene {
     this.botaoPassar.visible = false;
     this._virarCpu();
 
-    // Agenda a decisão da CPU num timer à parte — captura o resultado
-    // DESTA rodada agora, porque this._resultadoAtual já vai ter mudado
-    // quando o timer disparar (a próxima pergunta já estará em andamento).
+    // Agenda a decisão da CPU à parte — captura o resultado DESTA rodada
+    // agora, porque this._resultadoAtual já vai ter mudado quando a decisão
+    // disparar (a próxima pergunta já estará em andamento). Em segundos, e
+    // decrementada a quadro em `atualizar` — junto do relógio da rodada,
+    // então também congela na Pausa/Ajuda.
     if (this._existeNaCpu) {
       const resultadoDaRodada = this._resultadoAtual;
-      const tempoReacaoCpu = this._cpuTempoMin + Math.random() * (this._cpuTempoMax - this._cpuTempoMin);
-      const idTimer = setTimeout(() => {
-        this._timersCpuPendentes.delete(idTimer);
-        if (this._fimResolvido) return;
-        this._cpuMarcarSeTiver(resultadoDaRodada);
-      }, tempoReacaoCpu);
-      this._timersCpuPendentes.add(idTimer);
+      const tempoReacaoCpuMs = this._cpuTempoMin + Math.random() * (this._cpuTempoMax - this._cpuTempoMin);
+      this._cpuDecisoesPendentes.push({ restante: tempoReacaoCpuMs / 1000, resultado: resultadoDaRodada });
     }
 
     this._finalizarTurno();
@@ -1179,7 +1252,9 @@ export class GameScene extends Scene {
     celulaAlvo.marcarComAnimacao();
     this._acertosCpu++;
 
-    if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
+    // Sem som aqui de propósito: o efeito de acerto é feedback PRO ALUNO
+    // sobre a própria jogada, não uma narração do que a CPU faz fora de
+    // vista — ela já decide "fora de vista" (ver comentário mais abaixo).
 
     // Verificar se a CPU fez BINGO
     const vitoriaCpu = this._verificarLinhaVencedora(1);
@@ -1201,11 +1276,11 @@ export class GameScene extends Scene {
     // (ver _reagirCpuEAvancar) — quem quisesse ver o que ele decidiu já
     // teve a chance de espiar antes disso, no próprio ritmo.
 
-    // Limpar timer e cancelar Tweens (a decisão da CPU tem seu próprio
-    // timer independente agora — não é cancelada aqui, ver _reagirCpuEAvancar)
-    clearTimeout(this._timerTurno);
+    // Para o relógio da rodada e cancela Tweens (a decisão da CPU tem sua
+    // própria contagem independente agora — não é cancelada aqui, ver
+    // _reagirCpuEAvancar)
+    this._turnoRodando = false;
     Tween.removerDe(this);
-    this._barraTempoAtiva = false;
     this._barraTempoProgresso = 1;
 
     // Resetar flags de marcação
@@ -1229,7 +1304,7 @@ export class GameScene extends Scene {
    * Pular conta quando o resultado não existe em nenhuma cartela.
    */
   _pularContaSemResultado() {
-    this._barraTempoAtiva = false;
+    this._turnoRodando = false;
     this._barraTempoProgresso = 1;
     this.botaoPassar.visible = false;
     this._jogadorMarcouNesteTurno = false;
@@ -1636,8 +1711,8 @@ export class GameScene extends Scene {
 
   _comemorarBingoCpu(linha) {
     // Mesma trava contra reentrada de `_comemorarBingoJogador` — aqui é ainda
-    // mais fácil de disparar duas vezes: a CPU tem VÁRIOS timers pendentes em
-    // paralelo (`_timersCpuPendentes`), e cada um checa BINGO por conta
+    // mais fácil de disparar duas vezes: a CPU tem VÁRIAS decisões pendentes
+    // em paralelo (`_cpuDecisoesPendentes`), e cada uma checa BINGO por conta
     // própria em `_cpuMarcarSeTiver`.
     if (this._celebracaoIniciada) return;
     this._celebracaoIniciada = true;
@@ -1674,10 +1749,9 @@ export class GameScene extends Scene {
     if (this._fimResolvido) return;
     this._fimResolvido = true;
 
-    // Limpar timer de turno e qualquer decisão de CPU ainda pendente em paralelo
-    clearTimeout(this._timerTurno);
-    this._timersCpuPendentes.forEach((id) => clearTimeout(id));
-    this._timersCpuPendentes.clear();
+    // Para o relógio de turno e qualquer decisão de CPU ainda pendente
+    this._turnoRodando = false;
+    this._cpuDecisoesPendentes = [];
     this._turnoAtivo = false;
 
     // Se o jogo acabou (bingo) com uma marca errada ainda pendente, conta —

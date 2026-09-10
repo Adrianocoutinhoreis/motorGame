@@ -305,8 +305,17 @@ export class ResultScreen extends Scene {
     // `pontos` está declarado junto com o cálculo das estrelas, acima: é o mesmo
     // número alimentando as duas leituras, e separá-los era o caminho curto para
     // a fileira dizer uma coisa e a linha dizer outra.
+    //
+    // A UNIDADE ("ponto"/"pontos") é opcionalmente trocável por
+    // `config.unidadePlacar: { singular, plural }` — sem isso no config, o
+    // comportamento de todo jogo continua exatamente o mesmo de antes. Existe
+    // porque nem todo jogo pontua de verdade: o Bingo soma ACERTOS (respostas
+    // certas), não pontos por combo/bônus, e "8 pontos" mentia sobre o que os
+    // 8 eram. A REGRA (RE-03: a unidade, não uma fração) não muda — só a
+    // palavra que nomeia essa unidade.
+    const unidade = config.unidadePlacar ?? { singular: 'ponto', plural: 'pontos' };
     painel.adicionar(new TextNode(
-      `${pontos} ${pontos === 1 ? 'ponto' : 'pontos'}`,
+      `${pontos} ${pontos === 1 ? unidade.singular : unidade.plural}`,
       {
         x: larguraPainel / 2,
         y: yTitulo + PASSO_TITULO + PASSO_ESTRELAS,

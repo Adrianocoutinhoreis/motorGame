@@ -155,6 +155,16 @@ export default {
     { id: 'tutorial_tela1', src: './assets/audio/tutorial_tela1.wav' },
     { id: 'tutorial_tela2', src: './assets/audio/tutorial_tela2.wav' },
     { id: 'tutorial_tela3', src: './assets/audio/tutorial_tela3.wav' },
+    // Efeitos de fim de partida — reaproveitados de Jogo das Formas/Blocos/
+    // Cores/Bingo (mesmo arquivo, mesmo SHA-256 em todos). Sem fala, então
+    // servem a qualquer jogo da coleção. Ficha em
+    // assets/audio-transcricao/acertoSOS|erroSOS/.
+    { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
+    { id: 'erroSOS', src: './assets/audio/erroSOS.wav' },
+    // Clique da jogada do ALUNO (toque numa casa vazia do tabuleiro) —
+    // reaproveitado do Bingo (mesmo arquivo, `cliqueCartela` lá). A jogada
+    // da CPU não tem esse som. Ficha em assets/audio-transcricao/cliqueJogada/.
+    { id: 'cliqueJogada', src: './assets/audio/discord_ping_sound_effect.mp3' },
   ],
 
   /**
@@ -166,11 +176,13 @@ export default {
   mascote: { telas: [] },
 
   /**
-   * Mapa de sons. Todos `null` nesta primeira entrega — decisão consciente,
-   * não esquecimento: a regra do motor é todo som vir de arquivo GRAVADO
-   * (nunca sintetizado), e ainda não há gravação para este jogo. O jogo abre
-   * em silêncio e o console nomeia o que falta, como qualquer outro jogo do
-   * motor sem asset pronto.
+   * Mapa de sons. `vitoria`/`derrota` reaproveitam o efeito compartilhado
+   * (ver `assets`, acima) — os demais seguem `null`: decisão consciente, não
+   * esquecimento. A regra do motor é todo som vir de arquivo GRAVADO (nunca
+   * sintetizado), e ainda não há gravação própria pra clique/acerto/erro/
+   * abertura/falas deste jogo. O jogo fica em silêncio nesses pontos e o
+   * console nomeia o que falta, como qualquer outro jogo do motor sem asset
+   * pronto.
    *
    * `empate` e `falaEmpate` são campos novos, lidos pela `ResultScreen` só
    * quando a partida termina em empate (extras.empate) — ver
@@ -181,8 +193,10 @@ export default {
     clique: null,
     acerto: null,
     erro: null,
-    vitoria: null,
-    derrota: null,
+    // Diferente do Bingo: aqui não há comemoração própria na cena de jogo,
+    // então a ResultScreen é a ÚNICA a tocar este som — sem risco de dobrar.
+    vitoria: 'acertoSOS',
+    derrota: 'erroSOS',
     empate: null,
     abertura: null,
     falaVitoria: null,
