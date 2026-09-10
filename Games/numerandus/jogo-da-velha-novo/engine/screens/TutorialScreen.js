@@ -207,14 +207,18 @@ export class TutorialScreen extends Scene {
     });
     this.botaoJogar.visible = false;
 
+    // Sobre que fundo o contador cai? No modo ajuda é sempre o VÉU escuro
+    // (não o cenário do tutorial) — em tinta escura ele quase desaparecia.
+    // Fora do modo ajuda, o padrão é o cenário claro dos temas de campo, mas
+    // o tema 'quarto' termina na prateleira de madeira ESCURA (ver
+    // `Background._chao`), e essa faixa cai bem onde este texto fica — a
+    // mesma tinta escura ficaria ilegível ali também.
+    const sobreFundoEscuro = this.aoFecharAjuda || config.tema === 'quarto';
     this.contador = new TextNode('', {
       x: L / 2,
       y: yNav + 96,
       tamanho: tipografia.apoio,
-      // No modo ajuda este texto cai sobre o VÉU escuro, não sobre o cenário
-      // claro do tutorial: em tinta escura ele quase desaparecia. Visto numa
-      // captura — nenhum teste julgaria contraste.
-      cor: this.aoFecharAjuda ? cores.superficie : cores.tinta,
+      cor: sobreFundoEscuro ? cores.superficie : cores.tinta,
       alinhamento: 'center',
     });
 

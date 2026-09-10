@@ -260,6 +260,16 @@ class PlacaTituloMadeira extends Node {
 }
 
 /**
+ * PlacaTituloQuarto — placa simples e neutra, para o tema 'quarto' (quarto de
+ * leitura). O CENÁRIO é quem carrega o tema aqui (parede + prateleira, ver
+ * `Background`) — a placa não precisa repetir o vocabulário de "livro" ou
+ * "madeira": um cartão liso, na mesma linha da `PlacaTituloLimpa`, evita virar
+ * mais um elemento de jogo competindo com o tabuleiro (mesmo raciocínio que
+ * já vale para as formas na `PlacaTituloLimpa`, acima).
+ */
+class PlacaTituloQuarto extends PlacaTituloLimpa {}
+
+/**
  * PlacaTituloBingo — placa temática no estilo de cartão de bingo moderno,
  * com friso superior brilhante em 4 cores, painel branco limpo, sombra suave
  * e subtítulo em pílula destacada.
@@ -354,6 +364,7 @@ export class MenuScreen extends Scene {
     const Placa = config.tema === 'formas' ? PlacaTituloLimpa
       : config.tema === 'quadro' ? PlacaTituloQuadro
       : config.tema === 'bingo' ? PlacaTituloBingo
+      : config.tema === 'quarto' ? PlacaTituloQuarto
       : PlacaTituloMadeira;
     this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',

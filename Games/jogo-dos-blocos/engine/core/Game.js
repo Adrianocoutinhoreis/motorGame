@@ -179,6 +179,17 @@ export class Game extends Emitter {
     try {
       this.dados = { ...this.dados, ...dados };
 
+      // O tempo (`resultado.tempoSegundos`) precisa estar no `resultado` ANTES
+      // de `cena.aoEntrar()` rodar, não depois: é a `ResultScreen` entrando
+      // que lê `this.dados.resultado` para montar a tela (o eco opcional que
+      // `config.mostrarTempo` liga), e `aoEntrar()` roda umas linhas abaixo,
+      // antes de `_definirEstado` sequer existir nesta chamada. Um tempo
+      // mesclado só depois de `aoEntrar()` chegaria tarde demais — a tela já
+      // teria decidido, sem ele, que não havia tempo para mostrar.
+      if (this.dados.resultado) {
+        this.dados.resultado = { ...this.dados.resultado, tempoSegundos: Math.round(this._tempoJogando) };
+      }
+
       if (this.cena) {
         this.stage.raiz.remover(this.cena);
         this.cena._desmontar();
@@ -252,15 +263,13 @@ export class Game extends Emitter {
     if (novo === ESTADOS.RESULTADO) {
       // Borda de SUBIDA: fim de uma partida → registra uma vez.
       //
-      // O tempo vai como SEGUNDO argumento, e não misturado no resultado do
-      // jogo, porque a origem do dado importa: este número é medido pelo motor.
-      // Manter separado também preserva a guarda de honestidade do `AvaBridge` —
-      // `concluir(null)` continua avisando que o jogo não entregou resultado, em
-      // vez de o tempo disfarçar a falta com um objeto que parece preenchido.
-      this.ava.concluir(this.dados.resultado ?? null, {
-        tempoSegundos: Math.round(this._tempoJogando),
-        ajuda: this._ajudasPedidas,
-      });
+      // `tempoSegundos` já foi mesclado em `this.dados.resultado` — ver
+      // `irPara`, ANTES de `cena.aoEntrar()` rodar (a `ResultScreen` precisa
+      // dele pronto ao montar a tela). Aqui só se lê de volta, com um
+      // fallback só para o caso de o jogo não ter entregado resultado nenhum
+      // (`?? null` abaixo) — `concluir(null)` continua avisando essa falta.
+      const tempoSegundos = this.dados.resultado?.tempoSegundos ?? Math.round(this._tempoJogando);
+      this.ava.concluir(this.dados.resultado ?? null, { tempoSegundos, ajuda: this._ajudasPedidas });
     } else if (anterior === ESTADOS.RESULTADO) {
       // Borda de DESCIDA: saiu do resultado → re-arma para a próxima partida.
       this.ava.rearmar();

@@ -16,16 +16,17 @@ export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
-    // Tema 'quadro' e 'bingo': sem sol aberto nem nuvem de céu ensolarado por padrão
-    this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro' && this.tema !== 'bingo');
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo');
+    // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem nuvem
+    // de céu ensolarado por padrão — não têm céu de verdade, têm parede/tinta.
+    this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto');
 
     /**
      * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
@@ -280,6 +281,18 @@ export class Background extends Node {
       return;
     }
 
+    if (this.tema === 'quarto') {
+      // Prateleira de madeira no rodapé — o "chão" de um quarto de leitura,
+      // não uma colina. Friso mais claro no topo simula a borda iluminada da
+      // tábua, como no tema 'quadro' faz para a bandeja de giz.
+      const topoPrateleira = a * 0.9;
+      ctx.fillStyle = '#7C2D12';
+      ctx.fillRect(-sx, topoPrateleira, l + sx * 2, a + sy - topoPrateleira);
+      ctx.fillStyle = '#B45309';
+      ctx.fillRect(-sx, topoPrateleira, l + sx * 2, 8);
+      return;
+    }
+
     if (this.mostrarColinas) {
       this._colina(ctx, a * 0.78, this.corColinaFundo, 0.9, sx, sy);
       this._colina(ctx, a * 0.86, this.corColina, 1.15, sx, sy);
@@ -302,8 +315,8 @@ export class Background extends Node {
 
     this._ceu(ctx);
 
-    // Sol radiante — nunca nos temas 'quadro' e 'bingo'
-    if (this.mostrarSol && this.tema !== 'quadro' && this.tema !== 'bingo') {
+    // Sol radiante — nunca nos temas de interior ('quadro', 'bingo', 'quarto')
+    if (this.mostrarSol && this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto') {
       const sx = l * 0.88;
       const sy = a * 0.14;
       const brilho = ctx.createRadialGradient(sx, sy, 10, sx, sy, a * 0.28);
@@ -322,8 +335,8 @@ export class Background extends Node {
       ctx.fill();
     }
 
-    // Nuvens dinâmicas — não nos temas 'quadro' e 'bingo'
-    if (this.tema !== 'quadro' && this.tema !== 'bingo') {
+    // Nuvens dinâmicas — não nos temas de interior
+    if (this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto') {
       for (const nuvem of this.nuvens) {
         this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
       }
@@ -332,6 +345,7 @@ export class Background extends Node {
     if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
     if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
     if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
+    if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
     this._chao(ctx);
   }
 
@@ -378,6 +392,60 @@ export class Background extends Node {
 
       ctx.restore();
     }
+  }
+
+  /**
+   * Tema 'quarto' — o quarto de leitura do Jogo da Ordenação.
+   *
+   * Números soltos em círculos foram a primeira tentativa aqui e não convenceram:
+   * liam como enfeite de outro jogo colado na parede, não como o quarto. Um
+   * "livro" solto também já foi tentado antes e retirado por pedido — o
+   * tabuleiro é a única peça de leitura que importa nesta tela. Um facho de
+   * abajur também já esteve aqui e saiu por pedido — a parede em si já é uma
+   * lousa verde (ver `corCeuTopo`/`corCeuBase` e `_chao`), sem precisar de um
+   * "sol" de canto para ficar acolhedora.
+   *
+   * O que fica são números de giz branco subindo devagar pela lousa — o
+   * conteúdo do próprio jogo, mas sem virar ícone parado: sempre na mesma
+   * velocidade, sem girar nem balançar, um único movimento simples.
+   */
+  _desenharDecoracoesQuarto(ctx, l, a) {
+    // Cada número deriva de verdade (sobe e reaparece por baixo), não o
+    // balanço no lugar que as outras decorações usam — é o que faz ler como
+    // algo subindo pela parede, não como mais uma peça flutuante.
+    //
+    // `fase` é escolhida para que, em t=0, os seis já apareçam ESPALHADOS pela
+    // altura visível (não empilhados perto do chão): fase grande = nasce perto
+    // do teto, fase pequena = nasce perto da prateleira. Sem esse espalhamento
+    // inicial, os seis nascem juntos na faixa que acabou de reaparecer por
+    // baixo e ficam invisíveis (atrás da prateleira) por vários segundos.
+    //
+    // `x` cobre os dois lados da tela (0,08 a 0,32 à esquerda, 0,68 a 0,92 à
+    // direita) — não só um canto — deixando livre a faixa central onde o
+    // painel do nível e o tabuleiro da partida ficam.
+    const numeros = [
+      { x: 0.82, txt: '5', tam: 30, alfa: 0.22, velocidade: 14, fase: 730 },
+      { x: 0.18, txt: '2', tam: 24, alfa: 0.17, velocidade: 10, fase: 610 },
+      { x: 0.92, txt: '9', tam: 27, alfa: 0.20, velocidade: 12, fase: 490 },
+      { x: 0.08, txt: '0', tam: 20, alfa: 0.15, velocidade: 9, fase: 370 },
+      { x: 0.68, txt: '7', tam: 23, alfa: 0.16, velocidade: 11, fase: 250 },
+      { x: 0.32, txt: '3', tam: 19, alfa: 0.14, velocidade: 8, fase: 130 },
+    ];
+    const altura = a + 60;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Giz branco puro — não o creme quente usado sobre a madeira do rascunho
+    // anterior, que sumiria contra uma lousa escura.
+    ctx.fillStyle = '#FFFFFF';
+    for (const n of numeros) {
+      const y = altura - ((this._t * n.velocidade + n.fase) % altura);
+      const desvio = Math.sin(this._t / 4 + n.fase) * 6;
+      ctx.globalAlpha = n.alfa;
+      ctx.font = `800 ${n.tam}px system-ui, sans-serif`;
+      ctx.fillText(n.txt, n.x * l + desvio, y);
+    }
+    ctx.restore();
   }
 
   /**

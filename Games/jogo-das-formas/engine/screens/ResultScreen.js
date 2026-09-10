@@ -326,6 +326,29 @@ export class ResultScreen extends Scene {
       },
     ));
 
+    /**
+     * Tempo da partida — LINHA OPCIONAL, `config.mostrarTempo` (padrão
+     * `false`): sem isso no config, nenhum jogo muda de comportamento. Nasceu
+     * do Jogo da Ordenação, onde quanto tempo o aluno levou é uma informação
+     * relevante (não há derrota nem meta de tempo, então o placar sozinho diz
+     * pouco sobre o desempenho). Não é REGRA nova — é dado opcional que só o
+     * jogo que pedir mostra, igual `unidadePlacar` acima.
+     */
+    if (config.mostrarTempo && Number.isFinite(resultado.tempoSegundos)) {
+      const total = Math.max(0, Math.round(resultado.tempoSegundos));
+      const min = Math.floor(total / 60);
+      const seg = total % 60;
+      const tempoTexto = `${min}:${String(seg).padStart(2, '0')}`;
+      painel.adicionar(new TextNode(tempoTexto, {
+        x: larguraPainel / 2,
+        y: yTitulo + PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 0.9,
+        tamanho: tipografia.apoio,
+        peso: tipografia.pesoNormal,
+        cor: cores.tintaSuave,
+        alinhamento: 'center',
+      }));
+    }
+
     // ------------------------------------------------------------- mascote
     // Agora que há chão atrás, o mascote se apoia nele: 0.82 é a linha do
     // horizonte do `Background` no tema construção, e descontar meia altura põe
