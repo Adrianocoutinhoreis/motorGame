@@ -14,7 +14,8 @@ Jogo de Bingo competitivo onde a criança calcula mentalmente operações de adi
 
 O jogo possui **dois jogadores**:
 - **Jogador** (cartela azul) — controlado pela criança
-- **Computador** (cartela vermelha) — IA controlada pelo jogo
+- **Computador** (cartela ardósia/cinza-azulado) — IA controlada pelo jogo; a cartela dele
+  começa sempre virada ("?"), e só é revelada quando o aluno pede (botão ESPIAR CARTELA)
 
 **Regra de vitória:** Complete 4 fichas em linha (horizontal, vertical ou diagonal) na sua cartela antes do computador fazer o mesmo.
 
@@ -43,13 +44,18 @@ Ao concluir a partida, o jogo emite:
 ```js
 {
   type: "JOGO_CONCLUIDO",
-  acertos: 8,           // acertos do jogador
-  erros: 5,             // acertos da CPU (erros do jogador)
-  totalPerguntas: 13,   // total de desafios sorteados
+  acertos: 8,            // acertos REAIS do jogador (bruto, sem desconto de erro — ver CHECKLIST.md, RE-02)
+  erros: 1,              // erros REAIS do jogador (marca errada não corrigida até o fim da rodada)
+  totalPerguntas: 13,    // total de desafios sorteados
   nivel: 1,
   jogo: "bingo-da-adicao-e-subtracao",
   vitoria: true,
   tempoSegundos: 45,
-  ajuda: 0
+  ajuda: 0,
+  acertosJogador: 8,     // extra — igual a `acertos`, pra clareza do relatório
+  acertosCpu: 5          // extra — acertos da CPU (não confundir com `erros`, que é só do aluno)
 }
 ```
+
+A tela final mostra "N ACERTOS" (não "N PONTOS") — palavra customizada via
+`config.unidadePlacar`, sem mudar o valor enviado ao AVA.

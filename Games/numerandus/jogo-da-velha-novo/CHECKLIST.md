@@ -4,6 +4,9 @@
 > Um item que não se aplica deve ser **riscado com a justificativa**, nunca marcado por engano.
 >
 > Slug: `jogo-da-velha-novo` · Criado em: 2026-09-03 · Motor: v1.3.5
+> **Atualizado em: 2026-09-10** — som de vitória/derrota/jogada adicionado (seção 2); item
+> falso sobre o tempo pausar durante a Ajuda corrigido (seção 3) — a pendência real (mesmo
+> defeito já corrigido no Bingo) fica registrada lá.
 
 ---
 
@@ -41,19 +44,24 @@
       original (`assets/img/x.png`/`o.png`, ids `pecaVermelha`/`pecaAzul` — o jogo não fala em
       X/O em lugar nenhum, nem no fallback vetorial quando a imagem falha: é sempre um círculo
       chapado na cor certa, nunca um traço em forma de X ou O)
-- [x] Áudio de narração do **tutorial** presente (3 passos, `tutorial_tela1/2/3.wav`) — o
-      resto do conteúdo falado do jogo (música, cliques, vitória/derrota/empate, escolha de
-      cor) continua **pendente**, sem gravação nesta entrega (ver `README.md`)
-- [ ] ~~Efeitos de acerto, erro e clique presentes~~ — **pendente**, mesmo motivo
+- [x] Áudio de narração do **tutorial** presente (3 passos, `tutorial_tela1/2/3.wav`).
+- [x] Efeitos de **vitória/derrota** presentes (`acertoSOS`/`erroSOS`, reaproveitados de
+      Formas/Blocos/Cores/Bingo — mesmo arquivo, mesmo SHA-256 em todos) e de **clique da
+      jogada do aluno** (`cliqueJogada`, mesmo som do Bingo, `discord_ping_sound_effect.mp3`)
+      — atualizado em 10/09. Continuam **pendentes**: música, empate (`audio.empate`) e as
+      falas de resultado (`falaVitoria`/`falaDerrota`/`falaEmpate`/`escolhaCor`) — todos
+      `null`, sem gravação ainda.
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [ ] ~~Origem/licença de cada asset registrada no `README.md`~~ — **parcialmente pendente**:
       os 3 áudios do tutorial estão na tabela, mas com origem/licença marcadas "a confirmar"
-      (chegaram prontos nesta sessão, sem essa informação) — falta perguntar/registrar quem
-      gravou e a licença
-- [x] Ficha de transcrição criada para cada áudio existente (`assets/audio-transcricao/
-      tutorial_tela1/2/3/transcricao.md`) — conferido com `node tools/audio-info.mjs
-      numerandus/jogo-da-velha-novo` (APROVADO: tudo declarado, tudo com ficha, hash batendo)
+      (chegaram prontos nesta sessão, sem essa informação). O mesmo vale para `acertoSOS`/
+      `erroSOS` (origem documentada: Aula original 870298 — Educandus) e para `cliqueJogada`
+      (nome genérico, `discord_ping_sound_effect.mp3`, sem procedência — mesma pendência já
+      registrada no Bingo, é o mesmo arquivo)
+- [x] Ficha de transcrição criada para cada áudio existente, incluindo os três novos
+      (`assets/audio-transcricao/acertoSOS|erroSOS|cliqueJogada/transcricao.md`) — conferido
+      com `node tools/audio-info.mjs numerandus/jogo-da-velha-novo`
 - [ ] ~~Transcrições confirmadas ouvindo~~ — **pendente**: as 3 fichas estão como 🟡 INFERIDA
       (deduzidas do texto da tela + duração/ritmo de fala, não ouvidas) — falta alguém ouvir e
       confirmar, ou corrigir
@@ -105,8 +113,17 @@
 - [x] **Pausa** com continuar / recomeçar / sair (herdada do `PauseScreen` padrão)
 - [x] **Ajuda** na partida (regra RE-05): o botão do HUD abre o tutorial POR CIMA do jogo,
       a partida continua atrás e voltar a devolve intacta — placar e tabuleiro
-  - [x] O tempo NÃO corre enquanto a ajuda está aberta (`pausada = true`, mesmo padrão dos
-        outros três jogos — comportamento do motor, não específico deste jogo)
+  - [ ] ~~O tempo NÃO corre enquanto a ajuda está aberta~~ — **corrigido nesta entrada, era
+        falso.** `pausada = true` bloqueia NOVOS toques do aluno (`_jogarAluno` verifica o
+        flag), mas não é "comportamento do motor": nenhuma chamada a
+        `Tween.pausarTodos()`/`retomarTodos()` existe neste jogo. Concretamente, se o aluno
+        abrir a Pausa ou a Ajuda bem no instante em que é a vez da CPU (`Tween.de(this)
+        .esperar(550).chamar(() => this._jogadaComputador())`), essa espera de 550ms continua
+        contando em tempo real por baixo do véu, e a CPU pode jogar escondida — o mesmo defeito
+        já identificado e corrigido no Bingo em 10/09 (ver `bingo-da-adicao-e-subtracao/
+        CHECKLIST.md`, seção 5). Aqui ainda **não foi corrigido** — próxima melhoria a fazer,
+        mesmo padrão do Bingo (`Tween.pausarTodos()` no par pausa/ajuda, ou um relógio próprio
+        movido a quadro para a espera da CPU).
   - [x] Os passos do `config.tutorial` fazem sentido para quem JÁ está jogando e travou, não
         só para quem nunca viu o jogo — são os mesmos passos nas duas telas
 - [x] **Resultado** para vitória, derrota **e empate** (terceiro estado novo — ver seção 5 e
@@ -128,8 +145,8 @@
       de unidade. A correção foi adiar com `Promise.resolve().then(() => this.irPara(...))`, que
       roda depois do `finally` do `irPara` de fora (ele não tem nenhum `await` depois de chamar
       `aoEntrar()`, então um microtask já é tarde o bastante)
-- [x] Feedback **imediato** de acerto (visual: a marca aparece com animação de escala; som:
-      pendente, ver seção 2)
+- [x] Feedback **imediato** de acerto: a marca aparece com animação de escala, e a jogada do
+      aluno toca `cliqueJogada` (a da CPU fica muda — ver seção 2, atualizado em 10/09)
 - [x] Feedback **imediato** de erro — não se aplica no sentido usual (não há "toque errado":
       uma casa ocupada simplesmente ignora o toque, sem penalidade; a derrota real é a CPU
       fechar uma linha, com o mesmo destaque estável da linha vencedora)
@@ -202,9 +219,9 @@ Mapeamento semântico **deste** jogo:
 - [ ] ~~Nenhuma ação exige saber ler: tudo tem ícone e narração~~ — **parcialmente pendente**:
       o indicador de vez ("SUA VEZ"/"VEZ DO VERMELHO"/"VEZ DO AZUL") é só texto, sem narração (áudio
       pendente) nem ícone equivalente; ver seção 2
-- [ ] ~~Som pode ser desligado, e a preferência é lembrada~~ — herdado do `SoundToggle` do
-      motor (mesmo em todo jogo), mas sem música/efeito ainda gravado não há o que silenciar
-      de fato nesta entrega
+- [x] Som pode ser desligado, e a preferência é lembrada — herdado do `SoundToggle` do motor
+      (mesmo em todo jogo); agora há o que silenciar de fato: vitória/derrota e o clique da
+      jogada do aluno (ver seção 2, atualizado em 10/09)
 - [x] Nada pisca de forma rápida ou repetitiva — decisão deliberada (pedido do humano): a "vez
       de pensar" da CPU é uma espera simples, sem elemento piscando; a linha vencedora fica com
       realce ESTÁVEL (cor sólida), nunca em flash

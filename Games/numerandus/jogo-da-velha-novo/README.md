@@ -88,6 +88,9 @@ jogo-da-velha-novo/
 | `assets/audio/tutorial_tela1.wav` | narração (passo 1 do tutorial, id `tutorial_tela1`) | **A confirmar** — fornecido pelo humano nesta sessão, sem registro de quem gravou/gerou nem de licença. Ficha: `assets/audio-transcricao/tutorial_tela1/transcricao.md`. |
 | `assets/audio/tutorial_tela2.wav` | narração (passo 2 do tutorial, id `tutorial_tela2`) | **A confirmar** — idem acima. Ficha: `assets/audio-transcricao/tutorial_tela2/transcricao.md`. |
 | `assets/audio/tutorial_tela3.wav` | narração (passo 3 do tutorial, id `tutorial_tela3`) | **A confirmar** — idem acima. Ficha: `assets/audio-transcricao/tutorial_tela3/transcricao.md`. |
+| `assets/audio/acertoSOS.wav` | efeito de fim de partida — vitória (id `acertoSOS`) | Aula original 870298 — Educandus. Mesmo arquivo (mesmo SHA-256) do Jogo das Formas/Blocos/Cores/Bingo. Ficha: `assets/audio-transcricao/acertoSOS/transcricao.md`. |
+| `assets/audio/erroSOS.wav` | efeito de fim de partida — derrota (id `erroSOS`) | Aula original 870298 — Educandus. Mesmo arquivo do Jogo das Formas/Blocos/Bingo. Ficha: `assets/audio-transcricao/erroSOS/transcricao.md`. |
+| `assets/audio/discord_ping_sound_effect.mp3` | clique da jogada do aluno (id `cliqueJogada`) | **A confirmar** — mesmo arquivo já usado como `cliqueCartela` no Bingo, mesma pendência de lá: nome genérico, sem procedência documentada. Ficha: `assets/audio-transcricao/cliqueJogada/transcricao.md`. |
 
 Os nomes de ARQUIVO continuam `x.png`/`o.png` (não vale renomear um arquivo só porque o jogo
 mudou de vocabulário), mas os **ids** que o jogo usa para pedi-los ao `Loader` já são pela cor
@@ -108,11 +111,18 @@ desenhados no canvas pelo próprio motor — nenhum outro arquivo de imagem.
   duração, não ouvida) e a origem/licença do arquivo como **a confirmar**, porque foi entregue
   já pronto, sem essa informação. Falta: alguém ouvir os 3 arquivos e confirmar a transcrição,
   e registrar quem gravou/gerou e a licença.
-- **Sem áudio no restante do jogo.** Música, cliques, vitória/derrota/empate e a fala da
-  escolha de cor (`config.audio.musica/clique/acerto/erro/vitoria/derrota/empate/falaVitoria/
-  falaDerrota/falaEmpate/escolhaCor`) continuam `null` — o jogo fica em silêncio fora do
-  tutorial, e o console nomeia o que falta. A regra do motor é todo som vir de arquivo
-  gravado, nunca sintetizado; falta produzir e revisar essas gravações.
+- **Vitória, derrota e a jogada do aluno já têm som** (`acertoSOS`/`erroSOS`/`cliqueJogada`,
+  atualizado em 10/09) — reaproveitados de outros jogos da coleção, mesmo padrão do Bingo.
+  Origem do `cliqueJogada` ainda a confirmar (ver tabela acima).
+- **Sem áudio no restante do jogo.** Música, clique genérico de UI, empate e as falas de
+  vitória/derrota/empate/escolha de cor (`config.audio.musica/clique/empate/falaVitoria/
+  falaDerrota/falaEmpate/escolhaCor`) continuam `null` — o console nomeia o que falta. A regra
+  do motor é todo som vir de arquivo gravado, nunca sintetizado; falta produzir e revisar
+  essas gravações.
+- **Pausa/Ajuda não travam o tempo de verdade.** Se o aluno abrir a Pausa ou a Ajuda no
+  instante em que é a vez da CPU, a espera de 550ms antes da jogada dela continua contando em
+  tempo real por baixo do véu — o mesmo defeito já identificado e corrigido no Bingo (ver
+  `bingo-da-adicao-e-subtracao/CHECKLIST.md`, seção 5). Aqui ainda não foi corrigido.
 
 ## Atualizar o motor neste jogo
 
