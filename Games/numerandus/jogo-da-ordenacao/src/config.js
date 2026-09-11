@@ -169,6 +169,11 @@ export default {
     vitoria: 'acertoSOS',
     derrota: null,
     abertura: null,
+    // `null` é decisão consciente, não esquecimento: ainda não há locução
+    // própria gravada pra este jogo além do tutorial. Sem `falaDerrota`
+    // (nem `empate`/`falaEmpate`): este jogo nunca termina em derrota ou
+    // empate, então a `ResultScreen` nunca lê esses campos aqui.
+    falaVitoria: null, // "Muito bem! Você conseguiu!"
   },
 
   // -------------------------------------------------------------------- AVA

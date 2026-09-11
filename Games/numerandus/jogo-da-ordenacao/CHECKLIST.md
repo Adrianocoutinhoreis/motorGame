@@ -18,10 +18,16 @@
 - [x] `src/config.js` preenchido por inteiro.
 - [x] Regras educacionais conferidas (RE-01 a RE-05):
   - [x] RE-01 — todo texto em CAIXA ALTA (`textoEmCaixaAlta: true`).
-  - [x] RE-02 — a vitória desconta os erros reais (`ScoreSystem.pontuacao`,
-        reaproveitado do motor **desde o primeiro commit** — ao contrário do
-        Bingo, que só ganhou isso depois de já publicado). Não há desconto na
-        derrota porque não existe derrota neste jogo.
+  - [x] RE-02 — **não se aplica desconto aqui, e isso foi verificado, não
+        assumido.** A primeira versão contava erro a cada jogada legal que não
+        melhorava o tabuleiro na hora, para `ScoreSystem.pontuacao` descontar
+        na vitória; simulando o embaralhamento resolvido pelo caminho ÓTIMO
+        (nenhuma jogada desperdiçada), o nível Médio (60 passos) ainda somava
+        ~40 desses "erros" — um quebra-cabeça deslizante exige isso, não é
+        deslize do aluno — e com meta 10 isso zerava a pontuação em QUALQUER
+        resolução real dos níveis Médio/Difícil. Corrigido: nenhuma jogada
+        legal é penalizada (ver `GameScene._tentarMover`); toda vitória vale
+        10/10. Não há desconto na derrota porque não existe derrota neste jogo.
   - [x] RE-03 — placar exibe a UNIDADE ("9 ACERTOS", não "9 de 10") via
         `config.unidadePlacar: { singular: 'acerto', plural: 'acertos' }`.
   - [x] RE-04 — estrelas calculadas pela `ResultScreen` a partir de
@@ -131,8 +137,8 @@
 
 | Campo | Significado | Observação |
 |---|---|---|
-| `acertos` | Pontuação (10 − erros, só se vitorioso) | Sempre vitorioso aqui — RE-02 |
-| `erros` | Trocas LEGAIS que não melhoraram o tabuleiro | Trocas inválidas não contam (ver seção 3) |
+| `acertos` | Sempre 10 (as 10 fichas) | Sem desconto — ver seção 1/RE-02: jogada legal nunca é penalizada |
+| `erros` | Sempre 0 | Este jogo nunca conta erro — trocas inválidas também não contam nada (ver seção 3) |
 | `totalPerguntas` | Sempre 10 (as fichas 0 a 9) | — |
 | `nivel` | Nível escolhido | `1`, `2` ou `3` |
 | `jogo` | Slug estável | `jogo-da-ordenacao` |

@@ -459,21 +459,30 @@ export class GameScene extends Scene {
     const vizinha = Math.abs(destino.lin - origemLin) + Math.abs(destino.col - origemCol) === 1;
 
     if (diferente && vazia && vizinha) {
-      const antes = this._pecasCorretas();
       this.grade.trocar(origemLin, origemCol, destino.lin, destino.col);
-      const depois = this._pecasCorretas();
 
       /**
-       * Placar sem risco de "vencer" cedo demais por oscilação: `acertos` do
-       * ScoreSystem só CRESCE, mas uma ficha pode ficar certa, sair do lugar e
-       * voltar a ficar certa várias vezes na mesma partida. Por isso NUNCA
-       * chamamos `.acertar()` a cada ficha que entra no lugar — só uma vez,
-       * quando as 10 caem certas ao MESMO TEMPO (`_verificarCompleto`, abaixo
-       * de `_reposicionarTodas`). Aqui, durante a partida, só existe `.errar()`
-       * — uma jogada válida que NÃO melhora o tabuleiro conta 1 erro, o
-       * suficiente para a RE-02 descontar na vitória (ver `_terminar`).
+       * SEM desconto de erro por jogada — e essa NÃO é a inversão de uma
+       * decisão anterior por acaso, é uma correção. A primeira versão contava
+       * 1 erro toda vez que uma troca válida não aumentava `_pecasCorretas` na
+       * hora, para a RE-02 descontar na vitória. Simulando o próprio
+       * embaralhamento (`_embaralharNivel`) resolvido pelo caminho ÓTIMO —
+       * ou seja, o jeito mais eficiente possível de terminar, sem NENHUMA
+       * jogada desperdiçada — o nível Médio (60 passos) ainda acumulava uns
+       * 40 desses "erros": num quebra-cabeça deslizante, destravar uma peça
+       * quase sempre exige afastar outra que já estava certa, e isso é
+       * inerente ao mecanismo, não um deslize do aluno. Com meta 10, isso
+       * zerava `pontuacao` (`max(0, 10 − erros)`) em qualquer resolução real
+       * dos níveis Médio/Difícil — a criança terminava o tabuleiro certinho e
+       * via "0 ACERTOS" e zero estrelas. Não existe um jeito de contar "erro
+       * de verdade" aqui sem reconstruir a noção de meta/progresso deste jogo
+       * inteira, então a saída honesta é: uma jogada legal nunca é penalizada,
+       * só a INVÁLIDA continua sem pontuar nada (a ficha só volta pro lugar).
+       * `acertos` do ScoreSystem só CRESCE, mas uma ficha pode ficar certa,
+       * sair do lugar e voltar a ficar certa várias vezes — por isso
+       * `.acertar()` só é chamado UMA vez, quando as 10 caem certas ao MESMO
+       * TEMPO (`_verificarCompleto`, abaixo), nunca por jogada.
        */
-      if (depois <= antes) this.placar.errar(1);
       if (this.config.audio?.soltar) this.audio.efeito(this.config.audio.soltar);
 
       this._reposicionarTodas(true);

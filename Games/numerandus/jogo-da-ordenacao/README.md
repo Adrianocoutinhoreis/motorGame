@@ -63,8 +63,8 @@ Ao completar o tabuleiro (sempre vitória), o jogo emite:
 ```js
 {
   type: "JOGO_CONCLUIDO",
-  acertos: 9,             // pontuação: 10 fichas, descontados os erros (RE-02)
-  erros: 1,               // trocas legais que NÃO melhoraram o tabuleiro
+  acertos: 10,            // pontuação: sempre as 10 fichas — ver "Sobre erros" abaixo
+  erros: 0,               // este jogo não penaliza jogada legal nenhuma
   totalPerguntas: 10,     // as 10 fichas (0 a 9)
   nivel: 2,
   jogo: "jogo-da-ordenacao",
@@ -88,11 +88,20 @@ puramente informativo — sem prazo, sem cor de alerta, sem pressão. Lê
 `tempoSegundos` do AVA — por isso o relógio congela sozinho durante Pausa e
 Ajuda (RE-05), sem nenhuma lógica de pausa própria do jogo.
 
-**Sobre `erros`:** uma troca só conta como erro se for LEGAL (para uma vizinha
-vazia) e ainda assim não aumentar quantas fichas ficam no lugar certo — soltar
-uma ficha numa célula inválida (ocupada, não vizinha, ou a mesma de onde saiu)
-não conta nada: a ficha só volta pro lugar, sem penalidade. Ver
-`GameScene._tentarMover`.
+**Sobre `erros`: este jogo não conta nenhum.** A primeira versão contava 1 erro
+a cada troca LEGAL que não aumentava na hora quantas fichas ficam no lugar
+certo, para a pontuação descontar na vitória (RE-02). Bug real, encontrado
+jogando: simulando o próprio embaralhamento resolvido pelo caminho ÓTIMO (o
+jeito mais eficiente possível, zero jogada desperdiçada), o nível Médio (60
+passos) ainda somava umas 40 dessas "faltas" — num quebra-cabeça deslizante,
+destravar uma peça quase sempre exige afastar outra que já estava certa, e
+isso é inerente ao mecanismo, não deslize do aluno. Com meta 10, isso zerava a
+pontuação em qualquer resolução real dos níveis Médio/Difícil (e, jogando sem
+otimizar, também no Fácil) — a criança terminava certinho e via "0 ACERTOS" e
+zero estrelas. Corrigido: uma troca inválida (célula ocupada, não vizinha, ou
+a mesma de onde saiu) continua sem pontuar nada — a ficha só volta pro
+lugar — mas nenhuma troca LEGAL é penalizada. Toda vitória vale as 10 fichas.
+Ver o comentário em `GameScene._tentarMover`.
 
 ## Estrutura
 

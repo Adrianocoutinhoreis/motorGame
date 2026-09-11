@@ -107,6 +107,50 @@ class Estrelas extends Node {
 }
 
 /**
+ * LinhaTempo — ícone de relógio + "TEMPO mm:ss", centrado como UM BLOCO.
+ *
+ * Existe porque um `Icone` e um `TextNode` lado a lado, cada um na sua
+ * própria coordenada fixa, só ficam centrados por coincidência: a largura do
+ * texto muda ("TEMPO 0:04" e "TEMPO 12:31" não pesam igual), e coordenadas
+ * fixas centralizam para UM valor só, ficando visivelmente deslocadas para
+ * qualquer outro (foi o defeito visto: "0:04" descentralizado no jogo real).
+ * Aqui os dois se desenham juntos, num só `desenhar()`, medindo o texto de
+ * verdade (`ctx.measureText`) antes de posicionar — por isso o grupo inteiro
+ * fica centrado em `this.x` não importa quantos dígitos o tempo tenha.
+ */
+class LinhaTempo extends Node {
+  constructor(texto, opcoes = {}) {
+    const tamanhoIcone = opcoes.tamanhoIcone ?? 24;
+    super({ largura: 0, altura: tamanhoIcone, ...opcoes });
+    this.texto = texto;
+    this.tamanhoIcone = tamanhoIcone;
+    this.tamanhoTexto = opcoes.tamanhoTexto ?? tipografia.apoio;
+    this.peso = opcoes.peso ?? tipografia.pesoForte;
+    this.cor = opcoes.cor ?? cores.tintaSuave;
+    this.espaco = opcoes.espaco ?? 10;
+  }
+
+  desenhar(ctx) {
+    ctx.font = `${this.peso} ${this.tamanhoTexto}px system-ui, -apple-system, "Segoe UI", Arial, sans-serif`;
+    const larguraTexto = ctx.measureText(this.texto).width;
+    const larguraTotal = this.tamanhoIcone + this.espaco + larguraTexto;
+    const inicioX = -larguraTotal / 2;
+
+    ctx.save();
+    ctx.translate(inicioX, 0);
+    desenharIcone(ctx, 'relogio', this.tamanhoIcone, this.cor, 2.2);
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = this.cor;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.texto, inicioX + this.tamanhoIcone + this.espaco, this.tamanhoIcone / 2);
+    ctx.restore();
+  }
+}
+
+/**
  * Quantas das cinco estrelas este resultado acende — **um quinto da meta por
  * estrela**, sobre a pontuação que a mesma tela mostra e que vai para o AVA.
  *
@@ -173,24 +217,25 @@ export class ResultScreen extends Scene {
     // empate o céu é claro, como na vitória, mas SEM sol: nem festa, nem
     // tempestade — um empate contra a CPU não é um fracasso.
     //
-    // **Exceto no tema 'quadro'**: o azul de vitória/o cinza de derrota são o
-    // vocabulário de um céu ao ar livre (campo, canteiro de obras), e um jogo
-    // de quadro-negro não tem céu — trocar para ele na tela final quebraria a
-    // continuidade com o verde-quadro do menu e da partida. Ali o `Background`
-    // usa o PRÓPRIO verde-quadro nos três desfechos (é o padrão dele para o
-    // tema, sem passar `corCeuTopo`/`corCeuBase`), e quem segue diferenciando
-    // vitória de derrota é o título, a cor dele e as estrelas. O sol NÃO
-    // entra aqui: o `Background` recusa o sol no tema 'quadro' mesmo quando
-    // `mostrarSol: true` é passado (pedido do humano) — uma sala de aula não
+    // **Exceto nos temas de INTERIOR** ('quadro', 'bingo', 'quarto'): o azul
+    // de vitória/o cinza de derrota são o vocabulário de um céu ao ar livre
+    // (campo, canteiro de obras), e um quadro-negro, uma sala de bingo ou um
+    // quarto de leitura não têm céu — trocar para ele na tela final quebraria
+    // a continuidade com a parede/lousa do menu e da partida. Ali o
+    // `Background` usa a PRÓPRIA cor do tema nos três desfechos (é o padrão
+    // dele para cada tema, sem passar `corCeuTopo`/`corCeuBase`), e quem segue
+    // diferenciando vitória de derrota é o título, a cor dele e as estrelas.
+    // O sol NÃO entra aqui: o `Background` recusa o sol nesses temas mesmo
+    // quando `mostrarSol: true` é passado (pedido do humano) — nenhum deles
     // tem sol, nem na vitória.
-    const temaQuadro = (config.tema ?? 'construcao') === 'quadro';
+    const temaInterior = ['quadro', 'bingo', 'quarto'].includes(config.tema ?? 'construcao');
     this.adicionar(new Background({
       largura: L,
       altura: A,
       // Também estava cravado: a última tela da atividade voltava ao canteiro
       // de obras mesmo num jogo de outro tema.
       tema: config.tema ?? 'construcao',
-      ...(temaQuadro ? {} : {
+      ...(temaInterior ? {} : {
         corCeuTopo: (venceu || empatou) ? cores.ceuProfundo : '#94A3B8',
         corCeuBase: (venceu || empatou) ? cores.ceu : '#CBD5E1',
       }),
@@ -218,10 +263,19 @@ export class ResultScreen extends Scene {
     // nascia colado no topo (`espaco.lg`) e o placar era ancorado em
     // `alturaPainel * 0.55` — dois pontos independentes, então mexer em um
     // desequilibrava o outro. Agora as três alturas saem de um cálculo só.
+    //
+    // O tempo (quando `config.mostrarTempo` está ligado) entra ACIMA do
+    // título, não abaixo do placar — é o que a criança viu primeiro nascer no
+    // HUD durante a partida (o mesmo ícone de relógio), então aqui ele abre a
+    // tela, e o título "MUITO BEM!" continua sendo a peça central, sem
+    // disputar espaço com um número secundário logo abaixo dele.
+    const mostrarTempo = !!(config.mostrarTempo && Number.isFinite(resultado.tempoSegundos));
     const PASSO_TITULO = tipografia.titulo * 1.5;
     const PASSO_ESTRELAS = Estrelas.ALTURA_PADRAO + espaco.md;
-    const ALTURA_BLOCO = PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 1.3;
-    const yTitulo = (alturaPainel - ALTURA_BLOCO) / 2;
+    const PASSO_TEMPO = mostrarTempo ? tipografia.apoio * 1.8 : 0;
+    const ALTURA_BLOCO = PASSO_TEMPO + PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 1.3;
+    const yTopoBloco = (alturaPainel - ALTURA_BLOCO) / 2;
+    const yTitulo = yTopoBloco + PASSO_TEMPO;
 
     const titulo = empatou ? 'Empatou!' : (venceu ? 'Muito bem!' : 'Quase lá!');
     painel.adicionar(new TextNode(titulo, {
@@ -333,19 +387,27 @@ export class ResultScreen extends Scene {
      * relevante (não há derrota nem meta de tempo, então o placar sozinho diz
      * pouco sobre o desempenho). Não é REGRA nova — é dado opcional que só o
      * jogo que pedir mostra, igual `unidadePlacar` acima.
+     *
+     * **Ícone + rótulo, não só o número.** A primeira versão desta linha era
+     * só "0:07" sem contexto. O relógio (mesmo ícone do cronômetro ao vivo da
+     * partida) mais a palavra "TEMPO" fecham essa lacuna.
+     *
+     * **Acima do título, não abaixo do placar** (pedido do humano): usa
+     * `PASSO_TEMPO`/`yTopoBloco`, já reservados no cálculo do bloco acima —
+     * por isso o título e as estrelas não precisam saber que esta linha existe.
      */
-    if (config.mostrarTempo && Number.isFinite(resultado.tempoSegundos)) {
+    if (mostrarTempo) {
       const total = Math.max(0, Math.round(resultado.tempoSegundos));
       const min = Math.floor(total / 60);
       const seg = total % 60;
-      const tempoTexto = `${min}:${String(seg).padStart(2, '0')}`;
-      painel.adicionar(new TextNode(tempoTexto, {
+      const tempoTexto = `TEMPO ${min}:${String(seg).padStart(2, '0')}`;
+      const tamanhoIconeTempo = 24;
+      const yTempo = yTopoBloco + PASSO_TEMPO * 0.55;
+      painel.adicionar(new LinhaTempo(tempoTexto, {
         x: larguraPainel / 2,
-        y: yTitulo + PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 0.9,
-        tamanho: tipografia.apoio,
-        peso: tipografia.pesoNormal,
+        y: yTempo - tamanhoIconeTempo / 2,
+        tamanhoIcone: tamanhoIconeTempo,
         cor: cores.tintaSuave,
-        alinhamento: 'center',
       }));
     }
 
