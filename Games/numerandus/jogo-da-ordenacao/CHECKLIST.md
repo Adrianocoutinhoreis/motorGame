@@ -51,9 +51,18 @@
       retangulares** (não quadrado perfeito, proporção 1.05): a grade 3×4 é
       bem mais alta que larga, e o quadro do jogo é bem mais largo que alto —
       um pouco de retângulo cobre mais da largura sem descaracterizar a grade.
-- [x] **Pausa** enxuta: só CONTINUAR / COMEÇAR DE NOVO / SAIR, mais o atalho
-      de AJUDA no canto oposto ao som (`aoAjuda`) — sem ícone de som dentro do
-      painel (`mostrarSom: false`, já que o HUD atrás do véu sempre o mostra).
+- [x] **Cronômetro ao vivo** no HUD, topo-centro, entre os ícones de
+      pausa/ajuda e o de som — ícone de relógio + "mm:ss" escritos em branco
+      direto na parede (sem painel novo). Só INFORMA, nunca cobra: sem cor de
+      alerta, sem piscar, sem limite nenhum. Lê `game.tempoJogando` (getter
+      público no motor), o MESMO número que vira `tempoSegundos` no fim da
+      partida — então congela sozinho durante Pausa/Ajuda, sem lógica própria
+      do jogo para isso.
+- [x] **Pausa** enxuta: só CONTINUAR / COMEÇAR DE NOVO / SAIR — sem atalho de
+      AJUDA dentro do painel (`aoAjuda` não é passado; a `PauseScreen` do motor
+      só desenha esse botão quando recebe `aoAjuda`) nem ícone de som
+      (`mostrarSom: false`, já que o HUD atrás do véu sempre o mostra). Quem
+      quiser ajuda usa o ícone de tutorial do próprio HUD.
 - [x] **Resultado** com estrelas + "N ACERTOS" + **tempo da partida** (mm:ss,
       `config.mostrarTempo: true` — ver seção 6).
 
@@ -97,18 +106,26 @@
 
 - [x] `acertoSOS` — fim de partida (sempre vitória). Canal `sfx`, via
       `config.audio.vitoria`, disparado pela `ResultScreen` do motor.
-- [x] `cliqueFicha` — clique genérico de botão (HUD, pausa, ajuda, telas de
-      apoio). Via `config.audio.clique`.
+- [x] `config.audio.clique: null` — SEM som de clique. Botões de HUD (pausa,
+      ajuda, som) e as telas de apoio (menu, níveis, tutorial, resultado)
+      ficam silenciosos ao tocar. Decisão de projeto: som só onde é gesto de
+      jogo de verdade. O `cliqueFicha` que existia aqui (reaproveitado do
+      Bingo/Jogo da Velha) foi removido do jogo — nada mais referencia esse id.
 - [x] `soltarPeca` — toca só quando um movimento de ficha é ACEITO (célula
       vizinha vazia). Não toca quando a ficha só volta pro lugar. Via
-      `config.audio.soltar`, separado do clique de botão de propósito.
-- [ ] **Origem/licença pendente**: `cliqueFicha`
-      (`discord_ping_sound_effect.mp3`) — mesmo arquivo, mesma pendência já
-      registrada em Bingo (`cliqueCartela`) e Jogo da Velha (`cliqueJogada`).
-      `soltarPeca` (`soltar_peca.mp3`) também pendente — arquivo próprio deste
-      jogo, origem a confirmar.
-- [ ] Sem narração no tutorial (`config.tutorial[n].fala` ausente) e sem
-      música — nenhuma gravação própria ainda produzida para este jogo.
+      `config.audio.soltar` — o único efeito de interação que sobra, porque é
+      o gesto central do jogo, não um clique de botão.
+- [x] `tutorialTela1/2/3` — narração dos 3 passos do tutorial (`config.tutorial[n].fala`),
+      tocada pela `TutorialScreen` do motor tanto no "COMO JOGAR" do menu
+      quanto na AJUDA dentro da partida (regra RE-05).
+- [ ] **Origem/licença pendente**: `soltarPeca` (`soltar_peca.mp3`) e
+      `tutorialTela1/2/3` (`tela1/2/3.wav`) — arquivos próprios deste jogo,
+      origem a confirmar.
+- [ ] **Transcrição da narração do tutorial ainda não foi OUVIDA** — as 3
+      fichas em `assets/audio-transcricao/tutorialTelaN/` estão como INFERIDA
+      (ver cada uma para o raciocínio). Confirmar ouvindo antes de publicar.
+- [ ] Sem música de fundo — nenhuma gravação própria ainda produzida para
+      este jogo.
 
 ## 6. Contrato do AVA
 
@@ -125,8 +142,8 @@
 
 ## Melhorias identificadas, ainda não feitas
 
-1. Origem/licença do `cliqueFicha` e do `soltarPeca` (seção 5) — a primeira é
-   a mesma pendência de outros jogos, a segunda é um arquivo novo deste jogo.
+1. Origem/licença e transcrição ouvida do `soltarPeca` e do `tutorialTela1/2/3`
+   (seção 5) — arquivos novos deste jogo.
 2. Narração do tutorial e música — nenhuma gravação própria ainda.
 3. Numeração do nível (`LevelSelectScreen`, motor compartilhado) visivelmente
    fora do centro do emblema — identificado antes em outros jogos, não

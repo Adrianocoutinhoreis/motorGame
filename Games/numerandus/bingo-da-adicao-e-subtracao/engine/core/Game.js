@@ -125,6 +125,18 @@ export class Game extends Emitter {
     });
   }
 
+  /**
+   * Segundos jogados na partida atual, ainda em andamento — o mesmo número
+   * que vira `tempoSegundos` no contrato do AVA quando a partida termina (ver
+   * `_tempoJogando` acima). Existe como getter público para uma cena de jogo
+   * poder mostrar um cronômetro AO VIVO (ex.: Jogo da Ordenação) sem precisar
+   * ler um campo com `_` — e sem duplicar a contagem, que continua sendo feita
+   * só aqui, uma vez.
+   */
+  get tempoJogando() {
+    return this._tempoJogando;
+  }
+
   /** Registra ou substitui uma cena. */
   registrarCena(nome, classe) {
     this.cenas.set(nome, classe);

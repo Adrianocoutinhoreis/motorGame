@@ -80,6 +80,14 @@ também o **tempo da partida** (mm:ss) — campo opcional e aditivo em
 `ResultScreen` (`config.mostrarTempo: true`), que nenhum outro jogo da coleção
 precisa ligar.
 
+O mesmo tempo já aparece AO VIVO durante a partida: um cronômetro no HUD
+(topo-centro, ícone de relógio + "mm:ss" escritos em branco na parede),
+puramente informativo — sem prazo, sem cor de alerta, sem pressão. Lê
+`this.game.tempoJogando`, um getter público adicionado ao motor
+(`engine/core/Game.js`) que expõe o mesmo contador que já existia por trás do
+`tempoSegundos` do AVA — por isso o relógio congela sozinho durante Pausa e
+Ajuda (RE-05), sem nenhuma lógica de pausa própria do jogo.
+
 **Sobre `erros`:** uma troca só conta como erro se for LEGAL (para uma vizinha
 vazia) e ainda assim não aumentar quantas fichas ficam no lugar certo — soltar
 uma ficha numa célula inválida (ocupada, não vizinha, ou a mesma de onde saiu)
@@ -107,8 +115,17 @@ jogo-da-ordenacao/
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
 | `assets/audio/acertoSOS.wav` | efeito de fim de partida — vitória (id `acertoSOS`) | Aula original 870298 — Educandus. Mesmo arquivo (mesmo SHA-256) do Jogo das Formas/Blocos/Cores/Bingo/Jogo da Velha. Ficha: `assets/audio-transcricao/acertoSOS/transcricao.md`. Não há `erroSOS`: este jogo nunca tem derrota. |
-| `assets/audio/discord_ping_sound_effect.mp3` | clique genérico de botão — HUD, pausa, ajuda, telas de apoio (id `cliqueFicha`) | **A confirmar** — mesmo arquivo já usado como `cliqueCartela` no Bingo e `cliqueJogada` no Jogo da Velha (mesmo SHA-256 nos três), mesma pendência de origem/licença de lá: nome genérico, sem procedência documentada. Ficha: `assets/audio-transcricao/cliqueFicha/transcricao.md`. |
 | `assets/audio/soltar_peca.mp3` | encaixe ao mover uma ficha com sucesso (id `soltarPeca`) | **A confirmar** — arquivo próprio deste jogo, fornecido pronto, origem/licença não documentada ainda. Ficha: `assets/audio-transcricao/soltarPeca/transcricao.md`. |
+| `assets/audio/tela1.wav` | narração do tutorial, passo 1 de 3 (id `tutorialTela1`) | **A confirmar** — arquivo próprio deste jogo, fornecido pronto, origem/licença não documentada ainda. Ficha: `assets/audio-transcricao/tutorialTela1/transcricao.md` (transcrição INFERIDA, não ouvida). |
+| `assets/audio/tela2.wav` | narração do tutorial, passo 2 de 3 (id `tutorialTela2`) | **A confirmar** — mesma origem do `tela1.wav`. Ficha: `assets/audio-transcricao/tutorialTela2/transcricao.md` (transcrição INFERIDA, não ouvida). |
+| `assets/audio/tela3.wav` | narração do tutorial, passo 3 de 3 (id `tutorialTela3`) | **A confirmar** — mesma origem do `tela1.wav`. Ficha: `assets/audio-transcricao/tutorialTela3/transcricao.md` (transcrição INFERIDA, não ouvida). |
+
+Sem som de clique: `config.audio.clique` é `null` de propósito — botões de HUD
+(pausa, ajuda, som), menu, níveis, tutorial e resultado ficam silenciosos ao
+tocar. Pedido do humano: som só onde é gesto de jogo de verdade. O arquivo que
+fazia esse clique (`discord_ping_sound_effect.mp3`, id `cliqueFicha`) foi
+removido deste jogo — ainda existe no Bingo e no Jogo da Velha, que continuam
+usando som de clique.
 
 O tabuleiro, as células e as fichas (círculos brancos com o número) são
 desenhados no canvas pelo próprio motor — nenhum arquivo de imagem. As 12 cores
@@ -120,13 +137,13 @@ das células e as cores do cenário já existem em `engine/theme/tokens.js`
 
 > Liste aqui, com honestidade, o que ainda falta.
 
-- **Origem/licença do `cliqueFicha` e do `soltarPeca` a confirmar** — ver
-  tabela acima; a do `cliqueFicha` é a mesma pendência já registrada em Bingo
-  e Jogo da Velha (mesmo arquivo), a do `soltarPeca` é um arquivo novo, próprio
+- **Origem/licença do `soltarPeca`, `tutorialTela1`, `tutorialTela2` e
+  `tutorialTela3` a confirmar** — ver tabela acima; todos arquivos próprios
   deste jogo.
-- **Sem narração no tutorial.** Os 3 passos de `config.tutorial` não têm
-  `fala` — o jogo mostra e lê o texto na tela, mas não narra em áudio. Nenhum
-  arquivo de locução foi gravado para este jogo ainda.
+- **Transcrição da narração do tutorial ainda não foi OUVIDA** — as 3 fichas
+  em `assets/audio-transcricao/tutorialTelaN/` estão como INFERIDA (o texto do
+  próprio passo, não uma transcrição de ouvido). Confirmar ouvindo antes de
+  publicar para alunos.
 - **Sem música de fundo** (`config.audio.musica: null`) e sem locução de
   abertura, escolha de nível, etc. — mesma regra do motor de todo jogo da
   coleção: som só de arquivo gravado, nunca sintetizado; falta produzir essas

@@ -1,6 +1,6 @@
 import {
   Scene, Node, ScoreSystem, GridBoard, IconButton, SoundToggle, PauseScreen, HelpScreen,
-  Background, Tween, Easing, ESTADOS, rand, cores, espaco, raio, sombras,
+  Background, Tween, Easing, ESTADOS, rand, cores, espaco, raio, sombras, TextNode, Icone, tipografia,
 } from '../../engine/index.js';
 
 /** Grade do tabuleiro: 3 colunas × 4 linhas, igual ao vídeo de referência. */
@@ -260,6 +260,44 @@ export class GameScene extends Scene {
       somToque: config.audio?.clique,
     }));
 
+    /**
+     * Cronômetro AO VIVO — só informa, nunca cobra. Lê `this.game.tempoJogando`
+     * (o motor já para essa contagem sozinho durante Pausa/Ajuda, ver
+     * `Game._tempoJogando`), então este relógio congela junto, de graça — não
+     * é lógica própria do jogo, é o mesmo número que vira `tempoSegundos` no
+     * fim da partida, só mostrado enquanto ela ainda roda.
+     *
+     * Sem cor de alerta, sem piscar, sem mudar de aparência perto do fim:
+     * é a mesma regra de "brilho estável, nunca oscilação" de todo o motor —
+     * um cronômetro que muda de cor perto de um limite IMPLICARIA um limite,
+     * e este jogo não tem um.
+     *
+     * Escrito na parede, como os números flutuantes e o contador do tutorial
+     * — não um painel branco novo competindo com o tabuleiro.
+     */
+    // Tamanho maior que o resto do texto de apoio (`tipografia.corpo`, não
+    // `apoio`): num celular a tela inteira encolhe, e "0:00" pequeno pertinho
+    // do topo é o primeiro texto a ficar ilegível — o alvo aqui é continuar
+    // lendo de longe, não só numa tela de 1280x720.
+    const yRelogio = espaco.md + 36;
+    this.adicionar(new Icone('relogio', {
+      x: L / 2 - 50,
+      y: yRelogio - 18,
+      tamanho: 36,
+      cor: cores.superficie,
+    }));
+    this._textoRelogio = new TextNode('0:00', {
+      x: L / 2 - 8,
+      y: yRelogio,
+      tamanho: tipografia.corpo,
+      peso: '700',
+      cor: cores.superficie,
+      alinhamento: 'left',
+      linhaBase: 'middle',
+    });
+    this.adicionar(this._textoRelogio);
+    this._relogioSegundoMostrado = -1;
+
     // ---------------------------------------------------------------- pausa
     // `mostrarSom: false`: o som já está sempre visível no HUD atrás do véu
     // (acima), repeti-lo dentro do painel seria redundante — mesmo padrão do
@@ -273,7 +311,6 @@ export class GameScene extends Scene {
       aoContinuar: () => { this.pausada = false; Tween.retomarTodos(); },
       aoReiniciar: () => this.irPara('jogando', { nivel: this.nivel }),
       aoSair: () => this.irPara('menu'),
-      aoAjuda: () => this._pedirAjuda(),
     });
     this.adicionar(this.pausa);
 
@@ -525,5 +562,22 @@ export class GameScene extends Scene {
       return;
     }
     super.atualizar(dt);
+    this._atualizarRelogio();
+  }
+
+  /**
+   * Só troca o texto quando o SEGUNDO inteiro muda — trocar a cada quadro
+   * (60x/s) reescreveria o mesmo "0:42" sessenta vezes por segundo, trabalho
+   * jogado fora. `tempoJogando` já vem congelado durante Pausa/Ajuda (ver o
+   * comentário onde o relógio é criado), então não há nada a checar aqui além
+   * do valor ter mudado.
+   */
+  _atualizarRelogio() {
+    const total = Math.floor(this.game.tempoJogando);
+    if (total === this._relogioSegundoMostrado) return;
+    this._relogioSegundoMostrado = total;
+    const min = Math.floor(total / 60);
+    const seg = total % 60;
+    this._textoRelogio.texto = `${min}:${String(seg).padStart(2, '0')}`;
   }
 }

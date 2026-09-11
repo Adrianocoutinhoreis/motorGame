@@ -100,6 +100,7 @@ export default {
     {
       titulo: 'Os números estão fora de ordem',
       texto: 'O tabuleiro tem 12 casas coloridas: 10 com números embaralhados e 2 vazias.',
+      fala: 'tutorialTela1',
       desenho: (ctx, l, a) => desenharTabuleiroExemplo(ctx, l, a, {
         valores: [4, 1, 7, 0, 5, 2, 8, 3, 9, 6, null, null],
       }),
@@ -108,6 +109,7 @@ export default {
       titulo: 'Arraste um número até uma casa vizinha vazia',
       texto: 'Só dá para mover um número para o lado, para cima ou para baixo — e só se '
         + 'aquela casa estiver vazia. Se estiver ocupada, espere ela esvaziar.',
+      fala: 'tutorialTela2',
       // A vaga (índice 1) fica bem ao lado da ficha que anima (índice 0) —
       // uma seta estática de canto a canto (como era antes) apontava para uma
       // casa que não é vizinha de verdade e não fazia sentido nenhum; agora é
@@ -122,6 +124,7 @@ export default {
       titulo: 'Deixe em ordem para completar o tabuleiro',
       texto: 'Do menor para o maior (ou do maior para o menor, no nível difícil). Quando as '
         + '10 fichas estiverem certas, o tabuleiro inteiro comemora!',
+      fala: 'tutorialTela3',
       desenho: (ctx, l, a) => desenharTabuleiroExemplo(ctx, l, a, {
         valores: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, null, null],
         resolvido: true,
@@ -131,20 +134,27 @@ export default {
 
   // ------------------------------------------------------------------ áudio
   /**
-   * Clique da ficha reaproveitado do Bingo (`cliqueCartela` lá) — mesmo
-   * arquivo, mesma pendência de origem/licença já registrada nos outros
-   * jogos da coleção (ver CHECKLIST.md). `acertoSOS` é o único som de fim de
-   * partida: este jogo nunca tem derrota, então `erroSOS` não é usado.
+   * Sem som de clique: botões de HUD/pausa/ajuda e as telas de apoio (menu,
+   * níveis, tutorial, pausa, resultado) ficam silenciosos ao tocar — pedido
+   * do humano, para o som só existir onde é gameplay de verdade. `acertoSOS`
+   * é o único som de fim de partida: este jogo nunca tem derrota, então
+   * `erroSOS` não é usado.
    *
-   * `soltarPeca` é um som PRÓPRIO deste jogo, separado de `cliqueFicha`: o
-   * clique é genérico (toca nos botões de HUD/pausa/ajuda), soltarPeca é
-   * específico do gesto de jogo — toca só quando uma ficha arrastada cai
-   * numa célula vizinha vazia e o movimento é aceito (`GameScene._tentarMover`).
+   * `soltarPeca` é o único efeito de interação que sobra, e é PRÓPRIO deste
+   * jogo: toca só quando uma ficha arrastada cai numa célula vizinha vazia e
+   * o movimento é aceito (`GameScene._tentarMover`) — o gesto central do jogo,
+   * não um clique de botão.
+   *
+   * `tutorialTela1..3` são a narração dos 3 passos do tutorial (ver `fala` em
+   * cada passo, acima) — tocam pela `TutorialScreen` do motor, tanto no "COMO
+   * JOGAR" do menu quanto na AJUDA dentro da partida (regra RE-05).
    */
   assets: [
-    { id: 'cliqueFicha', src: './assets/audio/discord_ping_sound_effect.mp3' },
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
+    { id: 'tutorialTela1', src: './assets/audio/tela1.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tela2.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tela3.wav' },
   ],
 
   /** Sem mascote nesta partida — decisão de projeto, o tabuleiro é a área de maior destaque. */
@@ -152,7 +162,7 @@ export default {
 
   audio: {
     musica: null,
-    clique: 'cliqueFicha',
+    clique: null,
     soltar: 'soltarPeca',
     acerto: null,
     erro: null,
