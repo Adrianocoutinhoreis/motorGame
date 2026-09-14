@@ -7,8 +7,13 @@ import {
  * Elenco temático fixo, 1 emoji por número — a MESMA figura sempre representa
  * o mesmo número (2 é sempre maçã), pra criança "reconhecer" o número pela
  * figura, não só contar.
+ *
+ * Maioria frutinha/objeto redondo (silhueta simples, fácil de contar de
+ * relance) e só UM bichinho — era 5 bichos (sapo, galinha, gato, cachorro,
+ * urso) pra 3 frutas; rostos de animais têm silhueta mais irregular que uma
+ * fruta ou bola, mais difícil de diferenciar rápido numa peça pequena.
  */
-const ROSTER_EMOJI = ['🍓', '🍎', '🍊', '🐸', '🐔', '🐱', '🐶', '🐻', '⭐'];
+const ROSTER_EMOJI = ['🍓', '🍎', '🍊', '🍋', '🍇', '🍒', '⚽', '🐱', '⭐'];
 const FONTE_EMOJI = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
 
 /** Paleta lúdica do motor (`engine/theme/tokens.js`), uma cor fixa por número. */
@@ -26,10 +31,32 @@ function faixa(min, max) {
   return lista;
 }
 
-/** Corta `lista` em pedaços de no máximo `tamanho` itens. */
+/**
+ * Divide `lista` em ondas de no máximo `tamanho` itens, DISTRIBUÍDAS por
+ * igual — nunca só cortando em fatias de `tamanho` e deixando o resto sobrar
+ * numa onda final pequena.
+ *
+ * Cortar em fatias fixas (`3,3,1` para 7 com tamanho 3) deixava a ÚLTIMA
+ * onda do nível Difícil com um par SÓ — didaticamente inútil: com um par só
+ * na tela, só existe UM soquete e UMA ficha, então não há como errar nem
+ * aprender a escolher entre opções (é sempre o par certo, sem alternativa
+ * para comparar). Calculando quantas ondas cabem e espalhando o total por
+ * elas (`7 -> 3,2,2`, nunca `3,3,1`), toda onda de qualquer nível sempre tem
+ * pelo menos 2 pares — uma escolha de verdade.
+ */
 function dividirEmOndas(lista, tamanho) {
+  const total = lista.length;
+  if (total === 0) return [];
+  const numOndas = Math.ceil(total / tamanho);
+  const base = Math.floor(total / numOndas);
+  const extra = total % numOndas;
   const ondas = [];
-  for (let i = 0; i < lista.length; i += tamanho) ondas.push(lista.slice(i, i + tamanho));
+  let cursor = 0;
+  for (let i = 0; i < numOndas; i++) {
+    const tamanhoOnda = base + (i < extra ? 1 : 0);
+    ondas.push(lista.slice(cursor, cursor + tamanhoOnda));
+    cursor += tamanhoOnda;
+  }
   return ondas;
 }
 
@@ -513,14 +540,18 @@ export class GameScene extends Scene {
       somToque: config.audio?.clique,
     }));
 
-    // Cronômetro Ampliado e Centralizado no HUD
-    this._relogioBadge = new RelogioBadge({
+    // Cronômetro Ampliado e Centralizado no HUD — opcional
+    // (`config.mostrarCronometro`, padrão `true`). `_relogioBadge` fica
+    // `null` quando desligado, e todo método que o toca já checa isso antes
+    // (`_atualizarRelogio`/`_atualizarTextoHud`) — mais barato e mais direto
+    // que criar o nó escondido e filtrar `atualizar()` toda hora.
+    this._relogioBadge = config.mostrarCronometro === false ? null : new RelogioBadge({
       x: L / 2,
       y: espaco.md + 26,
       largura: 170,
       altura: 50,
     });
-    this.adicionar(this._relogioBadge);
+    if (this._relogioBadge) this.adicionar(this._relogioBadge);
     this._relogioSegundoMostrado = 0;
     this.placar.on('mudou', () => this._atualizarTextoHud());
 

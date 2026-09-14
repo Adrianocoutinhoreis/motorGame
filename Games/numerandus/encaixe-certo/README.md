@@ -31,8 +31,11 @@ interativo) antes desta implementação começar.
 **Elenco temático fixo, 1 a 9** — cada número tem sempre a mesma figura, pra
 criança aprender a reconhecer o número pela figura, não só contar:
 
-🍓 morango · 🍎 maçã · 🍊 laranja · 🐸 sapo · 🐔 galinha · 🐱 gato · 🐶 cachorro ·
-🐻 urso · ⭐ estrela
+🍓 morango · 🍎 maçã · 🍊 laranja · 🍋 limão · 🍇 uva · 🍒 cereja · ⚽ bola ·
+🐱 gato · ⭐ estrela — maioria frutinha/objeto redondo, de propósito: um rosto
+de bicho tem silhueta mais irregular que uma fruta ou bola, mais difícil de
+diferenciar rápido numa peça pequena (era 5 bichos pra 3 frutas; agora é 1
+bicho pra 6 frutas + 1 bola).
 
 **Três níveis**, mesma mecânica em todos — a dificuldade cresce em três eixos
 (quantos pares por rodada, até que número vai, e como os marcadores de
@@ -54,6 +57,13 @@ quantos pares aparecem por vez resolve isso de raiz: a meta do nível continua
 valendo para a pontuação (`nivel.meta`), só não aparece de uma vez só. Quando
 a onda visível termina, ela comemora e a próxima aparece — até completar a
 meta do nível.
+
+**As ondas são DISTRIBUÍDAS por igual, nunca cortadas em fatias fixas**
+(`dividirEmOndas`): 7 pares no Difícil viravam `3, 3, 1` — a última onda
+sobrava com um par SÓ, e com um par só na tela não existe escolha nenhuma
+(um soquete, uma ficha, sempre o par certo, sem alternativa pra comparar ou
+errar). Agora vira `3, 2, 2`: toda onda, em qualquer nível, tem pelo menos 2
+pares — uma escolha de verdade entre pelo menos duas fichas.
 
 **É um quebra-cabeça solo — nunca há derrota.** Um encaixe errado nunca é
 "erro" no placar: só não trava. Não existe cronômetro regressivo nem "game
@@ -116,6 +126,13 @@ O mesmo tempo já aparece AO VIVO durante a partida: um cronômetro no HUD
 sem cor de alerta. Lê `this.game.tempoJogando` (getter público do motor), o
 mesmo contador que já existia por trás do `tempoSegundos` do AVA — por isso
 congela sozinho durante Pausa e Ajuda, sem lógica de pausa própria do jogo.
+
+Esse relógio ao vivo é opcional: `config.mostrarCronometro: false` tira o
+badge do HUD por completo (junto com o "X/Y" de progresso entre ondas, que
+mora no mesmo indicador) — pra quem preferir não incentivar pressa em quem
+ainda está aprendendo a contar. Independente de `mostrarTempo` (a linha na
+tela de RESULTADO), que continua existindo mesmo com o relógio ao vivo
+desligado.
 
 **Sobre `erros`: este jogo não conta nenhum.** Tentar encaixar um número no
 soquete errado nunca vira erro — a peça só não trava e volta pro próprio
@@ -181,6 +198,14 @@ nenhuma cor nova no motor.
   `temaInterior` que tinha ficado sem declarar foi restaurada — não quebrava
   este jogo (que sempre define `corCeuTopo`/`corCeuBase`), mas quebraria
   qualquer jogo que não defina essas cores.
+- **Ondas do Difícil nunca mais sobram com 1 par sozinho.** 7 pares em ondas
+  de até 3 viravam `3, 3, 1` — a última onda, sem opção nenhuma pra comparar,
+  não ensinava nem deixava errar. `dividirEmOndas` agora distribui por igual
+  (`3, 2, 2`): toda onda, em qualquer nível, tem pelo menos 2 pares.
+- **Cronômetro ao vivo agora é opcional** (`config.mostrarCronometro`, padrão
+  `true`) — ver a seção "Registro no AVA", acima.
+- **Elenco de emoji rebalanceado**: era 5 bichos pra 3 frutas; agora é 1
+  bicho (gato) pra 6 frutas/objetos redondos + 1 bola — ver "O que é", acima.
 
 ## Pendências conhecidas
 

@@ -150,6 +150,17 @@ export default {
 
   /** Linha extra na tela de resultado com o tempo da partida (mm:ss). */
   mostrarTempo: true,
+
+  /**
+   * Cronômetro AO VIVO no HUD durante a partida (o "0:19" no topo-centro).
+   * Puramente informativo — sem prazo, sem cor de alerta — mas alguns
+   * professores preferem tirá-lo de vista pra não incentivar pressa em quem
+   * ainda está aprendendo a contar. `false` remove só o relógio; o "X/Y" de
+   * progresso entre ondas (quando o nível tem mais de uma) some junto, já
+   * que os dois vivem no mesmo indicador — ver `GameScene._relogioBadge`.
+   * `mostrarTempo` (acima, tela de RESULTADO) é independente disto.
+   */
+  mostrarCronometro: true,
 };
 
 // ---------------------------------------------------------------------------

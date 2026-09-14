@@ -22,6 +22,13 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
 - [x] Corrigido bug de variável não declarada (`temaInterior`) no
       `ResultScreen.js` do motor — não afetava este jogo na prática, mas
       quebraria qualquer jogo sem `corCeuTopo`/`corCeuBase` próprios.
+- [x] `dividirEmOndas` distribui por igual (era `3,3,1` no Difícil — a
+      última onda com 1 par só não dava escolha nenhuma pro aluno; agora
+      `3,2,2`, nunca menos de 2 pares por onda em nenhum nível).
+- [x] `config.mostrarCronometro` (padrão `true`) liga/desliga o relógio ao
+      vivo do HUD — testado nos dois estados, sem quebrar a partida.
+- [x] Elenco de emoji rebalanceado: 1 bicho (gato) + 6 frutas/objetos
+      redondos + 1 bola (era 5 bichos + 3 frutas).
 - [x] Regressão: `testes.mjs` (154/154), `verificar-independencia.mjs`
       (aprovado), suíte E2E de ponta a ponta (29/29) refeita depois de cada
       mudança acima.
