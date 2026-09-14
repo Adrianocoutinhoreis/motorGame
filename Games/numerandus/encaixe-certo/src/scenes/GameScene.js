@@ -702,29 +702,30 @@ export class GameScene extends Scene {
   }
 
   /**
-   * `(x,y)` está perto o bastante do soquete de `peca` para contar como
-   * encaixe? Usado tanto para VALIDAR o encaixe (`_tentarEncaixar`) quanto
-   * para decidir o anel de destaque durante o arrasto (`_moverArrasto`) — o
-   * mesmo raio nos dois lugares, senão o anel promete um encaixe que a solta
-   * não confirma.
+   * Raio de aceite do soquete — mesmo raio usado pra VALIDAR o encaixe
+   * (`_dentroDaTolerancia`) e pro ÍMÃ que puxa a ficha durante o arrasto
+   * (`_moverArrasto`), um só lugar pra não desalinhar os dois.
    *
-   * O raio era `1.1×` (depois `1.35×`) a altura da peça — bem maior que a
-   * própria peça (chegava a ~80-90% da LARGURA dela), então soltar a ficha
-   * longe do soquete, quase fora do cartão, ainda contava como acerto e só
-   * depois "teleportava" pro lugar certo.
-   *
-   * `0.45×` (primeira correção) resolvia isso, mas media na prática ~39% da
-   * LARGURA da peça — apertado demais pro dedo de uma criança de 4-7 anos, que
-   * erra a mira por imprecisão motora, não por não saber o que fazer (medido:
-   * soltar a 70px/39% da largura ainda encaixava, a 90px/50% já não).
-   * `0.7×` mede ~65% da largura: ainda rejeita solta longe de qualquer jeito
-   * (ex.: 150-166px, ~85-92% da largura, continua rejeitado), mas aceita uma
-   * mira "por perto, mas não exata" — o meio-termo que faltava.
+   * Era `1.1×` (depois `1.35×`) a altura da peça — bem maior que a própria
+   * peça (~80-90% da LARGURA dela), então soltar longe do soquete, quase
+   * fora do cartão, ainda contava como acerto. `0.45×` (primeira correção)
+   * resolvia isso, mas media ~39% da LARGURA na prática — apertado demais
+   * pro dedo de uma criança de 4-7 anos, que erra a mira por imprecisão
+   * motora, não por não saber o que fazer. `0.7×` (~65% da largura) foi o
+   * meio-termo — mas o raio sozinho não bastava: motricidade fina (mão que
+   * treme, dedo maior que a tela) pode deixar a SOLTA fora do raio mesmo
+   * mirando certo, e a criança nunca vê o "quase". O ímã (`_moverArrasto`)
+   * resolve essa parte: perto o bastante, mesmo sem soltar em cima do pixel
+   * exato, a peça já escorrega sozinha pro lugar antes do dedo sair da tela.
    */
+  _raioTolerancia(peca) {
+    return peca.h * 0.7;
+  }
+
   _dentroDaTolerancia(peca, x, y) {
     const alvoX = peca.x + peca.w;
     const alvoY = peca.y + peca.h / 2;
-    const raio = peca.h * 0.7;
+    const raio = this._raioTolerancia(peca);
     const d = (x - alvoX) ** 2 + (y - alvoY) ** 2;
     return d <= raio ** 2;
   }
@@ -753,9 +754,29 @@ export class GameScene extends Scene {
     const alvo = this._soqueteVazioMaisProximo(ficha.x, ficha.y);
     const perto = alvo && this._dentroDaTolerancia(alvo, ficha.x, ficha.y);
     for (const peca of this.pecasQuantidade) peca.destacada = perto && peca === alvo;
+
+    // Ímã: perto o bastante de QUALQUER soquete vazio (certo ou errado — não
+    // é o valor que decide, é só posição, igual o anel de destaque acima),
+    // a ficha é puxada suavemente pro centro do soquete a cada quadro. Ajuda
+    // quem não consegue soltar com precisão de pixel (mão que treme, dedo
+    // maior que a área alvo) sem entregar de graça se o número bate: uma
+    // ficha errada também é atraída, e só não trava ao soltar
+    // (`_tentarEncaixar` continua exigindo `alvo.valor === ficha.valor`).
+    if (perto) {
+      const alvoX = alvo.x + alvo.w;
+      const alvoY = alvo.y + alvo.h / 2;
+      const dx = alvoX - ficha.x;
+      const dy = alvoY - ficha.y;
+      const raio = this._raioTolerancia(alvo);
+      const forca = 1 - Math.sqrt(dx * dx + dy * dy) / raio; // 0 na borda, 1 no centro
+      const FATOR_IMA = 0.3; // fração do caminho restante puxada a cada quadro
+      ficha.x += dx * forca * FATOR_IMA;
+      ficha.y += dy * forca * FATOR_IMA;
+    }
   }
 
-  _soltarArrasto(ponto) {
+  /** `soltar`/`cancelar` não precisam mais do ponto — ver o comentário abaixo. */
+  _soltarArrasto() {
     const ficha = this._arrastando;
     if (!ficha) return;
     this._arrastando = null;
@@ -764,8 +785,12 @@ export class GameScene extends Scene {
     Tween.removerDe(ficha);
     Tween.para(ficha, { scaleX: 1, scaleY: 1 }, 120, Easing.suaveSaida);
 
-    const local = this.area.globalParaLocal(ponto.x, ponto.y);
-    this._tentarEncaixar(ficha, local);
+    // Valida na posição ATUAL da ficha (`ficha.x/y`), não no ponto cru do
+    // dedo/mouse: o ímã de `_moverArrasto` já pode ter puxado a ficha mais
+    // perto do soquete do que o dedo estava exatamente — o que a criança VÊ
+    // na tela (a ficha já quase encostada) é o que precisa valer, senão o
+    // ímã vira uma promessa vazia (parece que vai encaixar e não encaixa).
+    this._tentarEncaixar(ficha, { x: ficha.x, y: ficha.y });
   }
 
   _tentarEncaixar(ficha, ponto) {
@@ -792,11 +817,39 @@ export class GameScene extends Scene {
     Tween.para(ficha, { x: ficha.trayX, y: ficha.trayY }, 220, Easing.suaveSaida);
   }
 
+  /**
+   * Salta cada par (comemoração de onda/vitória) — mas ANTES disso, assenta
+   * cada ficha exatamente no encaixe, sem depender de nenhum tween anterior
+   * ter tido tempo de terminar.
+   *
+   * Bug real: quando o par que acabava de chamar esta função era o ÚLTIMO da
+   * onda (o mais comum — é o par que COMPLETA a onda que dispara a
+   * comemoração), `_tentarEncaixar` tinha acabado de iniciar
+   * `Tween.para(ficha, {x:alvoX,y:alvoY}, 180, ...)` no MESMO instante
+   * síncrono — o tween nem tinha rodado um quadro ainda. Esta função então
+   * lia `baseYFicha = ficha.y` (a posição de ANTES de soltar, não a de
+   * encaixe) e fazia a ficha saltar em torno do lugar ERRADO, e o tween de
+   * encaixe (ainda vivo, sem cancelar) brigava pelo mesmo `y` — resultado:
+   * a peça ficava visivelmente fora do lugar bem no instante em que a tela
+   * trocava (onda seguinte, ou resultado). Sempre no ÚLTIMO encaixe de uma
+   * onda, nunca nos outros — porque só o último corre essa corrida.
+   *
+   * Consertado assentando a ficha na hora (`Tween.removerDe` cancela
+   * qualquer tween pendente, `ficha.x`/`baseYFicha` vêm da GEOMETRIA do
+   * soquete, nunca de `ficha.x/y` correntes) — não importa se um tween de
+   * encaixe estava ou não em andamento, o resultado é sempre o mesmo lugar
+   * certo.
+   */
   _saltarParesDaOnda(aoFinalizar) {
     this.pecasQuantidade.forEach((peca, i) => {
       const ficha = this.fichaDoValor.get(peca.valor);
       const baseYPeca = peca.y;
-      const baseYFicha = ficha.y;
+      const alvoXFicha = peca.x + peca.w;
+      const baseYFicha = peca.y + peca.h / 2;
+      Tween.removerDe(ficha);
+      ficha.x = alvoXFicha;
+      ficha.y = baseYFicha;
+
       const atraso = i * 60;
       Tween.de(peca).esperar(atraso)
         .entao({ y: baseYPeca - 14 }, 140, Easing.suaveSaida)

@@ -202,10 +202,32 @@ nenhuma cor nova no motor.
   de até 3 viravam `3, 3, 1` — a última onda, sem opção nenhuma pra comparar,
   não ensinava nem deixava errar. `dividirEmOndas` agora distribui por igual
   (`3, 2, 2`): toda onda, em qualquer nível, tem pelo menos 2 pares.
+- **Ímã de encaixe, pra motricidade fina.** O raio de tolerância (acima)
+  resolvia soltar longe do soquete, mas não ajudava quem mira certo e ainda
+  assim treme na hora de soltar. Agora, dentro do mesmo raio, a ficha é
+  puxada suavemente pro centro do soquete a cada quadro do arrasto
+  (`GameScene._moverArrasto`) — quando o dedo solta, ela já está bem mais
+  perto (ou exatamente) no lugar certo. O ímã age por POSIÇÃO, igual o anel
+  de destaque: uma ficha errada perto de um soquete errado também é puxada,
+  então não entrega a resposta — só ajuda a ficha certa a chegar no lugar
+  certo (`_tentarEncaixar` continua exigindo o valor bater pra travar).
 - **Cronômetro ao vivo agora é opcional** (`config.mostrarCronometro`, padrão
   `true`) — ver a seção "Registro no AVA", acima.
 - **Elenco de emoji rebalanceado**: era 5 bichos pra 3 frutas; agora é 1
   bicho (gato) pra 6 frutas/objetos redondos + 1 bola — ver "O que é", acima.
+- **Peça fora do lugar bem no último encaixe de cada onda — bug real,
+  corrigido.** O par que COMPLETA uma onda dispara a comemoração
+  (`_saltarParesDaOnda`) no MESMO instante síncrono em que `_tentarEncaixar`
+  tinha acabado de iniciar o tween de "encaixar" daquela ficha — o tween
+  ainda não tinha rodado um quadro sequer. A comemoração lia a posição
+  ATUAL da ficha (ainda a de antes de soltar, não a do encaixe) como base
+  do salto, e o tween de encaixe (nunca cancelado) brigava pelo mesmo eixo
+  Y — resultado: a última peça de cada onda podia assentar visivelmente
+  fora do lugar bem no instante em que a tela trocava (próxima onda ou
+  resultado). Corrigido calculando a posição de encaixe pela GEOMETRIA do
+  soquete (nunca pela posição corrente da ficha) e cancelando qualquer tween
+  pendente antes de assentar — agora sempre no lugar certo, não importa o
+  timing.
 
 ## Pendências conhecidas
 

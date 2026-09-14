@@ -29,6 +29,18 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
       vivo do HUD — testado nos dois estados, sem quebrar a partida.
 - [x] Elenco de emoji rebalanceado: 1 bicho (gato) + 6 frutas/objetos
       redondos + 1 bola (era 5 bichos + 3 frutas).
+- [x] Ímã de encaixe: dentro do raio de tolerância, a ficha é puxada suave
+      pro centro do soquete a cada quadro do arrasto — ajuda motricidade
+      fina (mão que treme, dedo maior que o alvo) sem revelar a resposta
+      (uma ficha errada perto do soquete errado também é puxada; só o
+      valor bater decide se trava). Testado: ímã reduz a distância antes de
+      soltar, solta imprecisa (60% do raio) ainda encaixa, ficha errada
+      puxada não trava nem soma erro.
+- [x] Corrigida peça fora do lugar no ÚLTIMO encaixe de cada onda (corrida
+      entre o tween de "encaixar" e a comemoração, que disparam no mesmo
+      instante síncrono — ver README.md → "Ajustes de qualidade"). Testado:
+      a última ficha de TODA onda, nos 3 níveis (6 ondas no total), nasce
+      exatamente no soquete no mesmo tick do encaixe.
 - [x] Regressão: `testes.mjs` (154/154), `verificar-independencia.mjs`
       (aprovado), suíte E2E de ponta a ponta (29/29) refeita depois de cada
       mudança acima.
