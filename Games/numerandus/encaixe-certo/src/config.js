@@ -93,20 +93,20 @@ export default {
     {
       titulo: 'Cada peça mostra uma quantidade',
       texto: 'Conte os bichinhos ou frutinhas da peça fixa — nunca vem o número escrito ali.',
-      fala: null, // narração ainda não gravada — ver CHECKLIST.md
+      fala: 'tutorialTela1',
       desenho: (ctx, l, a) => desenharCenaTutorial(ctx, l, a, { passo: 1 }),
     },
     {
       titulo: 'Arraste o número até encaixar',
       texto: 'Puxe o número certo para perto da peça — perto o bastante, ele é atraído e '
         + 'trava sozinho, como um quebra-cabeça de verdade.',
-      fala: null,
+      fala: 'tutorialTela2',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 2, t }),
     },
     {
       titulo: 'Encaixe todos os pares para vencer',
       texto: 'Quando todo mundo estiver encaixado, o tabuleiro inteiro comemora com você!',
-      fala: null,
+      fala: 'tutorialTela3',
       desenho: (ctx, l, a) => desenharCenaTutorial(ctx, l, a, { passo: 3 }),
     },
   ],
@@ -117,13 +117,19 @@ export default {
    * silenciosos ao tocar (mesma decisão do Jogo da Ordenação) — o som só
    * existe onde é gameplay de verdade.
    *
-   * `soltar` (o som de encaixe) ainda não foi gravado — fica `null` de
-   * propósito, não por esquecimento (ver CHECKLIST.md). `acertoSOS` é
-   * reaproveitado de outro jogo da coleção como som de vitória, o mesmo
-   * padrão já usado pelo Jogo da Velha.
+   * `soltar` (o som de encaixe) reaproveita `soltarPeca` do Jogo da Ordenação
+   * (mesmo arquivo, mesmo SHA-256 — ali é o som de uma ficha assentando numa
+   * célula vizinha vazia; aqui, o encaixe da peça no soquete certo — mesmo
+   * gesto central de "encaixar", ambos os jogos). `acertoSOS` é reaproveitado
+   * de outro jogo da coleção como som de vitória, o mesmo padrão já usado
+   * pelo Jogo da Velha.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
+    { id: 'tutorialTela1', src: './assets/audio/tela1.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tela2.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tela3.wav' },
+    { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
   ],
 
   /** Sem mascote nesta partida — o tabuleiro de encaixe é a área de maior destaque. */
@@ -132,7 +138,7 @@ export default {
   audio: {
     musica: null,
     clique: null,
-    soltar: null, // som de encaixe a gravar — ver CHECKLIST.md
+    soltar: 'soltarPeca', // reaproveitado do Jogo da Ordenação — ver comentário em `assets`
     acerto: null,
     erro: null,
     vitoria: 'acertoSOS',

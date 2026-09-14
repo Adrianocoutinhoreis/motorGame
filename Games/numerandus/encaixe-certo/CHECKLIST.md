@@ -177,10 +177,14 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
       jogo da coleção (mesmo arquivo, mesmo SHA-256).
 - [x] `config.audio.clique: null` — SEM som de clique. Mesma decisão do Jogo
       da Ordenação: som só onde é gesto de jogo de verdade.
-- [ ] **`soltar` (som de encaixe) ainda não gravado** — `config.audio.soltar: null`.
-      O jogo funciona inteiro sem ele (feedback visual já existe).
-- [ ] **`tutorialTela1/2/3` ainda não gravados** — `tutorial[].fala: null` nos
-      3 passos. O tutorial funciona só com texto e ilustração.
+- [x] **`soltar` (som de encaixe) ligado** (sessão de 2026-09-14) —
+      `config.audio.soltar: 'soltarPeca'`, reaproveitando o mesmo arquivo já
+      usado no Jogo da Ordenação (`soltarPeca`), mesmo SHA-256. Toca só no
+      encaixe CERTO (verificado: não toca num encaixe errado).
+- [x] **`tutorialTela1/2/3` gravados e ligados** (sessão de 2026-09-14) —
+      `tutorial[].fala` aponta pros 3 arquivos (`assets/audio/tela{1,2,3}.wav`),
+      tocados pelo `TutorialScreen` compartilhado (`falar()`), tanto no
+      "COMO JOGAR" do menu quanto na ajuda dentro da partida (RE-05).
 - [ ] Sem música de fundo — nenhuma gravação própria ainda produzida para
       este jogo.
 
@@ -218,13 +222,17 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
       (`acertos: 7, totalPerguntas: 7`); HUD mostra "X/7" corretamente; nível
       Fácil (1 onda só) NÃO mostra "X/Y" (sem onda extra, não precisa).
 - [x] Nenhum erro de console/página em nenhuma das cenas visitadas.
+- [x] Narração do tutorial: `tutorialTela1/2/3` registrados no `AudioBus`
+      (`temSom()` true pros 3), e `audio.falar()` disparado com o id certo ao
+      navegar pelos 3 passos (`TutorialScreen.mostrarPasso`) — sem aviso de
+      narração ausente no console.
+- [x] Som de encaixe: `soltarPeca` registrado no `AudioBus`; encaixe ERRADO
+      não dispara `audio.efeito('soltarPeca')`, encaixe CERTO dispara.
 
 ## Melhorias identificadas, ainda não feitas
 
-1. Gravar e ligar o som de encaixe (`audio.soltar`) e a narração do tutorial
-   (`tutorialTela1/2/3`) — seção 5.
-2. Testar a renderização dos emojis nos tablets reais da escola (Android/
+1. Testar a renderização dos emojis nos tablets reais da escola (Android/
    Windows/iOS podem desenhar o mesmo emoji de forma um pouco diferente).
-3. Numeração do nível (`LevelSelectScreen`, motor compartilhado) visivelmente
+2. Numeração do nível (`LevelSelectScreen`, motor compartilhado) visivelmente
    fora do centro do emblema — identificado antes em outros jogos, não
    corrigido (afeta todos os jogos que usam a tela padrão).

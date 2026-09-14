@@ -160,14 +160,20 @@ encaixe-certo/
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
 | `assets/audio/acertoSOS.wav` | efeito de fim de partida — vitória (id `acertoSOS`) | Aula original 870298 — Educandus. Mesmo arquivo (mesmo SHA-256) do Jogo das Formas/Blocos/Cores/Bingo/Jogo da Velha/Jogo da Ordenação. Ficha: `assets/audio-transcricao/acertoSOS/transcricao.md`. Não há `erroSOS`: este jogo nunca tem derrota. |
+| `assets/audio/tela1.wav`, `tela2.wav`, `tela3.wav` | narração dos 3 passos do tutorial (ids `tutorialTela1/2/3`) | Gravação própria deste jogo. Tocada pelo `TutorialScreen` compartilhado (`audio.falar()`) tanto no "COMO JOGAR" do menu quanto na ajuda dentro da partida (RE-05). |
+| `assets/audio/soltar_peca.mp3` | som de encaixe — trava do par certo (id `soltarPeca`) | Mesmo arquivo (mesmo SHA-256) do `soltarPeca` do Jogo da Ordenação — mesmo gesto central de "encaixar" nos dois jogos. Origem/licença ainda a confirmar (mesma pendência de lá). Ficha: `assets/audio-transcricao/soltarPeca/transcricao.md`. |
 
 Sem som de clique (`config.audio.clique: null`): botões de HUD (pausa, ajuda,
 som), menu, níveis, tutorial e resultado ficam silenciosos ao tocar — mesma
 decisão do Jogo da Ordenação, som só onde é gesto de jogo de verdade.
 
-**O som de encaixe (`config.audio.soltar`) ainda não foi gravado** — fica
-`null` de propósito. O jogo funciona inteiro sem ele (feedback visual: a peça
-é puxada pro lugar e trava), só falta o efeito sonoro.
+**O som de encaixe (`config.audio.soltar`) reaproveita `soltarPeca` do Jogo
+da Ordenação** — toca só quando um par TRAVA certo (nunca num encaixe errado,
+que não pontua e não trava).
+
+**A narração do tutorial (`tutorial[].fala`) já está gravada e ligada** —
+`tutorialTela1/2/3` tocam nos 3 passos do "COMO JOGAR" (menu) e da ajuda
+dentro da partida, pelo `TutorialScreen` compartilhado.
 
 Nenhuma imagem: peças, entalhe/nó, contorno e os marcadores de quantidade são
 desenhados no canvas — os marcadores usam **emoji nativo** (`ctx.fillText`),
@@ -228,16 +234,29 @@ nenhuma cor nova no motor.
   soquete (nunca pela posição corrente da ficha) e cancelando qualquer tween
   pendente antes de assentar — agora sempre no lugar certo, não importa o
   timing.
+- **Narração do tutorial gravada e ligada.** `tutorial[].fala` apontava pra
+  `null` nos 3 passos; agora aponta pros arquivos `tutorialTela1/2/3`
+  (`assets/audio/tela{1,2,3}.wav`), registrados em `config.assets`. Nenhuma
+  mudança de código foi necessária além do `config.js` — o `TutorialScreen`
+  compartilhado já sabia tocar `passo.fala` (mesmo mecanismo usado pelo Jogo
+  da Ordenação). Verificado ao vivo: os 3 áudios carregam no `AudioBus` e
+  `falar()` dispara na ordem certa ao navegar pelos passos, sem aviso de
+  narração ausente no console.
+- **Som de encaixe ligado, reaproveitando o Jogo da Ordenação.** `audio.soltar`
+  apontava pra `null`; agora aponta pra `soltarPeca`, o mesmo arquivo (mesmo
+  SHA-256) já usado no Jogo da Ordenação para o mesmo gesto — uma ficha
+  encaixando no lugar certo. Verificado ao vivo: o efeito toca exatamente no
+  encaixe CERTO (`GameScene._tentarEncaixar`) e não dispara num encaixe
+  errado.
 
 ## Pendências conhecidas
 
 > Liste aqui, com honestidade, o que ainda falta.
 
-- **Som de encaixe (`audio.soltar`) ainda não gravado** — o jogo funciona
-  silencioso nesse gesto específico; falta produzir/gravar o efeito.
-- **Narração do tutorial ainda não gravada** (`tutorial[].fala: null` nos 3
-  passos) — o tutorial funciona só com texto e ilustração; falta gravar
-  `tutorialTela1/2/3` (mesmo padrão de outros jogos da coleção).
+- **Origem/licença do som de encaixe (`soltarPeca`) ainda a confirmar** —
+  arquivo fornecido pronto, sem procedência documentada; mesma pendência já
+  existente no Jogo da Ordenação (é o mesmo arquivo nos dois). Confirmar
+  antes de publicar para alunos.
 - **Sem música de fundo** e sem locução de abertura, escolha de nível, etc. —
   mesma regra do motor: som só de arquivo gravado, nunca sintetizado.
 - **Renderização de emoji varia entre sistemas** (Segoe UI Emoji no Windows,
