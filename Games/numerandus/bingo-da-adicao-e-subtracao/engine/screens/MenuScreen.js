@@ -352,10 +352,14 @@ export class MenuScreen extends Scene {
     this.estado = ESTADOS.MENU;
     const { largura: L, altura: A, config } = this;
 
-    // O tema vem do jogo. Estava cravado em 'construcao' aqui, então o
-    // `config.tema` — que o Tutorial e a Seleção de Níveis já respeitavam — era
-    // silenciosamente ignorado no menu: uma opção documentada que não funcionava.
-    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
+    this.adicionar(new Background({
+      largura: L,
+      altura: A,
+      tema: config.tema ?? 'construcao',
+      corCeuTopo: config.corCeuTopo,
+      corCeuBase: config.corCeuBase,
+      mostrarDecoracoes: config.mostrarDecoracoes ?? true,
+    }));
 
     // ---------------------------------------------------------------- título
     // A placa segue o tema, e não uma chave própria: tema É a linguagem visual

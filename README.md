@@ -86,6 +86,8 @@ Coleção **Numerandus** (`Games/numerandus/`) — ver [`docs/METODO-JOGOS-NUMER
 |---|---|---|
 | [Jogo da Velha](Games/numerandus/jogo-da-velha-novo/) | — | ✅ jogável |
 | [Bingo da Adição e Subtração](Games/numerandus/bingo-da-adicao-e-subtracao/) | — | ✅ jogável |
+| [Jogo da Ordenação](Games/numerandus/jogo-da-ordenacao/) | — | ✅ jogável |
+| [Encaixe Certo](Games/numerandus/encaixe-certo/) | — | ✅ jogável, [pendências declaradas](Games/numerandus/encaixe-certo/README.md#pendências-conhecidas) |
 
 ---
 

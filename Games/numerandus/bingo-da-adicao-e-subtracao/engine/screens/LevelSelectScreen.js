@@ -138,7 +138,14 @@ export class LevelSelectScreen extends Scene {
     const { largura: L, altura: A, config } = this;
     const niveis = config.niveis ?? [];
 
-    this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
+    this.adicionar(new Background({
+      largura: L,
+      altura: A,
+      tema: config.tema ?? 'construcao',
+      corCeuTopo: config.corCeuTopo,
+      corCeuBase: config.corCeuBase,
+      mostrarDecoracoes: config.mostrarDecoracoes ?? true,
+    }));
 
     this.adicionar(new TextNode('Escolha um nível', {
       x: L / 2,

@@ -206,6 +206,13 @@ export class ResultScreen extends Scene {
      */
     const empatou = !!resultado.extras?.empate;
     const venceu = !empatou && !!resultado.vitoria;
+    // Ver o comentário abaixo, junto do `Background`: temas de INTERIOR não
+    // ganham céu de vitória/derrota, usam a própria cor do tema nos três
+    // desfechos. Esta declaração tinha sumido de uma edição anterior — sem
+    // ela, qualquer jogo que NÃO defina `config.corCeuTopo`/`corCeuBase`
+    // (a maioria) cairia num `ReferenceError` (`temaInterior is not defined`)
+    // bem aqui, na primeira linha da tela de resultado.
+    const temaInterior = ['quadro', 'bingo', 'quarto'].includes(config.tema ?? 'construcao');
 
     // Mesmo canteiro de obras do menu e da partida, em vez de um céu vazio.
     // A tela de resultado é a última coisa que a criança vê da atividade; com
@@ -228,32 +235,38 @@ export class ResultScreen extends Scene {
     // O sol NÃO entra aqui: o `Background` recusa o sol nesses temas mesmo
     // quando `mostrarSol: true` é passado (pedido do humano) — nenhum deles
     // tem sol, nem na vitória.
-    const temaInterior = ['quadro', 'bingo', 'quarto'].includes(config.tema ?? 'construcao');
     this.adicionar(new Background({
       largura: L,
       altura: A,
-      // Também estava cravado: a última tela da atividade voltava ao canteiro
-      // de obras mesmo num jogo de outro tema.
       tema: config.tema ?? 'construcao',
-      ...(temaInterior ? {} : {
-        corCeuTopo: (venceu || empatou) ? cores.ceuProfundo : '#94A3B8',
-        corCeuBase: (venceu || empatou) ? cores.ceu : '#CBD5E1',
-      }),
-      // Sol só na vitória: sol a pino com glow amarelo sobre céu encoberto (ou
-      // sobre um empate) era uma contradição visual — o céu dizia uma coisa e
-      // a luz dizia outra.
+      corCeuTopo: config.corCeuTopo ?? (temaInterior ? undefined : ((venceu || empatou) ? cores.ceuProfundo : '#94A3B8')),
+      corCeuBase: config.corCeuBase ?? (temaInterior ? undefined : ((venceu || empatou) ? cores.ceu : '#CBD5E1')),
       mostrarSol: venceu,
+      mostrarDecoracoes: config.mostrarDecoracoes ?? true,
     }));
 
     // O painel precisa deixar espaço para a fileira de botões ABAIXO dele sem
     // sair da área lógica: painel + margem + botão (88) tem de caber em `A`.
     const larguraPainel = Math.min(760, L - espaco.xl * 2);
     const alturaPainel = Math.min(430, A - espaco.xl * 2 - 120);
+
+    // O BLOCO INTEIRO (painel + respiro + botões) é quem centraliza na tela,
+    // não o painel sozinho. Estava `painel.y = (A - alturaPainel) / 2`, que
+    // centraliza só o painel e finge que os botões abaixo dele não ocupam
+    // espaço — o grupo inteiro nascia empurrado pra cima, com uma sobra de
+    // céu enorme no topo e os botões quase colados no chão embaixo (visto no
+    // print: 145px de folga em cima contra 25px embaixo). Reservando a altura
+    // do botão E do respiro ANTES de centralizar, o grupo fica com a mesma
+    // folga dos dois lados.
+    const ALTURA_BOTAO = 88;
+    const alturaBlocoTotal = alturaPainel + espaco.lg + ALTURA_BOTAO;
+    const yBlocoTopo = (A - alturaBlocoTotal) / 2;
+
     const painel = new Panel({
       largura: larguraPainel,
       altura: alturaPainel,
       x: (L - larguraPainel) / 2,
-      y: (A - alturaPainel) / 2,
+      y: yBlocoTopo,
     });
     this.adicionar(painel);
 
@@ -467,7 +480,7 @@ export class ResultScreen extends Scene {
 
     const larguraTotal = botoes.reduce((s, b) => s + b.largura, 0) + (botoes.length - 1) * espaco.md;
     let cursorX = (L - larguraTotal) / 2;
-    const yBotoes = (A + alturaPainel) / 2 + espaco.lg;
+    const yBotoes = yBlocoTopo + alturaPainel + espaco.lg;
 
     for (const botao of botoes) {
       // Button ancora no centro: soma metade da largura ao posicionar.

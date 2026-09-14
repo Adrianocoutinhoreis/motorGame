@@ -83,7 +83,14 @@ export class TutorialScreen extends Scene {
     // Sem cenário no modo ajuda: o véu do `HelpScreen` já separa a camada, e um
     // fundo opaco esconderia a partida que a criança precisa ver que continua lá.
     if (!this.aoFecharAjuda) {
-      this.adicionar(new Background({ largura: L, altura: A, tema: config.tema ?? 'construcao' }));
+      this.adicionar(new Background({
+        largura: L,
+        altura: A,
+        tema: config.tema ?? 'construcao',
+        corCeuTopo: config.corCeuTopo,
+        corCeuBase: config.corCeuBase,
+        mostrarDecoracoes: config.mostrarDecoracoes ?? true,
+      }));
     }
 
     // ------------------------------------------------------------ cartão
@@ -158,7 +165,14 @@ export class TutorialScreen extends Scene {
     // Antes as setas ficavam a 126 px do centro e o JOGAR tem 130 de meia
     // largura — os dois se SOBREPUNHAM em 4 px no último passo, com a seta de
     // voltar por baixo da borda do botão verde.
-    const yNav = A * 0.82;
+    //
+    // 0.80 e não 0.82: com 0.82 sobravam só ~25px entre o fundo VISUAL do
+    // botão (relevo + sombra, ver o comentário do `contador` abaixo) e a
+    // borda de baixo da tela (720) — não dava pra caber o contador ali sem
+    // ele colar no botão ou vazar pra fora do palco. 0.80 libera a folga que
+    // faltava, ao custo de ~15px a menos entre o painel e os botões (ainda
+    // positivo, não aperta o painel).
+    const yNav = A * 0.80;
     const tamanhoSeta = 84;
     // 340 no modo ajuda: "VOLTAR AO JOGO" não cabe nos 260 de "JOGAR". E o
     // rótulo é esse, e não "VOLTAR" sozinho, porque a seta de voltar PASSO fica
@@ -214,9 +228,18 @@ export class TutorialScreen extends Scene {
     // `Background._chao`), e essa faixa cai bem onde este texto fica — a
     // mesma tinta escura ficaria ilegível ali também.
     const sobreFundoEscuro = this.aoFecharAjuda || config.tema === 'quarto';
+    // `+96` deixava o contador quase colado no JOGAR/nas setas: o `Button`
+    // desenha ~19px ABAIXO da própria altura declarada (aba 3D de relevo em
+    // +8 e sombra com desfoque 12 — ver `Button.desenhar` e o comentário
+    // equivalente em `MenuScreen.js`), e a borda de baixo do botão
+    // (`yNav - 2 + 88` = `yNav + 86`, mais os ~19px do relevo/sombra ≈
+    // `yNav + 105`) ficava mais para baixo que o centro do texto do contador
+    // (`yNav + 96`) — o contador nascia meio ATRÁS do próprio botão.
+    // `+120` deixa uma folga real, e ainda cabe no palco com `yNav` em 0.80
+    // (ver o comentário de `yNav`, acima).
     this.contador = new TextNode('', {
       x: L / 2,
-      y: yNav + 96,
+      y: yNav + 120,
       tamanho: tipografia.apoio,
       cor: sobreFundoEscuro ? cores.superficie : cores.tinta,
       alinhamento: 'center',

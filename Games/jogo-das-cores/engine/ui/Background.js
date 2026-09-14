@@ -11,6 +11,9 @@ import { cores } from '../theme/tokens.js';
  *
  * As nuvens se movem devagar: sinal de que a tela está viva, sem competir com
  * o conteúdo pela atenção da criança.
+ *
+ * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
+ * 'bingo', 'quarto'.
  */
 export class Background extends Node {
   constructor(opcoes = {}) {
@@ -23,10 +26,12 @@ export class Background extends Node {
       ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
-    // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem nuvem
-    // de céu ensolarado por padrão — não têm céu de verdade, têm parede/tinta.
+    // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
+    // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
+    // parede/tinta.
     this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto');
     this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto');
+    this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
 
     /**
      * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
@@ -342,10 +347,12 @@ export class Background extends Node {
       }
     }
 
-    if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
-    if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
-    if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
-    if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
+    if (this.mostrarDecoracoes) {
+      if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
+      if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
+      if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
+      if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
+    }
     this._chao(ctx);
   }
 
