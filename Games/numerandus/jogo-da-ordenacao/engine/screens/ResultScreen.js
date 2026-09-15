@@ -243,6 +243,7 @@ export class ResultScreen extends Scene {
       corCeuBase: config.corCeuBase ?? (temaInterior ? undefined : ((venceu || empatou) ? cores.ceu : '#CBD5E1')),
       mostrarSol: venceu,
       mostrarDecoracoes: config.mostrarDecoracoes ?? true,
+      mostrarChao: config.mostrarChao ?? true,
     }));
 
     // O painel precisa deixar espaço para a fileira de botões ABAIXO dele sem

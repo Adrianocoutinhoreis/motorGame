@@ -359,6 +359,7 @@ export class MenuScreen extends Scene {
       corCeuTopo: config.corCeuTopo,
       corCeuBase: config.corCeuBase,
       mostrarDecoracoes: config.mostrarDecoracoes ?? true,
+      mostrarChao: config.mostrarChao ?? true,
     }));
 
     // ---------------------------------------------------------------- título

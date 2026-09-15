@@ -32,6 +32,11 @@ export class Background extends Node {
     this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto');
     this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
+    /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
+     *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
+     *  nenhuma. Existe porque um jogo pode preferir o cenário mais limpo,
+     *  sem o piso disputando espaço com o conteúdo da partida. */
+    this.mostrarChao = opcoes.mostrarChao ?? true;
 
     /**
      * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
@@ -134,7 +139,7 @@ export class Background extends Node {
     const sx = Math.max(0, -area.x);
     const sy = Math.max(0, -area.y);
     this._ceu(ctx, sx, sy);
-    this._chao(ctx, sx, sy);
+    if (this.mostrarChao) this._chao(ctx, sx, sy);
   }
 
   /**
@@ -353,7 +358,7 @@ export class Background extends Node {
       if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
       if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
     }
-    this._chao(ctx);
+    if (this.mostrarChao) this._chao(ctx);
   }
 
   /**
@@ -528,7 +533,7 @@ export class Background extends Node {
       }
     }
 
-    this._chao(ctx);
+    if (this.mostrarChao) this._chao(ctx);
 
     if (this.mostrarPecas) {
       const friso = ['circulo', 'quadrado', 'triangulo', 'retangulo'];
