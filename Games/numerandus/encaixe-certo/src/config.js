@@ -145,14 +145,15 @@ export default {
     derrota: null,
     abertura: null,
     falaVitoria: null, // "Muito bem! Você conseguiu!"
+    escolhaNivel: null, // "Escolha um nível" — narração da LevelSelectScreen
   },
 
   // -------------------------------------------------------------------- AVA
   /** Este jogo nunca tem derrota: só demora mais quando o aluno erra o encaixe. */
   registrarDerrota: false,
 
-  /** RE-03: o placar mostra "N PARES", não "N pontos" nem uma fração. */
-  unidadePlacar: { singular: 'par', plural: 'pares' },
+  /** RE-03: o placar mostra "N ACERTOS", não "N pontos" nem uma fração. */
+  unidadePlacar: { singular: 'acerto', plural: 'acertos' },
 
   /** Linha extra na tela de resultado com o tempo da partida (mm:ss). */
   mostrarTempo: true,

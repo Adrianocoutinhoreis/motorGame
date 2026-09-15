@@ -106,8 +106,8 @@ Ao completar todos os pares (sempre vitória), o jogo emite:
 ```js
 {
   type: "JOGO_CONCLUIDO",
-  acertos: 5,             // pares encaixados — igual à meta do nível jogado
-  erros: 0,               // este jogo não penaliza tentativa nenhuma
+  acertos: 5,             // pares encaixados — SEMPRE cheio, nunca descontado
+  erros: 2,               // tentativas com valor ERRADO perto de um soquete de verdade
   totalPerguntas: 5,      // pares da rodada (3, 5 ou 7, conforme o nível)
   nivel: 2,
   jogo: "encaixe-certo",
@@ -117,8 +117,24 @@ Ao completar todos os pares (sempre vitória), o jogo emite:
 }
 ```
 
-A tela final mostra "N PARES" (não "N pontos") via `config.unidadePlacar`, e
-também o **tempo da partida** (mm:ss) — campo opcional em `ResultScreen`
+`erros` conta só quando a ficha é solta perto o bastante de um soquete vazio
+de VERDADE (`_dentroDaTolerancia`) mas com o valor errado — uma tentativa
+real, não uma solta longe de qualquer soquete (motricidade imprecisa não é
+um palpite). **Decisão explícita do humano: `erros` é só demonstrativo, sem
+desconto nenhum.** A regra RE-02 (a nota desconta a falha na vitória) NÃO se
+aplica a este campo aqui: 2 tentativas erradas seguidas de todos os pares
+certos reporta `acertos: 5` (cheio) e `erros: 2` (só pra registro) — nunca
+`acertos: 3`. Por isso `GameScene` nunca chama `placar.errar()` (que
+acionaria o desconto do `ScoreSystem`); a contagem vive num contador próprio
+da cena e só é escrita no campo `erros` da mensagem final, por fora do
+`ScoreSystem`. O erro nunca aparece durante a partida (a HUD só mostra
+`acertos`/`total`) nem na tela de resultado (que lê só `acertos`/
+`totalPerguntas`, nunca `erros` — RE-04) — só o relatório passa a saber
+quantas tentativas erradas aconteceram.
+
+A tela final mostra "N ACERTOS" (não "N pontos" nem "N pares") via
+`config.unidadePlacar: { singular: 'acerto', plural: 'acertos' }`, e também
+o **tempo da partida** (mm:ss) — campo opcional em `ResultScreen`
 (`config.mostrarTempo: true`).
 
 O mesmo tempo já aparece AO VIVO durante a partida: um cronômetro no HUD
@@ -134,10 +150,10 @@ ainda está aprendendo a contar. Independente de `mostrarTempo` (a linha na
 tela de RESULTADO), que continua existindo mesmo com o relógio ao vivo
 desligado.
 
-**Sobre `erros`: este jogo não conta nenhum.** Tentar encaixar um número no
-soquete errado nunca vira erro — a peça só não trava e volta pro próprio
-lugar na bandeja. É a mesma correção (RE-02) já aplicada no Jogo da
-Ordenação: um quebra-cabeça não pune tentativa, só não premia a errada.
+**Sobre `erros`: ver "Registro no AVA", acima.** Conta tentativas com valor
+errado perto de um soquete real, mas é só demonstrativo — nunca desconta a
+nota nem trava a peça no lugar errado; ela só não trava e volta pro próprio
+lugar na bandeja.
 
 ## Estrutura
 
@@ -248,6 +264,39 @@ nenhuma cor nova no motor.
   encaixando no lugar certo. Verificado ao vivo: o efeito toca exatamente no
   encaixe CERTO (`GameScene._tentarEncaixar`) e não dispara num encaixe
   errado.
+- **Investigação completa por erros — nenhum encontrado.** Varredura ao
+  vivo por exceções/avisos de console em toda tela e interação (menu,
+  tutorial, seleção de nível, os 3 níveis jogados até o fim com todas as
+  ondas, pausa, pausa NO MEIO de um arrasto, ajuda em partida, encaixe
+  errado proposital, encaixe por gesto de mouse REAL exercitando o ímã) —
+  nenhuma exceção JS, nenhum problema de fluxo. Só 2 avisos informativos
+  (narração ausente para `escolhaNivel`/`falaVitoria`, ambos já
+  documentados, ver "Pendências conhecidas"). De quebra, a pendência de
+  "numeração do cartão de nível fora do centro" (abaixo, nesta seção antes
+  desta sessão) foi conferida por código e captura de tela e está
+  desatualizada — o motor compartilhado já centraliza corretamente; foi
+  removida da lista.
+- **Tentativas incorretas agora contam no `erros` do AVA — sem desconto.**
+  Pedido do humano: contabilizar tentativas incorretas para o relatório,
+  mas SEM que isso afete a nota/estrelas da vitória (ao contrário do que
+  RE-02 faria em qualquer outro jogo do motor). Passou por três versões
+  nesta sessão: (1) campo próprio em `extras`, sem afetar nota; (2) campo
+  `erros` padrão via `placar.errar()`, que aciona o desconto de RE-02 —
+  descartada por descontar a nota, o que o humano não queria; (3) versão
+  final: um contador próprio da cena (`GameScene._tentativasErradas`,
+  nunca passa por `placar.errar()`) escrito diretamente no campo `erros`
+  da mensagem final, por fora do `ScoreSystem` — assim `acertos` sai
+  sempre CHEIO (nunca descontado) e `erros` só registra a contagem. Conta
+  só soltas perto o bastante de um soquete vazio de verdade com o valor
+  errado — uma solta longe de qualquer soquete (motricidade imprecisa) não
+  conta. Verificado ao vivo com o cenário exato pedido (2 tentativas
+  erradas + todos os pares certos depois): `acertos: 3` (cheio), `erros: 2`,
+  `vitoria: true`.
+- **Rótulo da tela final trocado para "ACERTOS".** Pedido do humano:
+  `config.unidadePlacar` mudou de `{ singular: 'par', plural: 'pares' }`
+  para `{ singular: 'acerto', plural: 'acertos' }` — a tela de resultado
+  agora mostra "N ACERTOS" em vez de "N PARES" (mesmo padrão já usado pelo
+  Bingo e pelo Jogo da Ordenação). Verificado ao vivo por captura de tela.
 
 ## Pendências conhecidas
 
@@ -257,17 +306,18 @@ nenhuma cor nova no motor.
   arquivo fornecido pronto, sem procedência documentada; mesma pendência já
   existente no Jogo da Ordenação (é o mesmo arquivo nos dois). Confirmar
   antes de publicar para alunos.
-- **Sem música de fundo** e sem locução de abertura, escolha de nível, etc. —
-  mesma regra do motor: som só de arquivo gravado, nunca sintetizado.
+- **Sem música de fundo**, sem locução de abertura, e faltam duas narrações
+  opcionais do motor compartilhado: `audio.escolhaNivel` ("Escolha um
+  nível", na seleção de nível) e `audio.falaVitoria` ("Muito bem! Você
+  conseguiu!", na tela de resultado) — ambas silenciosas por falta de
+  gravação, ambas documentadas explicitamente em `config.js` (não é
+  esquecimento). Mesma regra do motor: som só de arquivo gravado, nunca
+  sintetizado.
 - **Renderização de emoji varia entre sistemas** (Segoe UI Emoji no Windows,
   Noto Color Emoji no Android/Chrome OS, Apple Color Emoji no iOS/macOS) — o
   desenho do bichinho/fruta muda um pouco entre aparelhos, mas o significado
   se mantém. Vale testar no(s) tablet(s) reais da escola antes de considerar
   fechado.
-- **Numeração dos cartões de nível** (`LevelSelectScreen`, motor
-  compartilhado) tem o número do círculo visivelmente fora do centro do
-  emblema — identificado em outros jogos da coleção, afeta todos os jogos que
-  usam a tela padrão, não é específico deste.
 
 ## Atualizar o motor neste jogo
 

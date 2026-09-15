@@ -61,13 +61,23 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
 - [x] `src/config.js` preenchido por inteiro.
 - [x] Regras educacionais conferidas (RE-01 a RE-05):
   - [x] RE-01 — todo texto em CAIXA ALTA (`textoEmCaixaAlta: true`).
-  - [x] RE-02 — **verificado, não assumido**: um encaixe na peça errada nunca
-        vira erro no placar — a peça só não trava e volta pro próprio lugar
-        na bandeja (testado via Playwright: `placar.erros` continua 0 depois
-        de uma tentativa errada). `ScoreSystem.acertar(1)` só é chamado no
-        exato momento em que um par TRAVA de verdade — nunca por tentativa.
-  - [x] RE-03 — placar exibe a UNIDADE ("5 PARES", não "5 de 5") via
-        `config.unidadePlacar: { singular: 'par', plural: 'pares' }`.
+  - [x] RE-02 — **verificado, não assumido** (revisado em 2026-09-15): a
+        REGRA (desconta a falha da nota na vitória) foi CONSCIENTEMENTE
+        deixada de fora deste jogo — pedido explícito do humano. Este jogo
+        passou a contar tentativas erradas (`GameScene._tentativasErradas`,
+        incrementado só quando a ficha solta perto o bastante de um soquete
+        vazio de verdade tem o valor ERRADO — uma solta longe de qualquer
+        soquete é motricidade imprecisa e não conta), mas o contador NUNCA
+        passa por `placar.errar()` — é escrito direto no campo `erros` da
+        mensagem final do AVA, por fora do `ScoreSystem`, então `acertos`
+        sai sempre CHEIO. `ScoreSystem.acertar(1)` continua só no exato
+        momento em que um par TRAVA de verdade — nunca por tentativa.
+        Confirmado ao vivo com o cenário pedido (2 tentativas erradas + 3
+        pares certos): `acertos: 3` (cheio, sem desconto), `erros: 2`,
+        `vitoria: true`.
+  - [x] RE-03 — placar exibe a UNIDADE ("5 ACERTOS", não "5 de 5") via
+        `config.unidadePlacar: { singular: 'acerto', plural: 'acertos' }`
+        (trocado de `par`/`pares` a pedido do humano em 2026-09-15).
   - [x] RE-04 — estrelas calculadas pela `ResultScreen` a partir de
         `acertos`/`totalPerguntas` reais, sem escala própria do jogo.
   - [x] RE-05 — ajuda/pausa não custam a partida: `Tween.pausarTodos()` é
@@ -136,7 +146,7 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
 - [x] **Pausa** enxuta: só CONTINUAR / COMEÇAR DE NOVO / SAIR — sem atalho de
       AJUDA dentro do painel, nem ícone de som (`mostrarSom: false`, já que o
       HUD atrás do véu sempre o mostra).
-- [x] **Resultado** com estrelas + "N PARES" + **tempo da partida** (mm:ss,
+- [x] **Resultado** com estrelas + "N ACERTOS" + **tempo da partida** (mm:ss,
       `config.mostrarTempo: true`).
 
 ## 3. As peças e o encaixe
@@ -192,12 +202,12 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
 
 | Campo | Significado | Observação |
 |---|---|---|
-| `acertos` | Pares encaixados | Igual à meta do nível — sem desconto (ver seção 1/RE-02: nenhuma tentativa é penalizada) |
-| `erros` | Sempre 0 | Este jogo nunca conta erro — um encaixe errado não trava e não pontua |
+| `acertos` | Pares encaixados | Igual à meta do nível — SEM desconto por erro, mesmo com `erros` > 0 (ver seção 1: decisão explícita de deixar RE-02 de fora deste campo) |
+| `erros` | Tentativas com valor ERRADO perto de um soquete vazio de verdade | Puramente demonstrativo — `GameScene._tentativasErradas`, escrito no `erros` da mensagem final por fora do `ScoreSystem` (nunca `placar.errar()`). Não conta soltas longe de qualquer soquete (motricidade imprecisa, não um palpite). Nunca aparece na HUD nem na tela de resultado durante/depois da partida |
 | `totalPerguntas` | Pares da rodada | 3 (Fácil), 5 (Médio) ou 7 (Difícil) |
 | `nivel` | Nível escolhido | `1`, `2` ou `3` |
 | `jogo` | Slug estável | `encaixe-certo` |
-| `vitoria` | Sempre `true` | Quebra-cabeça solo, sem derrota |
+| `vitoria` | Sempre `true` | Quebra-cabeça solo, sem vidas — `erros` nunca derruba a vitória nem desconta a nota |
 | `tempoSegundos` | Tempo jogando, medido pelo motor | Também aparece na `ResultScreen` (`config.mostrarTempo`) |
 
 ## 7. Verificação automatizada (feita nesta sessão)
@@ -228,11 +238,39 @@ atual). Ver `README.md` → "Ajustes de qualidade" para o detalhe de cada item:
       narração ausente no console.
 - [x] Som de encaixe: `soltarPeca` registrado no `AudioBus`; encaixe ERRADO
       não dispara `audio.efeito('soltarPeca')`, encaixe CERTO dispara.
+- [x] Contagem de tentativas incorretas em `erros`, SEM desconto na nota:
+      cenário exato testado (2 tentativas com valor ERRADO perto de um
+      soquete real, seguidas de todos os pares certos) — mensagem final do
+      AVA chega com `acertos: 3` (cheio, sem descontar as 2 tentativas),
+      `erros: 2`, `vitoria: true`. Confirmado também que `placar.erros`
+      (`ScoreSystem`) nunca é tocado — a contagem vive só em
+      `GameScene._tentativasErradas` e é escrita no campo `erros` da
+      mensagem por fora do placar.
+- [x] Rótulo da tela final: captura de tela confirma "3 ACERTOS" (não mais
+      "3 PARES") após `unidadePlacar` trocado.
+- [x] **Investigação dedicada por erros (sessão de 2026-09-15)** — varredura
+      por exceções/avisos de console em TODA tela e interação: menu,
+      tutorial (3 passos), seleção de nível, os 3 níveis jogados até o fim
+      com TODAS as ondas, pausa, pausa NO MEIO de um arrasto (retoma e a
+      peça volta sozinha), ajuda em partida, um encaixe ERRADO proposital
+      por onda, e — numa segunda passada — os MESMOS encaixes por gesto de
+      mouse REAL (mousedown/move×12 passos/mouseup via CDP, exercitando o
+      ímã de verdade, não chamando `_tentarEncaixar` direto). **Nenhuma
+      exceção JS, nenhum erro de fluxo, nenhum problema visual novo em
+      nenhum teste.** Só os 2 avisos de narração ausente já documentados
+      (`escolhaNivel`/`falaVitoria`). Uma suspeita de bug real (nível
+      Médio, onda 2 "perdendo" uma peça) foi investigada a fundo e
+      confirmada como falso positivo do PRÓPRIO script de teste (esperava
+      só 300ms entre ondas; a comemoração de onda leva até ~680ms —
+      `_saltarParesDaOnda`/`_avancarOnda`), não um bug do jogo.
+- [x] Verificado que a pendência antiga "numeração do cartão de nível fora
+      do centro" está desatualizada: `LevelSelectScreen.js:82-94` já usa
+      `textAlign='center'`/`textBaseline='middle'` com ajuste fino
+      (`cy + 2`, comentado no próprio código), e a captura de tela desta
+      sessão mostra os números 1/2/3 centrados nos círculos. Removida da
+      lista de melhorias abaixo.
 
 ## Melhorias identificadas, ainda não feitas
 
 1. Testar a renderização dos emojis nos tablets reais da escola (Android/
    Windows/iOS podem desenhar o mesmo emoji de forma um pouco diferente).
-2. Numeração do nível (`LevelSelectScreen`, motor compartilhado) visivelmente
-   fora do centro do emblema — identificado antes em outros jogos, não
-   corrigido (afeta todos os jogos que usam a tela padrão).

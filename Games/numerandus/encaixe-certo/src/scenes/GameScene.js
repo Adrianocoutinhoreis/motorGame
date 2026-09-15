@@ -496,6 +496,15 @@ export class GameScene extends Scene {
     this._ondas = dividirEmOndas(valores, GameScene.MAX_PARES_POR_ONDA);
     this._ondaIndex = 0;
 
+    // Contagem de tentativas erradas — só DEMONSTRATIVA. Vai no campo `erros`
+    // da mensagem final do AVA (ver `_terminar`), mas por fora do
+    // `ScoreSystem`: `placar.errar()` NÃO é chamado de propósito, porque o
+    // `ScoreSystem.pontuacao` descontaria a falha da nota na vitória (RE-02)
+    // — e a decisão aqui, pedida pelo humano, é o oposto: 2 tentativas
+    // erradas seguidas de 2 encaixes certos reporta `acertos: 2` (cheio,
+    // sem desconto) e `erros: 2` (só pra registro), nunca `acertos: 0`.
+    this._tentativasErradas = 0;
+
     // ------------------------------------------------------------- geometria
     // HUD fica no topo (0 a 96px) e a prateleira fica na base (648px).
     // Centralizamos o conjunto perfeitamente no vão vertical de 552px.
@@ -798,7 +807,8 @@ export class GameScene extends Scene {
     if (alvo) {
       const alvoX = alvo.x + alvo.w;
       const alvoY = alvo.y + alvo.h / 2;
-      if (this._dentroDaTolerancia(alvo, ponto.x, ponto.y) && alvo.valor === ficha.valor) {
+      const perto = this._dentroDaTolerancia(alvo, ponto.x, ponto.y);
+      if (perto && alvo.valor === ficha.valor) {
         alvo.preenchida = true;
         ficha.trancada = true;
         ficha.interativo = false;
@@ -812,6 +822,13 @@ export class GameScene extends Scene {
         }
         return;
       }
+      // Chegou perto o bastante de um soquete vazio de verdade, mas com o
+      // valor errado — uma tentativa real (não um deslize de motricidade
+      // que caiu longe de qualquer soquete). Só isso conta. De propósito
+      // NÃO chama `placar.errar()` — isso descontaria a falha da nota na
+      // vitória (RE-02), e a decisão aqui é o oposto: a tentativa errada só
+      // é registrada (ver `_terminar`), nunca desconta acertos nem estrelas.
+      if (perto) this._tentativasErradas += 1;
     }
     Tween.removerDe(ficha);
     Tween.para(ficha, { x: ficha.trayX, y: ficha.trayY }, 220, Easing.suaveSaida);
@@ -903,9 +920,12 @@ export class GameScene extends Scene {
   }
 
   _terminar(venceu) {
+    // `paraAva()` nunca vê `erros` > 0 (o `ScoreSystem` deste jogo nunca
+    // chama `errar()`), então `acertos` sai sempre no valor CHEIO — sem o
+    // desconto de RE-02. `erros` é sobrescrito por fora, só pra registro.
     this.irPara('resultado', {
       nivel: this.nivel,
-      resultado: this.placar.paraAva(venceu),
+      resultado: { ...this.placar.paraAva(venceu), erros: this._tentativasErradas },
     });
   }
 
