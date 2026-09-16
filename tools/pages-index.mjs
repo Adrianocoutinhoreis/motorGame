@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * pages-index.mjs — gera o `index.html` da RAIZ: a capa que lista os jogos.
+ * pages-index.mjs — gera o `index.html` da RAIZ (a capa que lista os jogos) e
+ * o `__jogos.json` da RAIZ (a mesma lista, para o seletor do `ava-teste.html`).
  *
  * ## Por que existe
  *
@@ -16,16 +17,19 @@
  * a lista à mão criaria a terceira cópia da mesma informação — e a que
  * envelheceria calada, porque nenhum teste olha a capa.
  *
- * No Pages não há como descobrir isso em tempo de execução (não existe a rota
- * `/__jogos.json` nem listagem de diretório), então a descoberta acontece AQUI,
- * na geração, e o resultado é commitado.
+ * No Pages não há como descobrir isso em tempo de execução — não existe a rota
+ * `/__jogos.json` que o `serve.mjs` serve dinamicamente, nem listagem de
+ * diretório —, então a descoberta acontece AQUI, na geração, e o resultado
+ * (índice E lista) é commitado. É o mesmo arquivo `__jogos.json` que o
+ * `ava-teste.html` já sabia buscar (1ª via de `descobrirJogos()`); ele só não
+ * fazia diferença nenhuma sem existir um arquivo estático com esse nome.
  *
  * ## Uso
  *
  *     node tools/pages-index.mjs
  *
- * Rode depois de criar um jogo novo. O arquivo gerado avisa, no topo, que foi
- * gerado — para ninguém editá-lo à mão e perder a edição na próxima geração.
+ * Rode depois de criar um jogo novo. O `index.html` gerado avisa, no topo, que
+ * foi gerado — para ninguém editá-lo à mão e perder a edição na próxima geração.
  */
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -199,8 +203,6 @@ ${cartoes}
     <p>
       O <a href="./tools/ava-teste.html">host de teste do AVA</a> simula a página que hospeda o jogo
       num <code>&lt;iframe&gt;</code> e valida a mensagem de fim de partida.
-      Servido pelo GitHub Pages, as abas de jogo dele não aparecem — não há
-      <code>/__jogos.json</code> nem listagem de diretório —, então use o campo de caminho.
     </p>
   </footer>
 </main>
@@ -209,5 +211,11 @@ ${cartoes}
 `;
 
 await writeFile(path.join(RAIZ, 'index.html'), html, 'utf8');
-console.log(`index.html gerado com ${jogos.length} jogo(s):`);
+
+// O mesmo arquivo que `serve.mjs` serve dinamicamente em dev, aqui congelado
+// no disco — só os campos que o seletor do `ava-teste.html` de fato lê.
+const jogosJson = jogos.map(({ dir, slug, titulo }) => ({ dir, slug, titulo }));
+await writeFile(path.join(RAIZ, '__jogos.json'), JSON.stringify(jogosJson), 'utf8');
+
+console.log(`index.html e __jogos.json gerados com ${jogos.length} jogo(s):`);
 for (const jogo of jogos) console.log(`  ${jogo.titulo}  ->  ./Games/${jogo.dir}/`);

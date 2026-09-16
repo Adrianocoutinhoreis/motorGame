@@ -189,10 +189,11 @@
   <strong>Host de teste do AVA</strong>
 
   <!--
-    O seletor é montado em tempo de execução, a partir de `/__jogos.json` (ver
-    tools/serve.mjs). Não há lista de jogos escrita aqui de propósito: uma
-    lista fixa envelheceria em silêncio e o sintoma seria "criei o jogo com
-    new-game.mjs e ele não aparece".
+    O seletor é montado em tempo de execução, a partir de `/__jogos.json` —
+    servido ao vivo por `tools/serve.mjs` em dev, ou congelado no disco por
+    `tools/pages-index.mjs` para o GitHub Pages. Não há lista de jogos escrita
+    aqui de propósito: uma lista fixa envelheceria em silêncio e o sintoma
+    seria "criei o jogo com new-game.mjs e ele não aparece".
   -->
   <div class="seletor" id="seletorJogo">
     <button type="button" id="seletorBotao" aria-haspopup="listbox" aria-expanded="false">
@@ -373,10 +374,12 @@
    * nenhuma. O host respondia com um aviso mandando reiniciar um servidor que
    * nem estava em uso — conselho errado, dado com convicção.
    *
-   *  1. **`/__jogos.json`** — quando é o `serve.mjs`. Traz slug e título prontos.
+   *  1. **`/__jogos.json`** — vivo, do `serve.mjs`, ou estático, congelado por
+   *     `pages-index.mjs` para o GitHub Pages. Traz slug e título prontos.
    *  2. **A listagem de `../Games/`** — qualquer estático que liste diretório
-   *     (Live Server, `http-server`, nginx com autoindex). Os slugs saem dos
-   *     links, e o título de cada um sai do `<title>` do próprio `index.html`.
+   *     (Live Server, `http-server`, nginx com autoindex — o GitHub Pages NÃO
+   *     lista). Os slugs saem dos links, e o título de cada um sai do
+   *     `<title>` do próprio `index.html`.
    *
    * A regra do que É um jogo é a MESMA das duas vias, e a mesma do servidor:
    * subpasta de `Games/` **que tenha um `index.html`**, OU — sem `index.html`
