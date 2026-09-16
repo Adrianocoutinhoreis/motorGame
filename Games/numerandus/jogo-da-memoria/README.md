@@ -130,6 +130,9 @@ jogo-da-memoria/
 | `assets/audio/acertoSOS.wav` | Efeito de vitória (`audio.vitoria`) — sem fala | Aula original 870298 — Educandus. Mesmo arquivo já usado em toda a coleção. |
 | `assets/audio/carta-correta.mp3` | Efeito de "par encontrado" (`audio.acerto`) — sem fala | Criado pelo humano especificamente para este jogo, nesta sessão. Arquivo próprio, não reaproveitado. |
 | `assets/audio/error.MP3` | Som de erro (`audio.erro`) — par que não combina | **A confirmar** — fornecido pelo humano nesta sessão, ainda não ouvido (ver ficha em `assets/audio-transcricao/erro/`). |
+| `assets/audio/tela1.wav` | Narração do tutorial, passo 1 (`config.tutorial[0].fala`) | **A confirmar** — fornecido pelo humano nesta sessão, ainda não ouvido (ver ficha em `assets/audio-transcricao/tutorialTela1/`). |
+| `assets/audio/tela2.wav` | Narração do tutorial, passo 2 (`config.tutorial[1].fala`) | **A confirmar** — mesma origem do `tela1.wav` (ver ficha em `.../tutorialTela2/`). |
+| `assets/audio/tela3.wav` | Narração do tutorial, passo 3 (`config.tutorial[2].fala`) | **A confirmar** — mesma origem do `tela1.wav` (ver ficha em `.../tutorialTela3/`). |
 
 Nenhum outro asset de imagem: todo o tabuleiro (verso das cartas, emoji, texto) é
 desenhado em canvas por `GameScene.js` — sem depender de `center_back.png`/`back.png` do
@@ -139,17 +142,15 @@ projeto-fonte Remotion, consistente com o resto do motor.
 
 > Liste aqui, com honestidade, o que ainda falta.
 
-- **Sem narração de tutorial.** Os áudios brutos fornecidos em
-  `Videos_Numerandus/jogo_memoria_assets/` (vários `.wav` "Generated Audio…") não estão
-  identificados por passo — ao contrário do Jogo da Velha/Ordenação/Encaixe Certo, onde o
-  humano entregou os arquivos já nomeados `tela1.wav`/`tela2.wav`/`tela3.wav` na ordem dos
-  passos. Mapear um `.wav` sem rótulo a um passo do tutorial seria **chutar**, e o motor
-  nunca sintetiza nem assume conteúdo pedagógico sem confirmação humana — por isso
-  `config.tutorial[*].fala` fica de fora de propósito (tutorial 100% visual por enquanto,
-  com texto e desenho animado, mas sem voz). Falta: ouvir os áudios brutos, identificar
-  qual (se algum) corresponde a qual passo, renomear e mapear.
-- **Sem `escolhaNivel`/`falaVitoria`** — mesma causa acima, narrações opcionais do motor
-  compartilhado sem gravação identificada.
+- **Narração do tutorial ligada, mas não confirmada por ouvido.** O humano entregou
+  `tela1.wav`/`tela2.wav`/`tela3.wav` já nomeados na ordem dos passos — mesma convenção do
+  Jogo da Velha/Ordenação/Encaixe Certo/Bingo — então `config.tutorial[*].fala` já aponta
+  pra eles (`tutorialTela1/2/3`). As 3 fichas em `assets/audio-transcricao/` inferem a
+  transcrição do próprio texto da tela (mesmo método dos outros jogos), status 🟡 INFERIDA.
+  Falta: ouvir os 3 e confirmar — o passo 3 ("Errou? Sem problema!") é prioridade, por causa
+  da regra "errar não pode humilhar" (`docs/DESIGN.md`).
+- **Sem `escolhaNivel`/`falaVitoria`** — esses dois áudios específicos não foram fornecidos
+  (só os 3 do tutorial vieram), narrações opcionais do motor compartilhado.
 - **`error.MP3` (som de erro) ainda não foi ouvido.** Ficha 🔴 NÃO VERIFICADA em
   `assets/audio-transcricao/erro/`. Se for uma voz reprovadora (não um efeito neutro),
   contraria "errar não pode humilhar" (`docs/DESIGN.md`) — e pesa mais aqui, porque o jogo

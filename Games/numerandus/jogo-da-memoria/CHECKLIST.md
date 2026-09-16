@@ -40,8 +40,9 @@
 
 - [x] Arte 100% desenhada em canvas (`Carta` em `GameScene.js`) — verso decorativo,
       emoji + palavra (item) ou palavra (unidade), coerente com o design system do motor.
-- [ ] Áudio de narração do tutorial — **pendência conhecida, ver README**: os brutos
-      fornecidos não estão identificados por passo; não foram mapeados sem confirmação.
+- [x] Áudio de narração do tutorial (`tutorialTela1/2/3`, `tela1/2/3.wav`) presente e
+      mapeado — o humano forneceu os arquivos já nomeados na ordem dos passos. **Pendência:**
+      nenhum dos três foi ouvido ainda (fichas 🟡 INFERIDA) — ver README.
 - [x] Efeito de "par encontrado" (`cartaCorreta`, arquivo PRÓPRIO deste jogo, criado
       pelo humano) e de vitória (`acertoSOS`, reaproveitado) presentes. Sem som de clique —
       mesma decisão do Encaixe Certo/Ordenação (som só onde é gameplay de verdade).
@@ -51,19 +52,21 @@
 - [x] Todo asset está dentro de `assets/`, com caminho relativo.
 - [x] Nenhuma fonte, imagem ou som vindo da internet.
 - [x] Origem/licença de cada asset registrada no `README.md` (tabela "Assets").
-- [x] Ficha de transcrição criada para os 3 áudios usados
-      (`assets/audio-transcricao/acertoSOS/`, `.../cartaCorreta/`, `.../erro/`).
+- [x] Ficha de transcrição criada para os 6 áudios usados
+      (`assets/audio-transcricao/acertoSOS/`, `.../cartaCorreta/`, `.../erro/`,
+      `.../tutorialTela1/`, `.../tutorialTela2/`, `.../tutorialTela3/`).
 - [ ] Transcrições confirmadas: `acertoSOS` e `cartaCorreta` por natureza (sem fala — ver
       as fichas; `cartaCorreta` confirmado diretamente pelo humano que criou o arquivo).
-      `erro` continua 🔴 NÃO VERIFICADA — falta ouvir.
+      `erro` e os 3 `tutorialTelaN` continuam sem confirmar por ouvido (🔴/🟡) — falta ouvir
+      os quatro.
 - [x] Pendências de áudio ainda não mapeado listadas explicitamente no `README.md`.
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR (telas padrão do motor, sem alteração).
-- [x] **Tutorial** com 3 passos ilustrados (desenho animado em canvas) e puláveis. Sem
-      narração ainda — ver pendência no README; o texto visual e o desenho carregam a
-      explicação sozinhos por enquanto.
+- [x] **Tutorial** com 3 passos ilustrados (desenho animado em canvas), puláveis, e narrados
+      (`tutorialTela1/2/3`) — texto visual, desenho e narração juntos. Narração ainda não
+      confirmada por ouvido, ver pendência no README.
 - [x] **Seleção de nível** (3 níveis: Fácil/Médio/Difícil).
 - [x] **Partida** com HUD legível: progresso "X/Y pares" + tempo no mesmo badge, pausa e
       ajuda.
@@ -193,9 +196,10 @@ Mapeamento semântico **deste** jogo (preencha):
 
 - [x] `README.md` do jogo atualizado (o que é, como rodar, assets, pendências).
 - [ ] Este checklist com todos os itens fechados ou justificados — restam só: narração do
-      tutorial não mapeada (seção 2), `tools/ava-teste.html`/iframes/toque real em
-      tablet/troca de aba não testados nesta sessão (seção 7), zip de publicação não
-      gerado (abaixo) — todos já documentados, nenhum silencioso.
+      tutorial mapeada mas não confirmada por ouvido, junto com `erro` (seção 2),
+      `tools/ava-teste.html`/iframes/toque real em tablet/troca de aba não testados nesta
+      sessão (seção 7), zip de publicação não gerado (abaixo) — todos já documentados,
+      nenhum silencioso.
 - [x] `node tools/build.mjs numerandus/jogo-da-memoria` rodado (motor v1.3.5 na cópia).
 - [x] Versão do motor conferida: `engine/version.json` dentro da pasta do jogo, v1.3.5,
       igual à raiz.

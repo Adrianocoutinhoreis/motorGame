@@ -83,27 +83,32 @@ export default {
   // --------------------------------------------------------------- tutorial
   /**
    * 3 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida
-   * (regra RE-05). Sem narração ainda (ver "Pendências conhecidas" no README) —
-   * `fala` fica de fora de propósito, não é esquecimento: os áudios brutos
-   * fornecidos não estão identificados por passo, e o motor nunca chuta uma
-   * transcrição/mapeamento sem confirmação humana.
+   * (regra RE-05). Narração ligada — o humano forneceu `tela1/2/3.wav` já
+   * nomeados na ordem dos passos (mesma convenção do Jogo da Velha/Ordenação/
+   * Encaixe Certo/Bingo). Cada ficha em `assets/audio-transcricao/` infere a
+   * transcrição do PRÓPRIO texto da tela (mesmo método usado nesses outros
+   * jogos): ninguém ouviu os arquivos ainda, então o status fica 🟡 INFERIDA
+   * até alguém confirmar — ver "Pendências conhecidas" no README.
    */
   tutorial: [
     {
       titulo: 'Cada carta esconde uma surpresa',
       texto: 'Toque numa carta virada pra baixo pra ver o que tem nela.',
+      fala: 'tutorialTela1',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 1, t }),
     },
     {
       titulo: 'Ache a carta que combina',
       texto: 'Vire duas cartas. Se elas combinarem — como "leite" e "litro" — as duas ficam '
         + 'reveladas!',
+      fala: 'tutorialTela2',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 2, t }),
     },
     {
       titulo: 'Errou? Sem problema!',
       texto: 'Se as cartas não combinarem, elas viram de volta com calma. Tente de novo até '
         + 'achar todos os pares.',
+      fala: 'tutorialTela3',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 3, t }),
     },
   ],
@@ -117,14 +122,18 @@ export default {
    * VERIFICADA): se acabar sendo uma voz reprovadora, contraria "errar não
    * pode humilhar" (`docs/DESIGN.md`) — ver "Pendências conhecidas" no
    * README antes de considerar isso fechado. Sem som de clique nem música de
-   * fundo, mesma decisão do Encaixe Certo/Ordenação. Narração do tutorial e
-   * das telas de apoio (`escolhaNivel`, `falaVitoria`) ficam `null` até um
-   * áudio confirmado existir — ver "Pendências conhecidas" no README.
+   * fundo, mesma decisão do Encaixe Certo/Ordenação. `tutorialTela1/2/3` são
+   * a narração dos 3 passos (ver `tutorial` acima). As telas de apoio
+   * (`escolhaNivel`, `falaVitoria`) continuam `null` — esses dois áudios
+   * específicos não foram fornecidos, só os do tutorial.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     { id: 'cartaCorreta', src: './assets/audio/carta-correta.mp3' },
     { id: 'erro', src: './assets/audio/error.MP3' },
+    { id: 'tutorialTela1', src: './assets/audio/tela1.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tela2.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tela3.wav' },
   ],
 
   /** Sem mascote nesta partida — o tabuleiro de cartas é a área de maior destaque. */
