@@ -52,7 +52,7 @@ const TIPOS = {
  * quando o jogo mora numa pasta de COLEÇÃO (`Games/numerandus/<slug>/`): o
  * caminho carrega o nome da coleção, o slug do AVA não. Sem isto, `dir`
  * cairia como aproximação do slug em todo lugar que mostra o identificador
- * do AVA (ex.: a aba do `ava-teste.html`), e mentiria sobre o campo `jogo`
+ * do AVA (ex.: o seletor do `ava-teste.html`), e mentiria sobre o campo `jogo`
  * que a mensagem `JOGO_CONCLUIDO` de verdade envia.
  */
 async function slugDoJogo(pastaDoJogo, dirFallback) {

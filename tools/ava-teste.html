@@ -35,8 +35,8 @@
     background: var(--fundo);
     display: grid;
     grid-template-columns: 1fr 460px;
-    /* Três faixas: as abas dos jogos, a barra de controles, e o resto. */
-    grid-template-rows: auto auto 1fr;
+    /* Duas faixas: a barra de controles (com o seletor de jogo) e o resto. */
+    grid-template-rows: auto 1fr;
     height: 100vh;
   }
   #controles strong { font-size: 16px; white-space: nowrap; }
@@ -61,48 +61,59 @@
   button.primario { background: var(--azul); color: #fff; border-color: var(--azul); }
   button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
 
-  /* -------------------------------------------------------------- abas */
-  #abas {
-    grid-column: 1 / -1;
+  /* ---------------------------------------------------------- seletor */
+  /* Combobox com busca no lugar da antiga fileira de abas: uma aba por jogo
+     não escala — já quebrava linha com 8 jogos, e a coleção só cresce. */
+  .seletor { position: relative; }
+  .seletor > button {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 4px;
-    padding: 10px 16px 0;
-    background: #fff;
-    border-bottom: 2px solid var(--linha);
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+    justify-content: space-between;
   }
-  #abas .rotulo {
-    align-self: center;
-    margin-right: 8px;
-    font-size: 13px;
+  .seletor-seta { color: var(--suave); font-size: 11px; }
+  .seletor-painel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    width: 320px;
+    max-width: min(320px, 90vw);
+    background: #fff;
+    border: 2px solid var(--linha);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    padding: 8px;
+  }
+  .seletor-painel input[type="text"] { width: 100%; margin-bottom: 6px; }
+  .seletor-lista { max-height: 320px; overflow-y: auto; }
+  .seletor-grupo {
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: .04em;
     color: var(--suave);
     font-weight: 700;
+    padding: 8px 8px 4px;
   }
-  /* Aba de verdade: encostada na borda de baixo, sem raio embaixo, e a
-     selecionada emenda com a faixa de controles logo abaixo. */
-  #abas button {
-    border-radius: 10px 10px 0 0;
-    border-bottom-width: 0;
-    margin-bottom: -2px;
-    padding: 9px 16px;
-    /* A aba parada é acinzentada. Com fundo branco ela emendava com a faixa de
-       baixo igual à selecionada, e as duas disputavam o papel de ativa. */
-    background: var(--fundo);
-    color: var(--suave);
+  .seletor-grupo:first-child { padding-top: 2px; }
+  .seletor-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font: inherit;
+    font-weight: 500;
+    color: var(--tinta);
+    cursor: pointer;
   }
-  #abas button[aria-selected="true"] {
-    background: var(--azul);
-    color: #fff;
-    border-color: var(--azul);
-  }
-  #abas .aviso {
-    align-self: center;
-    font-size: 13px;
-    color: var(--vermelho);
-  }
+  .seletor-item:hover { background: var(--fundo); }
+  .seletor-item[aria-selected="true"] { background: var(--azul); color: #fff; }
+  .seletor-vazio { padding: 8px; color: var(--suave); font-style: italic; font-size: 13px; }
+  .aviso { font-size: 13px; color: var(--vermelho); }
 
   #controles {
     grid-column: 1 / -1;
@@ -174,18 +185,29 @@
 </head>
 <body>
 
-<!--
-  As abas dos jogos são montadas em tempo de execução, a partir de
-  `/__jogos.json` (ver tools/serve.mjs). Não há lista de jogos escrita aqui de
-  propósito: uma lista fixa envelheceria em silêncio e o sintoma seria "criei o
-  jogo com new-game.mjs e ele não aparece".
--->
-<nav id="abas" role="tablist" aria-label="Jogos">
-  <span class="rotulo">Jogo</span>
-</nav>
-
 <div id="controles">
   <strong>Host de teste do AVA</strong>
+
+  <!--
+    O seletor é montado em tempo de execução, a partir de `/__jogos.json` (ver
+    tools/serve.mjs). Não há lista de jogos escrita aqui de propósito: uma
+    lista fixa envelheceria em silêncio e o sintoma seria "criei o jogo com
+    new-game.mjs e ele não aparece".
+  -->
+  <div class="seletor" id="seletorJogo">
+    <button type="button" id="seletorBotao" aria-haspopup="listbox" aria-expanded="false">
+      <span id="seletorRotulo">Selecionar jogo…</span>
+      <span class="seletor-seta" aria-hidden="true">▾</span>
+    </button>
+    <div class="seletor-painel" id="seletorPainel" hidden>
+      <input type="text" id="seletorBusca" placeholder="Buscar jogo…"
+             aria-label="Buscar jogo" autocomplete="off">
+      <div class="seletor-lista" id="seletorLista" role="listbox" aria-label="Jogos"></div>
+    </div>
+  </div>
+  <span class="aviso" id="aviso"></span>
+
+  <span class="separador"></span>
   <input type="text" id="caminho" value="../Games/jogo-dos-blocos/index.html"
          aria-label="Caminho do jogo em teste">
   <button class="primario" id="carregar">Carregar</button>
@@ -218,66 +240,135 @@
 
   function carregar() {
     quadro.src = caminho.value;
-    marcarAbaDoCaminho();
+    atualizarRotulo();
   }
 
   document.getElementById('carregar').addEventListener('click', carregar);
   caminho.addEventListener('keydown', (e) => { if (e.key === 'Enter') carregar(); });
 
-  /* ------------------------------------------------------------- as abas */
+  /* ----------------------------------------------------------- o seletor */
 
-  const abas = document.getElementById('abas');
+  const seletorJogo = document.getElementById('seletorJogo');
+  const seletorBotao = document.getElementById('seletorBotao');
+  const seletorRotulo = document.getElementById('seletorRotulo');
+  const seletorPainel = document.getElementById('seletorPainel');
+  const seletorBusca = document.getElementById('seletorBusca');
+  const seletorLista = document.getElementById('seletorLista');
+  const avisoEl = document.getElementById('aviso');
+
+  let jogosCarregados = []; // { dir, slug, titulo }
+
+  // `dir` carrega o caminho inteiro da pasta (ex.: `numerandus/jogo-da-memoria`).
+  // O primeiro segmento é a COLEÇÃO; jogo direto (sem "/") cai no grupo "Jogos".
+  function grupoDoJogo(jogo) {
+    const [antes, depois] = jogo.dir.split('/');
+    if (!depois) return 'Jogos';
+    return antes.charAt(0).toUpperCase() + antes.slice(1);
+  }
+
+  function urlDoJogo(jogo) {
+    // Relativo à página (que está em /tools/), como o valor inicial do campo:
+    // assim o host funciona igual se o projeto for servido sob um prefixo.
+    return `../Games/${jogo.dir}/index.html`;
+  }
+
+  function abrirSeletor() {
+    seletorPainel.hidden = false;
+    seletorBotao.setAttribute('aria-expanded', 'true');
+    seletorBusca.value = '';
+    renderizarLista('');
+    seletorBusca.focus();
+  }
+
+  function fecharSeletor() {
+    seletorPainel.hidden = true;
+    seletorBotao.setAttribute('aria-expanded', 'false');
+  }
+
+  seletorBotao.addEventListener('click', () => {
+    if (seletorPainel.hidden) abrirSeletor(); else fecharSeletor();
+  });
+  seletorBusca.addEventListener('input', () => renderizarLista(seletorBusca.value));
+  document.addEventListener('click', (e) => {
+    if (!seletorPainel.hidden && !seletorJogo.contains(e.target)) fecharSeletor();
+  });
+  seletorJogo.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { fecharSeletor(); seletorBotao.focus(); }
+  });
 
   /**
-   * Deixa selecionada a aba que corresponde ao caminho no campo — e NENHUMA se
-   * o caminho for outro.
+   * Redesenha a lista filtrada por texto, agrupada por coleção.
    *
-   * Isso importa mais do que parece: o campo continua aceitando qualquer
-   * endereço (uma build em `dist/`, uma pasta copiada para fora do projeto pelo
-   * teste-entrega-avulsa), e uma aba que ficasse acesa mostrando um jogo que não
-   * é o carregado faria a tela MENTIR sobre o que está sendo testado.
+   * Refeita a cada tecla — a lista é pequena o bastante (dezenas de jogos, não
+   * milhares) para não precisar de nada mais esperto que um filtro na hora.
    */
-  function marcarAbaDoCaminho() {
+  function renderizarLista(filtro) {
+    const alvo = filtro.trim().toLocaleLowerCase('pt-BR');
     const atual = quadro.getAttribute('src') ?? '';
-    for (const botao of abas.querySelectorAll('button[data-url]')) {
-      botao.setAttribute('aria-selected', String(botao.dataset.url === atual));
+    const porGrupo = new Map();
+    for (const jogo of jogosCarregados) {
+      if (alvo && !jogo.titulo.toLocaleLowerCase('pt-BR').includes(alvo)) continue;
+      const grupo = grupoDoJogo(jogo);
+      if (!porGrupo.has(grupo)) porGrupo.set(grupo, []);
+      porGrupo.get(grupo).push(jogo);
+    }
+
+    seletorLista.innerHTML = '';
+    const grupos = [...porGrupo.keys()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (!grupos.length) {
+      const vazio = document.createElement('p');
+      vazio.className = 'seletor-vazio';
+      vazio.textContent = jogosCarregados.length ? 'nenhum jogo encontrado' : 'nenhum jogo disponível';
+      seletorLista.append(vazio);
+      return;
+    }
+
+    for (const grupo of grupos) {
+      const titulo = document.createElement('div');
+      titulo.className = 'seletor-grupo';
+      titulo.textContent = grupo;
+      seletorLista.append(titulo);
+
+      for (const jogo of porGrupo.get(grupo)) {
+        const url = urlDoJogo(jogo);
+        const botao = document.createElement('button');
+        botao.type = 'button';
+        botao.className = 'seletor-item';
+        botao.setAttribute('role', 'option');
+        botao.setAttribute('aria-selected', String(url === atual));
+        botao.textContent = jogo.titulo;
+        botao.title = jogo.slug; // o slug é o que vai no campo `jogo` do AVA
+        botao.addEventListener('click', () => {
+          caminho.value = url;
+          carregar();
+          fecharSeletor();
+        });
+        seletorLista.append(botao);
+      }
     }
   }
 
-  function montarAba(jogo) {
-    const botao = document.createElement('button');
-    botao.type = 'button';
-    botao.setAttribute('role', 'tab');
-    botao.setAttribute('aria-selected', 'false');
-    botao.textContent = jogo.titulo;
-    botao.title = jogo.slug; // o slug é o que vai no campo `jogo` do AVA
-    // `dir` é o caminho da PASTA (relativo a Games/) — usado na URL. Divide de
-    // `slug` (o identificador do AVA, no tooltip acima) só quando o jogo mora
-    // numa coleção, ex.: Games/numerandus/jogo-da-velha-novo/. Jogo direto tem
-    // os dois iguais, então `?? jogo.slug` cobre quem ainda não manda `dir`.
-    const dir = jogo.dir ?? jogo.slug;
-    // Relativo à página (que está em /tools/), como o valor inicial do campo:
-    // assim o host funciona igual se o projeto for servido sob um prefixo.
-    botao.dataset.url = `../Games/${dir}/index.html`;
-    botao.addEventListener('click', () => {
-      caminho.value = botao.dataset.url;
-      carregar();
-    });
-    return botao;
+  /**
+   * Mostra no botão fechado o título do jogo carregado — e o próprio caminho
+   * se ele não corresponder a nenhum jogo conhecido (um caminho digitado à
+   * mão, uma build em `dist/`, uma cópia do teste-entrega-avulsa). Mentir
+   * aqui mostrando o último jogo da lista seria pior que mostrar o caminho cru.
+   */
+  function atualizarRotulo() {
+    const atual = quadro.getAttribute('src') ?? '';
+    const jogo = jogosCarregados.find((j) => urlDoJogo(j) === atual);
+    seletorRotulo.textContent = jogo ? jogo.titulo : (atual || 'Selecionar jogo…');
   }
 
   function avisar(texto) {
-    const aviso = document.createElement('span');
-    aviso.className = 'aviso';
-    aviso.textContent = texto;
-    abas.append(aviso);
+    avisoEl.textContent = texto;
   }
 
   /**
    * Descobre os jogos por DUAS vias independentes, e é de propósito.
    *
    * A primeira versão só conhecia `/__jogos.json` (a rota do `tools/serve.mjs`).
-   * Isso deixava as abas mortas para quem abre a página pela **Live Server da
+   * Isso deixava o seletor vazio para quem abre a página pela **Live Server da
    * IDE**, que é um estático puro: ela serve o jogo perfeitamente e não tem rota
    * nenhuma. O host respondia com um aviso mandando reiniciar um servidor que
    * nem estava em uso — conselho errado, dado com convicção.
@@ -292,7 +383,7 @@
    * próprio — uma pasta de COLEÇÃO cujas subpastas SÃO jogos (um nível de
    * aninhamento, ex.: `Games/numerandus/jogo-da-velha-novo/`). Na via 2 isso é
    * verificado buscando o arquivo — pasta sem ele, nos dois níveis, não vira
-   * aba.
+   * opção no seletor.
    */
   async function descobrirJogos() {
     // 1ª via: a rota do serve.mjs.
@@ -366,11 +457,11 @@
   }
 
   /**
-   * Monta as abas. Falhar aqui não pode derrubar o host: o campo de caminho
-   * continua funcionando, então o aviso é discreto e nomeia **o que foi
-   * tentado** — não um palpite sobre a causa.
+   * Carrega os jogos conhecidos no seletor. Falhar aqui não pode derrubar o
+   * host: o campo de caminho continua funcionando, então o aviso é discreto e
+   * nomeia **o que foi tentado** — não um palpite sobre a causa.
    */
-  async function montarAbas() {
+  async function montarSeletor() {
     let achado;
     try {
       achado = await descobrirJogos();
@@ -385,8 +476,8 @@
       return;
     }
 
-    for (const jogo of achado.jogos) abas.append(montarAba(jogo));
-    marcarAbaDoCaminho();
+    jogosCarregados = achado.jogos;
+    atualizarRotulo();
     console.log(`[host AVA] ${achado.jogos.length} jogo(s) via ${achado.via}`);
   }
 
@@ -459,7 +550,7 @@
   });
 
   carregar();
-  montarAbas();
+  montarSeletor();
 </script>
 </body>
 </html>
