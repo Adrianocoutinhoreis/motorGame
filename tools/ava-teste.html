@@ -61,6 +61,14 @@
   button.primario { background: var(--azul); color: #fff; border-color: var(--azul); }
   button[aria-pressed="true"] { background: var(--azul); color: #fff; border-color: var(--azul); }
 
+  /* Hamburguer que esconde o painel de mensagens — ele existe para depurar,
+     não precisa estar sempre visível, e some com ele o espaço que rouba do
+     iframe numa tela pequena. */
+  #alternarPainel { font-size: 18px; line-height: 1; padding: 7px 13px; }
+  #alternarPainel[aria-expanded="false"] { background: var(--fundo); }
+  body.sem-painel { grid-template-columns: 1fr; }
+  body.sem-painel aside { display: none; }
+
   /* ---------------------------------------------------------- seletor */
   /* Combobox com busca no lugar da antiga fileira de abas: uma aba por jogo
      não escala — já quebrava linha com 8 jogos, e a coleção só cresce. */
@@ -219,13 +227,15 @@
   <button data-tam="1280x720">Grande</button>
   <span class="separador"></span>
   <button id="limpar">Limpar registro</button>
+  <button id="alternarPainel" aria-expanded="true" aria-controls="painelMensagens"
+          title="Esconder/mostrar mensagens recebidas">☰</button>
 </div>
 
 <div id="area">
   <div id="moldura"><iframe id="quadro" title="Jogo em teste"></iframe></div>
 </div>
 
-<aside>
+<aside id="painelMensagens">
   <h2>Mensagens recebidas (<span class="contagem" id="total">0</span>)</h2>
   <div id="registro"><p class="vazio">Jogue uma partida até o fim. A mensagem aparece aqui.</p></div>
 </aside>
@@ -499,6 +509,11 @@
     recebidas = 0;
     total.textContent = '0';
     registro.innerHTML = '<p class="vazio">Registro limpo.</p>';
+  });
+
+  document.getElementById('alternarPainel').addEventListener('click', (e) => {
+    const escondido = document.body.classList.toggle('sem-painel');
+    e.currentTarget.setAttribute('aria-expanded', String(!escondido));
   });
 
   /**
