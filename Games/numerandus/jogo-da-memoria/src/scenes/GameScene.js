@@ -122,6 +122,94 @@ const CORES_CATEGORIA_TEXTO = {
   forma: '#15803D',
 };
 
+/**
+ * Conversão hex → HSL → hex, só pra derivar o pastel de fundo da carta-item
+ * (abaixo) sem escrever um sexto hex por categoria à mão. Preserva o MATIZ de
+ * `CORES_CATEGORIA` e só troca saturação/luminosidade — ou seja, as 6 cores
+ * continuam tão distinguíveis entre si quanto a paleta lúdica original
+ * (`docs/DESIGN.md` §2: escolhida pra isso), só mais claras. Aproximar os
+ * matizes um do outro (cores "análogas" de verdade) foi cogitado e descartado:
+ * destreinaria a única pista que ajuda a criança a notar "estas duas cartas
+ * são da mesma família" antes mesmo de ler.
+ */
+function hexParaHsl(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return [h, s, l];
+}
+
+function hslParaHex(h, s, l) {
+  const hue2rgb = (p, q, t) => {
+    let tt = t;
+    if (tt < 0) tt += 1;
+    if (tt > 1) tt -= 1;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  let r;
+  let g;
+  let b;
+  if (s === 0) {
+    r = l; g = l; b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  const paraHex = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
+  return `#${paraHex(r)}${paraHex(g)}${paraHex(b)}`;
+}
+
+/**
+ * Saturação/luminosidade padrão do fundo pastel da carta-item: claro o
+ * bastante pra não competir com o emoji, escuro o bastante pra dar contraste
+ * a QUALQUER emoji do elenco — quase. "capacidade" (leite/água/suco) é a
+ * exceção: ícones de líquido são claros/translúcidos por natureza, e a
+ * categoria também é um azul, então as duas coisas no mesmo tom quase
+ * cancelavam o contraste (medido renderizando de verdade, não no papel — a
+ * borda do copo praticamente sumia no fundo padrão). Mais saturado e menos
+ * claro só aqui resolve, sem precisar mexer nas outras 5.
+ *
+ * Essa exceção vale só pra carta-ITEM. A carta-unidade (`LITRO`) usa sempre o
+ * padrão, nunca o ajuste: o texto dela (`CORES_CATEGORIA_TEXTO`) foi calibrado
+ * contra o pastel CLARO, e um fundo mais escuro reduz o contraste do texto —
+ * conferido nas 6 categorias antes de mexer aqui: `comprimento`, `duzia` e
+ * `forma` já ficam abaixo de 4,5:1 (AA) mesmo no padrão claro, então escurecer
+ * mais pioraria, não ajudaria. Por isso a carta-unidade nem passa por
+ * `AJUSTE_FUNDO_ITEM` — só a carta-item, que não tem texto colorido pra
+ * proteger.
+ */
+const PADRAO_FUNDO_ITEM = { saturacao: 0.55, luminosidade: 0.86 };
+const AJUSTE_FUNDO_ITEM = {
+  capacidade: { saturacao: 0.58, luminosidade: 0.76 },
+};
+
+function corFundoItem(categoria) {
+  const cor = CORES_CATEGORIA[categoria] ?? '#94A3B8';
+  const [matiz] = hexParaHsl(cor);
+  const { saturacao, luminosidade } = AJUSTE_FUNDO_ITEM[categoria] ?? PADRAO_FUNDO_ITEM;
+  return hslParaHex(matiz, saturacao, luminosidade);
+}
+
 /** Linhas/colunas do tabuleiro por `meta` (pares da rodada) — ver `config.js`. */
 const GRADE_POR_META = {
   3: { linhas: 2, colunas: 3 },
@@ -195,7 +283,10 @@ class Carta extends Node {
       ctx.stroke();
       this._desenharVerso(ctx);
     } else {
-      ctx.fillStyle = '#FFFFFF';
+      // Carta-item ganha o fundo pastel da categoria (corFundoItem, acima);
+      // carta-unidade continua branca — mesmo motivo do comentário em
+      // `corFundoItem`: o texto dela já é calibrado contra branco.
+      ctx.fillStyle = this.papel === 'item' ? corFundoItem(this.categoria) : '#FFFFFF';
       ctx.fill();
       ctx.shadowColor = 'transparent';
       let borda = '#CBD5E1';
@@ -231,60 +322,30 @@ class Carta extends Node {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     if (this.papel === 'item') {
-      // Frações de `h` aumentadas (eram 0.30/0.105) — no nível Difícil (12
-      // cartas, grade 3×4) a carta é bem menor (~146×175, contra ~227×273 do
-      // Fácil/Médio, mesmos rows=2 nos dois), e o emoji ficava pequeno demais
-      // pra enxergar num celular. O aumento é proporcional (mesma fração em
-      // todos os níveis, não só no Difícil) pra não desenhar cartas com
-      // proporção diferente entre níveis — ver espaço vertical conferido nos
-      // dois extremos (Difícil h≈175 e Fácil/Médio h≈273) antes de fixar os
-      // números: emoji e rótulo continuam sem se sobrepor em nenhum dos dois.
-      // Selo circular atrás do emoji, na cor VÍVIDA da categoria (mesma
-      // família de cor do texto da carta-unidade, só mais clara — ver
-      // CORES_CATEGORIA/CORES_CATEGORIA_TEXTO acima) — vários emoji do
-      // elenco são claros/brancos
-      // por natureza (🥛 leite, 🥚 ovo, ⚪ círculo) e somem sem isso: um
-      // emoji claro sobre carta branca não tem contraste nenhum, não importa
-      // o tamanho da fonte. O selo garante contraste com QUALQUER emoji,
-      // claro ou escuro, sem depender de acertar a cor certa pra cada um.
+      // HISTÓRICO (pra quem for mexer aqui de novo): esta carta já teve um
+      // selo circular atrás do emoji — precisou de três rodadas de ajuste
+      // (opacidade, depois disco sólido + anel, depois raio maior pro 🍚 não
+      // estourar) só pra dar contraste a emoji claros por natureza (🥛, 🥚,
+      // ⚪). O CARTÃO INTEIRO virou pastel da categoria (`corFundoItem`) e o
+      // selo saiu: sem ele, o ⚪ (que é uma esfera, do tamanho do próprio
+      // selo) parava de colidir com a forma atrás dele, e o fundo pastel
+      // reforça o agrupamento por categoria melhor que um selo pequeno.
+      // `capacidade` continua sendo a exceção que precisa de mais contraste
+      // — ver o comentário em `AJUSTE_FUNDO_ITEM`.
       //
-      // Duas rodadas de ajuste, as duas reportadas pelo humano jogando (não
-      // dava pra prever por conta própria: emoji colorido não respeita
-      // `fillStyle`/`strokeStyle`, então a única alavanca é o que fica ATRÁS
-      // dele). 30% de alfa era quase invisível; 45% + anel ainda ficou claro
-      // demais pro vidro/líquido claro do 🥛. Agora o selo é OPACO (sem
-      // `globalAlpha`) — um disco sólido na cor vívida, não mais uma tinta —
-      // e o anel usa a cor ESCURECIDA (CORES_CATEGORIA_TEXTO, mesma já com
-      // contraste AA comprovado sobre branco) por cima, pra dar um contorno
-      // definido ao disco. Contraste branco-sobre-disco-sólido bate ~3,7:1
-      // (o pior caso, categoria "capacidade"/azul) — acima do mínimo de
-      // elemento gráfico (WCAG 1.4.11, 3:1), e bem acima do que a versão
-      // translúcida entregava.
-      //
-      // TERCEIRA rodada: raio de 0.22 pra 0.28 — o 🍚 (arroz), que desenha
-      // tigela + bolinho de arroz num retângulo mais largo que a maioria dos
-      // emoji do elenco, estourava o disco por cima e pelos lados (reportado
-      // pelo humano). Conferido de ponta a ponta — carta mínima do Difícil
-      // (~146×175) e máxima do Fácil/Médio (~227×273) — renderizando o jogo
-      // de verdade (ver nota no commit): o ícone cabe com folga nos dois
-      // tamanhos, e o disco maior ainda não encosta no rótulo abaixo dele.
+      // Frações de `h` aumentadas (eram 0.30/0.105, depois 0.40) — no nível
+      // Difícil (12 cartas, grade 3×4) a carta é bem menor (~146×175, contra
+      // ~227×273 do Fácil/Médio, mesmos rows=2 nos dois), e o emoji ficava
+      // pequeno demais pra enxergar num celular. Sem o selo sobrando espaço
+      // fixo, o emoji pôde crescer mais ainda. Conferido nos dois extremos de
+      // tamanho de carta, renderizando o jogo de verdade — emoji e rótulo
+      // continuam sem se sobrepor em nenhum dos dois.
       const emojiY = h * 0.40;
-      const raioSelo = h * 0.28;
-      ctx.save();
-      ctx.fillStyle = CORES_CATEGORIA[this.categoria] ?? '#94A3B8';
-      ctx.beginPath();
-      ctx.arc(w / 2, emojiY, raioSelo, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = CORES_CATEGORIA_TEXTO[this.categoria] ?? '#334155';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.font = `${Math.round(h * 0.40)}px ${FONTE_EMOJI}`;
+      ctx.font = `${Math.round(h * 0.62)}px ${FONTE_EMOJI}`;
       ctx.fillText(this.conteudo.emoji, w / 2, emojiY);
       ctx.fillStyle = '#1E293B';
       ctx.font = `800 ${Math.round(h * 0.13)}px Outfit, system-ui, sans-serif`;
-      ctx.fillText(texto(this.conteudo.texto), w / 2, h * 0.76);
+      ctx.fillText(texto(this.conteudo.texto), w / 2, h * 0.82);
     } else {
       // Versão ESCURECIDA da cor da categoria — não a vívida do selo acima:
       // texto colorido sobre fundo branco precisa de contraste de verdade,
