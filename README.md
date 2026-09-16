@@ -105,6 +105,7 @@ Coleção **Numerandus** (`Games/numerandus/`) — ver [`docs/METODO-JOGOS-NUMER
 | `node tools/testes.mjs` | Testes de lógica, sem navegador — a suíte imprime o total ao terminar |
 | `node tools/teste-navegador.mjs [porta]` | Verificações ponta a ponta em navegador headless (piloto) |
 | `node tools/teste-jogabilidade-formas.mjs [porta]` | A jogada do Jogo das Formas com **toque real** — pegar, arrastar, depositar, e a pausa não virar jogada |
+| `node tools/captura-cena.mjs <jogo\|.html\|url> [opções]` | Screenshot de qualquer cena, renderizada de verdade em navegador headless — pra conferir contraste, layout ou um estado difícil de alcançar tocando (ex.: forçar um tabuleiro inteiro virado). Ver o cabeçalho do arquivo |
 | `node tools/teste-entrega-avulsa.mjs <slug>` | Copia o jogo para fora do projeto, serve de uma subpasta e abre — simula a publicação |
 | `tools/ava-teste.html` | Host que simula o AVA e valida o contrato ao vivo. Traz um **seletor de jogo com busca**, agrupado por coleção e descoberto em tempo de execução (por `/__jogos.json` no `serve.mjs`, ou pela listagem de `Games/` em qualquer estático — Live Server da IDE incluída). Jogo novo aparece sozinho |
 
