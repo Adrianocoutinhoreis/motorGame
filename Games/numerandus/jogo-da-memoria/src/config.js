@@ -170,6 +170,67 @@ export default {
 
 const FONTE_EMOJI_TUTORIAL = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
 
+/**
+ * Mesma conversão hex→HSL→hex de `GameScene.js` (`corFundoItem`), DUPLICADA
+ * de propósito — não importada: este arquivo já documenta acima que o
+ * desenho do tutorial é independente da cena real pra não divergir em
+ * silêncio atrás de um código compartilhado quebrado. Usada só pra achar o
+ * fundo pastel de cada carta-exemplo abaixo, com o mesmo matiz da cor vívida
+ * de referência (`corFundo` de cada card).
+ */
+function hexParaHslTutorial(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return h;
+}
+
+function hslParaHexTutorial(h, s, l) {
+  const hue2rgb = (p, q, t) => {
+    let tt = t;
+    if (tt < 0) tt += 1;
+    if (tt > 1) tt -= 1;
+    if (tt < 1 / 6) return p + (q - p) * 6 * tt;
+    if (tt < 1 / 2) return q;
+    if (tt < 2 / 3) return p + (q - p) * (2 / 3 - tt) * 6;
+    return p;
+  };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  const r = hue2rgb(p, q, h + 1 / 3);
+  const g = hue2rgb(p, q, h);
+  const b = hue2rgb(p, q, h - 1 / 3);
+  const paraHex = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
+  return `#${paraHex(r)}${paraHex(g)}${paraHex(b)}`;
+}
+
+/**
+ * Fundo pastel da carta-exemplo. Padrão igual ao de `GameScene.js`
+ * (saturação 0,55 / luminosidade 0,86); `ajuste` sobrescreve os dois pra
+ * reproduzir a exceção da categoria "capacidade" (ver LEITE, passo 2, abaixo)
+ * — o mesmo caso onde o ícone claro por natureza (🥛) e o matiz azul da
+ * categoria quase se cancelavam, medido renderizando o jogo de verdade.
+ */
+function pastelDaCorTutorial(corVivida, ajuste) {
+  const matiz = hexParaHslTutorial(corVivida);
+  const { saturacao = 0.55, luminosidade = 0.86 } = ajuste ?? {};
+  return hslParaHexTutorial(matiz, saturacao, luminosidade);
+}
+
 /** Posição no ciclo [0,1) de um período em segundos — pro loop do desenho animado. */
 function faseCiclo(t, periodo) {
   return (((t % periodo) + periodo) % periodo) / periodo;
@@ -201,7 +262,11 @@ function desenharCartaTutorial(ctx, w, h, frente, conteudo, destaque) {
     ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.stroke();
   } else {
-    ctx.fillStyle = '#FFFFFF';
+    // Carta-exemplo com emoji ganha o fundo pastel da categoria (mesmo
+    // tratamento de `GameScene.js` desde que o selo circular saiu de lá —
+    // ver `pastelDaCorTutorial`); carta de texto só (o "LITRO" ao lado)
+    // continua branca. `corFundo`/`ajusteFundo` vêm de cada card abaixo.
+    ctx.fillStyle = conteudo.emoji ? pastelDaCorTutorial(conteudo.corFundo ?? '#94A3B8', conteudo.ajusteFundo) : '#FFFFFF';
     ctx.fill();
     let borda = '#CBD5E1';
     if (destaque === 'certo') borda = '#16A34A';
@@ -213,24 +278,16 @@ function desenharCartaTutorial(ctx, w, h, frente, conteudo, destaque) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     if (conteudo.emoji) {
-      // Selo colorido atrás do emoji — mesma ideia do verso real (GameScene.js,
-      // `_desenharConteudo`): emoji claro (🥛, por exemplo) some sem contraste
-      // num cartão branco, não importa o tamanho da fonte.
+      // Emoji grande direto sobre o fundo pastel — sem selo atrás dele, mesma
+      // mudança de `GameScene.js` (removido: competia de forma com o próprio
+      // fundo colorido, e alguns emoji — ⚪, por exemplo — colidiam de forma
+      // com um selo circular do mesmo tamanho).
       const emojiY = -h * 0.08;
-      ctx.save();
-      ctx.globalAlpha = 0.30;
-      ctx.fillStyle = conteudo.corSelo ?? '#94A3B8';
-      ctx.beginPath();
-      ctx.arc(0, emojiY, h * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Mesma fração aumentada do verso real (GameScene.js, `_desenharConteudo`).
-      ctx.font = `${Math.round(h * 0.40)}px ${FONTE_EMOJI_TUTORIAL}`;
+      ctx.font = `${Math.round(h * 0.62)}px ${FONTE_EMOJI_TUTORIAL}`;
       ctx.fillText(conteudo.emoji, 0, emojiY);
       ctx.fillStyle = '#1E293B';
       ctx.font = `800 ${Math.round(h * 0.14)}px Outfit, system-ui, sans-serif`;
-      ctx.fillText(conteudo.texto, 0, h * 0.30);
+      ctx.fillText(conteudo.texto, 0, h * 0.32);
     } else {
       ctx.fillStyle = destaque === 'certo' ? '#16A34A' : '#334155';
       ctx.font = `800 ${Math.round(h * 0.19)}px Outfit, system-ui, sans-serif`;
@@ -269,7 +326,7 @@ function desenharCenaTutorial(ctx, l, a, opcoes = {}) {
 
     ctx.translate(l / 2, a / 2);
     ctx.scale(escalaX, 1);
-    desenharCartaTutorial(ctx, w, h, frente, { emoji: '🍚', texto: 'ARROZ', corSelo: '#F97316' });
+    desenharCartaTutorial(ctx, w, h, frente, { emoji: '🍚', texto: 'ARROZ', corFundo: '#F97316' });
   } else if (passo === 2) {
     // Duas cartas viram JUNTAS e combinam — destaque verde estável ao final.
     const w = Math.min(l * 0.24, 150);
@@ -283,7 +340,12 @@ function desenharCenaTutorial(ctx, l, a, opcoes = {}) {
     ctx.translate(l / 2 - w / 2 - gap / 2, a / 2);
     ctx.save();
     ctx.scale(escalaX, 1);
-    desenharCartaTutorial(ctx, w, h, frente, { emoji: '🥛', texto: 'LEITE', corSelo: '#3B82F6' }, destaque);
+    // "capacidade" é a categoria-exceção (ver `pastelDaCorTutorial`): o
+    // 🥛 é claro por natureza e o matiz também é azul, então o pastel
+    // padrão quase cancelava o contraste — mesmo ajuste do jogo real.
+    desenharCartaTutorial(ctx, w, h, frente, {
+      emoji: '🥛', texto: 'LEITE', corFundo: '#3B82F6', ajusteFundo: { saturacao: 0.58, luminosidade: 0.76 },
+    }, destaque);
     ctx.restore();
 
     ctx.translate(w + gap, 0);
@@ -311,7 +373,7 @@ function desenharCenaTutorial(ctx, l, a, opcoes = {}) {
     ctx.translate(l / 2 - w / 2 - gap / 2, a / 2);
     ctx.save();
     ctx.scale(escalaX, 1);
-    desenharCartaTutorial(ctx, w, h, frente, { emoji: '⏰', texto: 'RELÓGIO', corSelo: '#A78BFA' }, destaque);
+    desenharCartaTutorial(ctx, w, h, frente, { emoji: '⏰', texto: 'RELÓGIO', corFundo: '#A78BFA' }, destaque);
     ctx.restore();
 
     ctx.translate(w + gap, 0);
