@@ -128,7 +128,8 @@ jogo-da-memoria/
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
 | `assets/audio/acertoSOS.wav` | Efeito de vitória (`audio.vitoria`) — sem fala | Aula original 870298 — Educandus. Mesmo arquivo já usado em toda a coleção. |
-| `assets/audio/soltar_peca.mp3` | Efeito de "par encontrado" (`audio.acerto`) — sem fala | **A confirmar** — mesmo arquivo (mesmo SHA-256) já usado como `soltarPeca` no Jogo da Ordenação e no Encaixe Certo; arquivo fornecido pronto, sem procedência documentada (pendência compartilhada com os outros dois jogos). |
+| `assets/audio/carta-correta.mp3` | Efeito de "par encontrado" (`audio.acerto`) — sem fala | Criado pelo humano especificamente para este jogo, nesta sessão. Arquivo próprio, não reaproveitado. |
+| `assets/audio/error.MP3` | Som de erro (`audio.erro`) — par que não combina | **A confirmar** — fornecido pelo humano nesta sessão, ainda não ouvido (ver ficha em `assets/audio-transcricao/erro/`). |
 
 Nenhum outro asset de imagem: todo o tabuleiro (verso das cartas, emoji, texto) é
 desenhado em canvas por `GameScene.js` — sem depender de `center_back.png`/`back.png` do
@@ -149,8 +150,10 @@ projeto-fonte Remotion, consistente com o resto do motor.
   qual (se algum) corresponde a qual passo, renomear e mapear.
 - **Sem `escolhaNivel`/`falaVitoria`** — mesma causa acima, narrações opcionais do motor
   compartilhado sem gravação identificada.
-- **Origem/licença do `soltar_peca.mp3` ainda a confirmar** — mesma pendência já
-  existente no Jogo da Ordenação e no Encaixe Certo (é o mesmo arquivo nos três).
+- **`error.MP3` (som de erro) ainda não foi ouvido.** Ficha 🔴 NÃO VERIFICADA em
+  `assets/audio-transcricao/erro/`. Se for uma voz reprovadora (não um efeito neutro),
+  contraria "errar não pode humilhar" (`docs/DESIGN.md`) — e pesa mais aqui, porque o jogo
+  inteiro é desenhado para nunca punir o erro. Falta: ouvir e atualizar a ficha.
 - **Sem música de fundo** — mesma regra do motor: som só de arquivo gravado, nunca
   sintetizado.
 - **Renderização de emoji varia entre sistemas** (Segoe UI Emoji no Windows, Noto Color

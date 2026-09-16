@@ -42,15 +42,20 @@
       emoji + palavra (item) ou palavra (unidade), coerente com o design system do motor.
 - [ ] Áudio de narração do tutorial — **pendência conhecida, ver README**: os brutos
       fornecidos não estão identificados por passo; não foram mapeados sem confirmação.
-- [x] Efeito de "par encontrado" (`soltarPeca`, reaproveitado) e de vitória (`acertoSOS`,
-      reaproveitado) presentes. Sem som de erro nem de clique — mesma decisão do Encaixe
-      Certo/Ordenação (som só onde é gameplay de verdade).
+- [x] Efeito de "par encontrado" (`cartaCorreta`, arquivo PRÓPRIO deste jogo, criado
+      pelo humano) e de vitória (`acertoSOS`, reaproveitado) presentes. Sem som de clique —
+      mesma decisão do Encaixe Certo/Ordenação (som só onde é gameplay de verdade).
+- [x] Efeito de erro (`erro`, `error.MP3`) presente — toca quando as duas cartas viradas
+      não combinam. **Pendência:** ainda não foi ouvido (ver ficha), então não está
+      confirmado que é um efeito neutro e não uma voz — ver README.
 - [x] Todo asset está dentro de `assets/`, com caminho relativo.
 - [x] Nenhuma fonte, imagem ou som vindo da internet.
 - [x] Origem/licença de cada asset registrada no `README.md` (tabela "Assets").
-- [x] Ficha de transcrição criada para os 2 áudios usados
-      (`assets/audio-transcricao/acertoSOS/`, `.../soltarPeca/`).
-- [x] Transcrições confirmadas por natureza (nenhum dos dois tem fala — ver as fichas).
+- [x] Ficha de transcrição criada para os 3 áudios usados
+      (`assets/audio-transcricao/acertoSOS/`, `.../cartaCorreta/`, `.../erro/`).
+- [ ] Transcrições confirmadas: `acertoSOS` e `cartaCorreta` por natureza (sem fala — ver
+      as fichas; `cartaCorreta` confirmado diretamente pelo humano que criou o arquivo).
+      `erro` continua 🔴 NÃO VERIFICADA — falta ouvir.
 - [x] Pendências de áudio ainda não mapeado listadas explicitamente no `README.md`.
 
 ## 3. Telas
@@ -79,10 +84,10 @@
 
 - [x] Regras implementadas conforme a definição: par por associação (mesma `categoria`,
       papéis diferentes item/unidade), sorteio sem repetir categoria na rodada.
-- [x] Feedback imediato de acerto: borda verde estável nas 2 cartas + som (`soltarPeca`).
-- [x] Feedback imediato de erro: borda vermelha suave (só cor, sem tremor/piscar) por
-      ~700ms, depois as cartas viram de volta sozinhas — sem tom punitivo (RE-02, decisão
-      confirmada: nunca desconta a nota).
+- [x] Feedback imediato de acerto: borda verde estável nas 2 cartas + som (`cartaCorreta`).
+- [x] Feedback imediato de erro: borda vermelha suave (só cor, sem tremor/piscar) + som
+      (`erro`) por ~700ms, depois as cartas viram de volta sozinhas — sem tom punitivo
+      (RE-02, decisão confirmada: nunca desconta a nota).
 - [x] Dificuldade dos 3 níveis testada JOGANDO (não só configurada) — os 3 níveis foram
       jogados até o fim no playtest desta sessão (3, 4 e 6 pares), sem sobreposição de
       cartas mesmo com as 12 do Difícil (grade 3×4).

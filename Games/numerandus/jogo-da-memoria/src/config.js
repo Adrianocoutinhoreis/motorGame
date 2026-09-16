@@ -110,16 +110,21 @@ export default {
 
   // ------------------------------------------------------------------ áudio
   /**
-   * `acertoSOS` (vitória) e `soltarPeca` (par encontrado) são o MESMO arquivo já
-   * usado no resto da coleção — sem fala, então servem a qualquer jogo (ver
-   * `assets/audio-transcricao/` deste jogo). Sem som de clique nem música de
-   * fundo, mesma decisão do Encaixe Certo/Ordenação. Narração do tutorial e das
-   * telas de apoio (`escolhaNivel`, `falaVitoria`) ficam `null` até um áudio
-   * confirmado existir — ver "Pendências conhecidas" no README.
+   * `acertoSOS` (vitória) é o mesmo arquivo já usado no resto da coleção —
+   * sem fala, serve a qualquer jogo. `cartaCorreta` (par encontrado) e `erro`
+   * (par que não combina) são efeitos PRÓPRIOS deste jogo — ver
+   * `assets/audio-transcricao/`. `erro` ainda não foi ouvido (ficha 🔴 NÃO
+   * VERIFICADA): se acabar sendo uma voz reprovadora, contraria "errar não
+   * pode humilhar" (`docs/DESIGN.md`) — ver "Pendências conhecidas" no
+   * README antes de considerar isso fechado. Sem som de clique nem música de
+   * fundo, mesma decisão do Encaixe Certo/Ordenação. Narração do tutorial e
+   * das telas de apoio (`escolhaNivel`, `falaVitoria`) ficam `null` até um
+   * áudio confirmado existir — ver "Pendências conhecidas" no README.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
-    { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
+    { id: 'cartaCorreta', src: './assets/audio/carta-correta.mp3' },
+    { id: 'erro', src: './assets/audio/error.MP3' },
   ],
 
   /** Sem mascote nesta partida — o tabuleiro de cartas é a área de maior destaque. */
@@ -128,8 +133,8 @@ export default {
   audio: {
     musica: null,
     clique: null,
-    acerto: 'soltarPeca', // toca quando um PAR é encontrado (reaproveitado, ver acima)
-    erro: null,
+    acerto: 'cartaCorreta', // toca quando um PAR é encontrado (ver comentário acima)
+    erro: 'erro', // toca quando as duas cartas viradas NÃO combinam (ver comentário acima)
     vitoria: 'acertoSOS',
     derrota: null,
     abertura: null,

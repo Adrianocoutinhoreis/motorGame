@@ -414,7 +414,7 @@ export class GameScene extends Scene {
     });
     this.adicionar(this.ajuda);
 
-    this.placar.on('vitoria', () => this._terminar(true));
+    this.placar.on('vitoria', () => this._celebrarVitoria());
 
     // ------------------------------------------------------------ tabuleiro
     this._selecionadas = [];
@@ -559,6 +559,50 @@ export class GameScene extends Scene {
     Tween.pausarTodos();
     this.pausada = true;
     this.ajuda.abrir();
+  }
+
+  /**
+   * O último par fecha e o `ScoreSystem.acertar()` já dispara 'vitoria' NO
+   * MESMO INSTANTE (síncrono) — sem esta espera, a tela trocaria pro
+   * resultado no exato quadro em que a criança ainda está vendo a última
+   * carta virar, sem tempo de olhar o tabuleiro inteiro com todos os pares
+   * encontrados. Pedido do humano: alguns segundos de pausa aqui antes de
+   * `_terminar`. Mesmo espírito da comemoração do Encaixe Certo
+   * (`_celebrarCompleto`/`_saltarParesDaOnda`) antes de trocar de tela.
+   *
+   * Nenhum toque novo acontece nesse meio-tempo: `this.placar.encerrado` já
+   * é `true` (o `ScoreSystem` já se encerrou dentro de `acertar()`), e
+   * `_tocarCarta`/`_pausar`/`_pedirAjuda` checam isso antes de agir — o
+   * tabuleiro fica parado e completo, exatamente o que a criança precisa ver.
+   */
+  _celebrarVitoria() {
+    this._saltarTabuleiro();
+    Tween.de(this).esperar(1800).chamar(() => this._terminar(true));
+  }
+
+  /**
+   * Salto encadeado em CADA carta do tabuleiro — a tela não fica só parada
+   * durante a espera de `_celebrarVitoria`, comemora junto com a criança.
+   * Mesma comemoração que o Encaixe Certo já usa ao fechar uma rodada
+   * (`_saltarParesDaOnda`): sobe um pouco e aterrissa com uma molinha
+   * (`Easing.costasSaida`), espalhada por índice pra parecer uma onda
+   * passando pelo tabuleiro — não todas as cartas pulando ao mesmo tempo,
+   * que seria mais cansativo de acompanhar que festivo.
+   *
+   * Cabe folgado dentro do 1,8s de `_celebrarVitoria` mesmo no Difícil (12
+   * cartas): a última carta começa em `11×40 = 440ms` e termina a própria
+   * animação (150+230ms) em 820ms — sobra mais de 900ms de tabuleiro parado
+   * e verde antes de trocar de tela.
+   */
+  _saltarTabuleiro() {
+    this.cartas.forEach((carta, i) => {
+      const baseY = carta.y;
+      const atraso = i * 40;
+      Tween.removerDe(carta);
+      Tween.de(carta).esperar(atraso)
+        .entao({ y: baseY - 16 }, 150, Easing.suaveSaida)
+        .entao({ y: baseY }, 230, Easing.costasSaida);
+    });
   }
 
   /**
