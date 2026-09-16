@@ -37,7 +37,16 @@
   }
   h1 { font-size: 30px; letter-spacing: -.01em; }
   .lede { color: var(--suave); margin-top: 8px; }
-  .jogos { display: grid; gap: 14px; margin-top: 28px; }
+  .colecao { margin-top: 28px; }
+  .colecao h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--suave);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .jogos { display: grid; gap: 14px; }
   a.jogo {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -69,56 +78,64 @@
     Cada pasta abaixo é uma entrega independente — roda sozinha, e é assim que vai para o AVA.
   </p>
 
-  <div class="jogos">
-      <a class="jogo" href="./Games/numerandus/bingo-da-adicao-e-subtracao/">
-        <span class="nome">Bingo da Adição e Subtração</span>
-        <span class="sub">Resolva as operações e vença o computador!</span>
-        
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/numerandus/encaixe-certo/">
-        <span class="nome">Encaixe Certo</span>
-        <span class="sub">Arraste o número até a quantidade certa</span>
-        
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/numerandus/jogo-da-memoria/">
-        <span class="nome">Jogo da Memória</span>
-        <span class="sub">Ache o par que combina</span>
-        
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/numerandus/jogo-da-ordenacao/">
-        <span class="nome">Jogo da Ordenação</span>
-        <span class="sub">Arraste os números e deixe o tabuleiro em ordem</span>
-        
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/numerandus/jogo-da-velha-novo/">
-        <span class="nome">Jogo da Velha</span>
-        <span class="sub">Escolha a dificuldade e vença o computador!</span>
-        
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/jogo-das-cores/">
-        <span class="nome">Jogo das Cores</span>
-        <span class="sub">Ligue as cores iguais!</span>
-        <span class="aula">aula 870296</span>
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/jogo-das-formas/">
-        <span class="nome">Jogo das Formas</span>
-        <span class="sub">Junte três formas iguais!</span>
-        <span class="aula">aula 870298</span>
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-      <a class="jogo" href="./Games/jogo-dos-blocos/">
-        <span class="nome">Jogo dos Blocos</span>
-        <span class="sub">Empilhe os blocos na ordem certa!</span>
-        <span class="aula">aula 870294</span>
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>
-  </div>
+      <section class="colecao">
+        <h2>Jogos</h2>
+        <div class="jogos">
+        <a class="jogo" href="./Games/jogo-das-cores/">
+          <span class="nome">Jogo das Cores</span>
+          <span class="sub">Ligue as cores iguais!</span>
+          <span class="aula">aula 870296</span>
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        <a class="jogo" href="./Games/jogo-das-formas/">
+          <span class="nome">Jogo das Formas</span>
+          <span class="sub">Junte três formas iguais!</span>
+          <span class="aula">aula 870298</span>
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        <a class="jogo" href="./Games/jogo-dos-blocos/">
+          <span class="nome">Jogo dos Blocos</span>
+          <span class="sub">Empilhe os blocos na ordem certa!</span>
+          <span class="aula">aula 870294</span>
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        </div>
+      </section>
+      <section class="colecao">
+        <h2>Numerandus</h2>
+        <div class="jogos">
+        <a class="jogo" href="./Games/numerandus/bingo-da-adicao-e-subtracao/">
+          <span class="nome">Bingo da Adição e Subtração</span>
+          <span class="sub">Resolva as operações e vença o computador!</span>
+          
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        <a class="jogo" href="./Games/numerandus/encaixe-certo/">
+          <span class="nome">Encaixe Certo</span>
+          <span class="sub">Arraste o número até a quantidade certa</span>
+          
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        <a class="jogo" href="./Games/numerandus/jogo-da-memoria/">
+          <span class="nome">Jogo da Memória</span>
+          <span class="sub">Ache o par que combina</span>
+          
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        <a class="jogo" href="./Games/numerandus/jogo-da-ordenacao/">
+          <span class="nome">Jogo da Ordenação</span>
+          <span class="sub">Arraste os números e deixe o tabuleiro em ordem</span>
+          
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        <a class="jogo" href="./Games/numerandus/jogo-da-velha-novo/">
+          <span class="nome">Jogo da Velha</span>
+          <span class="sub">Escolha a dificuldade e vença o computador!</span>
+          
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>
+        </div>
+      </section>
 
   <footer>
     <p>

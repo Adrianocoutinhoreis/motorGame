@@ -117,12 +117,36 @@ const escapar = (t) => String(t)
 
 const jogos = await listarJogos();
 
-const cartoes = jogos.map((jogo) => `      <a class="jogo" href="./Games/${escapar(jogo.dir)}/">
-        <span class="nome">${escapar(jogo.titulo)}</span>
-        ${jogo.subtitulo ? `<span class="sub">${escapar(jogo.subtitulo)}</span>` : ''}
-        ${jogo.aula ? `<span class="aula">aula ${escapar(jogo.aula)}</span>` : ''}
-        <span class="abrir">ABRIR &rsaquo;</span>
-      </a>`).join('\n');
+// Mesma regra do seletor de `ava-teste.html` (`grupoDoJogo`): o primeiro
+// segmento de `dir` é a COLEÇÃO; jogo direto (sem "/") cai em "Jogos". A capa
+// e a ferramenta de teste devem concordar sobre o que é grupo de quê.
+function grupoDoJogo(jogo) {
+  const [antes, depois] = jogo.dir.split('/');
+  if (!depois) return 'Jogos';
+  return antes.charAt(0).toUpperCase() + antes.slice(1);
+}
+
+const cartao = (jogo) => `        <a class="jogo" href="./Games/${escapar(jogo.dir)}/">
+          <span class="nome">${escapar(jogo.titulo)}</span>
+          ${jogo.subtitulo ? `<span class="sub">${escapar(jogo.subtitulo)}</span>` : ''}
+          ${jogo.aula ? `<span class="aula">aula ${escapar(jogo.aula)}</span>` : ''}
+          <span class="abrir">ABRIR &rsaquo;</span>
+        </a>`;
+
+const porGrupo = new Map();
+for (const jogo of jogos) {
+  const grupo = grupoDoJogo(jogo);
+  if (!porGrupo.has(grupo)) porGrupo.set(grupo, []);
+  porGrupo.get(grupo).push(jogo);
+}
+const grupos = [...porGrupo.keys()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+const secoes = grupos.map((grupo) => `      <section class="colecao">
+        <h2>${escapar(grupo)}</h2>
+        <div class="jogos">
+${porGrupo.get(grupo).map(cartao).join('\n')}
+        </div>
+      </section>`).join('\n');
 
 const html = `<!DOCTYPE html>
 <!--
@@ -163,7 +187,16 @@ const html = `<!DOCTYPE html>
   }
   h1 { font-size: 30px; letter-spacing: -.01em; }
   .lede { color: var(--suave); margin-top: 8px; }
-  .jogos { display: grid; gap: 14px; margin-top: 28px; }
+  .colecao { margin-top: 28px; }
+  .colecao h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--suave);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .jogos { display: grid; gap: 14px; }
   a.jogo {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -195,9 +228,7 @@ const html = `<!DOCTYPE html>
     Cada pasta abaixo é uma entrega independente — roda sozinha, e é assim que vai para o AVA.
   </p>
 
-${jogos.length ? `  <div class="jogos">
-${cartoes}
-  </div>` : '  <p class="vazio">Nenhum jogo em Games/ (nenhuma subpasta com index.html).</p>'}
+${jogos.length ? secoes : '  <p class="vazio">Nenhum jogo em Games/ (nenhuma subpasta com index.html).</p>'}
 
   <footer>
     <p>
