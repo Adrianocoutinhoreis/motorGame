@@ -247,14 +247,31 @@ class Carta extends Node {
       // emoji claro sobre carta branca não tem contraste nenhum, não importa
       // o tamanho da fonte. O selo garante contraste com QUALQUER emoji,
       // claro ou escuro, sem depender de acertar a cor certa pra cada um.
+      //
+      // O preenchimento sozinho (30% de alfa) ficava claro demais pra emoji
+      // já claros por natureza — o vidro/líquido do 🥛, por exemplo, quase
+      // não se distinguia do selo atrás dele (reportado pelo humano vendo o
+      // jogo rodando). Alfa mais alto (0.45) + um ANEL sólido na cor
+      // ESCURECIDA (a mesma já com contraste AA comprovado sobre branco, ver
+      // CORES_CATEGORIA_TEXTO) resolve isso sem depender de opacidade: o
+      // anel desenha uma borda nítida do selo mesmo quando o preenchimento
+      // translúcido e o emoji ficam parecidos.
       const emojiY = h * 0.40;
       const raioSelo = h * 0.22;
       ctx.save();
-      ctx.globalAlpha = 0.30;
+      ctx.globalAlpha = 0.45;
       ctx.fillStyle = CORES_CATEGORIA[this.categoria] ?? '#94A3B8';
       ctx.beginPath();
       ctx.arc(w / 2, emojiY, raioSelo, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = CORES_CATEGORIA_TEXTO[this.categoria] ?? '#334155';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(w / 2, emojiY, raioSelo, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
 
       ctx.font = `${Math.round(h * 0.40)}px ${FONTE_EMOJI}`;
