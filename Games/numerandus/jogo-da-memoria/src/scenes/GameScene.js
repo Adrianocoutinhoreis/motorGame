@@ -248,29 +248,27 @@ class Carta extends Node {
       // o tamanho da fonte. O selo garante contraste com QUALQUER emoji,
       // claro ou escuro, sem depender de acertar a cor certa pra cada um.
       //
-      // O preenchimento sozinho (30% de alfa) ficava claro demais pra emoji
-      // já claros por natureza — o vidro/líquido do 🥛, por exemplo, quase
-      // não se distinguia do selo atrás dele (reportado pelo humano vendo o
-      // jogo rodando). Alfa mais alto (0.45) + um ANEL sólido na cor
-      // ESCURECIDA (a mesma já com contraste AA comprovado sobre branco, ver
-      // CORES_CATEGORIA_TEXTO) resolve isso sem depender de opacidade: o
-      // anel desenha uma borda nítida do selo mesmo quando o preenchimento
-      // translúcido e o emoji ficam parecidos.
+      // Duas rodadas de ajuste, as duas reportadas pelo humano jogando (não
+      // dava pra prever por conta própria: emoji colorido não respeita
+      // `fillStyle`/`strokeStyle`, então a única alavanca é o que fica ATRÁS
+      // dele). 30% de alfa era quase invisível; 45% + anel ainda ficou claro
+      // demais pro vidro/líquido claro do 🥛. Agora o selo é OPACO (sem
+      // `globalAlpha`) — um disco sólido na cor vívida, não mais uma tinta —
+      // e o anel usa a cor ESCURECIDA (CORES_CATEGORIA_TEXTO, mesma já com
+      // contraste AA comprovado sobre branco) por cima, pra dar um contorno
+      // definido ao disco. Contraste branco-sobre-disco-sólido bate ~3,7:1
+      // (o pior caso, categoria "capacidade"/azul) — acima do mínimo de
+      // elemento gráfico (WCAG 1.4.11, 3:1), e bem acima do que a versão
+      // translúcida entregava.
       const emojiY = h * 0.40;
       const raioSelo = h * 0.22;
       ctx.save();
-      ctx.globalAlpha = 0.45;
       ctx.fillStyle = CORES_CATEGORIA[this.categoria] ?? '#94A3B8';
       ctx.beginPath();
       ctx.arc(w / 2, emojiY, raioSelo, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-
-      ctx.save();
       ctx.strokeStyle = CORES_CATEGORIA_TEXTO[this.categoria] ?? '#334155';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(w / 2, emojiY, raioSelo, 0, Math.PI * 2);
+      ctx.lineWidth = 3;
       ctx.stroke();
       ctx.restore();
 
