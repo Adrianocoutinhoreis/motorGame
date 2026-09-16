@@ -260,8 +260,16 @@ class Carta extends Node {
       // (o pior caso, categoria "capacidade"/azul) — acima do mínimo de
       // elemento gráfico (WCAG 1.4.11, 3:1), e bem acima do que a versão
       // translúcida entregava.
+      //
+      // TERCEIRA rodada: raio de 0.22 pra 0.28 — o 🍚 (arroz), que desenha
+      // tigela + bolinho de arroz num retângulo mais largo que a maioria dos
+      // emoji do elenco, estourava o disco por cima e pelos lados (reportado
+      // pelo humano). Conferido de ponta a ponta — carta mínima do Difícil
+      // (~146×175) e máxima do Fácil/Médio (~227×273) — renderizando o jogo
+      // de verdade (ver nota no commit): o ícone cabe com folga nos dois
+      // tamanhos, e o disco maior ainda não encosta no rótulo abaixo dele.
       const emojiY = h * 0.40;
-      const raioSelo = h * 0.22;
+      const raioSelo = h * 0.28;
       ctx.save();
       ctx.fillStyle = CORES_CATEGORIA[this.categoria] ?? '#94A3B8';
       ctx.beginPath();
