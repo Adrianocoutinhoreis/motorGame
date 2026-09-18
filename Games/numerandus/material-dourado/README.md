@@ -81,7 +81,7 @@ do Encaixe Certo e do Jogo da Memória: `erros` é só demonstrativo, sem descon
 contador próprio da cena (`GameScene._tentativasErradas`) e só é escrita no campo `erros` da
 mensagem final, por fora do `ScoreSystem`.
 
-A tela final mostra "N NÚMEROS" via `config.unidadePlacar: { singular: 'número', plural: 'números' }`,
+A tela final mostra "N ACERTOS" via `config.unidadePlacar: { singular: 'acerto', plural: 'acertos' }`,
 e também o **tempo da partida** (mm:ss, `config.mostrarTempo: true`). O mesmo tempo aparece AO VIVO
 durante a partida, junto do progresso das rodadas, num badge no HUD — puramente informativo, sem
 prazo nem cor de alerta. O progresso é uma fileira de **estrelas** (uma por rodada da meta do
@@ -117,6 +117,9 @@ material-dourado/
 | `assets/img/centena-flat-v2.png` | Versão anterior da placa (face lateral à direita) | Não usada no jogo final — mantida na pasta, não referenciada em `config.js`. |
 | `assets/audio/progresso.mp3` | Efeito de "estrela acendeu" (progresso de rodada, HUD) | **Cópia** de `assets/audio/carta-correta.mp3` do Jogo da Memória — mesmo arquivo, sem fala, serve pra qualquer "avançou um passo". Cada pasta de jogo precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
 | `assets/audio/tela1.wav` … `tela5.wav` | Narração dos 5 passos do tutorial | Fornecido pelo humano nesta sessão. `id` de cada asset (`tutorialTela1-5`) bate com o `fala` de cada passo em `config.tutorial` — mesmo padrão do Jogo da Memória. |
+| `assets/audio/acertoSOS.wav` | Efeito de vitória (tela de resultado) | **Cópia** do mesmo `acertoSOS.wav` já usado no resto da coleção (Jogo da Memória, Encaixe Certo, Bingo, etc.) — sem fala, serve a qualquer jogo. Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
+| `assets/audio/soltar_peca.mp3` | Clique universal (tocar peça pra somar/tirar, botões de pausa/ajuda/som) | **Cópia** do `soltar_peca.mp3` do Jogo da Ordenação — lá é o som de "peça encaixou", reaproveitado aqui como o clique genérico (`somClique`). Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
+| `assets/audio/error.MP3` | Efeito de confirmar errado | **Cópia** do `error.MP3` do Jogo da Memória (`somErro`) — **não verificado por humano nenhum ainda** (o próprio Jogo da Memória documenta essa ficha como "não verificada"). Risco real: se soar reprovador, contraria o princípio deste jogo ("errar só demora mais, nunca perde nada") — ouvir com atenção antes de considerar definitivo. |
 
 Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 
@@ -124,11 +127,17 @@ Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 
 > Liste aqui, com honestidade, o que ainda falta.
 
-- **Narração do tutorial gravada (5 de 5 passos), resto do áudio ainda não.** `config.audio` só tem
-  `progresso` ligado (`somProgresso`) — faltam efeito de clique (tocar peça), efeito de acerto
-  (número formado certo), efeito de erro (confirmar errado) e efeito de vitória. O motor abre e joga
-  normalmente em silêncio nesses casos (regra do motor: som só de arquivo gravado, nunca
-  sintetizado).
+- **`error.MP3` (efeito de erro) ainda não foi ouvido por um humano nesta sessão** — copiado do Jogo
+  da Memória, que já documenta essa mesma ficha como "não verificada". Se ao ouvir soar como um
+  "errou!" áspero ou reprovador, precisa ser trocado: este jogo não pode punir nem humilhar quem
+  erra, é o oposto do que "contar e trocar" tenta ensinar.
+- **Narração do tutorial (5/5), clique, erro e efeito de vitória gravados, resto do áudio ainda
+  não.** `config.audio` tem `progresso` (`somProgresso`), `clique` (`somClique`), `erro` (`somErro`)
+  e `vitoria` (`acertoSOS`) ligados — falta efeito de acerto (número formado certo, diferente do
+  `progresso` que já toca nesse instante) e a fala do resultado (`falaVitoria`, texto "Muito bem!
+  Você conseguiu!" ainda sem áudio — a tela mostra o efeito sonoro, mas fica muda na locução). O
+  motor abre e joga normalmente em silêncio nesses casos (regra do motor: som só de arquivo
+  gravado, nunca sintetizado).
 - **Testado só em navegador headless** (`tools/captura-cena.mjs`, `tools/teste-entrega-avulsa.mjs`),
   simulando toques via chamada direta aos métodos da cena (`_adicionar`, `_confirmar`, etc.) — ainda
   não testado com toque de verdade em tablet, nem em iframe pequeno/médio/grande, nem o fluxo de

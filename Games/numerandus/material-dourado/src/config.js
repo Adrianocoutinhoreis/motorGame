@@ -153,26 +153,40 @@ export default {
 
   // ------------------------------------------------------------------ áudio
   /**
-   * As 3 imagens das peças, o efeito de progresso, e agora a narração dos 4
-   * passos do tutorial (`tela1-4.wav`, fornecidos pelo humano nesta sessão)
-   * — o resto do áudio ainda falta (ver "Pendências conhecidas" no README).
+   * As 3 imagens das peças, o efeito de progresso, a narração dos 5 passos
+   * do tutorial (`tela1-5.wav`, fornecidos pelo humano) e o som de vitória —
+   * o resto do áudio ainda falta (ver "Pendências conhecidas" no README).
    * `centena` usa a versão "esquerda" (face lateral do bloco à esquerda): é
    * a que empilha certo quando peças mais novas ficam na FRENTE e à DIREITA
    * das mais antigas (ver `GameScene._pilhaLateral`) — a face mostra
    * profundidade de verdade na costura entre uma placa e a próxima.
    * `somProgresso` é uma CÓPIA do `carta-correta.mp3` do Jogo da Memória
-   * (mesmo arquivo, sem fala, serve pra qualquer "avançou um passo") — cada
-   * pasta de jogo precisa ser autossuficiente, então o arquivo físico foi
-   * copiado, não referenciado entre pastas. Os `id` de `tutorialTela1-5`
-   * batem com o `fala` de cada passo em `tutorial` (acima) — é isso que o
-   * motor usa pra tocar a narração certa em cada tela (`TutorialScreen`
-   * chama `audio.falar(passo.fala, ...)`, que busca esse id nos assets).
+   * (mesmo arquivo, sem fala, serve pra qualquer "avançou um passo");
+   * `acertoSOS` é o MESMO som de vitória já usado no resto da coleção
+   * (Jogo da Memória, Encaixe Certo, Bingo, etc.); `somClique` é o
+   * `soltar_peca.mp3` do Jogo da Ordenação — lá é o som de "peça encaixou",
+   * aqui vira o clique universal (tocar +1/+10/+100, tocar numa peça da
+   * mesa pra tirar, e os botões de pausa/ajuda/som via `somToque`); e
+   * `somErro` é o `error.MP3` do Jogo da Memória — **atenção**: lá ele
+   * mesmo está documentado como "ainda não ouvido, ficha NÃO verificada"
+   * (risco de soar reprovador). Aqui o erro NUNCA pode humilhar ("errar só
+   * demora mais, nunca perde nada" — ver README) — se ao ouvir este som ele
+   * soar como um "errou!" áspero, precisa trocar antes de gravar oficial.
+   * Nenhum dos quatro é referenciado entre pastas, cada jogo precisa ser
+   * autossuficiente, então o arquivo físico foi copiado. Os `id` de
+   * `tutorialTela1-5` batem com o `fala` de cada passo em `tutorial`
+   * (acima) — é isso que o motor usa pra tocar a narração certa em cada
+   * tela (`TutorialScreen` chama `audio.falar(passo.fala, ...)`, que busca
+   * esse id nos assets).
    */
   assets: [
     { id: 'imgUnidade', src: './assets/img/unidade-flat-v2.png' },
     { id: 'imgDezena', src: './assets/img/dezena-flat-v2.png' },
     { id: 'imgCentena', src: './assets/img/centena-flat-esquerda-v3.png' },
     { id: 'somProgresso', src: './assets/audio/progresso.mp3' },
+    { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
+    { id: 'somClique', src: './assets/audio/soltar_peca.mp3' },
+    { id: 'somErro', src: './assets/audio/error.MP3' },
     { id: 'tutorialTela1', src: './assets/audio/tela1.wav' },
     { id: 'tutorialTela2', src: './assets/audio/tela2.wav' },
     { id: 'tutorialTela3', src: './assets/audio/tela3.wav' },
@@ -191,18 +205,27 @@ export default {
   mascote: { telas: [] },
 
   /**
-   * `progresso` toca quando uma rodada avança e uma nova estrela acende no
-   * HUD (ver `GameScene._avancarRodada`) — o resto ainda não foi gravado
-   * (ver "Pendências conhecidas" no README). A narração do tutorial NÃO mora
+   * `clique` toca ao tocar +1/+10/+100 (soma) e ao tocar uma peça da mesa
+   * (tira) — `GameScene._adicionar`/`_removerPeca` — e também nos botões de
+   * pausa/ajuda/som do HUD, via `somToque`. `progresso` toca quando uma
+   * rodada avança e uma nova estrela acende no HUD (`_avancarRodada`).
+   * `vitoria` toca na tela de resultado (`ResultScreen`, lido de
+   * `config.audio?.vitoria`) — como este jogo nunca tem derrota
+   * (`registrarDerrota: false`), é o único desfecho que existe. `erro` toca
+   * ao confirmar errado (`_confirmar`) — som ainda NÃO VERIFICADO por
+   * humano nenhum (ver o comentário em `assets`, acima); se soar reprovador
+   * precisa trocar, esse jogo não pode punir quem erra. `acerto` (som
+   * específico de confirmar certo, diferente do `progresso` que já toca
+   * nesse instante) ainda não foi gravado. A narração do tutorial NÃO mora
    * aqui — `passo.fala` (em `tutorial`, acima) aponta direto pro `id` do
-   * asset (`tutorialTela1-4`), mesmo padrão do Jogo da Memória.
+   * asset (`tutorialTela1-5`), mesmo padrão do Jogo da Memória.
    */
   audio: {
     musica: null,
-    clique: null,
+    clique: 'somClique',
     acerto: null,
-    erro: null,
-    vitoria: null,
+    erro: 'somErro',
+    vitoria: 'acertoSOS',
     derrota: null,
     abertura: null,
     progresso: 'somProgresso',
@@ -213,8 +236,8 @@ export default {
    *  a partida — a criança ajusta as peças e tenta de novo. */
   registrarDerrota: false,
 
-  /** RE-03: o placar mostra "N NÚMEROS" (cada acerto é um número montado certo). */
-  unidadePlacar: { singular: 'número', plural: 'números' },
+  /** RE-03: o placar mostra "N ACERTOS" (cada acerto é um número montado certo). */
+  unidadePlacar: { singular: 'acerto', plural: 'acertos' },
 
   /** Linha extra na tela de resultado com o tempo da partida (mm:ss). */
   mostrarTempo: true,

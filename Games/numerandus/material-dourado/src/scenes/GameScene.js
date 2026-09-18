@@ -14,7 +14,7 @@ import {
  */
 class SeloContagem extends Node {
   constructor(opcoes = {}) {
-    super({ ...opcoes, largura: 34, altura: 28 });
+    super({ ...opcoes, largura: 40, altura: 34 });
     this.valor = 0;
   }
 
@@ -27,7 +27,7 @@ class SeloContagem extends Node {
     ctx.roundRect(0, 0, l, a, a / 2);
     ctx.fill();
     ctx.fillStyle = '#FFF3D1';
-    ctx.font = '700 17px system-ui, sans-serif';
+    ctx.font = '700 20px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(this.valor), l / 2, a / 2 + 1);
@@ -39,6 +39,13 @@ class SeloContagem extends Node {
  * Botão de peça da bandeja (+1 / +10 / +100) — painel branco, a imagem real
  * da peça e o rótulo embaixo. Mesmo alvo de toque mínimo do motor (a
  * `largura`/`altura` do painel já nascem acima de 64px lógicos).
+ *
+ * Antes era um cartão liso — mesma cara EXATA das caixas passivas da mesa
+ * e do painel de desafio (mesmo branco, mesma borda fininha), sem nada
+ * dizendo "isso aqui é botão, toque". Ganhou a mesma linguagem visual de
+ * botão do resto do motor (`engine/ui/Button.js`): uma base dourada sólida
+ * por baixo (o "lado" do botão, como se tivesse espessura de verdade), um
+ * brilho suave no topo, sombra, e afunda de leve ao ser pressionado.
  */
 class BotaoPeca extends Node {
   constructor(opcoes = {}) {
@@ -52,19 +59,56 @@ class BotaoPeca extends Node {
     this.imgAltura = opcoes.imgAltura ?? 64;
     this.rotulo = opcoes.rotulo ?? '';
     this.aoTocar = opcoes.aoTocar ?? null;
+    this._pressionado = false;
+    this.on('apertar', () => this._animarPressao(true));
+    this.on('soltar', () => this._animarPressao(false));
+    this.on('sair', () => this._animarPressao(false));
     this.on('toque', () => this.aoTocar?.());
+  }
+
+  _animarPressao(pressionado) {
+    if (this._pressionado === pressionado) return;
+    this._pressionado = pressionado;
+    Tween.removerDe(this);
+    Tween.para(this, { scaleX: pressionado ? 0.94 : 1, scaleY: pressionado ? 0.94 : 1 }, 140);
   }
 
   desenhar(ctx) {
     const { largura: l, altura: a } = this;
+    const raioCanto = 16;
     ctx.save();
+
+    // Base dourada, alguns pixels mais abaixo — a "espessura" do botão,
+    // igual ao `Button` do motor. Some quando pressionado (o botão afunda
+    // até encostar na base).
+    if (!this._pressionado) {
+      ctx.fillStyle = '#C9971F';
+      ctx.beginPath();
+      ctx.roundRect(0, 6, l, a, raioCanto);
+      ctx.fill();
+    }
+
+    // Mais escura e mais opaca que o normal (`rgba(115, 77, 16, 0.28)`
+    // quase sumia contra o fundo azul-marinho) — sombra escura sobre fundo
+    // escuro precisa de bem mais contraste pra separar o cartão do fundo.
+    ctx.shadowColor = 'rgba(20, 12, 2, 0.55)';
+    ctx.shadowBlur = this._pressionado ? 3 : 12;
+    ctx.shadowOffsetY = this._pressionado ? 1 : 5;
     ctx.fillStyle = '#FFFFFF';
-    ctx.strokeStyle = '#EAD9A8';
-    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.roundRect(0, 0, l, a, 16);
+    ctx.roundRect(0, 0, l, a, raioCanto);
     ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#E0AB1B';
+    ctx.lineWidth = 2;
     ctx.stroke();
+
+    // Brilho suave no topo — reforça a leitura de "superfície de botão",
+    // não de cartão plano.
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.beginPath();
+    ctx.roundRect(4, 3, l - 8, a * 0.38, [raioCanto - 2, raioCanto - 2, 4, 4]);
+    ctx.fill();
 
     if (this.imagem) {
       const iw = this.imgLargura;
@@ -101,29 +145,49 @@ class PainelDesafio extends Node {
     const numeroY = a * 0.36 + 29;
 
     ctx.save();
+
+    // O painel ficava com os números direto no azul-marinho, sem nenhuma
+    // "caixa" — no meio do HUD (entre o relógio e os ícones, sem nada em
+    // volta), ficava parecendo vazio, sem destacar como as bandejas
+    // brancas da mesa. Ganhou a mesma cara de cartão delas (mesmo
+    // preenchimento da `mesa-coluna`) — e a paleta de texto voltou a
+    // ser a de "cartão claro" (marrom/dourado/verde), não mais a
+    // clara/amarela pensada pro fundo escuro direto.
+    //
+    // Pra se destacar como o elemento mais importante do HUD (não só mais
+    // uma caixa igual às da mesa), ganhou sombra (flutua, sem a base sólida
+    // dos botões — isso sinalizaria "toque aqui" por engano, e este painel
+    // não é tocável) e borda dourada mais grossa, puxando pro mesmo tom dos
+    // números, em vez da bege fina que também usa a mesa.
+    ctx.shadowColor = 'rgba(20, 12, 2, 0.35)';
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 6;
+    ctx.fillStyle = '#FFFDF8';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, l, a, 18);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#E0AB1B';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
 
-    // Antes vivia sobre um fundo creme/branco, então usava marrom escuro.
-    // Com o fundo azul-marinho, o painel deixou de precisar de uma placa
-    // própria por baixo (perderia contraste, não ganharia) — os textos vão
-    // direto no fundo, com uma paleta clara/amarela pensada pra ESSE fundo
-    // escuro (referência trazida pelo humano: rótulo cinza-azulado, alvo em
-    // amarelo, total em branco).
     ctx.font = '700 23px system-ui, sans-serif';
-    ctx.fillStyle = '#9FB3CC';
-    ctx.fillText(this.rotulo, l * 0.24, a * 0.12);
-    ctx.fillText('VOCÊ FORMOU', l * 0.76, a * 0.12);
+    ctx.fillStyle = '#734D10';
+    ctx.fillText(this.rotulo, l * 0.24, a * 0.22);
+    ctx.fillText('VOCÊ FORMOU', l * 0.76, a * 0.22);
 
-    ctx.fillStyle = '#F5C542';
+    ctx.fillStyle = '#E0AB1B';
     ctx.font = '800 54px system-ui, sans-serif';
     ctx.fillText(this.textoDesafio, l * 0.24, numeroY);
 
-    ctx.fillStyle = '#C3D2E3';
-    ctx.font = '700 36px system-ui, sans-serif';
+    ctx.fillStyle = '#B49A78';
+    ctx.font = '800 52px system-ui, sans-serif';
     ctx.fillText('=', l * 0.5, numeroY);
 
-    ctx.fillStyle = this.bateu ? '#4ADE80' : '#FFFFFF';
+    ctx.fillStyle = this.bateu ? '#16A34A' : '#4A3311';
     ctx.font = '800 54px system-ui, sans-serif';
     ctx.fillText(String(this.total), l * 0.76, numeroY);
 
@@ -167,9 +231,14 @@ function desenharEstrela(ctx, cx, cy, raioExterno, raioInterno, preenchida) {
  *
  * O progresso "X/Y" virou uma fileira de estrelas (pedido do humano, com
  * referência visual) — mais fácil de "ler de relance" numa criança pequena
- * do que uma fração, e cada estrela nova que acende toca `config.audio.progresso`
- * (ver `GameScene._avancarRodada`).
+ * do que uma fração. Cada estrela nova toca `config.audio.progresso` e
+ * "acende" com um pop + partículas (`celebrar()`) disparado em
+ * `GameScene._confirmar()`, no instante do toque em Confirmar — não em
+ * `_avancarRodada` (que só roda 900ms depois), senão a reação fica
+ * parecendo atrasada em relação à própria ação que a causou.
  */
+const DURACAO_CELEBRACAO = 1;
+
 class PainelRelogio extends Node {
   constructor(opcoes = {}) {
     super({
@@ -177,11 +246,43 @@ class PainelRelogio extends Node {
     });
     this.texto = '0:00';
     this.progresso = { atual: 0, meta: 5 };
+    this._celebrarIndice = -1;
+    this._celebrarT = 0;
+  }
+
+  /**
+   * Marca a estrela `indice` (0-based) pra "acender" com um pop + partículas
+   * no próximo `desenhar` — pedido do humano: a passagem de rodada não tinha
+   * NENHUM sinal visual (a estrela só nascia já pronta, sem transição).
+   * Sem texto de propósito (ver conversa: um popup escrito reintroduziria a
+   * mesma leitura/interrupção que o banner de feedback já removido).
+   */
+  celebrar(indice) {
+    this._celebrarIndice = indice;
+    this._celebrarT = DURACAO_CELEBRACAO;
+  }
+
+  atualizar(dt) {
+    super.atualizar(dt);
+    if (this._celebrarT > 0) this._celebrarT = Math.max(0, this._celebrarT - dt);
   }
 
   desenhar(ctx) {
     const { largura: l, altura: a } = this;
+    const emCelebracao = this._celebrarT > 0;
+    const p = emCelebracao ? 1 - this._celebrarT / DURACAO_CELEBRACAO : 1;
+
     ctx.save();
+    // A pill inteira dá um "bump" leve no começo da celebração — sozinha, a
+    // estrela é pequena demais pro olho pegar de relance; o resto do selo
+    // reagindo junto ajuda a puxar a atenção pra ali primeiro.
+    if (emCelebracao) {
+      const bump = 1 + Math.sin(Math.min(p, 1) * Math.PI) * 0.1;
+      ctx.translate(l / 2, a / 2);
+      ctx.scale(bump, bump);
+      ctx.translate(-l / 2, -a / 2);
+    }
+
     // Antes uma pill creme translúcida sobre fundo creme (mesma família de
     // cor) — sobre o azul-marinho agora precisa da lógica inversa: vidro
     // claro por cima do escuro, texto claro.
@@ -203,9 +304,49 @@ class PainelRelogio extends Node {
     const raioExterno = 9.5;
     const raioInterno = raioExterno * 0.42;
     const passoEstrela = 23;
+    const cy = a / 2;
     let cx = l - 18 - raioExterno - (meta - 1) * passoEstrela;
     for (let i = 0; i < meta; i++) {
-      desenharEstrela(ctx, cx, a / 2, raioExterno, raioInterno, i < atual);
+      if (emCelebracao && i === this._celebrarIndice) {
+        // Anel de brilho: um círculo dourado que nasce colado na estrela e
+        // se expande sumindo — o tipo de "ping" que o olho pega mesmo fora
+        // do foco central, bem mais visível que só a estrela crescendo.
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - p) * 0.8;
+        ctx.strokeStyle = '#FBBF24';
+        ctx.lineWidth = 3 * (1 - p) + 0.5;
+        ctx.beginPath();
+        ctx.arc(cx, cy, raioExterno + p * 34, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Pop: a estrela cresce bem além do tamanho normal (até 2.3×) antes
+        // de voltar — sem isso, ela só "aparecia pronta" de um frame pro
+        // outro, sem nenhuma transição perceptível.
+        const escala = 1 + Math.sin(Math.min(p, 1) * Math.PI) * 1.3;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(escala, escala);
+        desenharEstrela(ctx, 0, 0, raioExterno, raioInterno, true);
+        ctx.restore();
+
+        // Partículas: um punhado de pontos dourados se afastando e sumindo —
+        // reforça "aconteceu algo aqui" sem precisar de nenhuma palavra.
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - p);
+        ctx.fillStyle = '#FBBF24';
+        const nParticulas = 9;
+        for (let k = 0; k < nParticulas; k++) {
+          const ang = (k / nParticulas) * Math.PI * 2;
+          const dist = p * 40;
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(ang) * dist, cy + Math.sin(ang) * dist, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      } else {
+        desenharEstrela(ctx, cx, cy, raioExterno, raioInterno, i < atual);
+      }
       cx += passoEstrela;
     }
 
@@ -420,8 +561,8 @@ export class GameScene extends Scene {
 
     // Selo de contagem, encostado à direita do rótulo (que está centralizado
     // na coluna) — sem `x`, o Node nascia em 0 e desenhava no canto da tela.
-    const xSelo = (i) => this._xColuna[i] + this._larguraColuna / 2 + 48;
-    const ySelo = this._yMesaTopo + 15;
+    const xSelo = (i) => this._xColuna[i] + this._larguraColuna / 2 + 58;
+    const ySelo = this._yMesaTopo + 17;
     this._seloCentena = new SeloContagem({ x: xSelo(0), y: ySelo });
     this._seloDezena = new SeloContagem({ x: xSelo(1), y: ySelo });
     this._seloUnidade = new SeloContagem({ x: xSelo(2), y: ySelo });
@@ -501,8 +642,8 @@ export class GameScene extends Scene {
   _estiloRotuloColuna(x) {
     return {
       x: x + this._larguraColuna / 2,
-      y: this._yMesaTopo + 18,
-      tamanho: 17,
+      y: this._yMesaTopo + 19,
+      tamanho: 20,
       peso: '700',
       cor: '#734D10',
       alinhamento: 'center',
@@ -687,7 +828,14 @@ export class GameScene extends Scene {
 
   _adicionar(delta) {
     if (this.placar.encerrado || this.pausada) return;
-    this._total = Math.min(999, this._total + delta);
+    // Fácil/Difícil nunca têm alvo de 3 dígitos (e escondem o botão +100
+    // por isso) — mas sem um teto próprio, tocar +10 repetido além do
+    // necessário passava de 99 e uma placa de centena aparecia na mesa
+    // mesmo assim, contradizendo esse pressuposto. O teto por nível fecha
+    // essa brecha sem limitar nenhuma jogada válida (o alvo do Médio já é
+    // sempre ≤ 999).
+    const teto = this._mostrarCentena ? 999 : 99;
+    this._total = Math.min(teto, this._total + delta);
     if (this.config.audio?.clique) this.audio.efeito(this.config.audio.clique);
     this._reconstruirMesa();
     this._atualizarDesafio();
@@ -697,6 +845,7 @@ export class GameScene extends Scene {
     if (this.placar.encerrado || this.pausada) return;
     const delta = tipo === 'centena' ? 100 : tipo === 'dezena' ? 10 : 1;
     this._total = Math.max(0, this._total - delta);
+    if (this.config.audio?.clique) this.audio.efeito(this.config.audio.clique);
     this._reconstruirMesa();
     this._atualizarDesafio();
   }
@@ -708,6 +857,16 @@ export class GameScene extends Scene {
     if (bateu) {
       if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
       this.placar.acertar(1);
+      // Dispara AQUI, no toque em Confirmar — não em `_avancarRodada`, que só
+      // roda 900ms depois (esperar o "bateu" verde ficar visível antes de
+      // limpar a mesa). Som e animação da estrela precisam reagir junto do
+      // toque que os conquistou, senão ficam parecendo atrasados em relação
+      // à própria ação.
+      if (this.config.audio?.progresso) this.audio.efeito(this.config.audio.progresso);
+      // Índice da estrela que acabou de "ganhar" (0-based) — a rodada que
+      // este Confirmar concluiu é a `_rodadaIndex` atual (ainda não
+      // incrementado; isso só acontece em `_avancarRodada`, 900ms depois).
+      this._relogio?.celebrar(this._rodadaIndex);
       if (!this.placar.encerrado) {
         Tween.de(this).esperar(900).chamar(() => this._avancarRodada());
       }
@@ -725,7 +884,6 @@ export class GameScene extends Scene {
 
   _avancarRodada() {
     this._rodadaIndex += 1;
-    if (this.config.audio?.progresso) this.audio.efeito(this.config.audio.progresso);
     if (this._rodadaIndex >= this._rodadas.length) return;
     this._rodadaAtual = this._rodadas[this._rodadaIndex];
     this._total = 0;
@@ -781,6 +939,12 @@ export class GameScene extends Scene {
     const min = Math.floor(total / 60);
     const seg = total % 60;
     this._relogio.texto = `${min}:${String(seg).padStart(2, '0')}`;
-    this._relogio.progresso = { atual: this._rodadaIndex + 1, meta: this._rodadas.length };
+    // `atual` = rodadas JÁ CONCLUÍDAS (não mais "rodada atual") — pedido do
+    // humano: a primeira estrela já nascia acesa na rodada 1, antes de
+    // qualquer acerto, dando a impressão de que algo já tinha sido
+    // completado sem a criança ter feito nada ainda. Agora começa tudo
+    // apagado, e cada estrela só acende ao TERMINAR a rodada correspondente
+    // (ver `_confirmar`, que já chama `celebrar()` nesse instante).
+    this._relogio.progresso = { atual: this._rodadaIndex, meta: this._rodadas.length };
   }
 }

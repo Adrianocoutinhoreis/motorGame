@@ -21,16 +21,19 @@
         (frases de instrução seguem em caixa normal)
   - [x] RE-02 — a nota da partida desconta o erro **na vitória**, nunca na derrota
         (a cena usa `placar.paraAva()`; `placar.errar()` nunca é chamado — ver README)
-  - [x] RE-03 — o placar do fim de partida diz a **unidade** ("5 NÚMEROS"), não "5 de 5"
+  - [x] RE-03 — o placar do fim de partida diz a **unidade** ("5 ACERTOS"), não "5 de 5"
   - [x] RE-04 — a cena **não** passa `estrelas` em `irPara('resultado', …)`; a fileira é da tela
 
 ## 2. Assets
 
 - [x] Arte produzida (3 PNGs isométricos fornecidos pelo humano — cubinho, barrinha, placa)
 - [x] Áudio de narração do tutorial presente — 5 de 5 passos (`tela1-5.wav`, fornecidos pelo
-  humano); demais telas (abertura do menu, vitória) sem narração ainda
-- [ ] Efeitos de acerto, erro e clique presentes — **ainda faltam**; só `somProgresso` (estrela de
-  progresso no HUD) existe até agora, e é cópia do `carta-correta.mp3` do Jogo da Memória
+  humano); a locução do resultado (`falaVitoria`) ainda não tem áudio — só o efeito sonoro
+- [ ] Efeito de acerto presente — **ainda falta** (som específico de confirmar certo, diferente do
+  `progresso`, que já toca nesse instante). `clique` (`somClique`, do Jogo da Ordenação), `erro`
+  (`somErro`, do Jogo da Memória — **ainda não ouvido/verificado, ver risco no README**),
+  `progresso` (`somProgresso`, do Jogo da Memória) e `vitoria` (`acertoSOS`, usado em toda a
+  coleção) já estão ligados, todos cópias de arquivos já usados em outros jogos
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
@@ -42,7 +45,7 @@
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR
-- [x] **Tutorial** com passos narrados, ilustrados e puláveis — narração pendente (sem `fala`), ilustração ok
+- [x] **Tutorial** com passos narrados, ilustrados e puláveis — narração e ilustração ok (5/5 passos)
 - [x] **Seleção de nível** (3 níveis: Fácil, Médio, Difícil)
 - [x] **Partida** com HUD legível (progresso, tempo, pausa)
 - [x] **Pausa** com continuar / recomeçar / sair
@@ -58,7 +61,8 @@
 
 - [x] Regras implementadas conforme a definição — "contar e trocar" com revelação progressiva de +10/+100
 - [x] Feedback **imediato** de acerto (visual: verde + texto) — som pendente (sem asset de áudio)
-- [x] Feedback **imediato** de erro (visual: âmbar + texto), sem tom punitivo — som pendente
+- [x] Feedback **imediato** de erro (visual: âmbar + texto), sem tom punitivo — som ligado
+  (`somErro`), mas ainda não confirmado por audição que o próprio TOM do som não é punitivo
 - [x] Dificuldade dos níveis testada de verdade (capturas de tela, não só configurada)
 - [x] Nenhum estado travado: sempre dá para agir ou a partida termina
   - [ ] `Watchdog` — não se aplica: não há fase com toque bloqueado de propósito (sem
@@ -108,10 +112,14 @@ Mapeamento semântico **deste** jogo:
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/material-dourado` **aprovado** (simula a publicação)
 - [x] Jogo abre por `node tools/serve.mjs` sem **nenhuma** requisição externa (teste de entrega avulsa confirma)
 - [x] Fluxo completo de telas percorrido, sem travar (menu → tutorial → jogo → pausa/ajuda → resultado)
-- [x] **Vitória:** testada via `tools/captura-cena.mjs` (5 rodadas, tela de resultado com "5 NÚMEROS", 5 estrelas)
-- [ ] **Derrota:** não se aplica — jogo sem derrota
-- [ ] **Replay/duplicata de mensagem AVA:** ainda não testado com `tools/ava-teste.html`
-- [ ] `tools/ava-teste.html`: mensagem chegando ao pai — ainda não testado
+- [x] **Vitória:** testada via `tools/captura-cena.mjs` nos **3 níveis** (Fácil/Médio/Difícil — tela
+      de resultado com "5 ACERTOS", 5 estrelas, `nivel` 1/2/3 corretos) e com 1 erro no meio
+      (`erros: 1`, `acertos: 5` — confirma que erro não desconta, RE-02)
+- [~] **Derrota:** não se aplica — jogo sem derrota
+- [ ] **Replay/duplicata de mensagem AVA:** ainda não testado (reabrir/reenviar na mesma sessão do
+      `tools/ava-teste.html`)
+- [x] `tools/ava-teste.html`: mensagem chegando ao pai — testado nos 3 níveis, `JOGO_CONCLUIDO`
+      passa nas 8 checagens automáticas do host todas as vezes
 - [ ] Testado em iframe pequeno, médio e grande
 - [ ] Testado com **toque** em tablet real (só testado com captura headless até agora)
 - [ ] Testado após trocar de aba e voltar
