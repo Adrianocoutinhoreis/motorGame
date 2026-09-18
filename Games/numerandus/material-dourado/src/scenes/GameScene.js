@@ -715,6 +715,28 @@ export class GameScene extends Scene {
   }
 
   /**
+   * Dá à peça o mesmo "afundar ao tocar" dos botões da bandeja — sem isso,
+   * uma peça da mesa (`Sprite` puro, sem nenhum feedback embutido) não
+   * reage nada ao toque além de sumir de repente quando remove. O tutorial
+   * (passo 4) já ensina que dá pra tocar numa peça pra tirar, mas só na
+   * hora de jogar de verdade é que essa lembrança vira confiança — esse
+   * "aperto" confirma na hora "sim, isso reagiu à sua mão", mesmo pra quem
+   * já esqueceu o tutorial ou nunca prestou atenção nele.
+   */
+  _darFeedbackToque(peca) {
+    peca.on('apertar', () => {
+      Tween.removerDe(peca);
+      Tween.para(peca, { scaleX: 0.85, scaleY: 0.85 }, 100);
+    });
+    const soltar = () => {
+      Tween.removerDe(peca);
+      Tween.para(peca, { scaleX: 1, scaleY: 1 }, 150);
+    };
+    peca.on('soltar', soltar);
+    peca.on('sair', soltar);
+  }
+
+  /**
    * Leque lateral: a peça `i` nasce deslocada `i*passo` à direita da
    * anterior, na FRENTE (adicionada por último = desenhada por cima). O
    * passo normal é `passoBase`, mas se não couberem todas dentro da largura
@@ -736,6 +758,7 @@ export class GameScene extends Scene {
         y: this._alturaMesa - imgH - margem,
       });
       peca.on('toque', aoRemover);
+      this._darFeedbackToque(peca);
       container.adicionar(peca);
     }
   }
@@ -760,6 +783,7 @@ export class GameScene extends Scene {
         y: this._alturaCabecalho + margem + linha * (tam + gap),
       });
       peca.on('toque', aoRemover);
+      this._darFeedbackToque(peca);
       container.adicionar(peca);
     }
   }
