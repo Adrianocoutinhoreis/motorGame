@@ -27,14 +27,16 @@
 ## 2. Assets
 
 - [x] Arte produzida (3 PNGs isométricos fornecidos pelo humano — cubinho, barrinha, placa)
-- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **nenhum áudio gravado ainda**
+- [x] Áudio de narração do tutorial presente — 5 de 5 passos (`tela1-5.wav`, fornecidos pelo
+  humano); demais telas (abertura do menu, vitória) sem narração ainda
 - [ ] Efeitos de acerto, erro e clique presentes — **ainda faltam**; só `somProgresso` (estrela de
   progresso no HUD) existe até agora, e é cópia do `carta-correta.mp3` do Jogo da Memória
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [ ] Ficha de transcrição criada para **cada** áudio — não se aplica ainda, não há áudio
-- [ ] Transcrições **confirmadas ouvindo** — não se aplica ainda, não há áudio
+- [ ] Ficha de transcrição criada para **cada** áudio — pendente para `tela1-5.wav` (ver
+  `assets/audio-transcricao/` do Jogo da Memória como referência de formato)
+- [ ] Transcrições **confirmadas ouvindo** — pendente, ver item acima
 - [x] Pendências de áudio ainda não gravado listadas explicitamente no `README.md`
 
 ## 3. Telas
@@ -48,7 +50,7 @@
       a partida continua atrás e voltar a devolve intacta — placar, tempo e mesa
   - [x] O tempo NÃO corre enquanto a ajuda está aberta (`Tween.pausarTodos()` + `pausada = true`)
   - [x] Os passos do `config.tutorial` fazem sentido para quem JÁ está jogando e travou — mesmos
-        3 passos, mesma mecânica "contar e trocar", nas duas telas
+        5 passos, mesma mecânica "contar e trocar", nas duas telas
 - [x] **Resultado** para vitória (testado) **e** para derrota — não se aplica, jogo não tem derrota
 - [x] Nenhum beco sem saída: de toda tela dá para voltar ao menu
 

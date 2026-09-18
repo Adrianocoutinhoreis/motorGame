@@ -42,8 +42,8 @@ class SeloContagem extends Node {
  */
 class BotaoPeca extends Node {
   constructor(opcoes = {}) {
-    const largura = opcoes.largura ?? 128;
-    const altura = opcoes.altura ?? 128;
+    const largura = opcoes.largura ?? 150;
+    const altura = opcoes.altura ?? 150;
     super({
       ...opcoes, largura, altura, interativo: true,
     });
@@ -69,14 +69,14 @@ class BotaoPeca extends Node {
     if (this.imagem) {
       const iw = this.imgLargura;
       const ih = this.imgAltura;
-      ctx.drawImage(this.imagem, (l - iw) / 2, 10, iw, ih);
+      ctx.drawImage(this.imagem, (l - iw) / 2, 14, iw, ih);
     }
 
     ctx.fillStyle = '#734D10';
-    ctx.font = '700 18px system-ui, sans-serif';
+    ctx.font = '700 22px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(this.rotulo, l / 2, a - 14);
+    ctx.fillText(this.rotulo, l / 2, a - 16);
     ctx.restore();
   }
 }
@@ -110,21 +110,21 @@ class PainelDesafio extends Node {
     // direto no fundo, com uma paleta clara/amarela pensada pra ESSE fundo
     // escuro (referência trazida pelo humano: rótulo cinza-azulado, alvo em
     // amarelo, total em branco).
-    ctx.font = '700 20px system-ui, sans-serif';
+    ctx.font = '700 23px system-ui, sans-serif';
     ctx.fillStyle = '#9FB3CC';
     ctx.fillText(this.rotulo, l * 0.24, a * 0.12);
     ctx.fillText('VOCÊ FORMOU', l * 0.76, a * 0.12);
 
     ctx.fillStyle = '#F5C542';
-    ctx.font = '800 46px system-ui, sans-serif';
+    ctx.font = '800 54px system-ui, sans-serif';
     ctx.fillText(this.textoDesafio, l * 0.24, numeroY);
 
     ctx.fillStyle = '#C3D2E3';
-    ctx.font = '700 32px system-ui, sans-serif';
+    ctx.font = '700 36px system-ui, sans-serif';
     ctx.fillText('=', l * 0.5, numeroY);
 
     ctx.fillStyle = this.bateu ? '#4ADE80' : '#FFFFFF';
-    ctx.font = '800 46px system-ui, sans-serif';
+    ctx.font = '800 54px system-ui, sans-serif';
     ctx.fillText(String(this.total), l * 0.76, numeroY);
 
     ctx.restore();
@@ -173,7 +173,7 @@ function desenharEstrela(ctx, cx, cy, raioExterno, raioInterno, preenchida) {
 class PainelRelogio extends Node {
   constructor(opcoes = {}) {
     super({
-      ...opcoes, largura: opcoes.largura ?? 230, altura: opcoes.altura ?? 44,
+      ...opcoes, largura: opcoes.largura ?? 230, altura: opcoes.altura ?? 50,
     });
     this.texto = '0:00';
     this.progresso = { atual: 0, meta: 5 };
@@ -194,15 +194,15 @@ class PainelRelogio extends Node {
     ctx.stroke();
 
     ctx.fillStyle = '#DCE6F0';
-    ctx.font = '700 18px system-ui, sans-serif';
+    ctx.font = '700 21px system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(this.texto, 18, a / 2 + 1);
 
     const { atual, meta } = this.progresso;
-    const raioExterno = 8;
+    const raioExterno = 9.5;
     const raioInterno = raioExterno * 0.42;
-    const passoEstrela = 20;
+    const passoEstrela = 23;
     let cx = l - 18 - raioExterno - (meta - 1) * passoEstrela;
     for (let i = 0; i < meta; i++) {
       desenharEstrela(ctx, cx, a / 2, raioExterno, raioInterno, i < atual);
@@ -226,10 +226,10 @@ const UNIDADE_W = 88;
 // Ícones usados nos botões da bandeja (+1/+10/+100) — ainda menores que a
 // peça na mesa, mas grandes o bastante pra se reconhecer de relance, não só
 // um floquinho no meio do cartão branco.
-const ICONE_CENTENA = 80;
-const ICONE_DEZENA_W = 56;
-const ICONE_DEZENA_H = 84;
-const ICONE_UNIDADE = 80;
+const ICONE_CENTENA = 94;
+const ICONE_DEZENA_W = 66;
+const ICONE_DEZENA_H = 100;
+const ICONE_UNIDADE = 94;
 
 /**
  * GameScene — a partida do Material Dourado.
@@ -313,7 +313,7 @@ export class GameScene extends Scene {
     // só 20px entre a mesa e a bandeja. Redistribuído pra um ritmo vertical
     // mais parecido (~50px de respiro em cada vão: HUD→mesa, mesa→bandeja,
     // bandeja→borda), visual mais harmônico (pedido do humano).
-    this._yMesaTopo = 160;
+    this._yMesaTopo = 170;
     this._alturaMesa = 340;
     this._alturaCabecalho = 46;
 
@@ -324,8 +324,8 @@ export class GameScene extends Scene {
     // linha vertical fina, em vez de duas fileiras empilhadas (ícones+selo
     // numa, desafio bem maior noutra) competindo por atenção.
     const yLinhaHud = espaco.md;
-    const alturaLinhaHud = 90;
-    const larguraRelogio = 230;
+    const alturaLinhaHud = 100;
+    const larguraRelogio = 246;
 
     // Zona 3 (ícones) primeiro — as outras duas zonas encostam nela.
     const iconeLado = 64;
@@ -358,10 +358,14 @@ export class GameScene extends Scene {
       somToque: config.audio?.clique,
     }));
 
-    // Zona 1 (relógio/estrelas), encostada na margem esquerda da mesa.
+    // Zona 1 (relógio/estrelas), encostada na margem esquerda da mesa. Um
+    // pouco mais baixa que o topo da fileira (pedido do humano) — sozinha
+    // ali, alinhada só com o topo, sobrava "flutuando" alta demais acima do
+    // resto do conteúdo da linha (que é mais baixo, ex.: os números do
+    // desafio).
     this._relogio = config.mostrarCronometro === false ? null : new PainelRelogio({
       x: margemLateral,
-      y: yLinhaHud,
+      y: yLinhaHud + 20,
       largura: larguraRelogio,
     });
     if (this._relogio) this.adicionar(this._relogio);
@@ -372,7 +376,7 @@ export class GameScene extends Scene {
     const xDivisor1 = margemLateral + larguraRelogio + espaco.lg;
     const xDivisor2 = xIcone(0) - espaco.lg;
     const divisor = (x) => new Shape({
-      x, y: yLinhaHud + (alturaLinhaHud - 62) / 2, largura: 2, altura: 62,
+      x, y: yLinhaHud + (alturaLinhaHud - 70) / 2, largura: 2, altura: 70,
       forma: 'retangulo',
       preenchimento: 'rgba(255, 255, 255, 0.18)',
     });
@@ -424,7 +428,9 @@ export class GameScene extends Scene {
     this.adicionar(this._seloCentena, this._seloDezena, this._seloUnidade);
 
     // -------------------------------------------------------------- bandeja
-    const yBandeja = 545;
+    // As peças da bandeja cresceram (150px) — reduzido um pouco pra não
+    // sobrar só ~20px até a borda inferior da tela como antes.
+    const yBandeja = 540;
     this._removerCentena = () => this._removerPeca('centena');
     this._removerDezena = () => this._removerPeca('dezena');
     this._removerUnidade = () => this._removerPeca('unidade');
@@ -454,9 +460,10 @@ export class GameScene extends Scene {
       aoTocar: () => this._adicionar(100),
     });
     this.botaoConfirmar = new Button({
-      y: yBandeja + 24,
-      largura: 220,
-      altura: 80,
+      y: yBandeja + 27,
+      largura: 250,
+      altura: 96,
+      tamanhoTexto: 30,
       rotulo: 'CONFIRMAR',
       variante: 'sucesso',
       audio: this.audio,

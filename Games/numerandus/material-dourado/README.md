@@ -116,6 +116,7 @@ material-dourado/
 | `assets/img/centena-flat-esquerda-v3.png` | Placa (centena = 100) — grade 10×10, isométrica, fundo transparente | Fornecido pelo humano nesta sessão. Versão "esquerda": a face lateral do bloco fica à esquerda, pra empilhar certo no leque lateral (peças mais novas na frente e à direita mostram profundidade de verdade na costura com a anterior). |
 | `assets/img/centena-flat-v2.png` | Versão anterior da placa (face lateral à direita) | Não usada no jogo final — mantida na pasta, não referenciada em `config.js`. |
 | `assets/audio/progresso.mp3` | Efeito de "estrela acendeu" (progresso de rodada, HUD) | **Cópia** de `assets/audio/carta-correta.mp3` do Jogo da Memória — mesmo arquivo, sem fala, serve pra qualquer "avançou um passo". Cada pasta de jogo precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
+| `assets/audio/tela1.wav` … `tela5.wav` | Narração dos 5 passos do tutorial | Fornecido pelo humano nesta sessão. `id` de cada asset (`tutorialTela1-5`) bate com o `fala` de cada passo em `config.tutorial` — mesmo padrão do Jogo da Memória. |
 
 Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 
@@ -123,18 +124,15 @@ Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 
 > Liste aqui, com honestidade, o que ainda falta.
 
-- **Só um efeito sonoro gravado até agora** (`somProgresso`, tocado a cada estrela que acende no
-  HUD). O resto de `config.audio` está `null` e `config.tutorial[*].fala` aponta para ids
-  (`tutorialTela1/2/3`) que não têm arquivo — o motor abre e joga normalmente em silêncio (regra do
-  motor: som só de arquivo gravado, nunca sintetizado), mas falta gravar: narração dos 3 passos do
-  tutorial, efeito de clique (tocar peça), efeito de acerto (par confirmado certo), efeito de erro
-  (confirmar errado) e efeito de vitória.
+- **Narração do tutorial gravada (5 de 5 passos), resto do áudio ainda não.** `config.audio` só tem
+  `progresso` ligado (`somProgresso`) — faltam efeito de clique (tocar peça), efeito de acerto
+  (número formado certo), efeito de erro (confirmar errado) e efeito de vitória. O motor abre e joga
+  normalmente em silêncio nesses casos (regra do motor: som só de arquivo gravado, nunca
+  sintetizado).
 - **Testado só em navegador headless** (`tools/captura-cena.mjs`, `tools/teste-entrega-avulsa.mjs`),
   simulando toques via chamada direta aos métodos da cena (`_adicionar`, `_confirmar`, etc.) — ainda
   não testado com toque de verdade em tablet, nem em iframe pequeno/médio/grande, nem o fluxo de
   replay/duplicata de mensagem no `tools/ava-teste.html`.
-- **Texto do passo 2 do tutorial é um pouco longo** ("QUANDO VOCÊ JUNTA 10 CUBINHOS..."), quebra em
-  4 linhas no painel — legível, mas vale encurtar numa próxima passada.
 - **Sorteio do nível Difícil pode repetir a mesma conta** entre rodadas (não há controle de
   "não repetir a última") — se incomodar na prática, é fácil adicionar.
 - **`centena-flat-v2.png`** (a versão original, com a face lateral à direita) ficou na pasta de
