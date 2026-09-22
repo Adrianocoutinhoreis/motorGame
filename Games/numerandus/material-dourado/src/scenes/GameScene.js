@@ -1,6 +1,6 @@
 import {
   Scene, Node, Shape, Sprite, TextNode, Button, IconButton, SoundToggle, PauseScreen, HelpScreen,
-  Background, Tween, ScoreSystem, ESTADOS, rand, espaco,
+  Background, Tween, Easing, ScoreSystem, ESTADOS, rand, espaco,
 } from '../../engine/index.js';
 
 /**
@@ -138,6 +138,7 @@ class PainelDesafio extends Node {
     this.textoDesafio = '';
     this.total = 0;
     this.bateu = false;
+    this.errado = false;
   }
 
   desenhar(ctx) {
@@ -167,8 +168,11 @@ class PainelDesafio extends Node {
     ctx.roundRect(0, 0, l, a, 18);
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = '#E0AB1B';
-    ctx.lineWidth = 3;
+    // Âmbar e mais grossa por meio segundo quando a criança confirma errado
+    // — nunca vermelho (não é punição). É a MOLDURA que muda, não só o
+    // número: cor nunca é o único portador de significado.
+    ctx.strokeStyle = this.errado ? '#F59E0B' : '#E0AB1B';
+    ctx.lineWidth = this.errado ? 6 : 3;
     ctx.stroke();
 
     ctx.textBaseline = 'middle';
@@ -187,7 +191,7 @@ class PainelDesafio extends Node {
     ctx.font = '800 52px system-ui, sans-serif';
     ctx.fillText('=', l * 0.5, numeroY);
 
-    ctx.fillStyle = this.bateu ? '#16A34A' : '#4A3311';
+    ctx.fillStyle = this.bateu ? '#16A34A' : this.errado ? '#B45309' : '#4A3311';
     ctx.font = '800 54px system-ui, sans-serif';
     ctx.fillText(String(this.total), l * 0.76, numeroY);
 
@@ -438,6 +442,10 @@ export class GameScene extends Scene {
     // oposto, errar ao confirmar só demora mais, nunca perde nada.
     this._tentativasErradas = 0;
 
+    // Trava a mesa/Confirmar durante os 900ms de espera entre um acerto e a
+    // próxima rodada nascer — ver `_confirmar`/`_avancarRodada`.
+    this._aguardandoAvanco = false;
+
     // -------------------------------------------------------------- layout
     const margemLateral = 40;
     const gapColunas = 24;
@@ -637,6 +645,9 @@ export class GameScene extends Scene {
     this._atualizarDesafio();
     this._atualizarBandeja();
     this._atualizarTextoHud();
+    // Posição de repouso do Confirmar, pra `_sacudirErro` sempre voltar pro
+    // mesmo lugar mesmo se interromper uma sacudida anterior no meio.
+    this._xBaseConfirmar = this.botaoConfirmar.x;
   }
 
   _estiloRotuloColuna(x) {
@@ -763,11 +774,27 @@ export class GameScene extends Scene {
     }
   }
 
-  /** Unidade: grade simples (sem sobreposição — só 9 no máximo, cabe fácil). */
-  _grade(container, imagem, tam, qtd, aoRemover) {
+  /**
+   * Unidade: grade simples (até 9 cubinhos, sem sobreposição).
+   *
+   * `tamBase` é o tamanho normal (88px). Com 7, 8 ou 9 cubinhos a grade
+   * precisa de 3 fileiras — e 3 fileiras no tamanho normal, com os 16px de
+   * gap que a acessibilidade exige entre alvos (`docs/DESIGN.md`: "pelo
+   * menos 16 px entre alvos"), vazavam ~18px por baixo da caixa da coluna.
+   * O cubinho ENCOLHE só o necessário pra 3 fileiras caberem — mesmo
+   * espírito do leque de centena/dezena em `_pilhaLateral`, que também
+   * reduz o passo conforme a quantidade cresce, nunca deixando peça vazar
+   * da caixa. Com 1 ou 2 fileiras (até 6 cubinhos) sobra espaço de sobra,
+   * então o tamanho normal se mantém.
+   */
+  _grade(container, imagem, tamBase, qtd, aoRemover) {
     const margem = 16;
-    const gap = 10;
-    const porLinha = Math.max(1, Math.floor((this._larguraColuna - margem * 2) / (tam + gap)));
+    const gap = 16;
+    const porLinha = Math.max(1, Math.floor((this._larguraColuna - margem * 2) / (tamBase + gap)));
+    const linhas = Math.max(1, Math.ceil(qtd / porLinha));
+    const alturaDisponivel = this._alturaMesa - this._alturaCabecalho - margem * 2;
+    const tamMax = Math.floor((alturaDisponivel - gap * (linhas - 1)) / linhas);
+    const tam = Math.min(tamBase, tamMax);
     for (let i = 0; i < qtd; i++) {
       const col = i % porLinha;
       const linha = Math.floor(i / porLinha);
@@ -851,7 +878,7 @@ export class GameScene extends Scene {
   // -------------------------------------------------------------- ações
 
   _adicionar(delta) {
-    if (this.placar.encerrado || this.pausada) return;
+    if (this.placar.encerrado || this.pausada || this._aguardandoAvanco) return;
     // Fácil/Difícil nunca têm alvo de 3 dígitos (e escondem o botão +100
     // por isso) — mas sem um teto próprio, tocar +10 repetido além do
     // necessário passava de 99 e uma placa de centena aparecia na mesa
@@ -866,7 +893,7 @@ export class GameScene extends Scene {
   }
 
   _removerPeca(tipo) {
-    if (this.placar.encerrado || this.pausada) return;
+    if (this.placar.encerrado || this.pausada || this._aguardandoAvanco) return;
     const delta = tipo === 'centena' ? 100 : tipo === 'dezena' ? 10 : 1;
     this._total = Math.max(0, this._total - delta);
     if (this.config.audio?.clique) this.audio.efeito(this.config.audio.clique);
@@ -875,7 +902,7 @@ export class GameScene extends Scene {
   }
 
   _confirmar() {
-    if (this.placar.encerrado || this.pausada) return;
+    if (this.placar.encerrado || this.pausada || this._aguardandoAvanco) return;
     const bateu = this._total === this._rodadaAtual.alvo;
 
     if (bateu) {
@@ -891,22 +918,54 @@ export class GameScene extends Scene {
       // este Confirmar concluiu é a `_rodadaIndex` atual (ainda não
       // incrementado; isso só acontece em `_avancarRodada`, 900ms depois).
       this._relogio?.celebrar(this._rodadaIndex);
+      // Trava a mesa e o próprio Confirmar até a próxima rodada nascer — sem
+      // isso, um SEGUNDO toque durante os 900ms de espera repetia
+      // `placar.acertar()` (inflando os acertos por uma única rodada) e
+      // agendava um segundo avanço, pulando a rodada seguinte inteira sem a
+      // criança nunca vê-la. `_avancarRodada` destrava de novo, já com a
+      // mesa da rodada nova.
+      this._aguardandoAvanco = true;
       if (!this.placar.encerrado) {
         Tween.de(this).esperar(900).chamar(() => this._avancarRodada());
       }
       return;
     }
 
-    // Errar aqui só demora mais — sem mensagem, sem desconto (ver
-    // `_tentativasErradas`, escrito no `erros` do AVA por fora do
-    // `ScoreSystem`). O painel do desafio já mostra "VOCÊ FORMOU" em cor
-    // diferente quando bate, e o Confirmar muda de cor/estado — o retorno
-    // continua existindo, só não tem mais uma frase embaixo da tela.
+    // Errar aqui só demora mais — sem desconto (ver `_tentativasErradas`,
+    // escrito no `erros` do AVA por fora do `ScoreSystem`). Antes disso não
+    // mudava NADA na tela além do som — com o som desligado ou no mudo, o
+    // toque parecia não ter feito efeito nenhum. Agora ganha a mesma
+    // "oscilação suave" que o resto da coleção usa pra erro não-punitivo
+    // (nunca vermelho, nunca trava o jogo): ver `_sacudirErro`.
     if (this.config.audio?.erro) this.audio.efeito(this.config.audio.erro);
     this._tentativasErradas += 1;
+    this._sacudirErro();
+  }
+
+  /**
+   * Feedback de "ainda não" sem som e sem frase nova na tela: a moldura do
+   * painel do desafio pisca âmbar por meio segundo (nunca vermelho — errar
+   * aqui não pode ler como punição, `docs/METODO-JOGOS-NUMERANDUS.md`) e o
+   * botão Confirmar balança de leve. `Tween.removerDe` primeiro cancela
+   * qualquer sacudida/piscada ainda em andamento de um toque errado
+   * anterior, pra dois erros seguidos não somarem deslocamento.
+   */
+  _sacudirErro() {
+    this.painelDesafio.errado = true;
+    Tween.removerDe(this.painelDesafio);
+    Tween.de(this.painelDesafio).esperar(480).chamar(() => { this.painelDesafio.errado = false; });
+
+    const xBase = this._xBaseConfirmar;
+    Tween.removerDe(this.botaoConfirmar);
+    Tween.de(this.botaoConfirmar)
+      .entao({ x: xBase - 12 }, 60, Easing.suaveSaida)
+      .entao({ x: xBase + 12 }, 90, Easing.suave)
+      .entao({ x: xBase - 6 }, 80, Easing.suave)
+      .entao({ x: xBase }, 70, Easing.suaveSaida);
   }
 
   _avancarRodada() {
+    this._aguardandoAvanco = false;
     this._rodadaIndex += 1;
     if (this._rodadaIndex >= this._rodadas.length) return;
     this._rodadaAtual = this._rodadas[this._rodadaIndex];
