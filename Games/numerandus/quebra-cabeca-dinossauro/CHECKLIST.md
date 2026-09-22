@@ -104,9 +104,13 @@ Mapeamento semântico **deste** jogo:
 
 ## 6. Acessibilidade
 
-- [x] Todo alvo tocável tem no mínimo 64×64 px lógicos — peças do tabuleiro (escala calculada pra
-      caber o cartão) e da bandeja (grade calculada pra caber sem cortar); conferir em tela
-      pequena antes de publicar
+- [x] Todo alvo tocável tem no mínimo 64×64 px lógicos — **achado numa revisão de código e
+      corrigido**: peças largas/achatadas (25, 10, 16, 22) encolhiam abaixo de 64px de ALTURA só
+      pra caber na célula da grade da bandeja (a 25 chegava a 42px). A ÁREA DE TOQUE de cada peça
+      da bandeja agora é garantida ≥64×64px centrada no desenho (`_criarAreaTocavelAcessivel`,
+      via `alvoAcessivel` do motor) mesmo quando o desenho em si fica menor — testado programaticamente
+      (`contemPontoLocal` aceita um toque até 32px além da borda visível da peça 25, recusa além
+      disso) e visualmente (nada mudou no desenho, só a área que responde ao toque)
 - [x] Espaço suficiente entre alvos — grade da bandeja usa `gap` fixo entre células
 - [x] Contraste de texto e de elementos essenciais em nível AA — cartões brancos sobre fundo escuro
 - [x] Cor **nunca** é o único portador de significado — cada peça tem número grande, forma única

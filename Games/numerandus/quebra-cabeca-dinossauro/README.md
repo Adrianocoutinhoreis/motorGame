@@ -132,6 +132,13 @@ altura numa peça de 303×151 (a mais larga e achatada do conjunto), lendo peque
 vizinhas. Aumentado pra ~43px, ainda centralizado na área aberta da peça, longe de aba/entalhe.
 Cópia atualizada em `fontes/dinossauro/pecas-redesenhadas/peca-25.png` também.
 
+**Área de toque mínima garantida mesmo pra peças pequenas na bandeja** — a grade da bandeja
+encolhe cada peça pra caber a própria célula, e peças largas/achatadas (25: 303×151, 10: 225×128,
+16 e 22) chegavam a ficar com menos de 64px de altura desenhada — abaixo do mínimo de
+`docs/DESIGN.md`, achado numa revisão de código. `_criarAreaTocavelAcessivel` (`GameScene.js`)
+garante que a área que RESPONDE ao toque nunca fica menor que 64×64px, centrada no desenho, mesmo
+quando o desenho em si é menor — o visual não muda, só fica mais fácil de acertar com o dedo.
+
 ## Pendências conhecidas
 
 > Liste aqui, com honestidade, o que ainda falta.
@@ -145,6 +152,16 @@ Cópia atualizada em `fontes/dinossauro/pecas-redesenhadas/peca-25.png` também.
 - **Origem/licença de `soltar_peca.mp3` ainda a confirmar** — mesma pendência já registrada no
   Jogo da Ordenação e no Encaixe Certo (é o mesmo arquivo nos quatro jogos): fornecido pronto,
   sem procedência documentada. Confirmar antes de publicar para alunos.
+- **Segundo toque simultâneo pode soltar a peça sendo arrastada antes da hora** — o `Input.js` do
+  motor (`engine/core/Input.js`) só acompanha UM ponteiro de cada vez (um `pressionado`/
+  `noPressionado` só, não por `pointerId`). Se a criança já estiver arrastando uma peça com um
+  dedo e um SEGUNDO toque (outro dedo, a palma da mão encostando) descer e subir em qualquer
+  lugar do canvas, o evento global `soltar` do motor finaliza a peça que ainda está sendo
+  arrastada pelo primeiro dedo — ela assenta ou volta pra bandeja no meio do gesto, sem a criança
+  ter soltado de verdade. Isso não é específico deste jogo: o Encaixe Certo tem exatamente o
+  mesmo padrão de código e o mesmo risco. Corrigir de verdade significa o `Input.js` do motor
+  rastrear `pointerId`, o que afeta todos os jogos com arrasto — fora do escopo de uma correção
+  só neste jogo.
 - **Testado só em navegador headless**, chamando os métodos de arrasto da cena diretamente
   (`_pegarPeca`/`_moverArrasto`/`_soltarArrasto`, mesma técnica usada no Material Dourado) —
   ainda não testado com toque de verdade em tablet, nem em iframe pequeno/médio/grande, nem o

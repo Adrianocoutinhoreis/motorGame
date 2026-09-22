@@ -1,6 +1,6 @@
 import {
   Scene, Node, Sprite, TextNode, IconButton, SoundToggle, PauseScreen, HelpScreen,
-  Background, Panel, Tween, Easing, ScoreSystem, ESTADOS, rand, espaco,
+  Background, Panel, Tween, Easing, ScoreSystem, ESTADOS, rand, espaco, alvoAcessivel,
 } from '../../engine/index.js';
 
 /**
@@ -40,6 +40,28 @@ const LAYOUT_PECAS = [
   { n: 25, x: 611, y: 647, w: 303, h: 151 },
   { n: 26, x: 851, y: 640, w: 234, h: 195 },
 ];
+
+/** `LAYOUT_PECAS`, mas indexado por número — evita um `.find()` por peça. */
+const LAYOUT_POR_NUMERO = new Map(LAYOUT_PECAS.map((info) => [info.n, info]));
+
+/**
+ * Alvo tocável mínimo (`docs/DESIGN.md`: 64×64 px lógicos) MEDIDO A PARTIR
+ * DO CENTRO da peça, nunca menor que o próprio desenho — peças largas e
+ * achatadas (a 25, 303×151, é a pior: 42px de altura na grade da bandeja)
+ * encolhem bastante pra caber na célula da grade, e ficariam abaixo do
+ * mínimo se a área de toque fosse só o retângulo desenhado. Ver
+ * `_criarAreaTocavelAcessivel`.
+ */
+function _criarAreaTocavelAcessivel(peca) {
+  const meiaLargura = alvoAcessivel(peca.largura) / 2;
+  const meiaAltura = alvoAcessivel(peca.altura) / 2;
+  const cx = peca.largura / 2;
+  const cy = peca.altura / 2;
+  peca.contemPontoLocal = (x, y) => (
+    x >= cx - meiaLargura && x <= cx + meiaLargura
+    && y >= cy - meiaAltura && y <= cy + meiaAltura
+  );
+}
 
 /**
  * Anelzinho verde que nasce e some no lugar certo de uma peça — só aparece
@@ -161,7 +183,7 @@ export class GameScene extends Scene {
 
     this.pecas = new Map();
     ordemExibicao.forEach((numero, indice) => {
-      const info = LAYOUT_PECAS.find((p) => p.n === numero);
+      const info = LAYOUT_POR_NUMERO.get(numero);
       const col = indice % colunas;
       const lin = Math.floor(indice / colunas);
       const escalaCelula = Math.min(cellW / info.w, cellH / info.h);
@@ -185,6 +207,10 @@ export class GameScene extends Scene {
       peca.alvoY = this.tabuleiro.y + info.y * escT;
       peca.alvoLargura = info.w * escT;
       peca.alvoAltura = info.h * escT;
+      // Peças largas e achatadas (a 25, a 10…) encolhem bem além de 64px de
+      // altura só pra caber na célula da grade — a ÁREA DE TOQUE nunca pode
+      // encolher junto (`docs/DESIGN.md`), mesmo que o desenho fique menor.
+      _criarAreaTocavelAcessivel(peca);
 
       peca.on('apertar', (ponto) => this._pegarPeca(peca, ponto));
       this.area.adicionar(peca);
