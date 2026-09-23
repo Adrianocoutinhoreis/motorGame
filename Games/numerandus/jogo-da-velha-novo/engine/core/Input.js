@@ -61,7 +61,15 @@ export class Input extends Emitter {
       if (!this.stage.dentroDaArea(p.x, p.y)) return;
       this.pressionado = true;
       this.noPressionado = no;
-      evento.target.setPointerCapture?.(evento.pointerId);
+      // Best-effort: falha (ex.: `NotFoundError`, ponteiro que o navegador não
+      // reconhece como "ativo" — visto em toque sintético/assistivo) não pode
+      // abortar o resto do toque. Sem o `catch`, essa exceção subia e o
+      // `emit('apertar', ...)` logo abaixo nunca rodava — a criança tocava e o
+      // jogo simplesmente não reagia, sem nenhum erro visível. A captura só
+      // ajuda a manter o arrasto se o dedo sair do canvas; os listeners de
+      // `pointermove`/`pointerup` na JANELA (abaixo) já cobrem esse caso mesmo
+      // sem ela.
+      try { evento.target.setPointerCapture?.(evento.pointerId); } catch { /* segue sem captura */ }
       no?.emit('apertar', p, no);
       this.emit('apertar', p, no);
       return;

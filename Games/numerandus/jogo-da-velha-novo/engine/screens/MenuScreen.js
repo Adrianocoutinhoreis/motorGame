@@ -28,8 +28,8 @@ class PlacaTituloLimpa extends Node {
     super({ largura: 740, altura: 170, ...opcoes });
     this.titulo = titulo;
     this.subtitulo = subtitulo;
-    this.regX = 370;
-    this.regY = 85;
+    this.regX = this.largura / 2;
+    this.regY = this.altura / 2;
   }
 
   desenhar(ctx) {
@@ -374,7 +374,11 @@ export class MenuScreen extends Scene {
     this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',
       config.subtitulo ?? 'EMPILHE OS BLOCOS NA ORDEM CERTA!',
-      { x: L / 2, y: A * 0.16 },
+      {
+        x: L / 2,
+        y: A * 0.16,
+        largura: config.larguraPlacaTitulo ?? 740,
+      },
     );
     this.adicionar(this.placaTitulo);
 
