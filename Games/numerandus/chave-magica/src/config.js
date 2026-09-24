@@ -116,7 +116,11 @@ export default {
   niveis: [
     {
       id: 1, nome: 'Fácil', descricao: '4 chaves', amostra: '🔑', cor: '#22C55E',
-      meta: 4, vidas: 3, pecas: 4, dentesMax: 1, cadeado: false, tempoInicial: 30,
+      // 45s (não 30): é o primeiro contato da criança com a MECÂNICA em si
+      // (arrastar, achar o formato certo), então o cronômetro aqui não pode
+      // competir com o aprendizado — a pressão de tempo é um ajuste dos
+      // níveis seguintes, quando o jeito de jogar já foi entendido.
+      meta: 4, vidas: 3, pecas: 4, dentesMax: 1, cadeado: false, tempoInicial: 45,
     },
     {
       id: 2, nome: 'Médio', descricao: '6 chaves', amostra: '🔑🔑', cor: '#F59E0B',
@@ -163,17 +167,21 @@ export default {
       texto: 'Errar o formato custa uma vida. Encaixe todas as chaves antes do tempo (e das vidas) acabarem!',
       fala: 'tutorialTela3',
       desenho: (ctx, l, a) => {
+        // Ícones bem maiores que o resto do tutorial (60px/46px, não
+        // 40px/30px) — são só 4 glifos soltos no meio de uma tela vazia, sem
+        // texto ao redor pra "ajudar" a ler; num aparelho pequeno o tamanho
+        // antigo ficava pequeno demais pra chamar atenção sozinho.
         ctx.save();
         ctx.fillStyle = '#DC2626';
-        ctx.font = '800 40px system-ui, sans-serif';
+        ctx.font = '800 60px system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (let i = 0; i < 3; i++) {
-          ctx.fillText('❤', l / 2 - 80 + i * 60, a / 2 - 30);
+          ctx.fillText('❤', l / 2 - 95 + i * 95, a / 2 - 38);
         }
         ctx.fillStyle = '#F5EAD6';
-        ctx.font = '800 30px system-ui, sans-serif';
-        ctx.fillText('⏳', l / 2, a / 2 + 40);
+        ctx.font = '800 46px system-ui, sans-serif';
+        ctx.fillText('⏳', l / 2, a / 2 + 52);
         ctx.restore();
       },
     },

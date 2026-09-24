@@ -413,6 +413,15 @@ class Fechadura extends Node {
     // 0 = sem onda; sobe até 1 no instante do encaixe (ver `_encaixar`) e um
     // `.chamar()` no fim do tween zera de novo — não fica ligado pra sempre.
     this._anel = 0;
+    // Alça (cadeado, nível Difícil): deslocamento vertical animado, 0 = travada,
+    // -14 = destravada. Era um salto instantâneo (`if (resolvida) translate`) —
+    // sem transição nenhuma, e disparado no INÍCIO do arrasto solto, quando o
+    // olho ainda está seguindo a chave voando até aqui, não o cadeado. Agora
+    // é uma propriedade animável (`Tween`, ver `_encaixar`), acionada só
+    // quando a chave chega de verdade.
+    this._alcaY = 0;
+    /** Escala do "✓" do cadeado, 0 a 1 — cresce com salto (`Easing.costasSaida`) no instante em que a chave chega, em vez de aparecer pronto. */
+    this._marca = 0;
     // Canvas fora de tela com a sombra entalhada do rebaixo, pronta — ver
     // `_gerarSombraRebaixo`. Não depende de `destacado`/`resolvida` (a sombra
     // é sempre a mesma; só a cor do preenchimento por baixo dela muda), então
@@ -597,7 +606,7 @@ class Fechadura extends Node {
 
     // Alça — sobe (translada pra cima) quando resolvida, como se tivesse destravado.
     ctx.save();
-    if (this.resolvida) ctx.translate(0, -14);
+    ctx.translate(0, this._alcaY);
     ctx.strokeStyle = '#B0B8C1';
     ctx.lineWidth = 13;
     ctx.lineCap = 'round';
@@ -607,12 +616,13 @@ class Fechadura extends Node {
     ctx.stroke(ALCA_PATH);
     ctx.restore();
 
-    // Corpo — cinza neutro, não a cor da chave certa: no Difícil o cadeado
-    // colorido dava uma pista a mais (bate a cor, e já sabe qual chave é),
-    // deixando a discriminação de FORMA (o objetivo do jogo) opcional. Um
-    // corpo neutro tira essa pista sem custo de contraste — a dica escura da
-    // chave entalhada (abaixo) já contrasta bem contra cinza também.
-    ctx.fillStyle = this.destacado ? '#F59E0B' : '#7C8591';
+    // Corpo — cinza neutro ENQUANTO fechado, não a cor da chave certa: se
+    // toda cor aparecesse antes de resolver, o Difícil dava uma pista a mais
+    // (bate a cor, já sabe qual chave é), deixando a discriminação de FORMA
+    // opcional. Depois de resolvido não tem mais pista nenhuma a proteger —
+    // o cadeado assume a cor da chave que acabou de sumir dentro dele, uma
+    // lembrança do que foi encaixado ali, em vez de só ficar cinza pra sempre.
+    ctx.fillStyle = this.resolvida ? this.cor : (this.destacado ? '#F59E0B' : '#7C8591');
     ctx.beginPath();
     ctx.roundRect(18, 58, 124, 92, 14);
     ctx.fill();
@@ -622,11 +632,25 @@ class Fechadura extends Node {
     ctx.fill();
 
     if (this.resolvida) {
+      // Cresce com salto (`_marca` vai de 0 a 1 via `Easing.costasSaida`, que
+      // ultrapassa 1 antes de assentar) em vez de já nascer pronto — o "pulo"
+      // de tamanho é o que faz o ✓ ser notado por cima da chave que acabou
+      // de sumir no mesmo instante.
+      ctx.save();
+      ctx.translate(135, 138);
+      ctx.scale(this._marca, this._marca);
+      ctx.translate(-135, -138);
       ctx.fillStyle = '#00D2A0';
       ctx.beginPath();
       ctx.arc(135, 138, 13, 0, Math.PI * 2);
       ctx.fill();
+      // Aro branco: o corpo agora pode ser QUALQUER uma das 8 cores das
+      // chaves (ver acima) — em vez de sempre cinza, então o selo precisa de
+      // um contorno próprio pra não se perder contra corpos verdes/teal
+      // (perto do próprio tom do selo).
       ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 2;
+      ctx.stroke();
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
@@ -635,6 +659,7 @@ class Fechadura extends Node {
       ctx.lineTo(133, 144);
       ctx.lineTo(143, 132);
       ctx.stroke();
+      ctx.restore();
     } else {
       // Escura e quase opaca de propósito — a 32% de antes lia bem só nos
       // cadeados mais claros; nos escuros (roxo, azul) a dica quase sumia,
@@ -739,7 +764,7 @@ export class GameScene extends Scene {
     // pequeno, onde célula pequena + fator fixo dava uma chave franzina.
     const fatorChave = pecas.length <= 4 ? 0.86 : pecas.length <= 6 ? 0.94 : 0.99;
     const razaoChave = Math.min(cellW / 130, cellH / 54) * fatorChave;
-    const razaoCadeado = Math.min(cellW, cellH) / 160 * 0.9;
+    const razaoCadeado = Math.min(cellW, cellH) / 160 * 1.05;
     // A silhueta no tabuleiro não é só a chave: é a chave DENTRO do rebaixo
     // entalhado (`Fechadura._desenharSilhueta`, `padX`/`padY` somam 40×60 ao
     // redor dela). Sem contar essa folga aqui, `razaoChave` (calculada só
@@ -932,7 +957,6 @@ export class GameScene extends Scene {
   _encaixar(chave, fechadura) {
     chave.colocada = true;
     chave.interativo = false;
-    fechadura.resolvida = true;
 
     // A chave da bandeja nasce um pouco maior que o rebaixo da fechadura
     // (ver comentário do plano de layout). Redimensionar ANTES do tween
@@ -948,6 +972,35 @@ export class GameScene extends Scene {
       x: fechadura.x, y: fechadura.y, brilho: 1,
     }, 180, Easing.suaveSaida)
       .chamar(() => {
+        // Tudo que celebra o acerto na FECHADURA (onda, alça, ✓) só liga
+        // AQUI — no instante em que a chave chega de verdade — e não no
+        // início do arrasto solto. Antes, `resolvida`/`_anel` disparavam
+        // 570ms mais cedo (junto do início deste tween), quando o olho ainda
+        // está seguindo a chave voando, não o cadeado: pelo tempo dela
+        // chegar, a onda já tinha murchado e a alça só "pulava" pronta, sem
+        // transição — quase imperceptível. Sincronizado aqui, os quatro
+        // efeitos (estrelas, onda, alça, ✓) explodem juntos no mesmo instante.
+        fechadura.resolvida = true;
+        Tween.removerDe(fechadura);
+        Tween.para(fechadura, { _anel: 1 }, 480, Easing.suaveSaida)
+          .chamar(() => { fechadura._anel = 0; });
+        if (fechadura.cadeado) {
+          // Alça com salto (ultrapassa -14 e volta) e ✓ crescendo com o
+          // mesmo tipo de salto — `Easing.costasSaida` em ambos, igual ao
+          // resto do motor usa pra "assentar" com uma mola, não um corte seco.
+          Tween.para(fechadura, { _alcaY: -14 }, 260, Easing.costasSaida);
+          Tween.para(fechadura, { _marca: 1 }, 320, Easing.costasSaida);
+          // Depois de um instante parado — tempo pra criança REGISTRAR a cor
+          // e o ✓ (a "lembrança" da chave certa, ver comentário do corpo) —
+          // o cadeado inteiro encolhe e some. Limpa o tabuleiro conforme os 8
+          // vão sendo resolvidos, em vez de ficar lotado até o fim; `regX`/
+          // `regY` já centralizados (construtor) fazem o encolhimento mirar
+          // o próprio meio do cadeado, não o canto.
+          Tween.de(fechadura)
+            .esperar(650)
+            .entao({ scaleX: 0, scaleY: 0, alpha: 0 }, 260, Easing.suaveEntrada)
+            .chamar(() => { fechadura.visible = false; });
+        }
         // Amarelo sempre — cor de estrela/recompensa, igual ao resto do motor
         // (`criarEstrelaVoadora`), não a cor da própria chave: o estouro é
         // sobre TER acertado, não sobre qual chave era.
@@ -959,10 +1012,6 @@ export class GameScene extends Scene {
       .entao({ rotation: -26 }, 90, Easing.suaveSaida)
       .entao({ rotation: 12, brilho: 0 }, 140, Easing.suaveSaida)
       .entao({ rotation: 0 }, 160, Easing.costasSaida);
-
-    Tween.removerDe(fechadura);
-    Tween.para(fechadura, { _anel: 1 }, 480, Easing.suaveSaida)
-      .chamar(() => { fechadura._anel = 0; });
 
     // No cadeado (Difícil) o CADEADO já é o feedback de "resolvido" (alça
     // sobe + ✓, `Fechadura._desenharCadeado`) — a chave, depois de pousar,
