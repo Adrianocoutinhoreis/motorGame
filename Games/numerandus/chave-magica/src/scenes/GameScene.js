@@ -79,6 +79,27 @@ const BOW_PATHS = Object.fromEntries(BOWS.map((b) => [b, new Path2D(bowPathD(b))
 const ALCA_PATH = new Path2D('M 42 60 L 42 40 A 38 38 0 0 1 118 40 L 118 60');
 
 /**
+ * Cache de `Path2D` dos dentes, por combinação (`"8,15"`, `"22,8"`...). Sem
+ * isto, `desenhar()` montava a string do path e fazia o parse de um `Path2D`
+ * NOVO a cada quadro, em até 5 pontos do arquivo (chave da bandeja, chave
+ * encaixada, dica escura da fechadura...) — puro lixo de memória 60x/s por
+ * peça, medido como uma das causas do engasgo em celular (junto do
+ * `shadowBlur` contínuo, ver `_gerarSombraRebaixo`/pulso ambiente). O pool de
+ * combinações é pequeno e fixo (`DENTES_1`/`DENTES_2`), então o cache nunca
+ * cresce sem limite.
+ */
+const DENTES_PATHS = new Map();
+function dentesPath(dentes) {
+  const chave = dentes.join(',');
+  let p = DENTES_PATHS.get(chave);
+  if (!p) {
+    p = new Path2D(dentesPathD(dentes));
+    DENTES_PATHS.set(chave, p);
+  }
+  return p;
+}
+
+/**
  * Sorteia `n` combinações ÚNICAS de bow+dentes+cor para a rodada. A
  * unicidade vem dos DENTES (o pool tem exatamente `n` perfis para `n`
  * peças, nunca sobra nem repete) — é o suficiente para nenhuma peça
@@ -151,7 +172,7 @@ class FundoDecorativo extends Node {
       ctx.translate(-65, -27);
       ctx.fill(BOW_PATHS.circulo, 'evenodd');
       ctx.fillRect(44, 22, 74, 10);
-      ctx.fill(new Path2D(dentesPathD([15, 22])));
+      ctx.fill(dentesPath([15, 22]));
       ctx.restore();
     }
     ctx.restore();
@@ -165,13 +186,42 @@ class FundoDecorativo extends Node {
  * chaves soltas) continua no cartão branco padrão, porque são elas — coloridas,
  * de plástico — que contrastam com a madeira, não o contrário.
  */
+/** Folga em volta da textura cacheada da tábua — cobre a sombra externa (blur 18 + offsetY 7), que senão seria cortada na borda do canvas fora de tela. */
+const PAD_TEXTURA_PAINEL = 40;
+
 class PainelMadeira extends Node {
   constructor(opcoes = {}) {
     super({ ...opcoes });
+    // Canvas fora de tela com a textura pronta — ver `_gerarTextura`.
+    this._textura = null;
   }
 
-  desenhar(ctx) {
+  /**
+   * Hachurado (~80 traços), verniz em gradiente e sombra externa: nada disso
+   * muda quadro a quadro, só o tamanho do painel muda — e esse é fixo durante
+   * toda a partida (definido uma vez em `aoEntrar`). Redesenhar isso à mão
+   * todo frame, pra sempre, media como uma das causas do engasgo em celular
+   * (junto do `shadowBlur` das fechaduras e do pulso ambiente da chave); agora
+   * é pintado UMA VEZ aqui e colado (`drawImage`) depois — custo de um blit.
+   */
+  _gerarTextura() {
     const { largura: l, altura: a } = this;
+    const p = PAD_TEXTURA_PAINEL;
+    // Fator 2 fixo (não o DPR do aparelho): a textura é ruído sutil (12% de
+    // alpha), então nitidez extra não se nota, e usar o DPR real faria o
+    // canvas fora de tela variar de tamanho a cada troca de aparelho/zoom.
+    const escala = 2;
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round((l + p * 2) * escala));
+    off.height = Math.max(1, Math.round((a + p * 2) * escala));
+    const ctx = off.getContext('2d');
+    ctx.scale(escala, escala);
+    ctx.translate(p, p);
+    this._pintarTextura(ctx, l, a);
+    this._textura = off;
+  }
+
+  _pintarTextura(ctx, l, a) {
     const r = 22;
 
     ctx.save();
@@ -219,6 +269,12 @@ class PainelMadeira extends Node {
     ctx.roundRect(1.5, 1.5, l - 3, a - 3, r);
     ctx.stroke();
     ctx.restore();
+  }
+
+  desenhar(ctx) {
+    if (!this._textura) this._gerarTextura();
+    const p = PAD_TEXTURA_PAINEL;
+    ctx.drawImage(this._textura, -p, -p, this.largura + p * 2, this.altura + p * 2);
   }
 }
 
@@ -286,12 +342,24 @@ class Chave extends Node {
       ctx.save();
       ctx.translate(cx - 65 * this.escalaChave, cy - 27 * this.escalaChave);
       ctx.scale(this.escalaChave, this.escalaChave);
-      ctx.shadowColor = `rgba(255, 247, 214, ${0.9 * this.brilho})`;
-      ctx.shadowBlur = 26 * this.brilho;
+      // `shadowBlur` só entra no INSTANTE do encaixe (`brilho` alto, tween
+      // breve, ver `_encaixar`) — o pulso ambiente (`atualizar`, permanente,
+      // teto de 0.3) usava a mesma sombra, e isso rodava sem parar até o fim
+      // da partida: o gasto mais caro do canvas 2D, repetido a troco de um
+      // brilho quase imperceptível a mais. Acima do limiar, sombra normal;
+      // abaixo, só alpha no preenchimento — o pulso continua visível, sem o
+      // blur ligado pra sempre.
+      if (this.brilho > 0.4) {
+        ctx.shadowColor = `rgba(255, 247, 214, ${0.9 * this.brilho})`;
+        ctx.shadowBlur = 26 * this.brilho;
+      } else {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+      }
       ctx.fillStyle = `rgba(255, 247, 214, ${0.55 * this.brilho})`;
       ctx.fill(BOW_PATHS[this.bow], 'evenodd');
       ctx.fillRect(44, 22, 74, 10);
-      ctx.fill(new Path2D(dentesPathD(this.dentes)));
+      ctx.fill(dentesPath(this.dentes));
       ctx.restore();
     }
     ctx.translate(cx - 65 * this.escalaChave, cy - 27 * this.escalaChave);
@@ -310,7 +378,7 @@ class Chave extends Node {
     ctx.fillStyle = grad;
     ctx.fill(BOW_PATHS[this.bow], 'evenodd');
     ctx.fillRect(44, 22, 74, 10);
-    ctx.fill(new Path2D(dentesPathD(this.dentes)));
+    ctx.fill(dentesPath(this.dentes));
     ctx.restore();
   }
 }
@@ -345,6 +413,11 @@ class Fechadura extends Node {
     // 0 = sem onda; sobe até 1 no instante do encaixe (ver `_encaixar`) e um
     // `.chamar()` no fim do tween zera de novo — não fica ligado pra sempre.
     this._anel = 0;
+    // Canvas fora de tela com a sombra entalhada do rebaixo, pronta — ver
+    // `_gerarSombraRebaixo`. Não depende de `destacado`/`resolvida` (a sombra
+    // é sempre a mesma; só a cor do preenchimento por baixo dela muda), então
+    // uma única textura serve pra vida inteira da peça.
+    this._sombra = null;
   }
 
   /**
@@ -427,31 +500,16 @@ class Fechadura extends Node {
     // luz "empurra" a sombra pra baixo-direita); um segundo passe claro, com
     // deslocamento invertido, ilumina a parede oposta — sem os dois, o
     // retângulo lia como um adesivo colado em cima da tábua, não um buraco.
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(0, 0, slotW, slotH, slotR);
-    ctx.clip();
-
-    ctx.shadowColor = 'rgba(0,0,0,0.7)';
-    ctx.shadowBlur = 14;
-    ctx.shadowOffsetX = 6;
-    ctx.shadowOffsetY = 8;
-    ctx.fillStyle = '#000000';
-    ctx.beginPath();
-    ctx.rect(-slotW, -slotH, slotW * 3, slotH * 3);
-    ctx.roundRect(0, 0, slotW, slotH, slotR);
-    ctx.fill('evenodd');
-
-    ctx.shadowColor = 'rgba(255,255,255,0.4)';
-    ctx.shadowBlur = 7;
-    ctx.shadowOffsetX = -4;
-    ctx.shadowOffsetY = -5;
-    ctx.beginPath();
-    ctx.rect(-slotW, -slotH, slotW * 3, slotH * 3);
-    ctx.roundRect(0, 0, slotW, slotH, slotR);
-    ctx.fill('evenodd');
-
-    ctx.restore();
+    //
+    // O CÁLCULO da sombra (dois `fill('evenodd')` com `shadowBlur` sobre um
+    // retângulo 3x o tamanho do rebaixo) é a parte cara de tudo isto — e o
+    // resultado nunca muda depois de gerado (não depende de `destacado` nem
+    // `resolvida`), então em vez de recalcular isso 60x por segundo pra
+    // sempre, é feito UMA VEZ e colado (`drawImage`) daqui em diante. Medido
+    // como uma das causas do engasgo em celular.
+    if (!this._sombra) this._gerarSombraRebaixo(slotW, slotH, slotR);
+    const pad = this._sombraPad;
+    ctx.drawImage(this._sombra, -pad, -pad, slotW + pad * 2, slotH + pad * 2);
 
     // Borda tracejada — a mesma linguagem visual de "lugar vazio" do resto
     // da série (Geométrico usa o mesmo tracejado nos contornos do tabuleiro).
@@ -479,8 +537,56 @@ class Fechadura extends Node {
     ctx.fillStyle = this.destacado ? '#7C4A12' : '#2B1B0E';
     ctx.fill(BOW_PATHS[this.bow], 'evenodd');
     ctx.fillRect(44, 22, 74, 10);
-    ctx.fill(new Path2D(dentesPathD(this.dentes)));
+    ctx.fill(dentesPath(this.dentes));
     ctx.restore();
+  }
+
+  /**
+   * Gera, uma única vez, o canvas fora de tela com a sombra entalhada do
+   * rebaixo (ver comentário em `_desenharSilhueta`). `slotW`/`slotH`/`slotR`
+   * são fixos pra vida inteira desta peça (vêm só de `escalaChave`, definido
+   * no construtor), então não há necessidade de invalidar o cache depois.
+   */
+  _gerarSombraRebaixo(slotW, slotH, slotR) {
+    // Folga em volta: cobre o alcance dos dois `shadowBlur` (14 e 7, com
+    // deslocamento de até 8px) — sem isto a sombra seria cortada na borda do
+    // canvas fora de tela.
+    const pad = 36;
+    const escala = 2;
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round((slotW + pad * 2) * escala));
+    off.height = Math.max(1, Math.round((slotH + pad * 2) * escala));
+    const ctx = off.getContext('2d');
+    ctx.scale(escala, escala);
+    ctx.translate(pad, pad);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(0, 0, slotW, slotH, slotR);
+    ctx.clip();
+
+    ctx.shadowColor = 'rgba(0,0,0,0.7)';
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetX = 6;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.rect(-slotW, -slotH, slotW * 3, slotH * 3);
+    ctx.roundRect(0, 0, slotW, slotH, slotR);
+    ctx.fill('evenodd');
+
+    ctx.shadowColor = 'rgba(255,255,255,0.4)';
+    ctx.shadowBlur = 7;
+    ctx.shadowOffsetX = -4;
+    ctx.shadowOffsetY = -5;
+    ctx.beginPath();
+    ctx.rect(-slotW, -slotH, slotW * 3, slotH * 3);
+    ctx.roundRect(0, 0, slotW, slotH, slotR);
+    ctx.fill('evenodd');
+
+    ctx.restore();
+    this._sombra = off;
+    this._sombraPad = pad;
   }
 
   _desenharCadeado(ctx, cx, cy) {
@@ -541,7 +647,7 @@ class Fechadura extends Node {
       ctx.fillStyle = '#1A0B05';
       ctx.fill(BOW_PATHS[this.bow], 'evenodd');
       ctx.fillRect(44, 22, 74, 10);
-      ctx.fill(new Path2D(dentesPathD(this.dentes)));
+      ctx.fill(dentesPath(this.dentes));
       ctx.restore();
     }
     ctx.restore();
