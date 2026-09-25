@@ -198,6 +198,13 @@ export default {
     // Derrota (vidas ou tempo zerados) — mesmo do Jogo dos Blocos, único outro
     // jogo do motor com derrota de verdade até agora.
     { id: 'erroSOS', src: './assets/audio/erroSOS.wav' },
+    // Narração dos 3 passos do tutorial — os ids batem com `tutorial[i].fala`
+    // acima. Sem eles o passo tocava mudo (ver comentário em
+    // `TutorialScreen._exibirPasso`); a mesma lista também narra a AJUDA
+    // dentro da partida (regra RE-05).
+    { id: 'tutorialTela1', src: './assets/audio/tutorial/tela1.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial/tela2.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial/tela3.wav' },
   ],
 
   mascote: { telas: [] },

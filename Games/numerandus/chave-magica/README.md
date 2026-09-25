@@ -105,27 +105,27 @@ canvas.
 | `soltar_peca.mp3` | Áudio, encaixe certo | Mesmo arquivo do Material Dourado/Dino/Encaixe Certo/Geométrico — origem/licença a confirmar, ver `assets/audio-transcricao/soltarPeca/transcricao.md` |
 | `error.MP3` | Áudio, encaixe errado (custa 1 vida) | Mesmo arquivo do Jogo da Memória/Geométrico — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 | `erroSOS.wav` | Áudio, derrota | Mesmo arquivo do Jogo dos Blocos — ainda não ouvido, ver `assets/audio-transcricao/erroSOS/transcricao.md` |
+| `tutorial/tela1.wav`, `tela2.wav`, `tela3.wav` | Áudio, narração dos 3 passos do tutorial | Fornecidos prontos pelo humano nesta sessão — origem/licença a confirmar, transcrição só INFERIDA (não ouvida ainda), ver `assets/audio-transcricao/tutorialTela{1,2,3}/transcricao.md` |
 
 ## Pendências conhecidas
 
-- **Áudio de clique genérico e narração do tutorial** — ainda não gravados
-  (`config.audio.clique` continua `null`; os 3 passos do tutorial têm `fala:` apontando
-  pra ids que ainda não têm arquivo).
-- **`error.MP3` e `erroSOS.wav` não foram ouvidos** — ambos têm ficha "não verificada".
-  Aqui o risco pedagógico é maior que nos outros jogos que reusam esses arquivos: se
-  qualquer um dos dois for uma fala reprovadora, conflita direto com a derrota já sendo
-  uma experiência mais dura que o resto da coleção.
-- **Origem/licença de `soltar_peca.mp3`** — mesma pendência já registrada nos outros
-  jogos que usam este arquivo.
-- **Cadeado "aberto" (nível Difícil) é só a alça deslocada + um "✓"** — funciona, mas
-  não tem a animação de giro do protótipo original. Registrado como possível v2, não
-  como bug.
+- **Áudio de clique genérico** — ainda não gravado (`config.audio.clique` continua `null`).
+- **`error.MP3`, `erroSOS.wav` e a narração do tutorial (`tela1/2/3.wav`) não foram
+  ouvidos** — todos têm ficha "não verificada"/"inferida". Para os dois primeiros, o
+  risco pedagógico é maior que nos outros jogos que reusam esses arquivos: se qualquer um
+  for uma fala reprovadora, conflita direto com a derrota já sendo uma experiência mais
+  dura que o resto da coleção. Para a narração, a transcrição nas fichas foi inferida do
+  texto escrito na tela (mesmo título + corpo, mesma ordem tela1..tela3) — precisa ouvir
+  pra confirmar que a gravação bate com o texto.
+- **Origem/licença de `soltar_peca.mp3` e da narração do tutorial** — mesma pendência já
+  registrada nos outros jogos que usam `soltar_peca.mp3`; a narração foi entregue pronta
+  nesta sessão, sem registro de quem gravou.
 - **Testado só com chamada direta aos métodos da cena E com toque sintético via
   `PointerEvent`/CDP** (arrastar uma chave de verdade, ver histórico da sessão) — nenhum
   evento de toque disparado por um dedo de verdade num tablet ainda.
-- **Não testado em tablet real, nem em iframe pequeno/médio/grande.**
-- **Valores de vidas/tempo por nível são um ponto de partida** (3 vidas; 30/40/60s),
+- **Valores de vidas/tempo por nível são um ponto de partida** (3 vidas; 45/40/60s),
   ainda não calibrados com crianças de verdade jogando.
+- **Zip da entrega ainda não foi gerado nem aberto antes de enviar.**
 
 ## Atualizar o motor neste jogo
 

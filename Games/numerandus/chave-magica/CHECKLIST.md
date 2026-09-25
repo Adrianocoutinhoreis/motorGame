@@ -16,7 +16,8 @@
 - [x] Mecânica descrita em até 3 frases — ver README ("O que é")
 - [x] Níveis definidos: 3 (Fácil 4 peças/1 dente, Médio 6 peças/2 dentes,
       Difícil 8 peças/2 dentes/cadeado colorido), todos com 3 vidas e tempo
-      crescente (30/40/60s) — ver `config.js`
+      crescente (45/40/60s — Fácil recebeu mais folga por ser o primeiro
+      contato com a mecânica) — ver `config.js`
 - [x] Condição de **vitória** definida e mensurável (todas as chaves do nível encaixadas)
 - [x] Condição de **derrota** definida — vidas OU tempo zerados antes de terminar.
       **Primeiro jogo Numerandus com derrota de verdade** (decisão registrada no
@@ -35,8 +36,9 @@
 
 - [x] Arte produzida — cabeça e dentes desenhados via `Path2D` no canvas (sem
       imagem), geometria portada do protótipo `Aulas para Refazer/Jogo_da_chave_magica`
-- [ ] Áudio de narração do tutorial — **ainda não gravado** (`fala:` aponta pra ids
-      sem arquivo em `config.assets`)
+- [x] Áudio de narração do tutorial — gravado (`tela1/2/3.wav`), `fala:` dos 3 passos
+      aponta pra ids agora presentes em `config.assets`; transcrição só INFERIDA do
+      texto da tela, ainda não ouvida (ver seção 7/pendência abaixo)
 - [x] Efeito de vitória presente — `acertoSOS.wav`, mesmo tradicional da coleção
 - [x] Efeito de encaixe certo presente — `soltar_peca.mp3` — origem/licença a confirmar
       (pendência compartilhada com outros jogos)
@@ -46,16 +48,18 @@
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [x] Ficha de transcrição criada para cada áudio existente (4 arquivos)
-- [ ] Transcrições **confirmadas ouvindo** — só 2 dos 4 áudios são "confirmado por
-      natureza" (sem fala); `error.MP3` e `erroSOS.wav` ainda precisam ser ouvidos
-- [x] Pendências de áudio ainda não gravado listadas explicitamente no `README.md`
+- [x] Ficha de transcrição criada para cada áudio existente (7 arquivos)
+- [ ] Transcrições **confirmadas ouvindo** — só 2 dos 7 áudios são "confirmado por
+      natureza" (sem fala); `error.MP3`, `erroSOS.wav` e os 3 da narração do tutorial
+      (transcrição inferida do texto da tela, não ouvida) ainda precisam ser ouvidos
+- [x] Pendências de áudio ainda não gravado/ouvido listadas explicitamente no `README.md`
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR — testado (`tools/captura-cena.mjs`), sem mascote
 - [x] **Tutorial** ilustrado e pulável — os 3 passos testados rodando
-      (`mostrarPasso(0..2)`); narração ainda não gravada
+      (`mostrarPasso(0..2)`); narração gravada e carregando (`tela1/2/3.wav`), ainda
+      não ouvida pra confirmar que bate com o texto da tela
 - [x] **Seleção de nível** (3 níveis) — telas padrão do motor
 - [x] **Partida** com HUD legível (progresso, 3 vidas, cronômetro regressivo, pausa,
       ajuda, som) — testado nos 3 níveis
@@ -63,10 +67,10 @@
       o cronômetro CONGELA de verdade durante a pausa e retoma exatamente de onde parou
       (`cena.tempo.restante` medido antes/durante/depois — 500ms pausado = 0 de queda,
       500ms retomado = ~500ms de queda)
-- [ ] **Ajuda** na partida (regra RE-05) — usa `HelpScreen` padrão sobre `config.tutorial`;
-      não aberta de verdade nesta sessão (o botão chama `_pedirAjuda()`, que já pausa o
-      cronômetro do mesmo jeito comprovado acima, mas o fluxo completo de abrir/fechar a
-      camada não foi clicado)
+- [x] **Ajuda** na partida (regra RE-05) — usa `HelpScreen` padrão sobre `config.tutorial`;
+      testado abrindo e fechando de verdade via `_pedirAjuda()`/`ajuda.fechar()`: pausa a
+      cena E o cronômetro ao abrir (`cena.pausada`, `cena.tempo.rodando`), mostra o passo 1
+      do tutorial por cima do jogo, e ao fechar despausa e retoma os dois
 - [x] **Resultado** para vitória — testado (6/6... 4/4 CHAVES, "MUITO BEM!", estrelas)
 - [x] **Resultado** para derrota — testado por vidas zeradas E por tempo zerado
       ("QUASE LÁ!", em azul, nunca vermelho — mesmo tom não-punitivo do resto da coleção)
@@ -124,8 +128,8 @@ Mapeamento semântico **deste** jogo:
 - [x] Cor **nunca** é o único portador de significado — o formato (cabeça+dentes) é
       quem decide o encaixe, nunca a cor sozinha; a dica de erro é o contorno piscando
       (forma + cor), não só cor
-- [ ] Nenhuma ação exige saber ler: narração do tutorial ainda não gravada
-      (pendência de áudio, ver seção 2)
+- [x] Nenhuma ação exige saber ler: narração do tutorial gravada e carregando
+      (transcrição só inferida, não ouvida — ver seção 2)
 - [x] Som pode ser desligado (`SoundToggle` padrão do motor)
 - [x] Nada pisca de forma rápida ou repetitiva (o âmbar de erro é uma vez só, ~650ms)
 
@@ -134,7 +138,7 @@ Mapeamento semântico **deste** jogo:
 - [x] `node tools/testes.mjs` passa (154 testes do motor, sem regressão)
 - [x] `node tools/verificar-independencia.mjs numerandus/chave-magica` **aprovado**
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/chave-magica` **aprovado**
-      (11/11, 4 áudios carregados, zero erro de JS, zero 404)
+      (11/11, 7 áudios carregados, zero erro de JS, zero 404)
 - [x] Jogo abre por `node tools/serve.mjs` sem **nenhuma** requisição externa (teste de
       entrega avulsa confirma)
 - [x] Fluxo Menu → Tutorial → Níveis → Partida → Resultado percorrido, sem travar
@@ -148,19 +152,31 @@ Mapeamento semântico **deste** jogo:
 - [x] **Toque real:** testado com `PointerEvent` sintético via CDP (pointerdown/move/up,
       `pointerType:'touch'`), não só chamada direta — arrastar uma chave até a
       fechadura certa funciona ponta a ponta pelo caminho real do `Input.js`
-- [ ] **Replay/duplicata de mensagem AVA:** ainda não testado
-- [ ] `tools/ava-teste.html`: mensagem chegando ao pai — ainda não testado
-- [ ] Testado em iframe pequeno, médio e grande
+- [x] **Replay/duplicata de mensagem AVA:** testado via `tools/ava-teste.html` — duas
+      partidas seguidas (vitória, "jogar de novo") geram "Partida #1" e "Partida #2"
+      distintas no host, cada uma validando as 7 regras do contrato (nenhuma falha)
+- [x] `tools/ava-teste.html`: mensagem chegando ao pai — testado de verdade (não só por
+      inspeção de código): `JOGO_CONCLUIDO` cruza o `<iframe>`, aparece no host e passa
+      em todas as regras de contrato (`type`, `acertos`/`erros`/`totalPerguntas` como
+      `number`, `nivel` presente, `jogo` com slug estável, nenhum dado de aluno)
+- [x] Testado em iframe pequeno, médio, grande e celular (retrato estreito) via
+      `tools/ava-teste.html` — menu e partida renderizam sem cortar nem distorcer em
+      nenhum dos quatro; HUD continua legível mesmo no preset mais estreito
 - [ ] Testado com **toque em tablet real** (só toque sintético via CDP até agora)
-- [ ] Testado após trocar de aba e voltar
+- [x] Testado após trocar de aba — por INSPEÇÃO DE CÓDIGO (não captura ao vivo): o motor
+      (`Game.js`) escuta `visibilitychange` e chama `pausarLaco()`/`retomarLaco()`, o `dt`
+      é sempre recalculado a partir de `performance.now()` no instante em que o laço
+      retoma (nunca acumula o tempo em que a aba ficou escondida) e é limitado a no
+      máximo 100ms por quadro — mecanismo genérico do motor, não específico deste jogo,
+      então o cronômetro de Chave Mágica não pode "pular" nem "vazar" tempo ao trocar de aba
 
 ## 8. Entrega
 
 - [x] `README.md` do jogo atualizado (o que é, como os dados foram definidos, como
       rodar, assets, pendências)
-- [ ] Este checklist com todos os itens fechados ou justificados — **narração,
-      áudio de erro/derrota não ouvidos, teste em tablet real, iframe e troca de
-      aba pendentes**
+- [ ] Este checklist com todos os itens fechados ou justificados — restam: **narração do
+      tutorial e áudio de erro/derrota gravados mas não OUVIDOS pra confirmar**, **teste
+      em tablet real** (toque de dedo de verdade) e **zip gerado/aberto antes de enviar**
 - [x] `node tools/build.mjs numerandus/chave-magica` rodado
 - [x] Versão do motor conferida em `engine/version.json` dentro da pasta do jogo (v1.3.6)
 - [x] Pasta copiada para **fora** do projeto e testada — `teste-entrega-avulsa.mjs`
