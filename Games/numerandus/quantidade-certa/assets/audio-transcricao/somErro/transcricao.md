@@ -11,7 +11,7 @@
 | Duração | **0,34 s** |
 | SHA-256 (12 primeiros) | `a4eef0130419` |
 | Origem | Mesmo arquivo (mesmo hash) já usado no Jogo da Memória, Quebra-Cabeça
-  Geométrico e Chave Mágica — copiado do Quebra-Cabeça Geométrico a pedido do humano. |
+  Geométrico e Chave Mágica — copiado do Caminho dos Números a pedido do humano. |
 
 ## Transcrição
 
@@ -23,7 +23,7 @@
 Este áudio não foi ouvido — quem montou esta ficha não tem essa capacidade, e não há
 ferramenta de transcrição instalada neste ambiente. Duração de 0,34 s sugere um efeito
 curto (bipe/clunk), mas isso é inferência, não confirmação. As fichas equivalentes no
-Quebra-Cabeça Geométrico, Jogo da Memória e Chave Mágica registram a mesma pendência para
+Caminho dos Números, Jogo da Memória e Chave Mágica registram a mesma pendência para
 a mesma cópia do arquivo (confirmado por hash).
 
 ## Onde é usado no jogo

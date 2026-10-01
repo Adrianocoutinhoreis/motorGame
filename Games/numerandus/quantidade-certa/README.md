@@ -110,7 +110,7 @@ canvas.
 |---|---|---|
 | `acertoSOS.wav` | Áudio, vitória | Mesmo arquivo já usado pelo Encaixe Certo/Jogo da Velha/coleção Numerandus |
 | `soltar_peca.mp3` | Áudio, encaixe (peça no número **e** continha no furo) | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Dino/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
-| `error.MP3` | Áudio, peça de quantidade num número errado | Mesmo arquivo do Quebra-Cabeça Geométrico/Jogo da Memória/Chave Mágica — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
+| `error.MP3` | Áudio, peça de quantidade num número errado | Mesmo arquivo do Caminho dos Números/Jogo da Memória/Chave Mágica — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 
 ## Pendências conhecidas
 

@@ -108,7 +108,7 @@ export default {
    * Reaproveita arquivos já aprovados no resto da coleção: mesmo som de
    * "encaixar" tanto para a peça de quantidade quanto para cada continha (os
    * dois são o mesmo gesto central, encaixar algo num lugar vazio), e o
-   * mesmo som de erro do Quebra-Cabeça Geométrico (`somErro`/`error.MP3` —
+   * mesmo som de erro do Caminho dos Números (`somErro`/`error.MP3` —
    * também já usado no Jogo da Memória/Chave Mágica) para a peça de
    * quantidade que não bate com o número. Sem som de clique genérico (mesma
    * decisão do Encaixe Certo/Jogo da Ordenação): som só onde é gameplay de

@@ -107,7 +107,7 @@ export default {
    * (vitória), `soltar_peca` (encaixe correto — mesmo som de "assentar" do
    * Encaixe Certo/Quantidade Certa/Material Dourado/Dino/Geométrico/Chave
    * Mágica) e `error.MP3` (peça errada ou fora de ordem — mesmo arquivo do
-   * Quebra-Cabeça Geométrico/Jogo da Memória/Chave Mágica/Quantidade Certa).
+   * Caminho dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa).
    * Nenhum som novo precisou ser gravado.
    */
   assets: [

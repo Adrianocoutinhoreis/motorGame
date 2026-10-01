@@ -27,7 +27,7 @@ acaba se o tempo zerar antes de encaixar todas as chaves.
 ## Como os dados do jogo foram definidos
 
 Dois materiais de referência, nenhum dos dois um conjunto de fotos prontas (diferente
-do Quebra-Cabeça Geométrico):
+do Caminho dos Números):
 
 - `numerandus/finalizados/1ano/chave_magica/chave_magica.mp4` — vídeo do brinquedo
   físico (uma tábua com 8 silhuetas de chave recortadas, sem cor, e fechaduras
@@ -93,7 +93,7 @@ chave-magica/
 └── README.md       este arquivo
 ```
 
-Assim como o Quebra-Cabeça Geométrico, as peças aqui **não usam imagem** — cabeça e
+Assim como o Caminho dos Números, as peças aqui **não usam imagem** — cabeça e
 dentes são desenhados via `Path2D` (sintaxe de path SVG, sem nenhum DOM) direto no
 canvas.
 

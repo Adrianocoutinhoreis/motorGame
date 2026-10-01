@@ -41,7 +41,7 @@
 - [x] Efeito de encaixe presente — `soltar_peca.mp3`, reaproveitado para os
       dois gestos de encaixar (peça no número e continha no furo)
 - [x] Efeito de erro presente — `error.MP3`/`somErro`, mesmo arquivo do
-      Quebra-Cabeça Geométrico (copiado a pedido do humano), tocado quando a
+      Caminho dos Números (copiado a pedido do humano), tocado quando a
       peça de quantidade não bate com o número
 - [ ] Efeito de clique genérico — ainda falta (`config.audio.clique` continua `null`,
       mesma decisão já tomada no Encaixe Certo)
