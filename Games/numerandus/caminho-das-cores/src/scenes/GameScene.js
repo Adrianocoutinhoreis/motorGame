@@ -469,22 +469,33 @@ export class GameScene extends Scene {
     this._cartela.x = 0;
     this.area.adicionar(this._cartela);
 
-    // ------------------------------------------------- bandeja + trilhas (direita)
+    // ------------------------------------------------- trilhas (topo, à direita da cartela)
     const rightX = this._cartela.largura + gapCartela;
     const rightWidth = areaLargura - rightX;
     const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
 
-    const layout = this._calcularLayout(nivel.trilhas, nivel.profundidade, totalPecasBandeja, rightWidth, areaAltura);
+    const layout = this._calcularLayout(
+      nivel.trilhas, nivel.profundidade, totalPecasBandeja, rightWidth, areaLargura, areaAltura, this._cartela.altura,
+    );
     const {
       tam, gapTrilha, padTrilhaX, padTrilhaY, gapSlot,
       larguraPainelTrilhas, alturaPainelTrilhas,
-      padBandeja, gapBandeja, porLinha, totalLinhas, larguraPainelBandeja, alturaPainelBandeja,
+      padBandeja, gapBandeja, porLinha, larguraPainelBandeja, alturaPainelBandeja,
       gapZonas,
     } = layout;
 
-    // bandeja (topo)
-    const yBandeja = (areaAltura - (alturaPainelBandeja + gapZonas + alturaPainelTrilhas)) / 2;
-    const xBandeja = rightX + (rightWidth - larguraPainelBandeja) / 2;
+    // Cartela e trilhas dividem a FILEIRA DE CIMA (lado a lado, mesma linha);
+    // a bandeja vira uma faixa ÚNICA na fileira de BAIXO, com a largura
+    // inteira da área — igual à referência (brinquedo tem a bandeja de peças
+    // soltas correndo a largura toda, não só ao lado das trilhas).
+    const fileiraTopoAltura = Math.max(this._cartela.altura, alturaPainelTrilhas);
+    const alturaTotalConteudo = fileiraTopoAltura + gapZonas + alturaPainelBandeja;
+    const yTopo = (areaAltura - alturaTotalConteudo) / 2;
+    const yBandeja = yTopo + fileiraTopoAltura + gapZonas;
+
+    this._cartela.y = yTopo + (fileiraTopoAltura - this._cartela.altura) / 2;
+
+    const xBandeja = (areaLargura - larguraPainelBandeja) / 2;
     this._painelBandeja = new PainelZona({
       largura: larguraPainelBandeja, altura: alturaPainelBandeja, cor: 'rgba(255,255,255,0.10)', bordaCor: 'rgba(255,255,255,0.25)',
     });
@@ -517,8 +528,8 @@ export class GameScene extends Scene {
       this._ligarArrastePeca(peca);
     });
 
-    // trilhas (embaixo)
-    const yTrilhas = yBandeja + alturaPainelBandeja + gapZonas;
+    // trilhas (fileira de cima, à direita da cartela)
+    const yTrilhas = yTopo + (fileiraTopoAltura - alturaPainelTrilhas) / 2;
     const xTrilhas = rightX + (rightWidth - larguraPainelTrilhas) / 2;
     this._painelTrilhas = new PainelZona({
       largura: larguraPainelTrilhas, altura: alturaPainelTrilhas, cor: 'rgba(255,255,255,0.10)', bordaCor: 'rgba(255,255,255,0.25)',
@@ -545,11 +556,6 @@ export class GameScene extends Scene {
       this.area.adicionar(divisores);
     }
 
-    // A cartela se alinha verticalmente com a FILEIRA DE TRILHAS (não com o
-    // bloco bandeja+trilhas inteiro) — é com elas que cada coluna corresponde
-    // visualmente, então ficam na mesma altura.
-    this._cartela.y = yTrilhas + (alturaPainelTrilhas - this._cartela.altura) / 2;
-
     this._tamPeca = tam;
     this._trilhas = sequencias.map((sequencia, i) => {
       const trilha = new Trilha(sequencia, tam, gapSlot, padTrilhaY);
@@ -563,13 +569,15 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Busca o maior tamanho de peça que cabe nos dois eixos ao mesmo tempo:
-   * largura (trilhas lado a lado) e altura (profundidade da trilha + bandeja
-   * em várias fileiras). Testa de cima pra baixo e usa o primeiro que cabe —
-   * mais robusto que uma fórmula fechada, porque o número de fileiras da
-   * bandeja muda em saltos (não é contínuo) conforme o tamanho da peça.
+   * Busca o maior tamanho de peça que cabe nos três eixos ao mesmo tempo:
+   * largura das trilhas (lado a lado, ao lado da cartela), altura da trilha
+   * (profundidade) e a bandeja — agora uma faixa de largura INTEIRA embaixo
+   * da fileira cartela+trilhas, então sofre bem menos com várias fileiras.
+   * Testa de cima pra baixo e usa o primeiro que cabe — mais robusto que uma
+   * fórmula fechada, porque o número de fileiras da bandeja muda em saltos
+   * (não é contínuo) conforme o tamanho da peça.
    */
-  _calcularLayout(numTrilhas, profundidade, totalPecasBandeja, rightWidth, areaAltura) {
+  _calcularLayout(numTrilhas, profundidade, totalPecasBandeja, rightWidth, areaLargura, areaAltura, cartelaAltura) {
     const gapTrilha = 16;
     const padTrilhaX = 10;
     const padTrilhaY = 14;
@@ -582,16 +590,17 @@ export class GameScene extends Scene {
       const larguraGradeTrilhas = numTrilhas * tam + (numTrilhas - 1) * gapTrilha;
       const larguraPainelTrilhas = Math.min(rightWidth, larguraGradeTrilhas + padTrilhaX * 2);
       const alturaPainelTrilhas = profundidade * tam + (profundidade - 1) * gapSlot + padTrilhaY * 2;
+      const fileiraTopoAltura = Math.max(cartelaAltura, alturaPainelTrilhas);
 
-      const larguraUtilBandeja = rightWidth - padBandeja * 2;
+      const larguraUtilBandeja = areaLargura - padBandeja * 2;
       const celula = tam + gapBandeja;
       const porLinha = Math.max(1, Math.floor((larguraUtilBandeja + gapBandeja) / celula));
       const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
-      const larguraPainelBandeja = rightWidth;
+      const larguraPainelBandeja = areaLargura;
       const alturaPainelBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja + padBandeja * 2;
 
       return {
-        tam, gapTrilha, padTrilhaX, padTrilhaY, gapSlot, larguraPainelTrilhas, alturaPainelTrilhas, padBandeja, gapBandeja, porLinha, totalLinhas, larguraPainelBandeja, alturaPainelBandeja, gapZonas,
+        tam, gapTrilha, padTrilhaX, padTrilhaY, gapSlot, larguraPainelTrilhas, alturaPainelTrilhas, fileiraTopoAltura, padBandeja, gapBandeja, porLinha, totalLinhas, larguraPainelBandeja, alturaPainelBandeja, gapZonas,
       };
     };
 
@@ -599,7 +608,7 @@ export class GameScene extends Scene {
       const cand = montar(tam);
       const larguraGradeTrilhas = numTrilhas * tam + (numTrilhas - 1) * gapTrilha;
       if (larguraGradeTrilhas + padTrilhaX * 2 > rightWidth) continue;
-      const alturaTotal = cand.alturaPainelBandeja + gapZonas + cand.alturaPainelTrilhas;
+      const alturaTotal = cand.fileiraTopoAltura + gapZonas + cand.alturaPainelBandeja;
       if (alturaTotal <= areaAltura) return cand;
     }
     return montar(56);

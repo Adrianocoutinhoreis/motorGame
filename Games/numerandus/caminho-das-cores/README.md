@@ -49,6 +49,13 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
    níveis (Fácil = 3 trilhas × 1 peça) deixava o tabuleiro visualmente vazio
    e nunca exercitava a sequência (com 1 peça por trilha não existe "ordem").
    Todos os níveis agora têm profundidade ≥ 2.
+5. **A bandeja é uma faixa larga embaixo, não uma caixa estreita ao lado das
+   trilhas** — a primeira versão tinha a bandeja só acima das trilhas (mesma
+   largura delas, sem a cartela). O humano mandou um esboço de referência:
+   cartela e trilhas dividem a fileira de cima lado a lado, e a bandeja de
+   peças soltas corre a LARGURA INTEIRA da área, numa fileira só embaixo das
+   duas — mais parecido com o brinquedo físico, e com mais espaço horizontal
+   pra bandeja (menos fileiras de peças empilhadas verticalmente).
 
 **Tema visual:** fundo liso (sem gradiente, sem decoração) — o conteúdo já é
 visualmente carregado (várias cores/formatos ao mesmo tempo); o fundo não
