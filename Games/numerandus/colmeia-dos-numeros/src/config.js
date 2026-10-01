@@ -7,13 +7,12 @@
 
 /**
  * Cor real de cada número, transcrita das 7 peças do brinquedo físico
- * (fotografadas limpas, sem mão na frente — ver README "Assets"). 6 e 9 são
- * o MESMO triângulo impresso: aparece de cabeça para baixo em certas peças e
- * lê como 9, mas a cor (vermelho) é sempre a mesma — por isso os dois
- * números apontam pra cor 6 aqui.
+ * (fotografadas limpas, sem mão na frente — ver README "Assets"). Só os
+ * números 1 a 6 existem no jogo — ver README "Como os números foram
+ * conferidos" sobre a correção do 9 (triângulo de cabeça para baixo).
  */
 const CORES_POR_NUMERO = {
-  1: '#2E8B7C', 2: '#D959A8', 3: '#4A3FA6', 4: '#E8B93B', 5: '#C2A878', 6: '#C1364B', 9: '#C1364B',
+  1: '#2E8B7C', 2: '#D959A8', 3: '#4A3FA6', 4: '#E8B93B', 5: '#C2A878', 6: '#C1364B',
 };
 
 /**

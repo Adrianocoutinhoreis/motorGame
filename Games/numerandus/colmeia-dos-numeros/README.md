@@ -27,9 +27,15 @@ com as 7 já na posição E rotação corretas da montagem final. A partir delas
 - Os números de cada peça (`GameScene.js`, `SLOTS`/`NUMEROS_CENTRAL`) foram
   transcritos direto da segunda foto — sem precisar resolver rotação por
   matemática, porque as peças já apareciam na orientação certa.
-- **6 e 9 são o mesmo triângulo impresso.** A peça não reimprime o número
-  virado: em certas posições do hexágono o "6" cai de cabeça para baixo e lê
-  como "9". O jogo trata os dois como iguais ao comparar (`normalizarNumero`).
+- **A peça física não reimprime o número virado** — em certas posições do
+  hexágono o "6" cai de cabeça para baixo e, na foto, lê como "9". A
+  transcrição inicial registrou isso literalmente (um "9" nos dados,
+  tratado como igual a "6" só na hora de comparar). **Correção do humano:**
+  o jogo só ensina os números 1 a 6 — mostrar um "9" na tela confunde quem
+  está aprendendo a reconhecer esses 6 números, mesmo que a peça física
+  faça essa ambiguidade. Os dados (`SLOTS`, `GameScene.js`) e o desenho
+  sempre usam "6" agora; a comparação de igualdade não precisa mais de
+  nenhum tratamento especial.
 - A regra de encaixe foi testada matematicamente nas 12 arestas possíveis (6
   entre peça-vizinha e central, 6 entre peças vizinhas entre si) e todas
   batem — nenhuma peça toca outra só na "pontinha" sem regra, porque com a

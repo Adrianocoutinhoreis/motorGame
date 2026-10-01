@@ -27,7 +27,7 @@ const SLOTS = [
   { dir: 'cima-direita', anguloGraus: -30, seedK: 1, pieceJ: 4, numeros: [3, 4, 3, 2, 1, 3] },
   { dir: 'baixo-direita', anguloGraus: 30, seedK: 2, pieceJ: 5, numeros: [2, 2, 1, 1, 3, 3] },
   { dir: 'base', anguloGraus: 90, seedK: 3, pieceJ: 0, numeros: [2, 3, 1, 2, 6, 6] },
-  { dir: 'baixo-esquerda', anguloGraus: 150, seedK: 4, pieceJ: 1, numeros: [1, 9, 9, 1, 6, 1] },
+  { dir: 'baixo-esquerda', anguloGraus: 150, seedK: 4, pieceJ: 1, numeros: [1, 6, 6, 1, 6, 1] },
   { dir: 'cima-esquerda', anguloGraus: 210, seedK: 5, pieceJ: 2, numeros: [4, 6, 1, 1, 5, 3] },
 ];
 
@@ -66,15 +66,10 @@ const FOLGA_ENTRE_PECAS = 2;
 /** Redução leve das peças na montagem para deixar as junções mais limpas. */
 const ESCALA_PECAS_TABULEIRO = 0.96;
 
-/** Cor real de cada número (mesma fonte do config.js — ver ali o porquê do 6=9). */
+/** Cor real de cada número (mesma fonte do config.js). */
 const CORES_POR_NUMERO = {
-  1: '#2E8B7C', 2: '#D959A8', 3: '#4A3FA6', 4: '#E8B93B', 5: '#C2A878', 6: '#C1364B', 9: '#C1364B',
+  1: '#2E8B7C', 2: '#D959A8', 3: '#4A3FA6', 4: '#E8B93B', 5: '#C2A878', 6: '#C1364B',
 };
-
-/** 6 e 9 são o MESMO triângulo, só de cabeça para baixo — contam como iguais. */
-function normalizarNumero(n) {
-  return n === 9 ? 6 : n;
-}
 
 /** Número que aparece na posição-de-tela `j` (0..5), dada a peça girada `passos` vezes de 60°. */
 function numeroEm(numeros, j, passos) {
@@ -586,8 +581,7 @@ export class GameScene extends Scene {
 
   /**
    * A peça encaixa em `slot`? Compara o número que toca a central E, pra
-   * cada vizinho do anel que JÁ está colocado, o número que toca ele também
-   * — as 6 e 9 contam como iguais (`normalizarNumero`, ver topo do arquivo).
+   * cada vizinho do anel que JÁ está colocado, o número que toca ele também.
    */
   _validarEncaixe(slot, peca) {
     const slotIndex = this.slots.indexOf(slot);
@@ -595,7 +589,7 @@ export class GameScene extends Scene {
     // coincidência com a central podia deixar a montagem sem saída.
     if (peca.slotCorreto !== slotIndex) return false;
     const tocaCentral = numeroEm(peca.numeros, slot.def.pieceJ, peca.passos);
-    if (normalizarNumero(tocaCentral) !== normalizarNumero(NUMEROS_CENTRAL[slot.def.seedK])) return false;
+    if (tocaCentral !== NUMEROS_CENTRAL[slot.def.seedK]) return false;
 
     if (!this.nivel.validarVizinhos) return true;
 
@@ -608,8 +602,8 @@ export class GameScene extends Scene {
       else continue;
 
       if (!outroSlot.ocupada) continue;
-      const valorPeca = normalizarNumero(numeroEm(peca.numeros, jPeca, peca.passos));
-      const valorOutro = normalizarNumero(numeroEm(outroSlot.peca.numeros, jOutro, outroSlot.peca.passos));
+      const valorPeca = numeroEm(peca.numeros, jPeca, peca.passos);
+      const valorOutro = numeroEm(outroSlot.peca.numeros, jOutro, outroSlot.peca.passos);
       if (valorPeca !== valorOutro) return false;
     }
     return true;
