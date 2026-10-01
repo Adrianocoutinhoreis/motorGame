@@ -175,21 +175,23 @@ class Trilha extends Node {
   /**
    * SEM silhueta do que falta — nem formato, nem contorno pontilhado. Mostrar
    * a forma esperada na própria trilha entregava a resposta de graça (bastava
-   * casar o contorno, sem nunca olhar pra cartela). A única pista aqui é a
-   * ripa central (feedback de "essa é a trilha mais perto", não "essa é a
-   * peça certa") — quem decide o que vai em cada posição é SEMPRE a cartela.
+   * casar o contorno, sem nunca olhar pra cartela) — quem decide o que vai em
+   * cada posição é SEMPRE a cartela. As linhas divisórias entre trilhas são
+   * desenhadas à parte (`Divisores`, no ESPAÇO entre colunas, nunca em cima
+   * de uma peça) — uma ripa correndo pelo MEIO de cada trilha, por cima de
+   * onde a peça se encaixa, ficava desalinhada (trilha e vão têm larguras
+   * diferentes) e foi trocada por isso a pedido do humano. Aqui só sobra um
+   * realce liso (sem forma) quando a trilha é o alvo do arrasto.
    */
   desenhar(ctx) {
-    ctx.save();
-    const cx = this.tam / 2;
-    ctx.strokeStyle = this.destacada ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.32)';
-    ctx.lineWidth = this.destacada ? 5 : 3;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(cx, 6);
-    ctx.lineTo(cx, this.altura - 6);
-    ctx.stroke();
-    ctx.restore();
+    if (this.destacada) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, this.largura, this.altura, 10);
+      ctx.fill();
+      ctx.restore();
+    }
 
     for (let i = 0; i < this.proximo; i++) {
       const cel = this.sequencia[i];
@@ -204,6 +206,32 @@ class Trilha extends Node {
       ctx.stroke();
       ctx.restore();
     }
+  }
+}
+
+/**
+ * Divisores — as ripas verticais ENTRE as trilhas (não por cima delas), no
+ * mesmo espírito das linhas pretas entre colunas da `CartelaPainel`. Fica por
+ * baixo do próprio painel de fundo, então só é visível no VÃO entre uma
+ * trilha e a próxima.
+ */
+class Divisores extends Node {
+  constructor(xsRelativos, altura, largura) {
+    super({ largura, altura });
+    this.xsRelativos = xsRelativos;
+  }
+
+  desenhar(ctx) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    for (const x of this.xsRelativos) {
+      ctx.beginPath();
+      ctx.moveTo(x, 10);
+      ctx.lineTo(x, this.altura - 10);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 }
 
@@ -501,6 +529,21 @@ export class GameScene extends Scene {
 
     const larguraGradeTrilhas = nivel.trilhas * tam + (nivel.trilhas - 1) * gapTrilha;
     const inicioXTrilhas = xTrilhas + (larguraPainelTrilhas - larguraGradeTrilhas) / 2;
+
+    // Ripas divisórias NO VÃO entre uma trilha e a próxima (não em cima delas) —
+    // mesmo espírito das linhas entre colunas da cartela. `nivel.trilhas - 1`
+    // vãos; cada um no meio do gap entre a trilha `i` e a `i+1`.
+    if (nivel.trilhas > 1) {
+      const xsDivisores = [];
+      for (let i = 0; i < nivel.trilhas - 1; i++) {
+        const fimTrilha = inicioXTrilhas + i * (tam + gapTrilha) + tam;
+        xsDivisores.push((fimTrilha + gapTrilha / 2) - xTrilhas);
+      }
+      const divisores = new Divisores(xsDivisores, alturaPainelTrilhas, larguraPainelTrilhas);
+      divisores.x = xTrilhas;
+      divisores.y = yTrilhas;
+      this.area.adicionar(divisores);
+    }
 
     // A cartela se alinha verticalmente com a FILEIRA DE TRILHAS (não com o
     // bloco bandeja+trilhas inteiro) — é com elas que cada coluna corresponde

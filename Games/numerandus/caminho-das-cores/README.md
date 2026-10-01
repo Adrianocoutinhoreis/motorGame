@@ -38,10 +38,13 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
 3. **Sem silhueta do que falta na trilha** — a primeira versão desenhava um
    contorno pontilhado com o formato esperado em cada posição vazia; o humano
    apontou que isso entrega a resposta de graça (basta casar o contorno, sem
-   nunca olhar pra cartela). A trilha hoje só mostra uma ripa central —
-   nenhuma pista de formato ou cor — e o visual geral (ripas finas, sem caixa
-   por peça) foi ajustado pra ficar mais perto do brinquedo físico, a partir
-   de um esboço de referência do humano.
+   nunca olhar pra cartela). A trilha hoje não mostra pista nenhuma de formato
+   ou cor. A primeira correção trocou isso por uma ripa central por trilha,
+   mas o humano apontou que ela ficava desalinhada (a largura da trilha e a
+   do vão entre trilhas são diferentes) e pediu o espaçamento **entre** as
+   colunas — hoje as ripas são divisórias no vão entre uma trilha e a
+   próxima (`Divisores`), igual às linhas entre colunas da cartela, nunca por
+   cima de onde a peça se encaixa.
 4. **Fácil não podia ter só 3 peças no total** — a primeira proposta de
    níveis (Fácil = 3 trilhas × 1 peça) deixava o tabuleiro visualmente vazio
    e nunca exercitava a sequência (com 1 peça por trilha não existe "ordem").
