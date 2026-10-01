@@ -901,10 +901,37 @@ export class GameScene extends Scene {
 
     const raioContinha = Math.min(22, this._pecaH * 0.16);
     const gap = 14;
-    const larguraLinha = pendentes.length * (raioContinha * 2) + (pendentes.length - 1) * gap;
     const trilha = this._trilha;
-    const inicioX = trilha.x + Math.max(gap, (trilha.largura - larguraLinha) / 2) + raioContinha;
-    const y = trilha.y + trilha.altura / 2;
+
+    // Quebra em VÁRIAS FILEIRAS dentro da trilha em vez de uma fileira só —
+    // com números grandes (Difícil: até 10) e 3 peças por onda, a soma podia
+    // passar de 20 continhas, e uma fileira só não cabia na largura do
+    // painel: as últimas continhas nasciam fora da borda (visto no print,
+    // vazando pra direita). `porLinha` calcula quantas cabem de verdade na
+    // largura disponível; o resto desce pra fileira seguinte.
+    const padInterno = 20;
+    const larguraUtil = trilha.largura - padInterno * 2;
+    const celula = raioContinha * 2 + gap;
+    const porLinha = Math.max(1, Math.floor((larguraUtil + gap) / celula));
+    const totalLinhas = Math.ceil(pendentes.length / porLinha);
+    const alturaLinhas = totalLinhas * (raioContinha * 2) + (totalLinhas - 1) * gap;
+    const topoY = trilha.y + Math.max(padInterno, (trilha.altura - alturaLinhas) / 2) + raioContinha;
+
+    const posicaoDoIndice = (indice) => {
+      const linha = Math.floor(indice / porLinha);
+      const inicioLinha = linha * porLinha;
+      const nestaLinha = Math.min(porLinha, pendentes.length - inicioLinha);
+      const coluna = indice - inicioLinha;
+      // Cada fileira centralizada na largura do painel pelo seu PRÓPRIO
+      // total (a última fileira quase sempre tem menos continhas que as
+      // outras) — não pelo total geral, senão ela ficaria desalinhada.
+      const larguraLinha = nestaLinha * (raioContinha * 2) + (nestaLinha - 1) * gap;
+      const inicioX = trilha.x + (trilha.largura - larguraLinha) / 2 + raioContinha;
+      return {
+        x: inicioX + coluna * (raioContinha * 2 + gap),
+        y: topoY + linha * (raioContinha * 2 + gap),
+      };
+    };
 
     let i = 0;
     const passo = () => {
@@ -914,9 +941,9 @@ export class GameScene extends Scene {
         return;
       }
       const continha = new Continha(coresContinha[i % coresContinha.length], raioContinha);
-      const x = inicioX + i * (raioContinha * 2 + gap);
-      continha.x = x; continha.y = y;
-      continha.trayX = x; continha.trayY = y;
+      const p = posicaoDoIndice(i);
+      continha.x = p.x; continha.y = p.y;
+      continha.trayX = p.x; continha.trayY = p.y;
       continha.scaleX = 0; continha.scaleY = 0;
       this.area.adicionar(continha);
       this._continhas.push(continha);
