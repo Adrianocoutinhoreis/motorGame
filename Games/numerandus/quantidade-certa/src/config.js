@@ -215,8 +215,14 @@ function layoutFurosTutorial(n, safeW, safeH) {
 
 function desenharFurosTutorial(ctx, n, w, h, cores) {
   const r = w * 0.24;
-  const margemEsquerda = 14;
-  const margemDireita = r + 14;
+  // A peça de quantidade tem o NÓ saliente à ESQUERDA (`tracarQuantidadeTutorial`),
+  // não um entalhe à direita — é a margem esquerda que precisa da folga de `r`
+  // pra não desenhar furo em cima do bico do nó. Estava invertido (a folga de
+  // `r` ficava à direita, sobrando folga onde não precisa e faltando à
+  // esquerda), o que empurrava os furos pra cima do nó — visível no print com
+  // uma bolinha cortada pela curva do bico.
+  const margemEsquerda = r + 14;
+  const margemDireita = 14;
   const safeW = w - margemEsquerda - margemDireita;
   const safeH = h * 0.8;
   const marginTop = (h - safeH) / 2;
