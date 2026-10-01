@@ -60,8 +60,10 @@
 - [x] **Seleção de nível** (3 níveis) — tela padrão do motor
 - [x] **Partida** com HUD legível (relógio + progresso "X/Y" quando há mais de
       uma onda, pausa, ajuda, som) — testado nos 3 níveis
-- [x] **Pausa** — usa `PauseScreen` padrão; `Tween.pausarTodos()` congela peças,
-      continhas e a chuva em andamento
+- [x] **Pausa** — usa `PauseScreen` padrão; testado de verdade que
+      `_pausar()` cancela um arrasto em curso (peça/continha volta pro lugar)
+      E congela a chuva de continhas no meio (contagem não muda enquanto
+      pausado, retoma sozinha ao continuar)
 - [x] **Ajuda** na partida (regra RE-05) — testado chamando `_pedirAjuda()`
       de verdade: pausa a cena (`cena.pausada`), mostra o tutorial por cima
 - [x] **Resultado** para vitória — testado nos 3 níveis via captura
@@ -161,19 +163,27 @@ Mapeamento semântico **deste** jogo:
       ponta pelo caminho real do `Input.js`
 - [x] **Toque real da CONTINHA até o furo** — testado com `PointerEvent`
       sintético via CDP, mesmo caminho real do `Input.js`
-- [ ] **Replay/duplicata de mensagem AVA:** ainda não testado
-- [ ] `tools/ava-teste.html`: mensagem chegando ao pai — ainda não testado
-- [ ] Testado em iframe pequeno, médio e grande
+- [x] **Replay/duplicata de mensagem AVA:** testado via `tools/ava-teste.html`
+      — duas partidas seguidas geram "Partida #1" e "Partida #2" distintas,
+      cada uma válida nas 7 regras do contrato
+- [x] `tools/ava-teste.html`: mensagem chegando ao pai — testado de verdade
+      (não só por inspeção de código): cruza o `<iframe>`, valida type/números/
+      slug, nenhum dado de aluno
+- [x] Testado em iframe pequeno (menu e partida, nível Difícil com 3 números)
+      — renderiza sem cortar nem sobrepor; médio e grande ainda não
 - [ ] Testado com **toque em tablet real** (só toque sintético via CDP até agora)
-- [ ] Testado após trocar de aba e voltar
+- [x] Testado após trocar de aba — por INSPEÇÃO DE CÓDIGO (mecanismo genérico
+      do motor, `Game.js`: `visibilitychange` pausa/retoma o laço e o `dt` é
+      recalculado do zero ao voltar, nunca acumula o tempo escondido; mesma
+      garantia já usada no Chave Mágica/Encaixe Certo, não específica deste jogo)
 
 ## 8. Entrega
 
 - [x] `README.md` do jogo atualizado (o que é, como os dados foram definidos,
       como rodar, assets, pendências)
-- [ ] Este checklist com todos os itens fechados ou justificados — **narração
-      do tutorial, transcrições, toque real da continha, iframe/ava-teste/tablet
-      pendentes**
+- [ ] Este checklist com todos os itens fechados ou justificados — restam:
+      **narração do tutorial e transcrições, teste em tablet real** (toque de
+      dedo de verdade), **iframe médio/grande** e **zip gerado/aberto**
 - [x] `node tools/build.mjs numerandus/quantidade-certa` rodado
 - [x] Versão do motor conferida em `engine/version.json` dentro da pasta do jogo (v1.3.6)
 - [x] Pasta copiada para **fora** do projeto e testada — `teste-entrega-avulsa.mjs`

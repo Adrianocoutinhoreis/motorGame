@@ -890,7 +890,10 @@ export class GameScene extends Scene {
    */
   _iniciarChuvaDeContinhas() {
     this._faseAtual = 'chovendo';
-    const cores = rand.embaralhar([...CORES_CONTINHA, ...CORES_CONTINHA]);
+    // Nome explícito (não `cores`) pra não sombrear o token de tema importado
+    // no topo do arquivo — os dois nunca precisariam coexistir aqui, mas o
+    // nome genérico já causou confusão numa revisão.
+    const coresContinha = rand.embaralhar([...CORES_CONTINHA, ...CORES_CONTINHA]);
     const pendentes = [];
     for (const peca of this._pecasQuantidade) {
       for (let i = 0; i < peca.valor; i++) pendentes.push(true);
@@ -910,7 +913,7 @@ export class GameScene extends Scene {
         this._faseAtual = 'preenchendo';
         return;
       }
-      const continha = new Continha(cores[i % cores.length], raioContinha);
+      const continha = new Continha(coresContinha[i % coresContinha.length], raioContinha);
       const x = inicioX + i * (raioContinha * 2 + gap);
       continha.x = x; continha.y = y;
       continha.trayX = x; continha.trayY = y;
