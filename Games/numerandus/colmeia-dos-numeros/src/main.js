@@ -1,5 +1,5 @@
 /**
- * main.js — ponto de entrada de Caminho dos Números.
+ * main.js — ponto de entrada de Colmeia dos Números.
  *
  * Todo o encanamento (tokens, carregamento, telas padrão, laço, AVA) está no
  * motor. Aqui só se declara o config e a cena de partida.
@@ -15,7 +15,7 @@ iniciarJogo({
     jogando: GameScene,
   },
 }).catch((err) => {
-  console.error('[caminho-dos-numeros] não foi possível iniciar o jogo:', err);
+  console.error('[colmeia-dos-numeros] não foi possível iniciar o jogo:', err);
   const alvo = document.querySelector('#erro-fatal');
   if (alvo) {
     alvo.textContent = 'Não foi possível abrir o jogo. Recarregue a página.';

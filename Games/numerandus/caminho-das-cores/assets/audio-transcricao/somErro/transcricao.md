@@ -25,7 +25,7 @@
 Este áudio não foi ouvido — quem montou esta ficha não tem essa capacidade, e não há
 ferramenta de transcrição instalada neste ambiente. Duração de 0,34 s sugere um efeito
 curto (bipe/clunk), mas isso é inferência, não confirmação. As fichas equivalentes no
-Caminho dos Números, Jogo da Memória, Chave Mágica e Quantidade Certa registram a
+Colmeia dos Números, Jogo da Memória, Chave Mágica e Quantidade Certa registram a
 mesma pendência para a mesma cópia do arquivo (confirmado por hash).
 
 ## Onde é usado no jogo

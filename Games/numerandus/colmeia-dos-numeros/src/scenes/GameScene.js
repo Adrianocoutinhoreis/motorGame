@@ -228,7 +228,7 @@ class ContornoVazio extends Node {
 }
 
 /**
- * GameScene — a partida do Caminho dos Números.
+ * GameScene — a partida do Colmeia dos Números.
  *
  * Mecânica: uma peça central fixa fica no meio do tabuleiro; as outras 6
  * (todas as mesmas 7 peças reais do brinquedo, sempre) aparecem na bandeja.

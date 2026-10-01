@@ -118,7 +118,7 @@ usam imagem** — círculo, quadrado, triângulo e pentágono são desenhados vi
 |---|---|---|
 | `acertoSOS.wav` | Áudio, vitória | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
 | `soltar_peca.mp3` | Áudio, peça encaixada na trilha | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
-| `error.MP3` | Áudio, peça errada ou fora de ordem | Mesmo arquivo do Caminho dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
+| `error.MP3` | Áudio, peça errada ou fora de ordem | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 
 ## Pendências conhecidas
 

@@ -720,7 +720,7 @@ export class GameScene extends Scene {
     // -------------------------------------------------------------- layout
     // Dois cartões lado a lado, do mesmo tamanho — tabuleiro (fechaduras
     // fixas) e bandeja (chaves arrastáveis), mesmo plano de dois painéis do
-    // Caminho dos Números/Dino, só que aqui os dois lados são GRADES
+    // Colmeia dos Números/Dino, só que aqui os dois lados são GRADES
     // (sem flor nem ordem de pilha), então dividem a largura igualzinho.
     const margemLateral = 40;
     const topo = 108;

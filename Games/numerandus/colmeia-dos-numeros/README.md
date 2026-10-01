@@ -1,9 +1,9 @@
-# CAMINHO DOS NÚMEROS
+# COLMEIA DOS NÚMEROS
 
 Atividade educativa construída com o **Motor Educandus**.
 Esta pasta é **autossuficiente**: pode ser enviada sozinha para o AVA.
 
-- **Slug (campo `jogo` do AVA):** `caminho-dos-numeros`
+- **Slug (campo `jogo` do AVA):** `colmeia-dos-numeros`
 - **Faixa etária:** 7 a 9 anos (2º ano)
 - **Criado em:** 2026-09-23
 
@@ -44,7 +44,7 @@ O motor usa módulos ES, então abrir o `index.html` por `file://` **não funcio
 node tools/serve.mjs
 ```
 
-e abra `http://localhost:8080/Games/numerandus/caminho-dos-numeros/`.
+e abra `http://localhost:8080/Games/numerandus/colmeia-dos-numeros/`.
 
 Para ver a mensagem do AVA saindo de verdade, use o host de teste:
 `http://localhost:8080/tools/ava-teste.html`
@@ -55,7 +55,7 @@ Ao terminar uma partida (só vitória — este jogo não tem derrota, ver seçã
 do `CHECKLIST.md`), o jogo emite:
 
 ```js
-{ type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel, jogo: "caminho-dos-numeros" }
+{ type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel, jogo: "colmeia-dos-numeros" }
 ```
 
 `totalPerguntas` é sempre 6 (as 6 peças que vão ao redor da central — ela
@@ -69,7 +69,7 @@ O jogo não conhece aluno, `lo_id`, `activity_id`, XP ou nota — isso é do AVA
 ## Estrutura
 
 ```
-caminho-dos-numeros/
+colmeia-dos-numeros/
 ├── index.html      página do jogo
 ├── engine/         CÓPIA do motor — gerada por build, não editar
 ├── src/
@@ -128,6 +128,6 @@ brinquedo real, e esses vieram das fotos de referência (ver seção acima).
 ## Atualizar o motor neste jogo
 
 ```
-node tools/build.mjs numerandus/caminho-dos-numeros
-node tools/verificar-independencia.mjs numerandus/caminho-dos-numeros
+node tools/build.mjs numerandus/colmeia-dos-numeros
+node tools/verificar-independencia.mjs numerandus/colmeia-dos-numeros
 ```

@@ -1,9 +1,9 @@
-# Checklist — CAMINHO DOS NÚMEROS
+# Checklist — COLMEIA DOS NÚMEROS
 
 > Passos para este jogo ser considerado **concluído**. Marque conforme avança.
 > Um item que não se aplica deve ser **riscado com a justificativa**, nunca marcado por engano.
 >
-> Slug: `caminho-dos-numeros` · Criado em: 2026-09-23 · Motor: v1.3.5
+> Slug: `colmeia-dos-numeros` · Criado em: 2026-09-23 · Motor: v1.3.5
 
 ---
 
@@ -62,7 +62,7 @@
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR — testado (`tools/captura-cena.mjs`), sem mascote;
-      título oficial "CAMINHO DOS NÚMEROS" em caixa alta
+      título oficial "COLMEIA DOS NÚMEROS" em caixa alta
 - [x] **Tutorial** ilustrado e pulável — os 3 passos testados rodando
       (`tools/captura-cena.mjs`, `mostrarPasso(0..2)`), usando a MESMA geometria de desenho
       da partida (não uma peça genérica); narração ligada aos 3 passos
@@ -108,7 +108,7 @@ Mapeamento semântico **deste** jogo:
 | `acertos` | peças encaixadas certas (sempre as 6, ao final) | `6` |
 | `erros` | tentativas soltas no lugar certo mas com número errado, só demonstrativo | `0`, `1`, `2`… |
 | `nivel` | nível jogado (1 Fácil, 2 Médio, 3 Difícil) | `1`, `2` ou `3` |
-| `jogo` | slug estável | `caminho-dos-numeros` |
+| `jogo` | slug estável | `colmeia-dos-numeros` |
 
 - [x] Existe **um único** ponto de fim de partida (`irPara('resultado', { resultado })`, em `_terminar`)
 - [x] `type` é exatamente `"JOGO_CONCLUIDO"` (gerado pelo `AvaBridge`, não escrito à mão)
@@ -139,8 +139,8 @@ Mapeamento semântico **deste** jogo:
 ## 7. Validação (no navegador)
 
 - [x] `node tools/testes.mjs` passa (154 testes do motor, sem regressão)
-- [x] `node tools/verificar-independencia.mjs numerandus/caminho-dos-numeros` **aprovado**
-- [x] `node tools/teste-entrega-avulsa.mjs numerandus/caminho-dos-numeros` **aprovado**
+- [x] `node tools/verificar-independencia.mjs numerandus/colmeia-dos-numeros` **aprovado**
+- [x] `node tools/teste-entrega-avulsa.mjs numerandus/colmeia-dos-numeros` **aprovado**
       (11/11, 7 áudios carregados, zero erro de JS, zero 404)
 - [x] Jogo abre por `node tools/serve.mjs` sem **nenhuma** requisição externa (teste de entrega
       avulsa confirma)
@@ -164,7 +164,7 @@ Mapeamento semântico **deste** jogo:
       assets, pendências)
 - [ ] Este checklist com todos os itens fechados ou justificados — **áudio, tutorial rodando,
       teste em tablet real e teste de troca de aba pendentes**
-- [x] `node tools/build.mjs numerandus/caminho-dos-numeros` rodado
+- [x] `node tools/build.mjs numerandus/colmeia-dos-numeros` rodado
 - [x] Versão do motor conferida em `engine/version.json` dentro da pasta do jogo (v1.3.5)
 - [x] Pasta copiada para **fora** do projeto e testada — `teste-entrega-avulsa.mjs` cobre isso
       automaticamente (ver seção 7)

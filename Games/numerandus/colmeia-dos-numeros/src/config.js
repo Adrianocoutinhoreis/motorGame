@@ -1,5 +1,5 @@
 /**
- * config.js — o "formulário" do jogo Caminho dos Números.
+ * config.js — o "formulário" do jogo Colmeia dos Números.
  *
  * Leia junto: docs/CRIAR-JOGO.md, docs/CONTRATO-AVA.md e
  * docs/METODO-JOGOS-NUMERANDUS.md.
@@ -79,9 +79,9 @@ const NUMEROS_VIZINHA = [3, 4, 3, 2, 1, 3];
 
 export default {
   // ------------------------------------------------------------- identidade
-  slug: 'caminho-dos-numeros',
+  slug: 'colmeia-dos-numeros',
   // Nome oficial exibido em caixa alta em todas as telas e catálogos.
-  titulo: 'CAMINHO DOS NÚMEROS',
+  titulo: 'COLMEIA DOS NÚMEROS',
   subtitulo: 'Gire e encaixe os números iguais!',
 
   objetivo: 'Praticar a comparação de números (reconhecer iguais) e a orientação espacial, girando e arrastando peças reais de um quebra-cabeça geométrico até o número do lado que se toca ficar igual ao da peça vizinha.',

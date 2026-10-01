@@ -1,9 +1,9 @@
 ESTA PASTA É UMA CÓPIA GERADA. NÃO EDITE NADA AQUI.
 
 Motor:   Motor Educandus v1.3.6
-Jogo:    numerandus/caminho-dos-numeros
+Jogo:    numerandus/colmeia-dos-numeros
 
 Para alterar o motor, edite `engine/` na raiz do projeto e rode:
-    node tools/build.mjs numerandus/caminho-dos-numeros
+    node tools/build.mjs numerandus/colmeia-dos-numeros
 
 Qualquer edição feita diretamente aqui será apagada na próxima build.
