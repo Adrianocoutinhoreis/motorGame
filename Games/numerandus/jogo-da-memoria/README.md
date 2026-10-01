@@ -151,10 +151,11 @@ projeto-fonte Remotion, consistente com o resto do motor.
   da regra "errar não pode humilhar" (`docs/DESIGN.md`).
 - **Sem `escolhaNivel`/`falaVitoria`** — esses dois áudios específicos não foram fornecidos
   (só os 3 do tutorial vieram), narrações opcionais do motor compartilhado.
-- **`error.MP3` (som de erro) ainda não foi ouvido.** Ficha 🔴 NÃO VERIFICADA em
-  `assets/audio-transcricao/erro/`. Se for uma voz reprovadora (não um efeito neutro),
-  contraria "errar não pode humilhar" (`docs/DESIGN.md`) — e pesa mais aqui, porque o jogo
-  inteiro é desenhado para nunca punir o erro. Falta: ouvir e atualizar a ficha.
+- **`error.MP3` (som de erro) ainda não foi ouvido aqui.** Ficha 🔴 NÃO VERIFICADA em
+  `assets/audio-transcricao/erro/`. É o mesmo arquivo (mesmo SHA-256) já usado e aceito
+  como som de erro em Quantidade Certa — a pendência de ouvir com atenção ao tom
+  ("errar não pode humilhar", `docs/DESIGN.md`) é a mesma, só que compartilhada entre os
+  jogos que usam esta cópia.
 - **Sem música de fundo** — mesma regra do motor: som só de arquivo gravado, nunca
   sintetizado.
 - **Renderização de emoji varia entre sistemas** (Segoe UI Emoji no Windows, Noto Color

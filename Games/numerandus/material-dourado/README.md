@@ -119,7 +119,7 @@ material-dourado/
 | `assets/audio/tela1.wav` … `tela5.wav` | Narração dos 5 passos do tutorial | Fornecido pelo humano nesta sessão. `id` de cada asset (`tutorialTela1-5`) bate com o `fala` de cada passo em `config.tutorial` — mesmo padrão do Jogo da Memória. |
 | `assets/audio/acertoSOS.wav` | Efeito de vitória (tela de resultado) | **Cópia** do mesmo `acertoSOS.wav` já usado no resto da coleção (Jogo da Memória, Encaixe Certo, Bingo, etc.) — sem fala, serve a qualquer jogo. Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
 | `assets/audio/soltar_peca.mp3` | Clique universal (tocar peça pra somar/tirar, botões de pausa/ajuda/som) | **Cópia** do `soltar_peca.mp3` do Jogo da Ordenação — lá é o som de "peça encaixou", reaproveitado aqui como o clique genérico (`somClique`). Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
-| `assets/audio/error.MP3` | Efeito de confirmar errado | **Cópia** do `error.MP3` do Jogo da Memória (`somErro`) — **não verificado por humano nenhum ainda** (o próprio Jogo da Memória documenta essa ficha como "não verificada"). Risco real: se soar reprovador, contraria o princípio deste jogo ("errar só demora mais, nunca perde nada") — ouvir com atenção antes de considerar definitivo. |
+| `assets/audio/error.MP3` | Efeito de confirmar errado | **Cópia** do `error.MP3` do Jogo da Memória (`somErro`) — mesmo arquivo (mesmo SHA-256) já usado e aceito como som de erro em Quantidade Certa, mas **ainda não verificado por humano aqui**. Risco real: se soar reprovador, contraria o princípio deste jogo ("errar só demora mais, nunca perde nada") — ouvir com atenção antes de considerar definitivo. |
 
 Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 
@@ -127,10 +127,11 @@ Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 
 > Liste aqui, com honestidade, o que ainda falta.
 
-- **`error.MP3` (efeito de erro) ainda não foi ouvido por um humano nesta sessão** — copiado do Jogo
-  da Memória, que já documenta essa mesma ficha como "não verificada". Se ao ouvir soar como um
-  "errou!" áspero ou reprovador, precisa ser trocado: este jogo não pode punir nem humilhar quem
-  erra, é o oposto do que "contar e trocar" tenta ensinar.
+- **`error.MP3` (efeito de erro) ainda não foi ouvido por um humano aqui** — copiado do Jogo
+  da Memória, mesmo arquivo (mesmo SHA-256) já usado e aceito como som de erro em Quantidade
+  Certa. Se ao ouvir soar como um "errou!" áspero ou reprovador, precisa ser trocado: este
+  jogo não pode punir nem humilhar quem erra, é o oposto do que "contar e trocar" tenta
+  ensinar.
 - **Narração do tutorial (5/5), clique, erro e efeito de vitória gravados, resto do áudio ainda
   não.** `config.audio` tem `progresso` (`somProgresso`), `clique` (`somClique`), `erro` (`somErro`)
   e `vitoria` (`acertoSOS`) ligados — falta efeito de acerto (número formado certo, diferente do

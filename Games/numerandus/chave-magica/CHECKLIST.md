@@ -42,16 +42,18 @@
 - [x] Efeito de vitória presente — `acertoSOS.wav`, mesmo tradicional da coleção
 - [x] Efeito de encaixe certo presente — `soltar_peca.mp3` — origem/licença a confirmar
       (pendência compartilhada com outros jogos)
-- [ ] Efeito de erro (`error.MP3`) e de derrota (`erroSOS.wav`) presentes, mas
-      **nenhum dos dois foi ouvido** — fichas "não verificada"
+- [ ] Efeito de erro/derrota (`error.MP3`, um só arquivo pros dois papéis, mesmo som já
+      usado e aprovado em Quantidade Certa) presente, mas **ainda não foi ouvido** aqui
+      — ficha "não verificada" (antes a derrota tinha um som próprio, `erroSOS.wav`;
+      removido para padronizar no som já usado em Quantidade Certa)
 - [ ] Efeito de clique genérico — ainda falta (`config.audio.clique` continua `null`)
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [x] Ficha de transcrição criada para cada áudio existente (7 arquivos)
-- [ ] Transcrições **confirmadas ouvindo** — só 2 dos 7 áudios são "confirmado por
-      natureza" (sem fala); `error.MP3`, `erroSOS.wav` e os 3 da narração do tutorial
-      (transcrição inferida do texto da tela, não ouvida) ainda precisam ser ouvidos
+- [x] Ficha de transcrição criada para cada áudio existente (6 arquivos)
+- [ ] Transcrições **confirmadas ouvindo** — só 2 dos 6 áudios são "confirmado por
+      natureza" (sem fala); `error.MP3` e os 3 da narração do tutorial (transcrição
+      inferida do texto da tela, não ouvida) ainda precisam ser ouvidos
 - [x] Pendências de áudio ainda não gravado/ouvido listadas explicitamente no `README.md`
 
 ## 3. Telas

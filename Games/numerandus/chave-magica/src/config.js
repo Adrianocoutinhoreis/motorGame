@@ -193,11 +193,12 @@ export default {
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     // Encaixe correto — mesmo som de "assentar" do Material Dourado/Dino/Geométrico.
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
-    // Tentativa errada (formato não bate) — mesmo do Jogo da Memória/Geométrico.
+    // Tentativa errada (formato não bate) E derrota (vidas ou tempo zerados) —
+    // mesmo som pros dois casos, mesmo arquivo do Jogo da Memória/Geométrico/
+    // Quantidade Certa. Antes a derrota tinha um som próprio (`erroSOS.wav`,
+    // nunca ouvido); decisão do humano foi padronizar no som já usado e
+    // aprovado em Quantidade Certa em vez de manter um segundo som sem ouvir.
     { id: 'somErro', src: './assets/audio/error.MP3' },
-    // Derrota (vidas ou tempo zerados) — mesmo do Jogo dos Blocos, único outro
-    // jogo do motor com derrota de verdade até agora.
-    { id: 'erroSOS', src: './assets/audio/erroSOS.wav' },
     // Narração dos 3 passos do tutorial — os ids batem com `tutorial[i].fala`
     // acima. Sem eles o passo tocava mudo (ver comentário em
     // `TutorialScreen._exibirPasso`); a mesma lista também narra a AJUDA
@@ -215,7 +216,7 @@ export default {
     acerto: 'soltarPeca',
     erro: 'somErro',
     vitoria: 'acertoSOS',
-    derrota: 'erroSOS',
+    derrota: 'somErro',
     abertura: null,
   },
 

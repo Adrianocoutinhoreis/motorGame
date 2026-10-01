@@ -103,20 +103,19 @@ canvas.
 |---|---|---|
 | `acertoSOS.wav` | Áudio, vitória | Mesmo arquivo de toda a coleção Numerandus — ver `assets/audio-transcricao/acertoSOS/transcricao.md` |
 | `soltar_peca.mp3` | Áudio, encaixe certo | Mesmo arquivo do Material Dourado/Dino/Encaixe Certo/Geométrico — origem/licença a confirmar, ver `assets/audio-transcricao/soltarPeca/transcricao.md` |
-| `error.MP3` | Áudio, encaixe errado (custa 1 vida) | Mesmo arquivo do Jogo da Memória/Geométrico — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
-| `erroSOS.wav` | Áudio, derrota | Mesmo arquivo do Jogo dos Blocos — ainda não ouvido, ver `assets/audio-transcricao/erroSOS/transcricao.md` |
+| `error.MP3` | Áudio, encaixe errado (custa 1 vida) **e** derrota | Mesmo arquivo do Jogo da Memória/Geométrico/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md`. Usado nos dois papéis (antes a derrota tinha um som próprio, `erroSOS.wav`; removido — decisão do humano de padronizar no som já usado em Quantidade Certa em vez de manter um segundo arquivo sem ouvir) |
 | `tutorial/tela1.wav`, `tela2.wav`, `tela3.wav` | Áudio, narração dos 3 passos do tutorial | Fornecidos prontos pelo humano nesta sessão — origem/licença a confirmar, transcrição só INFERIDA (não ouvida ainda), ver `assets/audio-transcricao/tutorialTela{1,2,3}/transcricao.md` |
 
 ## Pendências conhecidas
 
 - **Áudio de clique genérico** — ainda não gravado (`config.audio.clique` continua `null`).
-- **`error.MP3`, `erroSOS.wav` e a narração do tutorial (`tela1/2/3.wav`) não foram
-  ouvidos** — todos têm ficha "não verificada"/"inferida". Para os dois primeiros, o
-  risco pedagógico é maior que nos outros jogos que reusam esses arquivos: se qualquer um
-  for uma fala reprovadora, conflita direto com a derrota já sendo uma experiência mais
-  dura que o resto da coleção. Para a narração, a transcrição nas fichas foi inferida do
-  texto escrito na tela (mesmo título + corpo, mesma ordem tela1..tela3) — precisa ouvir
-  pra confirmar que a gravação bate com o texto.
+- **`error.MP3` e a narração do tutorial (`tela1/2/3.wav`) não foram ouvidos** — todos
+  têm ficha "não verificada"/"inferida". Para o primeiro, o risco pedagógico é maior que
+  nos outros jogos que reusam o arquivo: toca tanto na tentativa errada (custa 1 vida)
+  quanto na derrota — se for uma fala reprovadora, conflita direto com a derrota já sendo
+  uma experiência mais dura que o resto da coleção. Para a narração, a transcrição nas
+  fichas foi inferida do texto escrito na tela (mesmo título + corpo, mesma ordem
+  tela1..tela3) — precisa ouvir pra confirmar que a gravação bate com o texto.
 - **Origem/licença de `soltar_peca.mp3` e da narração do tutorial** — mesma pendência já
   registrada nos outros jogos que usam `soltar_peca.mp3`; a narração foi entregue pronta
   nesta sessão, sem registro de quem gravou.
