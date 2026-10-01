@@ -110,14 +110,17 @@ canvas.
 |---|---|---|
 | `acertoSOS.wav` | Áudio, vitória | Mesmo arquivo já usado pelo Encaixe Certo/Jogo da Velha/coleção Numerandus |
 | `soltar_peca.mp3` | Áudio, encaixe (peça no número **e** continha no furo) | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Dino/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
+| `error.MP3` | Áudio, peça de quantidade num número errado | Mesmo arquivo do Quebra-Cabeça Geométrico/Jogo da Memória/Chave Mágica — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 
 ## Pendências conhecidas
 
-- **Um só efeito sonoro para dois gestos diferentes** — `soltar_peca.mp3` toca
+- **Um só efeito sonoro para dois gestos de encaixe** — `soltar_peca.mp3` toca
   tanto quando a peça de quantidade encaixa no número quanto quando uma
   continha entra num furo. Funciona (mesmo gesto central: "encaixar"), mas um
   som dedicado para a etapa das continhas poderia diferenciar melhor as duas
   conquistas.
+- **`error.MP3` não foi ouvido** — ficha "não verificada", mesma pendência já
+  registrada nos outros jogos que usam este arquivo.
 - **Sem narração do tutorial** — os 3 passos têm `fala:` apontando pra ids
   (`tutorialTela1/2/3`) que ainda não têm arquivo em `config.assets`.
 - **Sem áudio de clique genérico** (`config.audio.clique` continua `null`) —

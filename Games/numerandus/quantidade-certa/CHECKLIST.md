@@ -40,16 +40,18 @@
 - [x] Efeito de vitória presente — `acertoSOS.wav`, mesmo tradicional da coleção
 - [x] Efeito de encaixe presente — `soltar_peca.mp3`, reaproveitado para os
       dois gestos de encaixar (peça no número e continha no furo)
+- [x] Efeito de erro presente — `error.MP3`/`somErro`, mesmo arquivo do
+      Quebra-Cabeça Geométrico (copiado a pedido do humano), tocado quando a
+      peça de quantidade não bate com o número
 - [ ] Efeito de clique genérico — ainda falta (`config.audio.clique` continua `null`,
       mesma decisão já tomada no Encaixe Certo)
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [ ] Ficha de transcrição por áudio (`assets/audio-transcricao/<id>/transcricao.md`)
-      — pendente; os 2 arquivos já têm ficha equivalente nos jogos de onde
-      foram copiados (Encaixe Certo), mas não uma cópia local ainda
-- [ ] Transcrições confirmadas ouvindo — mesma pendência já registrada nos
-      jogos que compartilham estes arquivos
+- [x] Ficha de transcrição criada para os 3 áudios
+      (`assets/audio-transcricao/<id>/transcricao.md`)
+- [ ] Transcrições confirmadas ouvindo — só 2 dos 3 áudios são "confirmado por
+      natureza" (sem fala); `error.MP3` ainda precisa ser ouvido
 - [x] Pendências de áudio listadas explicitamente no `README.md`
 
 ## 3. Telas
@@ -82,8 +84,9 @@
       preenchido muda de cor na hora, peça completa dá um pulinho
       (`_celebrarPeca`) — e som (`soltar_peca.mp3`) nos dois gestos
 - [x] Feedback **imediato** de erro (só na etapa 1: peça no número errado) —
-      a peça não gruda e volta pra trilha, sem tom punitivo (nunca vermelho,
-      nenhum som negativo, só "não coube aqui")
+      a peça não gruda e volta pra trilha, sem tom punitivo visual (nunca
+      vermelho); toca `somErro` (`error.MP3`, mesmo arquivo do Quebra-Cabeça
+      Geométrico), testado sem lançar erro e com o asset carregando
 - [x] Dificuldade dos níveis testada de verdade — Fácil (3 pares, até 5),
       Médio (5 pares, até 8) e Difícil (7 pares, até 10, 3 ondas) confirmados
       via captura e via fluxo completo até a vitória
@@ -146,7 +149,7 @@ Mapeamento semântico **deste** jogo:
 - [x] `node tools/testes.mjs` passa (154 testes do motor, sem regressão)
 - [x] `node tools/verificar-independencia.mjs numerandus/quantidade-certa` **aprovado**
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/quantidade-certa` **aprovado**
-      (11/11, 2 áudios carregados, zero erro de JS, zero 404)
+      (11/11, 3 áudios carregados, zero erro de JS, zero 404)
 - [x] Jogo abre por `node tools/serve.mjs` sem **nenhuma** requisição externa
       (teste de entrega avulsa confirma)
 - [x] Fluxo Menu → Tutorial → Níveis → Partida → Resultado percorrido, sem travar

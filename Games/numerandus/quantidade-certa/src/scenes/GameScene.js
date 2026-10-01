@@ -811,7 +811,10 @@ export class GameScene extends Scene {
         }
         return;
       }
-      if (perto) this._tentativasErradas += 1;
+      if (perto) {
+        this._tentativasErradas += 1;
+        if (this.config.audio?.erro) this.audio.efeito(this.config.audio.erro);
+      }
     }
     Tween.removerDe(peca);
     Tween.para(peca, { x: peca.trayX, y: peca.trayY }, 220, Easing.suaveSaida);

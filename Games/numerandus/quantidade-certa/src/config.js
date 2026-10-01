@@ -105,15 +105,19 @@ export default {
 
   // ------------------------------------------------------------------ áudio
   /**
-   * Reaproveita os mesmos arquivos já aprovados no Encaixe Certo/resto da
-   * coleção (mesmo som de "encaixar" tanto para a peça de quantidade quanto
-   * para cada continha — os dois são o mesmo gesto central, encaixar algo
-   * num lugar vazio). Sem som de clique genérico (mesma decisão do Encaixe
-   * Certo/Jogo da Ordenação): som só onde é gameplay de verdade.
+   * Reaproveita arquivos já aprovados no resto da coleção: mesmo som de
+   * "encaixar" tanto para a peça de quantidade quanto para cada continha (os
+   * dois são o mesmo gesto central, encaixar algo num lugar vazio), e o
+   * mesmo som de erro do Quebra-Cabeça Geométrico (`somErro`/`error.MP3` —
+   * também já usado no Jogo da Memória/Chave Mágica) para a peça de
+   * quantidade que não bate com o número. Sem som de clique genérico (mesma
+   * decisão do Encaixe Certo/Jogo da Ordenação): som só onde é gameplay de
+   * verdade.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
+    { id: 'somErro', src: './assets/audio/error.MP3' },
   ],
 
   /** Sem mascote — o tabuleiro é a área de maior destaque, mesma decisão do Encaixe Certo. */
@@ -124,7 +128,7 @@ export default {
     clique: null,
     soltar: 'soltarPeca',
     acerto: null,
-    erro: null,
+    erro: 'somErro',
     vitoria: 'acertoSOS',
     derrota: null,
     abertura: null,
