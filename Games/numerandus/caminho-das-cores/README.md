@@ -78,10 +78,27 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
    peças por trilha. `config.mostrarCronometro` virou `false`: o brinquedo de
    verdade não tem cronômetro, e o relógio ao vivo saiu do HUD (continua
    pausa, ajuda e som).
+8. **Tabuleiro ganha visual de madeira, colunas esticam pra preencher a
+   largura** — uma foto do brinquedo físico (mandada pelo humano, com um X
+   vermelho marcando a sobra de espaço vazio nas laterais das colunas) pediu
+   duas mudanças de uma vez: (a) o painel direito troca o fundo liso/roxo
+   translúcido por uma pintura de madeira (`TabuleiroVisual`) — uma
+   "prateleira" (madeira clara) onde as peças soltas sentam, uma viga grossa
+   (madeira escura) dividindo, e colunas (madeira escura) descendo até a base,
+   tudo sobre um fundo bege claro; (b) as colunas, que antes tinham a largura
+   da PEÇA (`tam`) centralizadas com sobra morta dos dois lados, agora
+   ESTICAM pra preencher a largura inteira do tabuleiro, lado a lado com um
+   vão fino entre elas — a peça continua do tamanho de sempre, só centralizada
+   dentro da coluna mais larga (`Trilha` ganhou um parâmetro `larguraColuna`
+   separado de `tam` só pra isso). As cores reaproveitam os tokens de madeira
+   já existentes no motor (`cores.madeira`/`madeiraEscura`, usados no tema
+   'quarto' do `Background`), em vez de inventar uma paleta nova.
 
-**Tema visual:** fundo liso (sem gradiente, sem decoração) — o conteúdo já é
-visualmente carregado (várias cores/formatos ao mesmo tempo); o fundo não
-deveria competir por atenção. Sem mascote — decisão do humano para este jogo.
+**Tema visual:** o fundo da TELA (atrás do tabuleiro) continua liso e escuro
+— ainda é o conteúdo colorido (peças, tabuleiro) que deveria chamar atenção,
+não o fundo. O TABULEIRO em si, desde a correção 8, imita madeira de verdade
+(mais fiel à foto do brinquedo físico do que um painel liso). Sem mascote —
+decisão do humano para este jogo.
 
 ## Como rodar localmente
 

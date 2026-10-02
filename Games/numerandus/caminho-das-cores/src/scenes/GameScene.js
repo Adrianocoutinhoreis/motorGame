@@ -128,9 +128,6 @@ class Peca extends Node {
     ctx.fillStyle = this.cor;
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
-    ctx.stroke();
     ctx.restore();
   }
 }
@@ -144,9 +141,17 @@ class Peca extends Node {
  * fica representando o resultado é a própria trilha.
  */
 class Trilha extends Node {
-  constructor(sequencia, tam, gapSlot, padY) {
+  /**
+   * `larguraColuna` é a largura VISUAL do canal de madeira (estica pra
+   * preencher o tabuleiro, sem sobra nas laterais — correção pedida pelo
+   * humano com um X vermelho na referência) — pode ser bem maior que `tam`
+   * (o tamanho da peça); a peça sempre fica CENTRALIZADA dentro da coluna,
+   * nunca esticada/achatada. Sem o parâmetro, cai de volta pra `tam` (mesmo
+   * de antes).
+   */
+  constructor(sequencia, tam, gapSlot, padY, larguraColuna) {
     const altura = sequencia.length * tam + (sequencia.length - 1) * gapSlot + padY * 2;
-    const largura = tam;
+    const largura = larguraColuna ?? tam;
     super({ largura, altura });
     this.sequencia = sequencia;
     this.tam = tam;
@@ -161,7 +166,7 @@ class Trilha extends Node {
   /** Centro (em coordenadas do PAI, já somando `this.x/y`) do slot de índice `i`. */
   _centroDoSlot(i) {
     return {
-      x: this.x + this.tam / 2,
+      x: this.x + this.largura / 2,
       y: this.y + this.altura - this.padY - this.tam / 2 - i * (this.tam + this.gapSlot),
     };
   }
@@ -176,17 +181,14 @@ class Trilha extends Node {
    * SEM silhueta do que falta — nem formato, nem contorno pontilhado. Mostrar
    * a forma esperada na própria trilha entregava a resposta de graça (bastava
    * casar o contorno, sem nunca olhar pra cartela) — quem decide o que vai em
-   * cada posição é SEMPRE a cartela. As linhas divisórias entre trilhas são
-   * desenhadas à parte (`Divisores`, no ESPAÇO entre colunas, nunca em cima
-   * de uma peça) — uma ripa correndo pelo MEIO de cada trilha, por cima de
-   * onde a peça se encaixa, ficava desalinhada (trilha e vão têm larguras
-   * diferentes) e foi trocada por isso a pedido do humano. Aqui só sobra um
-   * realce liso (sem forma) quando a trilha é o alvo do arrasto.
+   * cada posição é SEMPRE a cartela. O canal de madeira em si (a cor marrom
+   * da coluna) é pintado pelo `TabuleiroVisual`, por baixo; aqui só sobram as
+   * peças já travadas e o realce de arrasto.
    */
   desenhar(ctx) {
     if (this.destacada) {
       ctx.save();
-      ctx.fillStyle = 'rgba(255,255,255,0.10)';
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
       ctx.beginPath();
       ctx.roundRect(0, 0, this.largura, this.altura, 10);
       ctx.fill();
@@ -197,64 +199,93 @@ class Trilha extends Node {
       const cel = this.sequencia[i];
       const cy = this.altura - this.padY - this.tam / 2 - i * (this.tam + this.gapSlot);
       ctx.save();
-      ctx.translate(0, cy - this.tam / 2);
+      ctx.translate((this.largura - this.tam) / 2, cy - this.tam / 2);
       tracarForma(ctx, cel.forma, this.tam);
       ctx.fillStyle = cel.cor;
       ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(0,0,0,0.22)';
-      ctx.stroke();
       ctx.restore();
     }
   }
 }
 
-/**
- * Divisores — as ripas verticais ENTRE as trilhas (não por cima delas), no
- * mesmo espírito das linhas pretas entre colunas da `CartelaPainel`. Fica por
- * baixo do próprio painel de fundo, então só é visível no VÃO entre uma
- * trilha e a próxima.
- */
-class Divisores extends Node {
-  constructor(xsRelativos, altura, largura) {
-    super({ largura, altura });
-    this.xsRelativos = xsRelativos;
+/** Tabuleiro visual imitando o painel físico de MDF do vídeo. */
+class TabuleiroVisual extends Node {
+  constructor(opcoes) {
+    super(opcoes);
+    this.corFundo = '#E1D3C1'; // Madeira clara
+    this.corCanaleta = '#8A6E59'; // Madeira escura/fundo
+
+    this.tamPeca = opcoes.tamPeca;
+    this.gapTrilha = opcoes.gapTrilha;
+    this.padPanelX = opcoes.padPanelX;
+    this.padPanelTopo = opcoes.padPanelTopo;
+    this.alturaBandeja = opcoes.alturaBandeja;
+    this.espessuraDivisor = 10;
+    this.numTrilhas = opcoes.numTrilhas;
+    this.alturaCanaletaHoriz = this.tamPeca + 12;
+    this.gapSlot = opcoes.gapSlot;
+    this.padTrilhaY = opcoes.padTrilhaY;
+    this.profundidade = opcoes.profundidade;
   }
 
   desenhar(ctx) {
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 2;
-    for (const x of this.xsRelativos) {
-      ctx.beginPath();
-      ctx.moveTo(x, 10);
-      ctx.lineTo(x, this.altura - 10);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-}
-
-/**
- * DivisorFormasColunas — uma única ripa HORIZONTAL dentro do painel direito,
- * separando a zona das peças soltas (topo) da zona das trilhas (embaixo) —
- * layout pedido pelo humano a partir do rascunho do vídeo: um painel só,
- * "GEOMÉTRICO" em cima, colunas embaixo, em vez de uma bandeja à parte numa
- * faixa inteira sob a fileira cartela+trilhas (versão anterior).
- */
-class DivisorFormasColunas extends Node {
-  constructor(largura) {
-    super({ largura, altura: 1 });
-  }
-
-  desenhar(ctx) {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 2;
+    
+    // 1. Fundo (Madeira Clara)
+    ctx.fillStyle = this.corFundo;
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 4;
     ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.lineTo(this.largura - 10, 0);
+    ctx.roundRect(0, 0, this.largura, this.altura, 8);
+    ctx.fill();
+    
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.stroke();
+
+    // 2. Canaletas (Madeira Escura)
+    ctx.fillStyle = this.corCanaleta;
+
+    // A. Piscina no topo
+    const piscinaX = this.padPanelX;
+    const piscinaY = this.padPanelTopo;
+    const piscinaW = this.largura - this.padPanelX * 2;
+    const piscinaH = this.alturaBandeja;
+    ctx.fillRect(piscinaX, piscinaY, piscinaW, piscinaH);
+
+    // B. Canaleta Horizontal
+    const chY = piscinaY + piscinaH + this.espessuraDivisor;
+    const chH = this.alturaCanaletaHoriz;
+    ctx.fillRect(piscinaX, chY, piscinaW, chH);
+
+    // C. Buraco na esquerda (ligação da piscina com a canaleta horizontal)
+    // As colunas agora ESTICAM pra preencher `piscinaW` inteira (sem sobra nas
+    // laterais — correção pedida pelo humano com um X vermelho na referência,
+    // ver `Trilha`/`_construirRodada`), em vez de uma grade estreita do
+    // tamanho da PEÇA centralizada com folga morta dos dois lados.
+    const larguraColuna = (piscinaW - (this.numTrilhas - 1) * this.gapTrilha) / this.numTrilhas;
+    const inicioXTrilhas = piscinaX;
+    const buracoW = larguraColuna + 16;
+    ctx.fillRect(inicioXTrilhas - 8, piscinaY + piscinaH, buracoW, this.espessuraDivisor);
+
+    // D. Trilhas verticais
+    for (let i = 0; i < this.numTrilhas; i++) {
+       const tx = inicioXTrilhas + i * (larguraColuna + this.gapTrilha);
+       const ty = chY + chH;
+       const tw = larguraColuna;
+       // Trilha vai até o fundo do tabuleiro
+       const th = this.altura - this.padPanelX - ty;
+       ctx.fillRect(tx, ty, tw, th);
+    }
+    
+    // Sombras internas nas canaletas para dar profundidade (opcional)
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(piscinaX, piscinaY, piscinaW, piscinaH);
+    ctx.strokeRect(piscinaX, chY, piscinaW, chH);
+    
     ctx.restore();
   }
 }
@@ -306,41 +337,13 @@ class CartelaPainel extends Node {
         tracarForma(ctx, cel.forma, this.tam);
         ctx.fillStyle = cel.cor;
         ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-        ctx.stroke();
         ctx.restore();
       });
     });
   }
 }
 
-/** PainelZona — cartão de fundo arredondado. Mesmo visual do Encaixe Certo/Quantidade Certa. */
-class PainelZona extends Node {
-  constructor({ largura, altura, cor, bordaCor = null }) {
-    super({ largura, altura });
-    this.cor = cor;
-    this.bordaCor = bordaCor;
-  }
 
-  desenhar(ctx) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.22)';
-    ctx.shadowBlur = 16;
-    ctx.shadowOffsetY = 6;
-    ctx.fillStyle = this.cor;
-    ctx.beginPath();
-    ctx.roundRect(0, 0, this.largura, this.altura, 22);
-    ctx.fill();
-    if (this.bordaCor) {
-      ctx.shadowColor = 'transparent';
-      ctx.strokeStyle = this.bordaCor;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-}
 
 /** Badge do cronômetro — mesmo visual do Encaixe Certo/Quantidade Certa. */
 class RelogioBadge extends Node {
@@ -430,12 +433,16 @@ export class GameScene extends Scene {
     this.aoDesmontar(this.input.on('cancelar', () => this._soltarArrasto()));
 
     // ------------------------------------------------------------------ HUD
-    this.adicionar(new IconButton({
-      icone: 'pausa', x: espaco.md, y: espaco.md, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pausar(),
-    }));
-    this.adicionar(new IconButton({
-      icone: 'tutorial', x: espaco.md + 72 + espaco.md, y: espaco.md, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pedirAjuda(),
-    }));
+    this._btnPausa = new IconButton({
+      icone: 'pausa', x: margemLateral, y: espaco.md, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pausar(),
+    });
+    this.adicionar(this._btnPausa);
+    
+    this._btnAjuda = new IconButton({
+      icone: 'tutorial', x: margemLateral + 72 + 16, y: espaco.md, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pedirAjuda(),
+    });
+    this.adicionar(this._btnAjuda);
+    
     this.adicionar(new SoundToggle({
       audio: this.audio, x: L - 96, y: espaco.md, somToque: config.audio?.clique,
     }));
@@ -469,81 +476,69 @@ export class GameScene extends Scene {
 
     this._arrastando = null;
     this._construirRodada();
+
+    const cartelaAbsY = this._topo + this._cartela.y;
+    const btnY = Math.max(espaco.md, cartelaAbsY - 72 - 12);
+    this._btnPausa.y = btnY;
+    this._btnAjuda.y = btnY;
   }
 
-  /** Única rodada por partida — todas as trilhas e toda a bandeja aparecem de uma vez, igual ao brinquedo físico. */
   _construirRodada() {
     const nivel = this.nivel;
     const { trilhas: sequencias, distratoras } = gerarRodada(nivel);
 
-    const areaLargura = this._areaLargura;
-    const areaAltura = this._areaAltura;
+    const layout = this._calcularLayout(nivel, this._areaLargura, this._areaAltura);
+
+    // Centraliza todo o conjunto (cartela + tabuleiro)
+    const startX = (this._areaLargura - layout.totalWidth) / 2;
 
     // -------------------------------------------------------- a cartela (esquerda)
-    const cartelaTam = Math.max(20, Math.min(36, Math.floor(240 / nivel.trilhas) - 8));
-    const cartelaGapIcone = 6;
-    const cartelaGapColuna = 10;
-    const cartelaPadX = 14;
-    const cartelaPadY = 14;
-
     this._cartela = new CartelaPainel(
-      sequencias, cartelaTam, cartelaGapIcone, cartelaGapColuna, cartelaPadX, cartelaPadY,
+      sequencias, layout.cartelaTam, layout.cartelaGapIcone, layout.cartelaGapColuna, layout.cartelaPadX, layout.cartelaPadY
     );
-    const gapCartela = 26;
-    this._cartela.x = 0;
+    this._cartela.x = startX;
+    this._cartela.y = (this._areaAltura - layout.cartelaHeight) / 2;
     this.area.adicionar(this._cartela);
 
-    // --------------------------------------------- painel único (à direita da cartela):
-    // as peças soltas (ex-bandeja) ficam no TOPO do painel, as trilhas ficam
-    // embaixo, ancoradas na base — layout pedido pelo humano a partir do
-    // rascunho do vídeo (um painel só, "GEOMÉTRICO" em cima, colunas embaixo
-    // recebendo a peça arrastada de cima pra baixo), substituindo a versão
-    // anterior (bandeja como faixa à parte, numa fileira inteira embaixo de
-    // cartela+trilhas).
-    const rightX = this._cartela.largura + gapCartela;
-    const rightWidth = areaLargura - rightX;
-    const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
-
-    const layout = this._calcularLayout(
-      nivel.trilhas, nivel.profundidade, totalPecasBandeja, rightWidth, areaAltura, this._cartela.altura,
-    );
-    const {
-      tam, gapTrilha, padTrilhaY, gapSlot,
-      padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
-      alturaBandeja, gapDivisor, alturaPainelDireita,
-    } = layout;
-
-    const fileiraAltura = Math.max(this._cartela.altura, alturaPainelDireita);
-    const yTopo = (areaAltura - fileiraAltura) / 2;
-    this._cartela.y = yTopo + (fileiraAltura - this._cartela.altura) / 2;
-
-    const yPainelDireita = yTopo + (fileiraAltura - alturaPainelDireita) / 2;
-    this._painelDireita = new PainelZona({
-      largura: rightWidth, altura: alturaPainelDireita, cor: 'rgba(255,255,255,0.10)', bordaCor: 'rgba(255,255,255,0.25)',
+    // --------------------------------------------- painel único (direita)
+    const boardX = startX + layout.cartelaWidth + layout.gapCartela;
+    const boardY = (this._areaAltura - layout.boardHeight) / 2;
+    
+    this._painelDireita = new TabuleiroVisual({
+      largura: layout.boardWidth,
+      altura: layout.boardHeight,
+      tamPeca: layout.tam,
+      gapTrilha: layout.gapTrilha,
+      padPanelX: layout.padPanelX,
+      padPanelTopo: layout.padPanelTopo,
+      alturaBandeja: layout.alturaBandeja,
+      numTrilhas: nivel.trilhas,
+      gapSlot: layout.gapSlot,
+      padTrilhaY: layout.padTrilhaY,
+      profundidade: nivel.profundidade
     });
-    this._painelDireita.x = rightX;
-    this._painelDireita.y = yPainelDireita;
+    this._painelDireita.x = boardX;
+    this._painelDireita.y = boardY;
     this.area.adicionar(this._painelDireita);
 
     // peças soltas, no topo do painel
-    const pecasDados = rand.embaralhar([
-      ...sequencias.flat(),
-      ...distratoras,
-    ]);
+    const pecasDados = rand.embaralhar([...sequencias.flat(), ...distratoras]);
     this._pecas = [];
-    const celulaBandeja = tam + gapBandeja;
+    const celulaBandeja = layout.tam + layout.gapBandeja;
     pecasDados.forEach((dado, indice) => {
-      const linha = Math.floor(indice / porLinha);
-      const inicioLinha = linha * porLinha;
-      const nestaLinha = Math.min(porLinha, pecasDados.length - inicioLinha);
+      const linha = Math.floor(indice / layout.porLinha);
+      const inicioLinha = linha * layout.porLinha;
+      const nestaLinha = Math.min(layout.porLinha, pecasDados.length - inicioLinha);
       const coluna = indice - inicioLinha;
-      const larguraLinha = nestaLinha * tam + (nestaLinha - 1) * gapBandeja;
-      const inicioX = rightX + (rightWidth - larguraLinha) / 2 + tam / 2;
-      const topoY = yPainelDireita + padPanelTopo + tam / 2;
+      const larguraLinha = nestaLinha * layout.tam + (nestaLinha - 1) * layout.gapBandeja;
+      
+      const piscinaW = layout.boardWidth - layout.padPanelX * 2;
+      const inicioX = boardX + layout.padPanelX + (piscinaW - larguraLinha) / 2 + layout.tam / 2;
+      const topoY = boardY + layout.padPanelTopo + layout.tam / 2;
 
-      const peca = new Peca(dado.forma, dado.cor, tam);
+      const peca = new Peca(dado.forma, dado.cor, layout.tam);
       const px = inicioX + coluna * celulaBandeja;
-      const py = topoY + linha * (tam + gapBandeja);
+      const py = topoY + linha * (layout.tam + layout.gapBandeja);
       peca.x = px; peca.y = py;
       peca.trayX = px; peca.trayY = py;
       this.area.adicionar(peca);
@@ -551,42 +546,19 @@ export class GameScene extends Scene {
       this._ligarArrastePeca(peca);
     });
 
-    // linha divisória horizontal, entre a zona das peças e a zona das trilhas
-    const yDivisor = yPainelDireita + padPanelTopo + alturaBandeja + gapDivisor / 2;
-    const divisorH = new DivisorFormasColunas(rightWidth - padPanelX * 2);
-    divisorH.x = rightX + padPanelX;
-    divisorH.y = yDivisor;
-    this.area.adicionar(divisorH);
+    // trilhas — a coluna estica pra preencher a largura toda do tabuleiro
+    // (sem sobra nas laterais), mesma conta usada pelo `TabuleiroVisual` pra
+    // pintar o canal de madeira por baixo; só a PEÇA continua do tamanho
+    // `layout.tam`, centralizada dentro da coluna mais larga (`Trilha`).
+    const piscinaW = layout.boardWidth - layout.padPanelX * 2;
+    const larguraColuna = (piscinaW - (nivel.trilhas - 1) * layout.gapTrilha) / nivel.trilhas;
+    const inicioXTrilhas = boardX + layout.padPanelX;
+    const yBaseTrilhas = boardY + layout.boardHeight - layout.padPanelX;
 
-    // trilhas, ancoradas na BASE do painel (embaixo da linha divisória)
-    const larguraGradeTrilhas = nivel.trilhas * tam + (nivel.trilhas - 1) * gapTrilha;
-    const inicioXTrilhas = rightX + (rightWidth - larguraGradeTrilhas) / 2;
-    const yBaseTrilhas = yPainelDireita + alturaPainelDireita - padPanelBase;
-
-    // Ripas divisórias NO VÃO entre uma trilha e a próxima (não em cima delas) —
-    // mesmo espírito das linhas entre colunas da cartela. `nivel.trilhas - 1`
-    // vãos; cada um no meio do gap entre a trilha `i` e a `i+1`. A ripa cobre
-    // a zona VISUAL da coluna (da linha divisória até a base do painel), não
-    // só a altura estrita da sequência (`alturaTrilhas`) — é essa folga extra
-    // que faz a coluna parecer alta e comprida, igual à foto do brinquedo.
-    const yTopoZonaColunas = yDivisor + gapDivisor / 2;
-    const alturaZonaColunas = yBaseTrilhas - yTopoZonaColunas;
-    if (nivel.trilhas > 1) {
-      const xsDivisores = [];
-      for (let i = 0; i < nivel.trilhas - 1; i++) {
-        const fimTrilha = inicioXTrilhas + i * (tam + gapTrilha) + tam;
-        xsDivisores.push((fimTrilha + gapTrilha / 2) - rightX);
-      }
-      const divisores = new Divisores(xsDivisores, alturaZonaColunas, rightWidth);
-      divisores.x = rightX;
-      divisores.y = yTopoZonaColunas;
-      this.area.adicionar(divisores);
-    }
-
-    this._tamPeca = tam;
+    this._tamPeca = layout.tam;
     this._trilhas = sequencias.map((sequencia, i) => {
-      const trilha = new Trilha(sequencia, tam, gapSlot, padTrilhaY);
-      trilha.x = inicioXTrilhas + i * (tam + gapTrilha);
+      const trilha = new Trilha(sequencia, layout.tam, layout.gapSlot, layout.padTrilhaY, larguraColuna);
+      trilha.x = inicioXTrilhas + i * (larguraColuna + layout.gapTrilha);
       trilha.y = yBaseTrilhas - trilha.altura;
       this.area.adicionar(trilha);
       return trilha;
@@ -595,49 +567,56 @@ export class GameScene extends Scene {
     this._atualizarTextoHud();
   }
 
-  /**
-   * Busca o maior tamanho de peça que cabe na LARGURA do painel (grade de
-   * trilhas lado a lado, e a mesma largura serve de base pro cálculo de
-   * fileiras da bandeja). A ALTURA do painel não é mais "o que o conteúdo
-   * precisa" — é a área de jogo INTEIRA (`areaAltura`): a referência que o
-   * humano mandou (foto do brinquedo real) mostra colunas bem mais altas do
-   * que a profundidade da sequência exigiria sozinha, porque o tabuleiro
-   * físico enche o quadro todo, com a bandeja de peças soltas compacta em
-   * cima e as colunas ocupando tudo que sobra embaixo — mesmo com poucas
-   * peças, a coluna continua alta e vazia por cima de onde a peça senta.
-   */
-  _calcularLayout(numTrilhas, profundidade, totalPecasBandeja, rightWidth, areaAltura, cartelaAltura) {
-    const gapTrilha = 16;
-    const padTrilhaY = 14;
-    const gapSlot = 10;
-    const gapBandeja = 12;
-    const padPanelX = 16;
-    const padPanelTopo = 18;
+  _calcularLayout(nivel, areaLargura, areaAltura) {
+    const gapTrilha = 14;
+    const padTrilhaY = 6;
+    const gapSlot = 6;
+    const gapBandeja = 6;
+    const padPanelX = 14;
+    const padPanelTopo = 16;
     const padPanelBase = 16;
-    const gapDivisor = 20;
-    const alturaPainelDireita = Math.max(areaAltura, cartelaAltura);
+    const gapDivisor = 10;
+    
+    const cartelaGapIcone = 8;
+    const cartelaGapColuna = 12;
+    const cartelaPadX = 16;
+    const cartelaPadY = 20;
+    const gapCartela = 30;
 
-    const montar = (tam) => {
-      const larguraUtil = rightWidth - padPanelX * 2;
-      const celula = tam + gapBandeja;
-      const porLinha = Math.max(1, Math.floor((larguraUtil + gapBandeja) / celula));
-      const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
-      const alturaBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja;
-      const alturaTrilhas = profundidade * tam + (profundidade - 1) * gapSlot + padTrilhaY * 2;
-      const alturaMinima = padPanelTopo + alturaBandeja + gapDivisor + alturaTrilhas + padPanelBase;
+    const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
 
-      return {
-        tam, gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha, totalLinhas, alturaBandeja, gapDivisor, alturaTrilhas, alturaMinima, alturaPainelDireita,
-      };
-    };
-
-    for (let tam = 120; tam >= 56; tam -= 2) {
-      const cand = montar(tam);
-      const larguraGradeTrilhas = numTrilhas * tam + (numTrilhas - 1) * gapTrilha;
-      if (larguraGradeTrilhas + padPanelX * 2 > rightWidth) continue;
-      if (cand.alturaMinima <= alturaPainelDireita) return cand;
+    // Tentar tamanhos progressivamente menores até o conjunto inteiro caber na tela
+    for (let tam = 100; tam >= 30; tam -= 2) {
+      // Disposição da bandeja (piscina)
+      const linhas = totalPecasBandeja <= 12 ? 1 : (totalPecasBandeja <= 24 ? 2 : 3);
+      const porLinha = Math.ceil(totalPecasBandeja / linhas);
+      
+      const larguraBandeja = porLinha * tam + (porLinha - 1) * gapBandeja;
+      const larguraGradeTrilhas = nivel.trilhas * tam + (nivel.trilhas - 1) * gapTrilha;
+      const boardWidth = Math.max(larguraBandeja, larguraGradeTrilhas) + padPanelX * 2;
+      
+      const alturaBandeja = linhas * tam + (linhas - 1) * gapBandeja;
+      const alturaTrilhas = nivel.profundidade * tam + (nivel.profundidade - 1) * gapSlot + padTrilhaY * 2;
+      const alturaCanaletaHoriz = tam + 12;
+      const boardHeight = padPanelTopo + alturaBandeja + gapDivisor + alturaCanaletaHoriz + alturaTrilhas + padPanelBase;
+      
+      // Proporção cartela vs tabuleiro (a peça da cartela fica um pouco menor)
+      const cartelaTam = Math.floor(tam * 0.9);
+      const cartelaWidth = nivel.trilhas * cartelaTam + (nivel.trilhas - 1) * cartelaGapColuna + cartelaPadX * 2;
+      const cartelaHeight = nivel.profundidade * cartelaTam + (nivel.profundidade - 1) * cartelaGapIcone + cartelaPadY * 2;
+      
+      const totalWidth = cartelaWidth + gapCartela + boardWidth;
+      const maxHeight = Math.max(boardHeight, cartelaHeight);
+      
+      if (totalWidth <= areaLargura && maxHeight <= areaAltura) {
+        return {
+          tam, cartelaTam, cartelaGapIcone, cartelaGapColuna, cartelaPadX, cartelaPadY, gapCartela,
+          gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
+          alturaBandeja, gapDivisor, boardWidth, boardHeight, cartelaWidth, cartelaHeight, totalWidth
+        };
+      }
     }
-    return montar(56);
+    return null; // Apenas se a tela for minúscula
   }
 
   // --------------------------------------------------------------- arrasto
