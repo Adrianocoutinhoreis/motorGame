@@ -56,6 +56,17 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
    peças soltas corre a LARGURA INTEIRA da área, numa fileira só embaixo das
    duas — mais parecido com o brinquedo físico, e com mais espaço horizontal
    pra bandeja (menos fileiras de peças empilhadas verticalmente).
+6. **Layout final: um painel só, peças em cima e colunas embaixo** — a versão
+   da correção 5 (cartela + trilhas numa fileira, bandeja numa faixa à parte
+   embaixo de tudo) foi substituída depois de um rascunho do humano direto do
+   vídeo de referência: a cartela continua fixa à esquerda, mas à direita
+   passa a existir um painel SÓ, com as peças soltas no TOPO e as trilhas
+   ancoradas na BASE do mesmo painel, separadas por uma ripa horizontal
+   (`DivisorFormasColunas`) — a criança arrasta de cima pra baixo, dentro do
+   mesmo painel, igual ao esboço. As trilhas em si não mudaram por dentro
+   (mesmo "poço" que só aceita a próxima peça da sequência); só a posição do
+   painel mudou, de uma fileira separada embaixo para o topo do painel das
+   colunas.
 
 **Tema visual:** fundo liso (sem gradiente, sem decoração) — o conteúdo já é
 visualmente carregado (várias cores/formatos ao mesmo tempo); o fundo não
