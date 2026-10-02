@@ -122,6 +122,17 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     cartela passa a nascer no topo da área (`y = 0`), igual ao tabuleiro
     (que já começa no topo desde a correção 10) — os botões, que seguem a
     altura da cartela, voltam a ficar coladinhos no topo da tela.
+12. **Margem do topo mais justa** — mesmo com cartela/tabuleiro alinhados pelo
+    topo (correção 11), sobravam ~12px inúteis entre a base dos botões e o
+    topo do tabuleiro; esse vão ficava mais visível em cima do TABULEIRO (que
+    não tem nenhum botão por cima "ocupando" a faixa) do que em cima da
+    cartela — o humano apontou isso como "um pouco de espaço acima do
+    tabuleiro" numa nova rodada de ajuste. `this._topo` caiu de 110 para 102
+    (o mínimo real: 20 de margem + 72 de altura do botão + 10 de respiro).
+    Testado também: tentativa de reproduzir "botões cortados" (mencionado
+    junto) em janelas bem estreitas (inclusive replicando a proporção da
+    captura enviada) — não reproduziu; os botões sempre renderizaram
+    inteiros, com folga, em todos os tamanhos testados.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

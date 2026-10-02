@@ -421,7 +421,13 @@ export class GameScene extends Scene {
       mostrarChao: false,
     }));
 
-    this._topo = 110;
+    // 110 deixava ~12px de sobra entre a base dos botões (20 + 72 de altura)
+    // e o topo do tabuleiro — meio inútil, e o vão ficava mais visível em
+    // cima do TABULEIRO (que não tem botão nenhum por cima pra "ocupar" a
+    // faixa) do que em cima da cartela. 102 é o mínimo real: 20 (margem) +
+    // 72 (altura do botão) + 10 (respiro) — ajuste pedido pelo humano
+    // ("um pouco de espaço acima do tabuleiro").
+    this._topo = 102;
     const margemLateral = 44;
     this._areaLargura = L - margemLateral * 2;
     this._areaAltura = A - this._topo - 30;
