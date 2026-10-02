@@ -56,8 +56,8 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
    peças soltas corre a LARGURA INTEIRA da área, numa fileira só embaixo das
    duas — mais parecido com o brinquedo físico, e com mais espaço horizontal
    pra bandeja (menos fileiras de peças empilhadas verticalmente).
-6. **Layout final: um painel só, peças em cima e colunas embaixo** — a versão
-   da correção 5 (cartela + trilhas numa fileira, bandeja numa faixa à parte
+6. **Layout: um painel só, peças em cima e colunas embaixo** — a versão da
+   correção 5 (cartela + trilhas numa fileira, bandeja numa faixa à parte
    embaixo de tudo) foi substituída depois de um rascunho do humano direto do
    vídeo de referência: a cartela continua fixa à esquerda, mas à direita
    passa a existir um painel SÓ, com as peças soltas no TOPO e as trilhas
@@ -67,6 +67,17 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
    (mesmo "poço" que só aceita a próxima peça da sequência); só a posição do
    painel mudou, de uma fileira separada embaixo para o topo do painel das
    colunas.
+7. **Colunas bem mais altas que o estritamente necessário, sem relógio no
+   HUD** — uma foto do brinquedo físico (mandada pelo humano) mostra o
+   tabuleiro inteiro dominado por colunas compridas, bem mais altas do que a
+   profundidade da sequência pediria sozinha, com a bandeja de peças soltas
+   pequena e compacta em cima. `_calcularLayout()` foi ajustado pra fixar a
+   altura do painel na altura TOTAL da área de jogo (não mais "o que o
+   conteúdo precisa") — a folga vira espaço vazio por cima de onde a peça
+   realmente senta, dando a sensação de coluna comprida mesmo com poucas
+   peças por trilha. `config.mostrarCronometro` virou `false`: o brinquedo de
+   verdade não tem cronômetro, e o relógio ao vivo saiu do HUD (continua
+   pausa, ajuda e som).
 
 **Tema visual:** fundo liso (sem gradiente, sem decoração) — o conteúdo já é
 visualmente carregado (várias cores/formatos ao mesmo tempo); o fundo não

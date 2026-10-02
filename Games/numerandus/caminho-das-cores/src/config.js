@@ -137,7 +137,8 @@ export default {
   unidadePlacar: { singular: 'trilha', plural: 'trilhas' },
 
   mostrarTempo: true,
-  mostrarCronometro: true,
+  /** Sem relógio ao vivo no HUD — decisão do humano: o tabuleiro de verdade não tem cronômetro. */
+  mostrarCronometro: false,
 };
 
 // ---------------------------------------------------------------------------

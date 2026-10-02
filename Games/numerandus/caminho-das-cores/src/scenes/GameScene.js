@@ -510,7 +510,7 @@ export class GameScene extends Scene {
     const {
       tam, gapTrilha, padTrilhaY, gapSlot,
       padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
-      alturaBandeja, gapDivisor, alturaTrilhas, alturaPainelDireita,
+      alturaBandeja, gapDivisor, alturaPainelDireita,
     } = layout;
 
     const fileiraAltura = Math.max(this._cartela.altura, alturaPainelDireita);
@@ -565,16 +565,21 @@ export class GameScene extends Scene {
 
     // Ripas divisórias NO VÃO entre uma trilha e a próxima (não em cima delas) —
     // mesmo espírito das linhas entre colunas da cartela. `nivel.trilhas - 1`
-    // vãos; cada um no meio do gap entre a trilha `i` e a `i+1`.
+    // vãos; cada um no meio do gap entre a trilha `i` e a `i+1`. A ripa cobre
+    // a zona VISUAL da coluna (da linha divisória até a base do painel), não
+    // só a altura estrita da sequência (`alturaTrilhas`) — é essa folga extra
+    // que faz a coluna parecer alta e comprida, igual à foto do brinquedo.
+    const yTopoZonaColunas = yDivisor + gapDivisor / 2;
+    const alturaZonaColunas = yBaseTrilhas - yTopoZonaColunas;
     if (nivel.trilhas > 1) {
       const xsDivisores = [];
       for (let i = 0; i < nivel.trilhas - 1; i++) {
         const fimTrilha = inicioXTrilhas + i * (tam + gapTrilha) + tam;
         xsDivisores.push((fimTrilha + gapTrilha / 2) - rightX);
       }
-      const divisores = new Divisores(xsDivisores, alturaTrilhas, rightWidth);
+      const divisores = new Divisores(xsDivisores, alturaZonaColunas, rightWidth);
       divisores.x = rightX;
-      divisores.y = yBaseTrilhas - alturaTrilhas;
+      divisores.y = yTopoZonaColunas;
       this.area.adicionar(divisores);
     }
 
@@ -591,14 +596,15 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Busca o maior tamanho de peça que cabe nos dois eixos do painel único:
-   * largura (grade de trilhas lado a lado, e a mesma largura serve de base
-   * pro cálculo de fileiras da bandeja) e altura (peças soltas no topo +
-   * linha divisória + trilhas embaixo, tudo empilhado no MESMO painel —
-   * layout novo, ver `_construirRodada`). Testa de cima pra baixo e usa o
-   * primeiro que cabe — mais robusto que uma fórmula fechada, porque o
-   * número de fileiras da bandeja muda em saltos (não é contínuo) conforme o
-   * tamanho da peça.
+   * Busca o maior tamanho de peça que cabe na LARGURA do painel (grade de
+   * trilhas lado a lado, e a mesma largura serve de base pro cálculo de
+   * fileiras da bandeja). A ALTURA do painel não é mais "o que o conteúdo
+   * precisa" — é a área de jogo INTEIRA (`areaAltura`): a referência que o
+   * humano mandou (foto do brinquedo real) mostra colunas bem mais altas do
+   * que a profundidade da sequência exigiria sozinha, porque o tabuleiro
+   * físico enche o quadro todo, com a bandeja de peças soltas compacta em
+   * cima e as colunas ocupando tudo que sobra embaixo — mesmo com poucas
+   * peças, a coluna continua alta e vazia por cima de onde a peça senta.
    */
   _calcularLayout(numTrilhas, profundidade, totalPecasBandeja, rightWidth, areaAltura, cartelaAltura) {
     const gapTrilha = 16;
@@ -609,6 +615,7 @@ export class GameScene extends Scene {
     const padPanelTopo = 18;
     const padPanelBase = 16;
     const gapDivisor = 20;
+    const alturaPainelDireita = Math.max(areaAltura, cartelaAltura);
 
     const montar = (tam) => {
       const larguraUtil = rightWidth - padPanelX * 2;
@@ -617,10 +624,10 @@ export class GameScene extends Scene {
       const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
       const alturaBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja;
       const alturaTrilhas = profundidade * tam + (profundidade - 1) * gapSlot + padTrilhaY * 2;
-      const alturaPainelDireita = padPanelTopo + alturaBandeja + gapDivisor + alturaTrilhas + padPanelBase;
+      const alturaMinima = padPanelTopo + alturaBandeja + gapDivisor + alturaTrilhas + padPanelBase;
 
       return {
-        tam, gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha, totalLinhas, alturaBandeja, gapDivisor, alturaTrilhas, alturaPainelDireita,
+        tam, gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha, totalLinhas, alturaBandeja, gapDivisor, alturaTrilhas, alturaMinima, alturaPainelDireita,
       };
     };
 
@@ -628,8 +635,7 @@ export class GameScene extends Scene {
       const cand = montar(tam);
       const larguraGradeTrilhas = numTrilhas * tam + (numTrilhas - 1) * gapTrilha;
       if (larguraGradeTrilhas + padPanelX * 2 > rightWidth) continue;
-      const fileiraAltura = Math.max(cartelaAltura, cand.alturaPainelDireita);
-      if (fileiraAltura <= areaAltura) return cand;
+      if (cand.alturaMinima <= alturaPainelDireita) return cand;
     }
     return montar(56);
   }
