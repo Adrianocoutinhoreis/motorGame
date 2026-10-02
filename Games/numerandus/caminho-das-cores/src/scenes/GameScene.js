@@ -443,9 +443,13 @@ export class GameScene extends Scene {
     });
     this.adicionar(this._btnAjuda);
     
-    this.adicionar(new SoundToggle({
-      audio: this.audio, x: L - 96, y: espaco.md, somToque: config.audio?.clique,
-    }));
+    // Som agrupado com pausa/ajuda no canto superior ESQUERDO (não isolado no
+    // canto oposto) — pedido do humano a partir da referência mais recente,
+    // os 3 botões formam uma fileira só.
+    this._btnSom = new SoundToggle({
+      audio: this.audio, x: margemLateral + 88 * 2, y: espaco.md, somToque: config.audio?.clique,
+    });
+    this.adicionar(this._btnSom);
 
     this._relogioBadge = config.mostrarCronometro === false ? null : new RelogioBadge({
       x: L / 2, y: espaco.md + 26, largura: 170, altura: 50,
@@ -481,6 +485,7 @@ export class GameScene extends Scene {
     const btnY = Math.max(espaco.md, cartelaAbsY - 72 - 12);
     this._btnPausa.y = btnY;
     this._btnAjuda.y = btnY;
+    this._btnSom.y = btnY;
   }
 
   _construirRodada() {
