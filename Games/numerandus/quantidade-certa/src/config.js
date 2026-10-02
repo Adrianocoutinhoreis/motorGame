@@ -396,8 +396,10 @@ function desenharCenaTutorial(ctx, l, a, opcoes = {}) {
     ctx.fill();
     ctx.strokeStyle = '#D4943A';
     ctx.stroke();
-    // 2 furos já cheios, 1 esperando — mostra a contagem em progresso, nunca já pronta.
-    desenharFurosTutorial(ctx, 3, w, h, [CONTAS_TUTORIAL[0], CONTAS_TUTORIAL[1], null]);
+    // Os 3 furos cheios — o número "3" precisa bater com 3 bolinhas coloridas,
+    // senão a cena confunde quem está aprendendo a contar (print do humano:
+    // "3" do lado de só 2 bolinhas e um furo vazio, parecendo errado/incompleto).
+    desenharFurosTutorial(ctx, 3, w, h, CONTAS_TUTORIAL);
   }
 
   ctx.restore();
