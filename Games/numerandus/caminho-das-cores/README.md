@@ -133,6 +133,34 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     junto) em janelas bem estreitas (inclusive replicando a proporção da
     captura enviada) — não reproduziu; os botões sempre renderizaram
     inteiros, com folga, em todos os tamanhos testados.
+13. **Canvas vertical (retrato) — único jogo da coleção assim** — uma foto do
+    brinquedo físico segurado em PÉ pelo humano mostrou que o vídeo de
+    referência original usa o tabuleiro na vertical, não deitado; pedido
+    explícito: "deixando verticalmente poderemos deixar o tabuleiro mais
+    próximo do vídeo com o tabuleiro centralizado". `largura`/`altura` do
+    `config.js` viram `720`/`1280` (espelho exato do `1280`/`720` do resto da
+    coleção — mesmas duas magnitudes, só giradas). O `Stage` do motor já
+    escala qualquer proporção sem ajuste; o que precisou de trabalho foi:
+    - **`MenuScreen`/`ResultScreen` do motor** (compartilhadas por TODA a
+      coleção) tinham larguras fixas em pixel pensadas pra 1280 de largura
+      (placa de título 740, botão 540, fileira de 3 botões de resultado
+      760+) que vazariam numa tela de 720. Corrigido com `Math.min(valor,
+      L - margem)` — em qualquer tela larga o resultado é idêntico a antes
+      (nenhum outro jogo muda), só entra em ação numa tela mais estreita.
+    - **`GameScene.js` deste jogo**: cartela e tabuleiro, que ficavam lado a
+      lado, passam a EMPILHAR (cartela em cima, tabuleiro embaixo), ambos
+      centralizados horizontalmente. `_calcularLayout()` foi reescrito: o
+      tabuleiro agora sempre usa a largura disponível INTEIRA (não briga
+      mais por espaço com a cartela do lado), e a busca de `tam` decide só a
+      altura do conjunto empilhado cabendo na tela — a folga depois da
+      cartela ainda estica o tabuleiro (mesmo raciocínio das correções 10-11,
+      agora aplicado à direção vertical).
+14. **Sempre 5 colunas, não 3/4/5 por nível** — outra foto do brinquedo
+    mostrou os números "1 2 3 4 5" escritos à mão do lado de cada coluna da
+    prancha: a prancha física tem 5 colunas FIXAS, não é um parâmetro de
+    dificuldade. `nivel.trilhas` virou `5` nos três níveis (`meta` também,
+    já que `meta = trilhas`); a dificuldade real continua sendo só
+    `profundidade` (2/3/4, sequência mais longa pra acertar).
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

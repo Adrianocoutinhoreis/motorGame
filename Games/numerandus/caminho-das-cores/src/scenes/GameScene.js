@@ -500,28 +500,23 @@ export class GameScene extends Scene {
 
     const layout = this._calcularLayout(nivel, this._areaLargura, this._areaAltura);
 
-    // Centraliza todo o conjunto (cartela + tabuleiro)
-    const startX = (this._areaLargura - layout.totalWidth) / 2;
-
-    // -------------------------------------------------------- a cartela (esquerda)
+    // --------------------------------------------- a cartela (topo, centralizada)
+    // Canvas VERTICAL (retrato) — a cartela e o tabuleiro agora EMPILHAM, um
+    // embaixo do outro, em vez de lado a lado (como era na versão horizontal
+    // do jogo). Pedido do humano a partir de uma foto do brinquedo físico
+    // segurado em pé: o tabuleiro fica centralizado, mais perto do vídeo de
+    // referência original.
     this._cartela = new CartelaPainel(
       sequencias, layout.cartelaTam, layout.cartelaGapIcone, layout.cartelaGapColuna, layout.cartelaPadX, layout.cartelaPadY
     );
-    this._cartela.x = startX;
-    // Alinhada pelo TOPO (não mais centralizada na altura da área) — a área
-    // ficou bem mais alta depois do tabuleiro esticar pra preencher
-    // `areaAltura` (correção anterior), e centralizar a cartela nela deixava
-    // um vão vazio em cima (empurrando pausa/ajuda/som pra baixo também) E
-    // embaixo da cartela — reclamação do humano, marcada com X/setas na
-    // referência mais recente. Pelo topo, a cartela fica junto da fileira de
-    // botões, igual à referência.
+    this._cartela.x = (this._areaLargura - this._cartela.largura) / 2;
     this._cartela.y = 0;
     this.area.adicionar(this._cartela);
 
-    // --------------------------------------------- painel único (direita)
-    const boardX = startX + layout.cartelaWidth + layout.gapCartela;
-    const boardY = (this._areaAltura - layout.boardHeight) / 2;
-    
+    // --------------------------------------------- o tabuleiro (embaixo, centralizado)
+    const boardX = (this._areaLargura - layout.boardWidth) / 2;
+    const boardY = this._cartela.altura + layout.gapCartela;
+
     this._painelDireita = new TabuleiroVisual({
       largura: layout.boardWidth,
       altura: layout.boardHeight,
@@ -585,6 +580,15 @@ export class GameScene extends Scene {
     this._atualizarTextoHud();
   }
 
+  /**
+   * Canvas VERTICAL: cartela e tabuleiro EMPILHAM (um embaixo do outro), não
+   * ficam mais lado a lado. O tabuleiro usa a largura DISPONÍVEL inteira
+   * (`areaLargura`) sempre — não há mais cartela "roubando" largura dele — e
+   * a busca de `tam` decide só a ALTURA do conjunto empilhado (cartela +
+   * vão + tabuleiro) cabendo em `areaAltura`. Teto alto (220) e busca
+   * decrescente: o maior `tam` que ainda cabe, sem limitar artificialmente
+   * em níveis simples.
+   */
   _calcularLayout(nivel, areaLargura, areaAltura) {
     const gapTrilha = 14;
     const padTrilhaY = 6;
@@ -594,7 +598,7 @@ export class GameScene extends Scene {
     const padPanelTopo = 16;
     const padPanelBase = 16;
     const gapDivisor = 10;
-    
+
     const cartelaGapIcone = 8;
     const cartelaGapColuna = 12;
     const cartelaPadX = 16;
@@ -602,57 +606,48 @@ export class GameScene extends Scene {
     const gapCartela = 30;
 
     const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
+    const boardWidth = areaLargura;
 
-    // Tentar tamanhos progressivamente menores até o conjunto inteiro caber na
-    // tela. O teto começava em 100 e nunca ia além disso — com níveis mais
-    // simples (poucas trilhas/peças), o conjunto parava bem menor do que a
-    // tela permitia, sobrando bastante espaço vazio nos 4 lados (reclamação
-    // do humano, marcada com X na referência). Teto bem mais alto (220): o
-    // próprio teste `maxHeight <= areaAltura && totalWidth <= areaLargura`
-    // já garante que não estoura a tela, então um teto alto só deixa crescer
-    // mais quando cabe, sem risco de vazar.
-    for (let tam = 220; tam >= 30; tam -= 2) {
-      // Disposição da bandeja (piscina)
-      const linhas = totalPecasBandeja <= 12 ? 1 : (totalPecasBandeja <= 24 ? 2 : 3);
-      const porLinha = Math.ceil(totalPecasBandeja / linhas);
-      
-      const larguraBandeja = porLinha * tam + (porLinha - 1) * gapBandeja;
-      const larguraGradeTrilhas = nivel.trilhas * tam + (nivel.trilhas - 1) * gapTrilha;
-      const boardWidth = Math.max(larguraBandeja, larguraGradeTrilhas) + padPanelX * 2;
-      
-      const alturaBandeja = linhas * tam + (linhas - 1) * gapBandeja;
+    const montar = (tam) => {
+      // Fileiras da bandeja calculadas pela largura DE VERDADE disponível
+      // (não mais um "nº de linhas" chutado por faixa de quantidade de
+      // peças) — o tabuleiro agora tem a largura da tela inteira, bem
+      // diferente da largura estreita de quando dividia espaço com a
+      // cartela ao lado.
+      const larguraUtilBandeja = boardWidth - padPanelX * 2;
+      const porLinha = Math.max(1, Math.floor((larguraUtilBandeja + gapBandeja) / (tam + gapBandeja)));
+      const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
+      const alturaBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja;
       const alturaTrilhas = nivel.profundidade * tam + (nivel.profundidade - 1) * gapSlot + padTrilhaY * 2;
       const alturaCanaletaHoriz = tam + 12;
-      const boardHeight = padPanelTopo + alturaBandeja + gapDivisor + alturaCanaletaHoriz + alturaTrilhas + padPanelBase;
-      
-      // Proporção cartela vs tabuleiro (a peça da cartela fica um pouco menor)
+      const boardHeightConteudo = padPanelTopo + alturaBandeja + gapDivisor + alturaCanaletaHoriz + alturaTrilhas + padPanelBase;
+
       const cartelaTam = Math.floor(tam * 0.9);
       const cartelaWidth = nivel.trilhas * cartelaTam + (nivel.trilhas - 1) * cartelaGapColuna + cartelaPadX * 2;
       const cartelaHeight = nivel.profundidade * cartelaTam + (nivel.profundidade - 1) * cartelaGapIcone + cartelaPadY * 2;
-      
-      const totalWidth = cartelaWidth + gapCartela + boardWidth;
-      const maxHeight = Math.max(boardHeight, cartelaHeight);
-      
-      if (totalWidth <= areaLargura && maxHeight <= areaAltura) {
-        // A LARGURA costuma travar o `tam` primeiro (a bandeja numa fileira
-        // só de peças soltas é geralmente mais larga que a grade de
-        // trilhas) — nesse ponto a ALTURA do tabuleiro ainda pode sobrar
-        // bem abaixo de `areaAltura`, deixando espaço morto em cima/embaixo
-        // de todo o conjunto (reclamação do humano, X nos 4 cantos da
-        // referência). Esticar `boardHeight` pra pelo menos `areaAltura`
-        // resolve: a folga extra vira canal de coluna mais comprido (o
-        // `TabuleiroVisual`/`Trilha` já calculam a altura do canal e a
-        // posição das peças a partir de `boardHeight`, então crescem junto
-        // sem precisar mexer em mais nada).
-        const boardHeightEsticado = Math.max(boardHeight, areaAltura);
-        return {
-          tam, cartelaTam, cartelaGapIcone, cartelaGapColuna, cartelaPadX, cartelaPadY, gapCartela,
-          gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
-          alturaBandeja, gapDivisor, boardWidth, boardHeight: boardHeightEsticado, cartelaWidth, cartelaHeight, totalWidth
-        };
-      }
+
+      return {
+        tam, cartelaTam, cartelaGapIcone, cartelaGapColuna, cartelaPadX, cartelaPadY, gapCartela,
+        gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
+        alturaBandeja, gapDivisor, boardWidth, boardHeightConteudo, cartelaWidth, cartelaHeight,
+      };
+    };
+
+    const finalizar = (cand) => {
+      // A folga que sobrar (depois da cartela + vão) vira canal de coluna
+      // mais comprido — mesmo raciocínio das correções anteriores, agora
+      // aplicado à altura que sobra DEPOIS da cartela, não à área inteira.
+      const boardHeight = Math.max(cand.boardHeightConteudo, areaAltura - cand.cartelaHeight - cand.gapCartela);
+      return { ...cand, boardHeight };
+    };
+
+    for (let tam = 220; tam >= 30; tam -= 2) {
+      const cand = montar(tam);
+      if (cand.cartelaWidth > areaLargura) continue;
+      const totalHeight = cand.cartelaHeight + cand.gapCartela + cand.boardHeightConteudo;
+      if (totalHeight <= areaAltura) return finalizar(cand);
     }
-    return null; // Apenas se a tela for minúscula
+    return finalizar(montar(30));
   }
 
   // --------------------------------------------------------------- arrasto

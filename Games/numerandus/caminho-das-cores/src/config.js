@@ -39,8 +39,14 @@ export default {
   faixaEtaria: '6 a 7 anos (1º ano)',
 
   // -------------------------------------------------------------- exibição
-  largura: 1280,
-  altura: 720,
+  // Canvas VERTICAL (retrato) — único jogo da coleção assim até agora,
+  // pedido do humano a partir de uma foto do brinquedo físico, que é
+  // literalmente segurado em pé (ver GameScene.js para o porquê). 720x1280
+  // é o espelho exato do 1280x720 que todo o resto da coleção usa — mesmas
+  // duas magnitudes, só giradas — e o motor (`Stage`) já escala qualquer
+  // proporção de palco sem precisar de ajuste nenhum nele.
+  largura: 720,
+  altura: 1280,
   corLetterbox: '#241A33',
 
   tema: 'quarto',
@@ -54,7 +60,10 @@ export default {
 
   // ----------------------------------------------------------------- níveis
   /**
-   * O eixo de dificuldade não é "mais cores" — é "sequência mais longa pra
+   * `trilhas` é sempre 5 — o brinquedo físico tem exatamente 5 colunas
+   * fixas na prancha (foto de referência do humano, com "1 2 3 4 5" escrito
+   * à mão do lado de cada uma); não é um parâmetro de dificuldade, é a forma
+   * do tabuleiro. O eixo de dificuldade real é "sequência mais longa pra
    * acertar, na ordem certa" (ver planejamento, seção 3): `profundidade` é
    * quantas peças tem cada coluna da cartela / cada trilha.
    * `meta` = `trilhas` (uma pontuação por trilha completada por inteiro).
@@ -62,11 +71,11 @@ export default {
   niveis: [
     {
       id: 1, nome: 'Fácil', descricao: 'Sequência de 2', amostra: '2 peças por trilha', cor: '#16A34A',
-      meta: 3, trilhas: 3, profundidade: 2, distratoras: 1,
+      meta: 5, trilhas: 5, profundidade: 2, distratoras: 1,
     },
     {
       id: 2, nome: 'Médio', descricao: 'Sequência de 3', amostra: '3 peças por trilha', cor: '#F59E0B',
-      meta: 4, trilhas: 4, profundidade: 3, distratoras: 2,
+      meta: 5, trilhas: 5, profundidade: 3, distratoras: 2,
     },
     {
       id: 3, nome: 'Difícil', descricao: 'Sequência de 4', amostra: '4 peças por trilha', cor: '#DC2626',
