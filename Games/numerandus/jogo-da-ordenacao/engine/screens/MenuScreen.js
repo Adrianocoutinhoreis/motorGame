@@ -377,7 +377,12 @@ export class MenuScreen extends Scene {
       {
         x: L / 2,
         y: A * 0.16,
-        largura: config.larguraPlacaTitulo ?? 740,
+        // `Math.min` com `L` é só uma rede de segurança: em toda tela LARGA
+        // (1280, o padrão da coleção inteira) o resultado é exatamente
+        // `740` de sempre, sem mudar nada. Só entra em ação numa tela mais
+        // ESTREITA que 740+margens (ex.: um jogo em formato retrato) — sem
+        // isso a placa vazava pra fora do palco.
+        largura: Math.min(config.larguraPlacaTitulo ?? 740, L - espaco.xl * 2),
       },
     );
     this.adicionar(this.placaTitulo);
@@ -431,7 +436,10 @@ export class MenuScreen extends Scene {
     // É intencional e é assim na referência: o mascote entra na cena por último,
     // então a mão passa NA FRENTE, e o hit-test ignora nós não interativos, então
     // o toque ali continua acionando o botão (há teste para isso).
-    const larguraBotao = 540;
+    // Mesma rede de segurança da placa de título, acima: em qualquer tela
+    // LARGA (1280, o padrão de toda a coleção) o resultado continua `540`
+    // de sempre. Só encolhe numa tela mais estreita (ex.: formato retrato).
+    const larguraBotao = Math.min(540, L - espaco.xl * 2);
     const xBotoes = L / 2 - larguraBotao / 2;
 
     this.botaoJogar = new Button({

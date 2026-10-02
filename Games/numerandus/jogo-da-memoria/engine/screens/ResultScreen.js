@@ -443,40 +443,44 @@ export class ResultScreen extends Scene {
 
     // ------------------------------------------------------------- botões
     const niveis = config.niveis ?? [];
-    const botoes = [];
 
-    botoes.push(new Button({
-      rotulo: 'JOGAR DE NOVO',
-      icone: 'reiniciar',
-      largura: 320,
+    // Larguras NATURAIS (320 + 220 + 220, como sempre foi). Em toda tela
+    // LARGA (1280, o padrão da coleção inteira) a fileira de 3 botões cabe
+    // folgada e o fator abaixo dá exatamente `1` — nada muda. Só encolhe
+    // numa tela mais estreita (ex.: formato retrato), onde 760px de botões
+    // lado a lado vazariam pra fora do palco.
+    const especificacoes = [
+      {
+        rotulo: 'JOGAR DE NOVO', icone: 'reiniciar', largura: 320, variante: 'primario',
+        aoTocar: () => this.irPara('jogando', { nivel: this.game.dados.nivel }),
+      },
+      ...(niveis.length > 1 ? [{
+        rotulo: 'NÍVEIS', largura: 220, variante: 'secundario', aoTocar: () => this.irPara('niveis'),
+      }] : []),
+      {
+        rotulo: 'MENU', icone: 'casa', largura: 220, variante: 'suave', aoTocar: () => this.irPara('menu'),
+      },
+    ];
+
+    const larguraDisponivel = L - espaco.xl * 2;
+    const somaGaps = (especificacoes.length - 1) * espaco.md;
+    const somaNatural = especificacoes.reduce((s, e) => s + e.largura, 0);
+    const fatorEncolher = Math.min(1, (larguraDisponivel - somaGaps) / somaNatural);
+
+    const botoes = especificacoes.map((esp) => new Button({
+      rotulo: esp.rotulo,
+      icone: esp.icone,
+      largura: Math.round(esp.largura * fatorEncolher),
+      // O texto (`tamanhoTexto`) não encolhe sozinho com a largura do botão —
+      // sem isso, "JOGAR DE NOVO" vazava pro lado numa tela estreita, mesmo
+      // com a largura do BOTÃO já corrigida. Em tela larga `fatorEncolher`
+      // é `1`, então o tamanho continua exatamente `tipografia.corpo`.
+      tamanhoTexto: Math.round(tipografia.corpo * fatorEncolher),
       altura: 88,
-      variante: 'primario',
+      variante: esp.variante,
       audio: this.audio,
       somToque: config.audio?.clique,
-      aoTocar: () => this.irPara('jogando', { nivel: this.game.dados.nivel }),
-    }));
-
-    if (niveis.length > 1) {
-      botoes.push(new Button({
-        rotulo: 'NÍVEIS',
-        largura: 220,
-        altura: 88,
-        variante: 'secundario',
-        audio: this.audio,
-        somToque: config.audio?.clique,
-        aoTocar: () => this.irPara('niveis'),
-      }));
-    }
-
-    botoes.push(new Button({
-      rotulo: 'MENU',
-      icone: 'casa',
-      largura: 220,
-      altura: 88,
-      variante: 'suave',
-      audio: this.audio,
-      somToque: config.audio?.clique,
-      aoTocar: () => this.irPara('menu'),
+      aoTocar: esp.aoTocar,
     }));
 
     const larguraTotal = botoes.reduce((s, b) => s + b.largura, 0) + (botoes.length - 1) * espaco.md;
