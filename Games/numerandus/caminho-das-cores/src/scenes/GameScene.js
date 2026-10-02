@@ -502,7 +502,14 @@ export class GameScene extends Scene {
       sequencias, layout.cartelaTam, layout.cartelaGapIcone, layout.cartelaGapColuna, layout.cartelaPadX, layout.cartelaPadY
     );
     this._cartela.x = startX;
-    this._cartela.y = (this._areaAltura - layout.cartelaHeight) / 2;
+    // Alinhada pelo TOPO (não mais centralizada na altura da área) — a área
+    // ficou bem mais alta depois do tabuleiro esticar pra preencher
+    // `areaAltura` (correção anterior), e centralizar a cartela nela deixava
+    // um vão vazio em cima (empurrando pausa/ajuda/som pra baixo também) E
+    // embaixo da cartela — reclamação do humano, marcada com X/setas na
+    // referência mais recente. Pelo topo, a cartela fica junto da fileira de
+    // botões, igual à referência.
+    this._cartela.y = 0;
     this.area.adicionar(this._cartela);
 
     // --------------------------------------------- painel único (direita)

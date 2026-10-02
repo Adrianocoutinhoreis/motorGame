@@ -112,6 +112,16 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     canal e a posição das peças a partir de `boardHeight`). O teto da busca de
     `tam` (antes travado em 100) também subiu pra 220, pra não limitar
     artificialmente o tamanho em níveis com pouco conteúdo.
+11. **Cartela alinhada pelo TOPO, não mais centralizada** — esticar o
+    tabuleiro (correção 10) deixou a ÁREA de jogo com uma altura bem maior do
+    que o conteúdo da cartela precisa; centralizar a cartela nessa área agora
+    alta deixava um vão vazio em cima dela (empurrando pausa/ajuda/som pra
+    baixo também, já que a posição dos botões segue a altura da cartela) E
+    outro vão embaixo — reclamação do humano, marcada com X e setas na
+    referência mais recente, pedindo pra "melhorar os espaços vazios". A
+    cartela passa a nascer no topo da área (`y = 0`), igual ao tabuleiro
+    (que já começa no topo desde a correção 10) — os botões, que seguem a
+    altura da cartela, voltam a ficar coladinhos no topo da tela.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
