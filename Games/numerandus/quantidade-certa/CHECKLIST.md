@@ -35,8 +35,8 @@
 
 - [x] Arte produzida — peças, furos e continhas desenhados via `Path2D`/arcos
       no canvas (sem imagem), geometria de encaixe portada do Encaixe Certo
-- [ ] Áudio de narração do tutorial — **ainda não gravado** (`fala:` aponta pra
-      ids sem arquivo em `config.assets`)
+- [x] Áudio de narração do tutorial — `tutorial/tela1.wav`, `tela2.wav`,
+      `tela3.wav`, um por passo, ligados em `config.assets`
 - [x] Efeito de vitória presente — `acertoSOS.wav`, mesmo tradicional da coleção
 - [x] Efeito de encaixe presente — `soltar_peca.mp3`, reaproveitado para os
       dois gestos de encaixar (peça no número e continha no furo)
@@ -48,17 +48,18 @@
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [x] Ficha de transcrição criada para os 3 áudios
+- [x] Ficha de transcrição criada para os 6 áudios
       (`assets/audio-transcricao/<id>/transcricao.md`)
-- [ ] Transcrições confirmadas ouvindo — só 2 dos 3 áudios são "confirmado por
-      natureza" (sem fala); `error.MP3` ainda precisa ser ouvido
+- [ ] Transcrições confirmadas ouvindo — `error.MP3` e os 3 áudios de
+      narração do tutorial ainda precisam ser ouvidos (status 🟡 INFERIDA
+      nas fichas, texto inferido de `config.tutorial[i].titulo/.texto`)
 - [x] Pendências de áudio listadas explicitamente no `README.md`
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR — telas padrão do motor
 - [x] **Tutorial** ilustrado e pulável — os 3 passos testados rodando
-      (`mostrarPasso(0..2)`); narração ainda não gravada
+      (`mostrarPasso(0..2)`); narração presente nos 3 passos
 - [x] **Seleção de nível** (3 níveis) — tela padrão do motor
 - [x] **Partida** com HUD legível (relógio + progresso "X/Y" quando há mais de
       uma onda, pausa, ajuda, som) — testado nos 3 níveis
@@ -139,8 +140,8 @@ Mapeamento semântico **deste** jogo:
 - [x] Cor **nunca** é o único portador de significado — o encaixe decide pelo
       NÚMERO (a peça só trava se a quantidade bater), nunca por cor; as
       continhas são coloridas ao acaso, sem combinação nenhuma pra decidir
-- [ ] Nenhuma ação exige saber ler: narração do tutorial ainda não gravada
-      (pendência de áudio, ver seção 2)
+- [x] Nenhuma ação exige saber ler: narração presente nos 3 passos do tutorial
+      (transcrição ainda não confirmada ouvindo, ver seção 2)
 - [x] Som pode ser desligado (`SoundToggle` padrão do motor)
 - [x] Nada pisca de forma rápida ou repetitiva (destaque de encaixe é contínuo, nunca oscila)
 
@@ -185,8 +186,9 @@ Mapeamento semântico **deste** jogo:
 - [x] `README.md` do jogo atualizado (o que é, como os dados foram definidos,
       como rodar, assets, pendências)
 - [ ] Este checklist com todos os itens fechados ou justificados — restam:
-      **narração do tutorial e transcrições, teste em tablet real** (toque de
-      dedo de verdade), **iframe médio/grande** e **zip gerado/aberto**
+      **confirmar transcrições ouvindo** (`error.MP3` e os 3 áudios de
+      narração), **teste em tablet real** (toque de dedo de verdade),
+      **iframe médio/grande** e **zip gerado/aberto**
 - [x] `node tools/build.mjs numerandus/quantidade-certa` rodado
 - [x] Versão do motor conferida em `engine/version.json` dentro da pasta do jogo (v1.3.6)
 - [x] Pasta copiada para **fora** do projeto e testada — `teste-entrega-avulsa.mjs`

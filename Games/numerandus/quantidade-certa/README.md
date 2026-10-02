@@ -111,6 +111,9 @@ canvas.
 | `acertoSOS.wav` | Áudio, vitória | Mesmo arquivo já usado pelo Encaixe Certo/Jogo da Velha/coleção Numerandus |
 | `soltar_peca.mp3` | Áudio, encaixe (peça no número **e** continha no furo) | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Dino/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
 | `error.MP3` | Áudio, peça de quantidade num número errado | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
+| `tutorial/tela1.wav` | Narração, tutorial 1 | Arquivo fornecido para o jogo — ainda não ouvido, ver `assets/audio-transcricao/tutorialTela1/transcricao.md` |
+| `tutorial/tela2.wav` | Narração, tutorial 2 | Arquivo fornecido para o jogo — ainda não ouvido, ver `assets/audio-transcricao/tutorialTela2/transcricao.md` |
+| `tutorial/tela3.wav` | Narração, tutorial 3 | Arquivo fornecido para o jogo — ainda não ouvido, ver `assets/audio-transcricao/tutorialTela3/transcricao.md` |
 
 ## Pendências conhecidas
 
@@ -121,8 +124,6 @@ canvas.
   conquistas.
 - **`error.MP3` não foi ouvido** — ficha "não verificada", mesma pendência já
   registrada nos outros jogos que usam este arquivo.
-- **Sem narração do tutorial** — os 3 passos têm `fala:` apontando pra ids
-  (`tutorialTela1/2/3`) que ainda não têm arquivo em `config.assets`.
 - **Sem áudio de clique genérico** (`config.audio.clique` continua `null`) —
   mesma decisão já usada no Encaixe Certo/Jogo da Ordenação.
 - **Origem/licença de `soltar_peca.mp3` e `acertoSOS.wav`** — mesma pendência

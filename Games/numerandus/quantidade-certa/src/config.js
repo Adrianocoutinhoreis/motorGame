@@ -118,6 +118,9 @@ export default {
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
     { id: 'somErro', src: './assets/audio/error.MP3' },
+    { id: 'tutorialTela1', src: './assets/audio/tutorial/tela1.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial/tela2.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial/tela3.wav' },
   ],
 
   /** Sem mascote — o tabuleiro é a área de maior destaque, mesma decisão do Encaixe Certo. */
