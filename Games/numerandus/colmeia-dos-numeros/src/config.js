@@ -182,8 +182,8 @@ export default {
       },
     },
     {
-      titulo: 'Complete a flor',
-      texto: 'Se uma peça não encaixar, ela volta para você tentar novamente. Complete a flor colocando as 6 peças ao redor da central.',
+      titulo: 'Complete a Colmeia',
+      texto: 'Se uma peça não encaixar, ela volta para você tentar novamente. Complete a Colmeia colocando as 6 peças ao redor da central.',
       fala: 'tutorialTela3',
       desenho: (ctx, l, a, t) => {
         const cx = l / 2;
