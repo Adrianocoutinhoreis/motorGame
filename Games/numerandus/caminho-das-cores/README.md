@@ -93,6 +93,31 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
    separado de `tam` só pra isso). As cores reaproveitam os tokens de madeira
    já existentes no motor (`cores.madeira`/`madeiraEscura`, usados no tema
    'quarto' do `Background`), em vez de inventar uma paleta nova.
+9. **Pausa/ajuda/som juntos no mesmo canto** — o som ficava isolado no canto
+   superior DIREITO enquanto pausa e ajuda ficavam à esquerda; a referência
+   mais recente mostra os 3 botões numa fileira só, à esquerda. O
+   `SoundToggle` foi realinhado pra perto dos outros dois, com o mesmo ajuste
+   vertical (acompanha a altura da cartela).
+10. **Altura do tabuleiro também estica** — a correção 7 já fixava a altura
+    numa tentativa de preencher a tela, mas essa conta se perdeu numa reescrita
+    direta do arquivo (ver nota técnica abaixo) e a LARGURA passou a travar o
+    tamanho da peça primeiro (a bandeja numa fileira só de peças soltas é
+    geralmente mais larga que a grade de trilhas) — nesse ponto a altura do
+    tabuleiro sobrava bem abaixo do disponível, deixando espaço morto em cima
+    e embaixo de todo o conjunto (cartela + tabuleiro), marcado com X nos 4
+    cantos da referência. `_calcularLayout()` agora estica `boardHeight` pra
+    pelo menos a altura total da área de jogo DEPOIS de escolher o `tam` pela
+    largura — a folga extra vira canal de coluna mais comprido, sem precisar
+    recalcular mais nada (`TabuleiroVisual`/`Trilha` já derivam a altura do
+    canal e a posição das peças a partir de `boardHeight`). O teto da busca de
+    `tam` (antes travado em 100) também subiu pra 220, pra não limitar
+    artificialmente o tamanho em níveis com pouco conteúdo.
+
+> **Nota técnica:** boa parte da reestruturação de layout desta seção
+> (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
+> correções 6-8) veio de uma edição direta no arquivo `GameScene.js`, fora
+> desta sessão de IA — registrado aqui porque o histórico de correções desta
+> seção só faz sentido junto.
 
 **Tema visual:** o fundo da TELA (atrás do tabuleiro) continua liso e escuro
 — ainda é o conteúdo colorido (peças, tabuleiro) que deveria chamar atenção,

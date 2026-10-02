@@ -590,8 +590,15 @@ export class GameScene extends Scene {
 
     const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
 
-    // Tentar tamanhos progressivamente menores até o conjunto inteiro caber na tela
-    for (let tam = 100; tam >= 30; tam -= 2) {
+    // Tentar tamanhos progressivamente menores até o conjunto inteiro caber na
+    // tela. O teto começava em 100 e nunca ia além disso — com níveis mais
+    // simples (poucas trilhas/peças), o conjunto parava bem menor do que a
+    // tela permitia, sobrando bastante espaço vazio nos 4 lados (reclamação
+    // do humano, marcada com X na referência). Teto bem mais alto (220): o
+    // próprio teste `maxHeight <= areaAltura && totalWidth <= areaLargura`
+    // já garante que não estoura a tela, então um teto alto só deixa crescer
+    // mais quando cabe, sem risco de vazar.
+    for (let tam = 220; tam >= 30; tam -= 2) {
       // Disposição da bandeja (piscina)
       const linhas = totalPecasBandeja <= 12 ? 1 : (totalPecasBandeja <= 24 ? 2 : 3);
       const porLinha = Math.ceil(totalPecasBandeja / linhas);
@@ -614,10 +621,21 @@ export class GameScene extends Scene {
       const maxHeight = Math.max(boardHeight, cartelaHeight);
       
       if (totalWidth <= areaLargura && maxHeight <= areaAltura) {
+        // A LARGURA costuma travar o `tam` primeiro (a bandeja numa fileira
+        // só de peças soltas é geralmente mais larga que a grade de
+        // trilhas) — nesse ponto a ALTURA do tabuleiro ainda pode sobrar
+        // bem abaixo de `areaAltura`, deixando espaço morto em cima/embaixo
+        // de todo o conjunto (reclamação do humano, X nos 4 cantos da
+        // referência). Esticar `boardHeight` pra pelo menos `areaAltura`
+        // resolve: a folga extra vira canal de coluna mais comprido (o
+        // `TabuleiroVisual`/`Trilha` já calculam a altura do canal e a
+        // posição das peças a partir de `boardHeight`, então crescem junto
+        // sem precisar mexer em mais nada).
+        const boardHeightEsticado = Math.max(boardHeight, areaAltura);
         return {
           tam, cartelaTam, cartelaGapIcone, cartelaGapColuna, cartelaPadX, cartelaPadY, gapCartela,
           gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
-          alturaBandeja, gapDivisor, boardWidth, boardHeight, cartelaWidth, cartelaHeight, totalWidth
+          alturaBandeja, gapDivisor, boardWidth, boardHeight: boardHeightEsticado, cartelaWidth, cartelaHeight, totalWidth
         };
       }
     }
