@@ -269,10 +269,31 @@ class NumeroFixo extends Node {
 
     ctx.save();
     ctx.fillStyle = corDoValor(this.valor);
-    ctx.font = `800 ${Math.round(h * 0.62)}px Outfit, system-ui, -apple-system, sans-serif`;
+    const texto = String(this.valor);
+    let tamanhoFonte = h * 0.62;
+    ctx.font = `800 ${Math.round(tamanhoFonte)}px Outfit, system-ui, -apple-system, sans-serif`;
+    let centroX = w / 2;
+    // "10" é o único numeral de dois dígitos da coleção (numeroMax não passa
+    // disso) — o "0" saía batendo na curva do entalhe (visto no print: o "0"
+    // sobrepondo o traço da borda). A causa não é falta de espaço no CARTÃO
+    // inteiro: é que o entalhe (`tracarCorpoEntalhe`) entra `r` px pra DENTRO
+    // da borda direita bem na altura vertical onde o número é desenhado
+    // (cy = h/2, o centro exato do entalhe) — a largura de verdade ali é
+    // `w - r`, não `w`. Um dígito só nunca chega perto disso (deixa como
+    // sempre foi); só recentraliza/encolhe quando o texto realmente invade
+    // essa faixa, pra não mexer no visual já aprovado dos outros 9 números.
+    if (w / 2 + ctx.measureText(texto).width / 2 > w - r) {
+      centroX = (w - r) / 2;
+      const larguraMax = (w - r) * 0.82;
+      const larguraTexto = ctx.measureText(texto).width;
+      if (larguraTexto > larguraMax) {
+        tamanhoFonte *= larguraMax / larguraTexto;
+        ctx.font = `800 ${Math.round(tamanhoFonte)}px Outfit, system-ui, -apple-system, sans-serif`;
+      }
+    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(this.valor), w / 2, h / 2 + h * 0.02);
+    ctx.fillText(texto, centroX, h / 2 + h * 0.02);
     ctx.restore();
 
     if (this.destacada && !this.preenchida) {
