@@ -56,13 +56,21 @@ qual peça está errada (`GameScene._avisarColmeiaErrada`). É o único sinal de
 "confira de novo" que o Médio/Difícil dão nessa situação; não dispara na
 jogada que vence (`placar.venceu` já é `true` antes da checagem rodar).
 
-O Difícil também ganhou um cronômetro REGRESSIVO (`tempoLimiteSegundos` no
-`config.js`, 3 minutos por padrão), só pra dar senso de urgência — chegar a
-"0:00" não acontece nada (sem derrota, sem reiniciar); o jogo inteiro continua
-"sem derrota" (`registrarDerrota: false`). Lê `this.game.tempoJogando`, o
-MESMO relógio que o motor já pausa sozinho durante Pausa/Ajuda e que vira
-`tempoSegundos` no fim da partida — mesmo padrão do cronômetro ao vivo do
-Jogo da Ordenação, só que regressivo em vez de progressivo.
+No Difícil (só nele — `centralAleatoria` no `config.js`), a peça central
+também nasce girada um número aleatório de passos de 60° (0 a 5), em vez de
+sempre na rotação exata da foto da montagem final. Girar uma montagem já
+consistente por inteiro preserva todo encontro de aresta (é uma transformação
+rígida — a MESMA foto, só vista girada), então continua havendo uma única
+posição+rotação certa pra cada peça; só muda QUAL posição e QUAL rotação são
+a certa a cada partida (`GameScene.passosCentral`, levado em conta tanto em
+`slotCorreto` quanto na rotação-alvo de `_validarEncaixe`). Fica mais difícil
+"decorar" a solução jogando várias vezes.
+
+> **Nota histórica:** este nível também teve um cronômetro regressivo no HUD
+> por um tempo (`tempoLimiteSegundos`, só pra dar senso de urgência, sem
+> nenhuma consequência ao zerar). Removido depois a pedido — o jogo não usa
+> mais `Game.tempoJogando` pra nada próprio (o `mostrarTempo` do resultado
+> final, que é do motor, continua intacto).
 
 **Bug corrigido: acerto dependia da ordem em que as peças eram colocadas.**
 Uma versão anterior de `_validarEncaixe` também conferia, só no Difícil, se o

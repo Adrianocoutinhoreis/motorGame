@@ -1,5 +1,5 @@
 import {
-  Scene, Node, TextNode, Icone, IconButton, SoundToggle, PauseScreen, HelpScreen,
+  Scene, Node, TextNode, IconButton, SoundToggle, PauseScreen, HelpScreen,
   Background, Panel, Tween, Easing, ScoreSystem, ESTADOS, rand, espaco, alvoAcessivel,
 } from '../../engine/index.js';
 
@@ -252,8 +252,9 @@ class ContornoVazio extends Node {
  *     conta ponto a peça genuinamente certa; o tabuleiro cheio mas errado
  *     ganha um balanço visual (`_avisarColmeiaErrada`), sem apontar qual
  *     peça está errada. O Difícil ainda escurece os contornos vazios
- *     (`contornosDiscretos`) e mostra um cronômetro regressivo sem punição
- *     (`tempoLimiteSegundos`).
+ *     (`contornosDiscretos`) e sorteia a rotação da central a cada partida
+ *     (`centralAleatoria`), deslocando junto a posição/rotação certa de
+ *     cada peça (`passosCentral`).
  */
 export class GameScene extends Scene {
   aoEntrar() {
@@ -320,10 +321,26 @@ export class GameScene extends Scene {
     this.tabuleiro = new Node();
     this.area.adicionar(this.tabuleiro);
 
+    /**
+     * Só no Difícil (`centralAleatoria`): a central nasce girada um número
+     * aleatório de "quartos de volta" (0 a 5 passos de 60°) — a MESMA
+     * montagem da foto, só vista girada como um todo. Rodar uma montagem já
+     * consistente por inteiro preserva todo encontro de aresta (é uma
+     * transformação rígida), então continua havendo uma — e só uma — posição
+     * certa pra cada peça; só muda QUAL posição e QUAL rotação são a certa.
+     * Girar por `passosCentral` desloca a posição certa de cada peça em
+     * `passosCentral` casas no anel (`slotCorreto`, abaixo) e a rotação certa
+     * de 0 para `passosCentral` (ver `_validarEncaixe`) — sempre os dois
+     * juntos, nunca um sem o outro.
+     */
+    this.passosCentral = this.nivel.centralAleatoria ? rand.inteiro(0, 5) : 0;
+
     this.central = new Hexagono({
       x: this.centroTabuleiro.x, y: this.centroTabuleiro.y,
       raio: this.raioTabuleiro, numeros: NUMEROS_CENTRAL,
+      rotation: this.passosCentral * 60,
     });
+    this.central.passos = this.passosCentral;
     this.tabuleiro.adicionar(this.central);
 
     this.slots = SLOTS.map((def) => {
@@ -382,7 +399,10 @@ export class GameScene extends Scene {
       const peca = new Hexagono({
         x: cx, y: cy, raio: this.raioBandeja, numeros: def.numeros, interativo: true,
       });
-      peca.slotCorreto = slotIndex;
+      // O lugar certo desta peça desloca junto com o giro da central (0 se
+      // `centralAleatoria` não estiver ligado) — ver comentário ao criar
+      // `this.passosCentral`, acima.
+      peca.slotCorreto = (slotIndex + this.passosCentral) % 6;
       peca.trayX = cx;
       peca.trayY = cy;
       peca.colocada = false;
@@ -390,8 +410,11 @@ export class GameScene extends Scene {
 
       // Nível fácil: a peça já nasce na rotação certa (só arrastar). Nos
       // outros dois, nasce embaralhada — a criança PRECISA girar primeiro.
+      // A rotação certa também é `passosCentral` agora (não sempre 0), então
+      // o sorteio soma esse deslocamento antes de pular 1 a 5 casas — assim
+      // nunca nasce por acidente já na rotação certa.
       if (this.nivel.rotacaoAleatoria) {
-        peca.passos = rand.inteiro(1, 5);
+        peca.passos = (this.passosCentral + rand.inteiro(1, 5)) % 6;
         peca.rotation = peca.passos * 60;
       }
 
@@ -492,37 +515,6 @@ export class GameScene extends Scene {
     });
     this.adicionar(this.progressoTexto);
     this._atualizarProgresso();
-
-    /**
-     * Cronômetro REGRESSIVO — só no Difícil (`tempoLimiteSegundos`). Dá
-     * senso de urgência, mas sem cobrar: chegar a "0:00" não acontece nada
-     * (sem derrota, sem reiniciar) — o jogo inteiro é "sem derrota", e isto
-     * não muda essa regra. Lê `this.game.tempoJogando`, o MESMO relógio que
-     * o motor já pausa sozinho durante Pausa/Ajuda (ver `Game._tempoJogando`)
-     * e que vira `tempoSegundos` no fim da partida — mesmo padrão do
-     * cronômetro ao vivo do Jogo da Ordenação, só que regressivo aqui em vez
-     * de progressivo, porque este nível quer parecer um desafio contra o
-     * tempo, não só informar quanto já passou.
-     */
-    if (this.nivel.tempoLimiteSegundos) {
-      this._tempoLimiteSegundos = this.nivel.tempoLimiteSegundos;
-      const yRelogio = espaco.md + 24 + 32;
-      this.adicionar(new Icone('relogio', {
-        x: L / 2 - 58, y: yRelogio - 13, tamanho: 26, cor: '#F5EAD6',
-      }));
-      this._textoRelogio = new TextNode('', {
-        x: L / 2 - 28,
-        y: yRelogio,
-        alinhamento: 'left',
-        linhaBase: 'middle',
-        tamanho: 22,
-        peso: '700',
-        cor: '#F5EAD6',
-      });
-      this.adicionar(this._textoRelogio);
-      this._relogioSegundoMostrado = -1;
-      this._atualizarRelogio();
-    }
 
     // ---------------------------------------------------------------- pausa
     this.pausa = new PauseScreen({
@@ -682,10 +674,11 @@ export class GameScene extends Scene {
    * do slot ao lado — ela não contava ponto; corrigir o vizinho depois não
    * consertava). `numeros` já vem transcrito direto da foto da montagem final
    * (ver comentário de `SLOTS`, no topo do arquivo): slot certo + rotação
-   * certa (`passos % 6 === 0`) já GARANTE sozinho que toda aresta desta peça
-   * — central e as duas que tocam vizinhas — bate, porque é exatamente a
-   * posição que a foto registrou. Checar o vizinho de novo não pegava nenhum
-   * erro a mais; só criava essa dependência de ordem.
+   * certa já GARANTEM sozinhos que toda aresta desta peça — central e as
+   * duas que tocam vizinhas — bate, porque é exatamente a posição que a foto
+   * registrou (ou essa posição girada como um todo, se `passosCentral` não
+   * for 0 — ver `aoEntrar`). Checar o vizinho de novo não pegava nenhum erro
+   * a mais; só criava essa dependência de ordem.
    */
   _validarEncaixe(slot, peca) {
     const slotIndex = this.slots.indexOf(slot);
@@ -695,9 +688,10 @@ export class GameScene extends Scene {
     // Uma peça com número repetido (ex.: a do topo, com três "3" e dois "6")
     // pode ter uma rotação ERRADA que, por coincidência, ainda mostra o
     // número certo numa aresta isolada (achado real: passos=5 na peça do
-    // topo também mostra "6" pro centro). Só `passos % 6 === 0` é a rotação
-    // de verdade.
-    return ((peca.passos % 6) + 6) % 6 === 0;
+    // topo também mostra "6" pro centro). A rotação de verdade é sempre
+    // `passosCentral` — normalmente 0, mas desloca junto quando a central
+    // nasce girada (`centralAleatoria`, só no Difícil; ver `aoEntrar`).
+    return ((peca.passos % 6) + 6) % 6 === this.passosCentral;
   }
 
   _encaixar(peca, slot) {
@@ -742,7 +736,6 @@ export class GameScene extends Scene {
     const correta = this._validarEncaixe(slot, peca);
 
     peca.colocada = true;
-    peca.errosEncaixe = correta ? 0 : peca.errosEncaixe + 1;
     peca.contouComoAcerto = correta;
     peca.interativo = true;
     peca.removivel = true;
@@ -951,22 +944,6 @@ export class GameScene extends Scene {
       return;
     }
     super.atualizar(dt);
-    if (this._tempoLimiteSegundos) this._atualizarRelogio();
-  }
-
-  /**
-   * Só troca o texto quando o SEGUNDO inteiro muda — mesma otimização do
-   * Jogo da Ordenação, pra não reescrever o mesmo "2:59" sessenta vezes por
-   * segundo. `Math.ceil` (não `floor`) pra mostrar o limite CHEIO assim que
-   * a partida começa, em vez de já nascer um segundo pra trás.
-   */
-  _atualizarRelogio() {
-    const restante = Math.max(0, Math.ceil(this._tempoLimiteSegundos - this.game.tempoJogando));
-    if (restante === this._relogioSegundoMostrado) return;
-    this._relogioSegundoMostrado = restante;
-    const min = Math.floor(restante / 60);
-    const seg = restante % 60;
-    this._textoRelogio.texto = `${min}:${String(seg).padStart(2, '0')}`;
   }
 
   // --------------------------------------------------------------- auxiliares

@@ -137,12 +137,15 @@ export default {
   //     `GameScene._validarEncaixe`, sobre um bug de ordem real que essa
   //     comparação causava). O Fácil é o único que ainda recusa de vez
   //     (pisca âmbar + som) uma peça com número errado;
-  //   `tempoLimiteSegundos` — só no Difícil: mostra um cronômetro regressivo
-  //     no HUD (`GameScene._atualizarRelogio`), só pra dar senso de urgência.
-  //     Chegar a "0:00" não acontece NADA — sem derrota, sem reiniciar; o
-  //     jogo inteiro continua "sem derrota" (`registrarDerrota: false`,
-  //     abaixo). Valor de palpite inicial, não medido com crianças de
-  //     verdade ainda — ajustar aqui se parecer curto ou longo demais.
+  //   `centralAleatoria` — só no Difícil: a peça central nasce girada um
+  //     número aleatório de passos de 60° (0 a 5), em vez de sempre na
+  //     rotação exata da foto. Como girar uma montagem já consistente por
+  //     inteiro preserva todo encontro de aresta (é só a MESMA foto vista
+  //     girada), continua havendo uma única posição+rotação certa pra cada
+  //     peça — ela só desloca junto com o giro da central (`slotCorreto` e a
+  //     rotação-alvo em `_validarEncaixe` levam `GameScene.passosCentral` em
+  //     conta). Fica mais difícil "decorar" a solução jogando várias vezes,
+  //     já que ela muda a cada partida.
   // Ver `GameScene._raioTolerancia`/`_validarEncaixe`/`_removerPeca`.
   niveis: [
     {
@@ -161,7 +164,7 @@ export default {
       id: 3, nome: 'Difícil', descricao: 'Compare as vizinhas', amostra: '⬡⬡⬡', cor: '#DC2626',
       meta: 6, rotacaoAleatoria: true, tolerancia: 0.82,
       destacarSlotCorreto: false, contornosDiscretos: true,
-      permitirRemoverPeca: true, encaixeLivre: true, tempoLimiteSegundos: 180,
+      permitirRemoverPeca: true, encaixeLivre: true, centralAleatoria: true,
     },
   ],
 
