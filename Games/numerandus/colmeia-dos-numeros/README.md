@@ -11,11 +11,14 @@ Esta pasta é **autossuficiente**: pode ser enviada sozinha para o AVA.
 
 Um quebra-cabeça geométrico real (brinquedo físico de 7 peças hexagonais) em
 versão digital. Uma peça central fica sempre fixa no meio do tabuleiro; a
-criança gira (botão dedicado) e arrasta cada uma das outras 6 peças até o
-número do lado que vai tocar bater com o número da peça vizinha — central ou
-já colocada. Pratica comparação de números (reconhecer iguais) e orientação
-espacial (girar até a peça "olhar" pro lado certo). Sem ordem certa pra
-seguir, sem derrota: errar só demora mais, a peça volta pra bandeja.
+criança arrasta cada uma das outras 6 peças até o número do lado que vai
+tocar bater com o número da peça vizinha — central ou já colocada. No Médio e
+no Difícil ela também precisa girar antes (botão dedicado) — no Fácil a peça
+já nasce alinhada, então não existe botão de girar nela (giraria uma peça que
+já estava certa, por engano). Pratica comparação de números (reconhecer
+iguais) e orientação espacial (girar até a peça "olhar" pro lado certo). Sem
+ordem certa pra seguir, sem derrota: errar só demora mais, a peça volta pra
+bandeja.
 
 Nos níveis 2 e 3 ("Médio" e "Difícil"), uma peça já encaixada continua
 tocável: tocar nela de novo tira ela do tabuleiro e devolve pra bandeja

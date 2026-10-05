@@ -418,40 +418,45 @@ export class GameScene extends Scene {
       peca.on('sair', () => { peca.hoverRemocao = false; });
       this.area.adicionar(peca);
 
-      // A aresta do hexágono na diagonal de 45° fica a ~0.9×raio do centro
-      // (não 0.55× — essa conta errada botava o botão em cima do número da
-      // própria peça). 0.98×raio deixa o botão encostado na quina, quase
-      // todo por fora, tipo selo — só um pouco por cima do desenho.
-      const ladoBotao = alvoAcessivel(56);
-      const margemBotao = 12;
-      // Se o selo ultrapassaria o cartão, desloca o conjunto inteiro para
-      // dentro. Mover apenas o botão o aproximava demais da peça nas últimas
-      // coluna e linha.
-      const limiteCentroX = xBandeja + larguraBandeja - margemBotao - ladoBotao / 2;
-      const limiteCentroY = areaAltura - margemBotao - ladoBotao / 2;
-      const excessoX = Math.max(0, cx + this.raioBandeja * 0.98 - limiteCentroX);
-      const excessoY = Math.max(0, cy + this.raioBandeja * 0.98 - limiteCentroY);
-      cx -= excessoX;
-      cy -= excessoY;
-      peca.x = cx;
-      peca.y = cy;
-      peca.trayX = cx;
-      peca.trayY = cy;
+      // Fácil não tem botão de girar: a peça já nasce alinhada (acima), então
+      // girar só serviria pra desalinhar por acidente uma peça que já estava
+      // certa. Nos outros dois a criança PRECISA girar antes de soltar.
+      if (this.nivel.rotacaoAleatoria) {
+        // A aresta do hexágono na diagonal de 45° fica a ~0.9×raio do centro
+        // (não 0.55× — essa conta errada botava o botão em cima do número da
+        // própria peça). 0.98×raio deixa o botão encostado na quina, quase
+        // todo por fora, tipo selo — só um pouco por cima do desenho.
+        const ladoBotao = alvoAcessivel(56);
+        const margemBotao = 12;
+        // Se o selo ultrapassaria o cartão, desloca o conjunto inteiro para
+        // dentro. Mover apenas o botão o aproximava demais da peça nas últimas
+        // coluna e linha.
+        const limiteCentroX = xBandeja + larguraBandeja - margemBotao - ladoBotao / 2;
+        const limiteCentroY = areaAltura - margemBotao - ladoBotao / 2;
+        const excessoX = Math.max(0, cx + this.raioBandeja * 0.98 - limiteCentroX);
+        const excessoY = Math.max(0, cy + this.raioBandeja * 0.98 - limiteCentroY);
+        cx -= excessoX;
+        cy -= excessoY;
+        peca.x = cx;
+        peca.y = cy;
+        peca.trayX = cx;
+        peca.trayY = cy;
 
-      const centroBotaoX = cx + this.raioBandeja * 0.98;
-      const centroBotaoY = cy + this.raioBandeja * 0.98;
-      const botaoGirar = new IconButton({
-        icone: 'reiniciar',
-        tamanho: ladoBotao,
-        x: centroBotaoX - ladoBotao / 2,
-        y: centroBotaoY - ladoBotao / 2,
-        variante: 'suaveAzul',
-        audio: this.audio,
-        somToque: config.audio?.clique,
-        aoTocar: () => this._girarPeca(peca),
-      });
-      this.area.adicionar(botaoGirar);
-      peca.botaoGirar = botaoGirar;
+        const centroBotaoX = cx + this.raioBandeja * 0.98;
+        const centroBotaoY = cy + this.raioBandeja * 0.98;
+        const botaoGirar = new IconButton({
+          icone: 'reiniciar',
+          tamanho: ladoBotao,
+          x: centroBotaoX - ladoBotao / 2,
+          y: centroBotaoY - ladoBotao / 2,
+          variante: 'suaveAzul',
+          audio: this.audio,
+          somToque: config.audio?.clique,
+          aoTocar: () => this._girarPeca(peca),
+        });
+        this.area.adicionar(botaoGirar);
+        peca.botaoGirar = botaoGirar;
+      }
 
       this.pecas.push(peca);
     });
