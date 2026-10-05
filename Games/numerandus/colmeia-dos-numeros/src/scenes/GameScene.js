@@ -584,10 +584,14 @@ export class GameScene extends Scene {
     const slot = this._lugarMaisPerto(peca);
 
     if (slot && this.nivel.encaixeLivre) {
-      // Difícil: qualquer peça serve em qualquer lugar vazio, na rotação que
-      // estiver — certa ou errada, ela fica ali, sem nenhum aviso. O aluno
-      // só descobre comparando os números com o olho, e tira a errada depois
-      // (`_removerPeca`) — ver `_encaixarLivre`.
+      // Médio/Difícil: qualquer peça serve em qualquer lugar vazio, na
+      // rotação que estiver — certa ou errada, ela fica ali, sem nenhum
+      // aviso. Só volta pra bandeja se o lugar mais perto já estiver
+      // OCUPADO (`_lugarMaisPerto` já ignora slots ocupados — por isso cai
+      // direto no "devolve pra bandeja" lá embaixo quando isso acontece). O
+      // aluno só descobre o que está errado comparando os números com o
+      // olho, e tira a peça errada depois (`_removerPeca`) — ver
+      // `_encaixarLivre`.
       this._encaixarLivre(peca, slot);
       return;
     }
@@ -682,9 +686,9 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Só no Difícil (`encaixeLivre`): encaixa a peça onde o aluno soltou, CERTA
-   * OU ERRADA, sem piscar âmbar nem tocar som — `_validarEncaixe` ainda roda,
-   * mas só decide se CONTA ponto, não se a peça pode ficar ali. Uma peça
+   * Médio e Difícil (`encaixeLivre`): encaixa a peça onde o aluno soltou,
+   * CERTA OU ERRADA, sem piscar âmbar nem tocar som — `_validarEncaixe` ainda
+   * roda, mas só decide se CONTA ponto, não se a peça pode ficar ali. Uma peça
    * errada fica visível na colmeia até o próprio aluno perceber (comparando
    * os números com o olho, igual ao brinquedo de verdade) e tirar
    * (`_removerPeca`) pra tentar de novo.

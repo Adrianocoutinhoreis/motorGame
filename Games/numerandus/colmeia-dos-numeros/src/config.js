@@ -124,17 +124,19 @@ export default {
   //     azul fraco, que acende forte ao passar o mouse por cima — o aviso
   //     visual de que aquela peça, diferente das travadas, pode ser pega de
   //     volta (ver `Hexagono.removivel`/`hoverRemocao`).
-  //   `encaixeLivre` — só no Difícil: QUALQUER peça serve em QUALQUER lugar
-  //     vazio, na rotação que estiver no momento de soltar — certa ou
-  //     errada, ela fica ali, sem piscar âmbar nem tocar som de erro (ver
-  //     `_encaixarLivre`). O Médio continua travando só a peça/rotação certa
-  //     no lugar certo (como sempre), com o aviso de erro de sempre; a
-  //     diferença do Difícil é deixar o aluno "ir pondo e tirando" sozinho,
-  //     comparando os números com o olho até formar a colmeia de verdade —
-  //     só conta ponto quando a peça posta é mesmo a certa (slot e rotação
-  //     exatos da peça, não comparação com vizinho — ver "por que não
-  //     comparar também com os vizinhos" em `GameScene._validarEncaixe`,
-  //     sobre um bug de ordem real que essa comparação causava).
+  //   `encaixeLivre` — no Médio e no Difícil: QUALQUER peça serve em
+  //     QUALQUER lugar vazio, na rotação que estiver no momento de soltar —
+  //     certa ou errada, ela fica ali, sem piscar âmbar nem tocar som de erro
+  //     (ver `_encaixarLivre`). A peça só volta pra bandeja se o lugar mais
+  //     perto já estiver OCUPADO — aí sim precisa tirar a que está lá
+  //     primeiro (`_removerPeca`). A ideia é deixar o aluno "ir pondo e
+  //     tirando" sozinho, comparando os números com o olho até formar a
+  //     colmeia de verdade — só conta ponto quando a peça posta é mesmo a
+  //     certa (slot e rotação exatos da peça, não comparação com vizinho —
+  //     ver "por que não comparar também com os vizinhos" em
+  //     `GameScene._validarEncaixe`, sobre um bug de ordem real que essa
+  //     comparação causava). O Fácil é o único que ainda recusa de vez
+  //     (pisca âmbar + som) uma peça com número errado.
   // Ver `GameScene._raioTolerancia`/`_validarEncaixe`/`_removerPeca`.
   niveis: [
     {
@@ -147,7 +149,7 @@ export default {
       id: 2, nome: 'Médio', descricao: 'Gire e encaixe', amostra: '⬡⬡', cor: '#F59E0B',
       meta: 6, rotacaoAleatoria: true, tolerancia: 1.0,
       destacarSlotCorreto: false, contornosDiscretos: false,
-      permitirRemoverPeca: true,
+      permitirRemoverPeca: true, encaixeLivre: true,
     },
     {
       id: 3, nome: 'Difícil', descricao: 'Compare as vizinhas', amostra: '⬡⬡⬡', cor: '#DC2626',

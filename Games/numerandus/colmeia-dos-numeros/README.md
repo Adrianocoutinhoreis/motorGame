@@ -33,7 +33,7 @@ de volta. Passar o mouse por cima acende o anel bem mais forte
 "passar por cima" antes de encostar, por isso o anel fraco já fica sempre
 ligado, servindo de aviso também pra quem usa o dedo.
 
-No Difícil (só nele — `encaixeLivre` no `config.js`), o encaixe em si também
+No Médio e no Difícil (`encaixeLivre` no `config.js`), o encaixe em si também
 muda: QUALQUER peça serve em QUALQUER lugar vazio, na rotação que estiver no
 momento de soltar — certa ou errada, ela fica visível na colmeia, sem piscar
 âmbar nem tocar som de erro (`GameScene._encaixarLivre`). A ideia é deixar a
@@ -44,9 +44,9 @@ peça colocada errada NUNCA soma ponto (`Hexagono.contouComoAcerto` continua
 falso), então o "X / 6 PEÇAS" do HUD segue contando só peças de verdade
 certas, mesmo com a colmeia visualmente cheia de peças erradas; só vence
 quando as 6 estão realmente certas. Um slot já ocupado (certo ou errado)
-continua recusando qualquer outra peça por cima — é preciso tirar a que está
-lá primeiro. No Médio nada disso muda: continua travando só a peça/rotação
-certa no lugar certo, com o aviso de erro de sempre (pisca âmbar + som).
+continua recusando qualquer outra peça por cima — a peça só volta pra bandeja
+nesse caso; é preciso tirar a que está lá primeiro. Só no Fácil a peça com
+número errado ainda é recusada na hora (pisca âmbar + som).
 
 **Bug corrigido: acerto dependia da ordem em que as peças eram colocadas.**
 Uma versão anterior de `_validarEncaixe` também conferia, só no Difícil, se o
