@@ -235,11 +235,25 @@ class ContornoVazio extends Node {
  *
  * Mecânica: uma peça central fixa fica no meio do tabuleiro; as outras 6
  * (todas as mesmas 7 peças reais do brinquedo, sempre) aparecem na bandeja.
- * A criança gira cada peça (botão dedicado, nunca gesto) até o número do
- * lado que vai tocar bater com o vizinho, e arrasta até o contorno
- * pontilhado. Só encaixa de vez quando os números das arestas batem, tanto
- * com a central quanto com as peças já colocadas do lado — cair perto do
- * lugar certo com o número errado só pisca âmbar e volta pra bandeja.
+ * No Médio/Difícil a criança gira cada peça (botão dedicado, nunca gesto)
+ * até o número do lado bater com o vizinho; no Fácil ela já nasce alinhada.
+ *
+ * O que acontece ao soltar uma peça perto de um lugar vazio difere por
+ * nível (ver `permitirRemoverPeca`/`encaixeLivre` no `config.js`):
+ *   - Fácil: só encaixa se for a peça certa, na rotação certa, no lugar
+ *     certo dela (`_validarEncaixe` + `_encaixar`) — caso contrário pisca
+ *     âmbar e volta pra bandeja; uma vez colocada, trava ali.
+ *   - Médio/Difícil (`encaixeLivre`): QUALQUER peça serve em QUALQUER lugar
+ *     vazio, na rotação que estiver — certa ou errada, ela fica visível ali
+ *     (`_encaixarLivre`), sem nenhum aviso de erro. Só volta pra bandeja se
+ *     o lugar mais perto já estiver OCUPADO. Uma peça colocada continua
+ *     tocável: tocar nela de novo a tira e devolve pra bandeja
+ *     (`_removerPeca`) — é assim que o aluno corrige uma peça errada. Só
+ *     conta ponto a peça genuinamente certa; o tabuleiro cheio mas errado
+ *     ganha um balanço visual (`_avisarColmeiaErrada`), sem apontar qual
+ *     peça está errada. O Difícil ainda escurece os contornos vazios
+ *     (`contornosDiscretos`) e mostra um cronômetro regressivo sem punição
+ *     (`tempoLimiteSegundos`).
  */
 export class GameScene extends Scene {
   aoEntrar() {
