@@ -35,18 +35,26 @@ ligado, servindo de aviso também pra quem usa o dedo.
 
 No Médio e no Difícil (`encaixeLivre` no `config.js`), o encaixe em si também
 muda: QUALQUER peça serve em QUALQUER lugar vazio, na rotação que estiver no
-momento de soltar — certa ou errada, ela fica visível na colmeia, sem piscar
-âmbar nem tocar som de erro (`GameScene._encaixarLivre`). A ideia é deixar a
-criança ir pondo peças, comparando os números com o olho (igual ao brinquedo
-físico de verdade) e tirando (toque + `_removerPeca`) as que não combinam,
-até montar a colmeia certa sozinha — sem o jogo apontar o erro na hora. Uma
-peça colocada errada NUNCA soma ponto (`Hexagono.contouComoAcerto` continua
+momento de soltar — certa ou errada, ela fica visível na colmeia. O som de
+encaixe (`soltarPeca`) toca pra QUALQUER peça que assenta, certa ou errada —
+é o som da peça física encostando no tabuleiro, não um prêmio por acertar
+(esse "prêmio" continua mudo de propósito). A ideia é deixar a criança ir
+pondo peças, comparando os números com o olho (igual ao brinquedo físico de
+verdade) e tirando (toque + `_removerPeca`) as que não combinam, até montar a
+colmeia certa sozinha — sem o jogo apontar qual peça está errada. Uma peça
+colocada errada NUNCA soma ponto (`Hexagono.contouComoAcerto` continua
 falso), então o "X / 6 PEÇAS" do HUD segue contando só peças de verdade
 certas, mesmo com a colmeia visualmente cheia de peças erradas; só vence
 quando as 6 estão realmente certas. Um slot já ocupado (certo ou errado)
 continua recusando qualquer outra peça por cima — a peça só volta pra bandeja
 nesse caso; é preciso tirar a que está lá primeiro. Só no Fácil a peça com
-número errado ainda é recusada na hora (pisca âmbar + som).
+número errado ainda é recusada na hora (pisca âmbar + som de erro).
+
+Quando o tabuleiro fica CHEIO (as 6 peças colocadas) mas a colmeia não está
+certa, o tabuleiro inteiro faz um balanço visual suave — sem som, sem apontar
+qual peça está errada (`GameScene._avisarColmeiaErrada`). É o único sinal de
+"confira de novo" que o Médio/Difícil dão nessa situação; não dispara na
+jogada que vence (`placar.venceu` já é `true` antes da checagem rodar).
 
 O Difícil também ganhou um cronômetro REGRESSIVO (`tempoLimiteSegundos` no
 `config.js`, 3 minutos por padrão), só pra dar senso de urgência — chegar a

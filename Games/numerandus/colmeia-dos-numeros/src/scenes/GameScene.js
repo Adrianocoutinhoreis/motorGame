@@ -718,10 +718,10 @@ export class GameScene extends Scene {
 
   /**
    * Médio e Difícil (`encaixeLivre`): encaixa a peça onde o aluno soltou,
-   * CERTA OU ERRADA, sem piscar âmbar nem tocar som — `_validarEncaixe` ainda
-   * roda, mas só decide se CONTA ponto, não se a peça pode ficar ali. Uma peça
-   * errada fica visível na colmeia até o próprio aluno perceber (comparando
-   * os números com o olho, igual ao brinquedo de verdade) e tirar
+   * CERTA OU ERRADA, sem piscar âmbar — `_validarEncaixe` ainda roda, mas só
+   * decide se CONTA ponto, não se a peça pode ficar ali. Uma peça errada
+   * fica visível na colmeia até o próprio aluno perceber (comparando os
+   * números com o olho, igual ao brinquedo de verdade) e tirar
    * (`_removerPeca`) pra tentar de novo.
    */
   _encaixarLivre(peca, slot) {
@@ -741,18 +741,54 @@ export class GameScene extends Scene {
     Tween.removerDe(peca);
     Tween.para(peca, { x: slot.x, y: slot.y }, 180, Easing.suaveSaida);
 
-    if (!correta) {
-      // Nenhum aviso — nem pisca, nem som. Só não soma ponto: `_colocadas`/
-      // `placar.acertos` seguem contando só peças de verdade certas, então o
-      // "X / 6 PEÇAS" do HUD nunca mente mesmo com a colmeia visualmente cheia.
+    // O som de encaixe toca pra QUALQUER peça, certa ou errada — é o som da
+    // peça física encostando no lugar, não um prêmio por acertar (esse
+    // prêmio continua mudo de propósito). Sem ele, uma peça errada
+    // "desaparecia" em silêncio, sem nenhuma confirmação de que o aluno
+    // realmente soltou-a ali.
+    if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
+
+    if (correta) {
+      this._colocadas += 1;
+      this.placar.acertar(1);
+      this._atualizarProgresso();
+    } else {
+      // Nenhum aviso de ERRO — nem pisca, nem som diferente. Só não soma
+      // ponto: `_colocadas`/`placar.acertos` seguem contando só peças de
+      // verdade certas, então o "X / 6 PEÇAS" do HUD nunca mente mesmo com a
+      // colmeia visualmente cheia.
       this._tentativasErradas += 1;
-      return;
     }
 
-    if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
-    this._colocadas += 1;
-    this.placar.acertar(1);
-    this._atualizarProgresso();
+    // Tabuleiro cheio (as 6 peças colocadas, certas ou erradas) mas a
+    // colmeia NÃO está correta — `placar.venceu` seria `true` se estivesse.
+    // Um balanço visual no tabuleiro inteiro avisa "confira de novo" sem
+    // apontar qual peça está errada e sem som (pedido explícito).
+    if (!this.placar.venceu && this.slots.every((s) => s.ocupada)) {
+      this._avisarColmeiaErrada();
+    }
+  }
+
+  /**
+   * Balanço visual (sem som, sem apontar peça nenhuma) quando o tabuleiro
+   * fica cheio mas a colmeia ainda não está certa — só acontece no
+   * `encaixeLivre` (Médio/Difícil), onde uma peça errada pode mesmo ocupar
+   * um lugar. O guarda (`_avisandoColmeiaErrada`) evita sobrepor a animação
+   * se outra peça for colocada/retirada bem rápido enquanto ela ainda roda.
+   */
+  _avisarColmeiaErrada() {
+    if (this._avisandoColmeiaErrada) return;
+    this._avisandoColmeiaErrada = true;
+    const baseX = this.tabuleiro.x;
+    Tween.removerDe(this.tabuleiro);
+    Tween.de(this.tabuleiro)
+      .entao({ x: baseX - 10 }, 55, Easing.suaveSaida)
+      .entao({ x: baseX + 10 }, 55, Easing.suaveSaida)
+      .entao({ x: baseX - 7 }, 55, Easing.suaveSaida)
+      .entao({ x: baseX + 7 }, 55, Easing.suaveSaida)
+      .entao({ x: baseX - 3 }, 55, Easing.suaveSaida)
+      .entao({ x: baseX }, 55, Easing.suaveSaida)
+      .chamar(() => { this._avisandoColmeiaErrada = false; });
   }
 
   /**

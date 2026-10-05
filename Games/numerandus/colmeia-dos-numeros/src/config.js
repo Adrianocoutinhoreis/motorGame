@@ -246,8 +246,11 @@ export default {
     // (Bingo, Jogo da Velha, Jogo da Ordenação, Encaixe Certo, Jogo da
     // Memória, Material Dourado, Quebra-Cabeça Dino) — sem fala.
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
-    // `soltarPeca` é o MESMO som de encaixe do Material Dourado/Dino — marca
-    // o ENCAIXE bem-sucedido (peça no lugar certo E número certo).
+    // `soltarPeca` é o MESMO som de encaixe do Material Dourado/Dino. No
+    // Fácil marca o ENCAIXE bem-sucedido (único jeito de uma peça assentar
+    // ali). No Médio/Difícil (`encaixeLivre`) toca pra QUALQUER peça que
+    // assenta num lugar, certa ou errada — é o som da peça física encostando
+    // no tabuleiro, não um prêmio por acertar (ver `GameScene._encaixarLivre`).
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
     { id: 'somProgresso', src: './assets/audio/progresso.mp3' },
     { id: 'tutorialTela1', src: './assets/audio/tutorial/tela1.wav' },
