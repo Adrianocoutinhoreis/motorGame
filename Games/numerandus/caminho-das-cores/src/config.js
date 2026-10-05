@@ -39,14 +39,19 @@ export default {
   faixaEtaria: '6 a 7 anos (1º ano)',
 
   // -------------------------------------------------------------- exibição
-  // Canvas VERTICAL (retrato) — único jogo da coleção assim até agora,
-  // pedido do humano a partir de uma foto do brinquedo físico, que é
-  // literalmente segurado em pé (ver GameScene.js para o porquê). 720x1280
-  // é o espelho exato do 1280x720 que todo o resto da coleção usa — mesmas
-  // duas magnitudes, só giradas — e o motor (`Stage`) já escala qualquer
-  // proporção de palco sem precisar de ajuste nenhum nele.
-  largura: 720,
-  altura: 1280,
+  // RESPONSIVO por tipo de tela — decidido UMA VEZ, no carregamento (o motor
+  // só lê `largura`/`altura` na hora de criar o `Stage`, não reage a um
+  // redimensionamento depois; ver `engine/core/Game.js`). Em CELULAR (tela
+  // em pé, mais alta que larga) o canvas é retrato — cartela e tabuleiro
+  // EMPILHAM, igual ao brinquedo físico segurado em pé. Em COMPUTADOR (tela
+  // deitada, mais larga que alta, com folga nas laterais) o canvas volta a
+  // ser paisagem — cartela e tabuleiro ficam LADO A LADO, aproveitando a
+  // largura — mas o TABULEIRO em si nunca muda de forma (continua vertical,
+  // com as colunas descendo), só a posição da cartela em relação a ele muda.
+  // `GameScene.js` lê `largura > altura` pra saber qual arranjo montar.
+  ...(typeof window !== 'undefined' && window.innerWidth > window.innerHeight * 1.05
+    ? { largura: 1280, altura: 800 }
+    : { largura: 720, altura: 1280 }),
   corLetterbox: '#241A33',
 
   tema: 'quarto',

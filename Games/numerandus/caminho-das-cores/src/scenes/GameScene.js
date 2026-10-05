@@ -404,6 +404,14 @@ export class GameScene extends Scene {
     this.estado = ESTADOS.JOGANDO;
     const { largura: L, altura: A, config } = this;
 
+    // RESPONSIVO: `config.js` já decidiu `largura`/`altura` uma vez, no
+    // carregamento, por tipo de tela (ver lá o porquê). Aqui só lemos o
+    // resultado — tela mais larga que alta é "computador" (cartela e
+    // tabuleiro lado a lado); mais alta que larga é "celular" (empilhados).
+    // O TABULEIRO em si nunca muda de forma nos dois modos — continua
+    // estreito e vertical, só a posição da cartela muda.
+    this._desktop = L > A;
+
     this.nivel = this.game.dados.nivel ?? config.niveis[0];
     this.placar = new ScoreSystem({ total: this.nivel.trilhas, nivel: this.nivel.id ?? 1 });
 
@@ -421,17 +429,29 @@ export class GameScene extends Scene {
       mostrarChao: false,
     }));
 
-    // 110 deixava ~12px de sobra entre a base dos botões (20 + 72 de altura)
-    // e o topo do tabuleiro — meio inútil, e o vão ficava mais visível em
-    // cima do TABULEIRO (que não tem botão nenhum por cima pra "ocupar" a
-    // faixa) do que em cima da cartela. 102 é o mínimo real: 20 (margem) +
-    // 72 (altura do botão) + 10 (respiro) — ajuste pedido pelo humano
-    // ("um pouco de espaço acima do tabuleiro").
-    this._topo = 102;
     const margemLateral = 44;
-    this._areaLargura = L - margemLateral * 2;
-    this._areaAltura = A - this._topo - 30;
-    this.area = new Node({ x: margemLateral, y: this._topo });
+    if (this._desktop) {
+      // No computador os botões viram uma COLUNA na lateral esquerda (ver
+      // HUD abaixo) — quem reserva espaço é a ESQUERDA, não o topo. A área
+      // de conteúdo (cartela + tabuleiro) começa à DIREITA dessa coluna.
+      this._topo = espaco.md;
+      const larguraColunaBotoes = 72 + 32;
+      const areaX = margemLateral + larguraColunaBotoes;
+      this._areaLargura = L - areaX - margemLateral;
+      this._areaAltura = A - this._topo - 30;
+      this.area = new Node({ x: areaX, y: this._topo });
+    } else {
+      // 110 deixava ~12px de sobra entre a base dos botões (20 + 72 de
+      // altura) e o topo do tabuleiro — meio inútil, e o vão ficava mais
+      // visível em cima do TABULEIRO (que não tem botão nenhum por cima pra
+      // "ocupar" a faixa) do que em cima da cartela. 102 é o mínimo real: 20
+      // (margem) + 72 (altura do botão) + 10 (respiro) — ajuste pedido pelo
+      // humano ("um pouco de espaço acima do tabuleiro").
+      this._topo = 102;
+      this._areaLargura = L - margemLateral * 2;
+      this._areaAltura = A - this._topo - 30;
+      this.area = new Node({ x: margemLateral, y: this._topo });
+    }
     this.adicionar(this.area);
 
     this.aoDesmontar(this.input.on('arrastar', (ponto) => this._moverArrasto(ponto)));
@@ -439,21 +459,30 @@ export class GameScene extends Scene {
     this.aoDesmontar(this.input.on('cancelar', () => this._soltarArrasto()));
 
     // ------------------------------------------------------------------ HUD
+    // No celular, os 3 botões formam uma FILEIRA no topo esquerdo (pedido do
+    // humano numa referência anterior). No computador sobra espaço na
+    // LATERAL (a cartela+tabuleiro não usam a largura toda) — então os 3
+    // viram uma COLUNA ali, aproveitando essa folga em vez de deixar o topo
+    // carregado (pedido do humano: "o botão pode ir pra lateral").
+    const btnX1 = margemLateral;
+    const btnX2 = this._desktop ? margemLateral : margemLateral + 88;
+    const btnX3 = this._desktop ? margemLateral : margemLateral + 88 * 2;
+    const btnY1 = espaco.md;
+    const btnY2 = this._desktop ? espaco.md + 88 : espaco.md;
+    const btnY3 = this._desktop ? espaco.md + 88 * 2 : espaco.md;
+
     this._btnPausa = new IconButton({
-      icone: 'pausa', x: margemLateral, y: espaco.md, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pausar(),
+      icone: 'pausa', x: btnX1, y: btnY1, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pausar(),
     });
     this.adicionar(this._btnPausa);
-    
+
     this._btnAjuda = new IconButton({
-      icone: 'tutorial', x: margemLateral + 72 + 16, y: espaco.md, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pedirAjuda(),
+      icone: 'tutorial', x: btnX2, y: btnY2, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pedirAjuda(),
     });
     this.adicionar(this._btnAjuda);
-    
-    // Som agrupado com pausa/ajuda no canto superior ESQUERDO (não isolado no
-    // canto oposto) — pedido do humano a partir da referência mais recente,
-    // os 3 botões formam uma fileira só.
+
     this._btnSom = new SoundToggle({
-      audio: this.audio, x: margemLateral + 88 * 2, y: espaco.md, somToque: config.audio?.clique,
+      audio: this.audio, x: btnX3, y: btnY3, somToque: config.audio?.clique,
     });
     this.adicionar(this._btnSom);
 
@@ -487,35 +516,57 @@ export class GameScene extends Scene {
     this._arrastando = null;
     this._construirRodada();
 
-    const cartelaAbsY = this._topo + this._cartela.y;
-    const btnY = Math.max(espaco.md, cartelaAbsY - 72 - 12);
-    this._btnPausa.y = btnY;
-    this._btnAjuda.y = btnY;
-    this._btnSom.y = btnY;
+    // Só no CELULAR os botões seguem a altura da cartela (empilhados logo
+    // acima dela). No computador eles já nasceram numa coluna fixa na
+    // lateral (acima), independente de onde a cartela caiu.
+    if (!this._desktop) {
+      const cartelaAbsY = this._topo + this._cartela.y;
+      const btnY = Math.max(espaco.md, cartelaAbsY - 72 - 12);
+      this._btnPausa.y = btnY;
+      this._btnAjuda.y = btnY;
+      this._btnSom.y = btnY;
+    }
   }
 
   _construirRodada() {
     const nivel = this.nivel;
     const { trilhas: sequencias, distratoras } = gerarRodada(nivel);
 
-    const layout = this._calcularLayout(nivel, this._areaLargura, this._areaAltura);
+    // RESPONSIVO: dois layouts diferentes, um cálculo de tamanho cada (ver os
+    // métodos). O TABULEIRO em si (`TabuleiroVisual`, `Trilha`, peças) é
+    // construído do MESMO jeito nos dois casos, mais abaixo — só muda onde a
+    // cartela e o tabuleiro são POSICIONADOS.
+    const layout = this._desktop
+      ? this._calcularLayoutDesktop(nivel, this._areaLargura, this._areaAltura)
+      : this._calcularLayout(nivel, this._areaLargura, this._areaAltura);
 
-    // --------------------------------------------- a cartela (topo, centralizada)
-    // Canvas VERTICAL (retrato) — a cartela e o tabuleiro agora EMPILHAM, um
-    // embaixo do outro, em vez de lado a lado (como era na versão horizontal
-    // do jogo). Pedido do humano a partir de uma foto do brinquedo físico
-    // segurado em pé: o tabuleiro fica centralizado, mais perto do vídeo de
-    // referência original.
     this._cartela = new CartelaPainel(
-      sequencias, layout.cartelaTam, layout.cartelaGapIcone, layout.cartelaGapColuna, layout.cartelaPadX, layout.cartelaPadY
+      sequencias, layout.cartelaTam, layout.cartelaGapIcone, layout.cartelaGapColuna, layout.cartelaPadX, layout.cartelaPadY,
     );
-    this._cartela.x = (this._areaLargura - this._cartela.largura) / 2;
-    this._cartela.y = 0;
-    this.area.adicionar(this._cartela);
 
-    // --------------------------------------------- o tabuleiro (embaixo, centralizado)
-    const boardX = (this._areaLargura - layout.boardWidth) / 2;
-    const boardY = this._cartela.altura + layout.gapCartela;
+    let boardX, boardY;
+    if (this._desktop) {
+      // COMPUTADOR: lado a lado — cartela à esquerda, tabuleiro (ESTREITO,
+      // sempre vertical, nunca alarga) à direita. A largura extra do
+      // computador só aproxima a cartela do tabuleiro; não alarga o
+      // tabuleiro em si (pedido explícito do humano).
+      const totalWidth = this._cartela.largura + layout.gapCartela + layout.boardWidth;
+      const startX = (this._areaLargura - totalWidth) / 2;
+      this._cartela.x = startX;
+      this._cartela.y = (this._areaAltura - this._cartela.altura) / 2;
+      boardX = startX + this._cartela.largura + layout.gapCartela;
+      boardY = (this._areaAltura - layout.boardHeight) / 2;
+    } else {
+      // CELULAR: empilhado — cartela em cima, tabuleiro embaixo, os dois
+      // centralizados horizontalmente. Pedido do humano a partir de uma foto
+      // do brinquedo físico segurado em pé: mais perto do vídeo de
+      // referência original do que a versão lado a lado.
+      this._cartela.x = (this._areaLargura - this._cartela.largura) / 2;
+      this._cartela.y = 0;
+      boardX = (this._areaLargura - layout.boardWidth) / 2;
+      boardY = this._cartela.altura + layout.gapCartela;
+    }
+    this.area.adicionar(this._cartela);
 
     this._painelDireita = new TabuleiroVisual({
       largura: layout.boardWidth,
@@ -646,6 +697,75 @@ export class GameScene extends Scene {
       if (cand.cartelaWidth > areaLargura) continue;
       const totalHeight = cand.cartelaHeight + cand.gapCartela + cand.boardHeightConteudo;
       if (totalHeight <= areaAltura) return finalizar(cand);
+    }
+    return finalizar(montar(30));
+  }
+
+  /**
+   * Canvas HORIZONTAL (computador, tela larga com folga nas laterais):
+   * cartela e tabuleiro voltam a ficar LADO A LADO. A diferença importante
+   * pro layout empilhado (`_calcularLayout`, acima) é que `boardWidth` aqui
+   * NÃO usa a largura disponível inteira — fica ESTREITO, do tamanho da
+   * própria grade de colunas (`larguraGradeTrilhas`), porque o tabuleiro
+   * nunca deve alargar (pedido explícito do humano: "não deixar largo o
+   * tabuleiro"). A bandeja de peças soltas simplesmente ocupa mais FILEIRAS
+   * dentro dessa largura estreita — sobra altura de sobra no computador pra
+   * isso não incomodar.
+   */
+  _calcularLayoutDesktop(nivel, areaLargura, areaAltura) {
+    const gapTrilha = 14;
+    const padTrilhaY = 6;
+    const gapSlot = 6;
+    const gapBandeja = 6;
+    const padPanelX = 14;
+    const padPanelTopo = 16;
+    const padPanelBase = 16;
+    const gapDivisor = 10;
+
+    const cartelaGapIcone = 8;
+    const cartelaGapColuna = 12;
+    const cartelaPadX = 16;
+    const cartelaPadY = 20;
+    const gapCartela = 36; // vão HORIZONTAL, entre a cartela e o tabuleiro
+
+    const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
+
+    const montar = (tam) => {
+      const larguraGradeTrilhas = nivel.trilhas * tam + (nivel.trilhas - 1) * gapTrilha;
+      const boardWidth = larguraGradeTrilhas + padPanelX * 2;
+
+      const larguraUtilBandeja = boardWidth - padPanelX * 2;
+      const porLinha = Math.max(1, Math.floor((larguraUtilBandeja + gapBandeja) / (tam + gapBandeja)));
+      const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
+      const alturaBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja;
+      const alturaTrilhas = nivel.profundidade * tam + (nivel.profundidade - 1) * gapSlot + padTrilhaY * 2;
+      const alturaCanaletaHoriz = tam + 12;
+      const boardHeightConteudo = padPanelTopo + alturaBandeja + gapDivisor + alturaCanaletaHoriz + alturaTrilhas + padPanelBase;
+
+      const cartelaTam = Math.floor(tam * 0.9);
+      const cartelaWidth = nivel.trilhas * cartelaTam + (nivel.trilhas - 1) * cartelaGapColuna + cartelaPadX * 2;
+      const cartelaHeight = nivel.profundidade * cartelaTam + (nivel.profundidade - 1) * cartelaGapIcone + cartelaPadY * 2;
+
+      return {
+        tam, cartelaTam, cartelaGapIcone, cartelaGapColuna, cartelaPadX, cartelaPadY, gapCartela,
+        gapTrilha, padTrilhaY, gapSlot, padPanelX, padPanelTopo, padPanelBase, gapBandeja, porLinha,
+        alturaBandeja, gapDivisor, boardWidth, boardHeightConteudo, cartelaWidth, cartelaHeight,
+      };
+    };
+
+    const finalizar = (cand) => {
+      // Sobra vertical generosa no computador (o tabuleiro não compete mais
+      // por largura) — a folga vira canal de coluna mais comprido, mesmo
+      // raciocínio de sempre.
+      const boardHeight = Math.max(cand.boardHeightConteudo, areaAltura);
+      return { ...cand, boardHeight };
+    };
+
+    for (let tam = 220; tam >= 30; tam -= 2) {
+      const cand = montar(tam);
+      const totalWidth = cand.cartelaWidth + cand.gapCartela + cand.boardWidth;
+      const maxHeight = Math.max(cand.boardHeightConteudo, cand.cartelaHeight);
+      if (totalWidth <= areaLargura && maxHeight <= areaAltura) return finalizar(cand);
     }
     return finalizar(montar(30));
   }

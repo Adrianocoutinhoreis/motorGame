@@ -161,6 +161,36 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     dificuldade. `nivel.trilhas` virou `5` nos três níveis (`meta` também,
     já que `meta = trilhas`); a dificuldade real continua sendo só
     `profundidade` (2/3/4, sequência mais longa pra acertar).
+15. **Responsivo: celular (retrato) × computador (lado a lado)** — a correção
+    13 fixava o jogo em retrato sempre; o humano pediu pra diferenciar por
+    tipo de tela, já que no computador sobra espaço nas laterais: "vamos
+    manter o tabuleiro vertical mas com alguns detalhes mudam no pc [...] o
+    botão pode ir para a lateral, e os cards também poderão ficar mais
+    horizontalmente" — com a ressalva explícita, na sequência, de **não
+    alargar o tabuleiro**. Decidido UMA VEZ, no carregamento (o motor só lê
+    `config.largura`/`altura` na hora de criar o `Stage`; não reage a
+    redimensionar a janela depois — ver `engine/core/Game.js`):
+    `window.innerWidth > window.innerHeight * 1.05` escolhe entre
+    `{largura:1280, altura:800}` (computador) e `{largura:720, altura:1280}`
+    (celular, igual à correção 13).
+    - **Celular**: exatamente o layout da correção 13 — cartela empilhada
+      sobre o tabuleiro, botões em fileira no topo esquerdo.
+    - **Computador**: cartela e tabuleiro voltam a ficar LADO A LADO (a
+      cartela fica mais "horizontal" só no sentido de estar ao lado, não
+      embaixo); os 3 botões viram uma COLUNA na lateral esquerda (ocupando a
+      folga que sobra ali) em vez de uma fileira no topo. O método novo
+      `_calcularLayoutDesktop()` difere do `_calcularLayout()` da correção
+      13 numa conta só, mas importante: `boardWidth` NÃO usa mais a largura
+      disponível inteira — fica do tamanho da própria grade de 5 colunas
+      (`larguraGradeTrilhas + padding`), porque o tabuleiro NUNCA deve
+      alargar (pedido explícito). A bandeja de peças soltas só ganha mais
+      FILEIRAS dentro dessa largura estreita — o computador tem altura de
+      sobra pra isso não incomodar.
+    - Testado nos dois modos (uma janela larga tipo computador e uma janela
+      390×700 tipo celular, via um driver CDP à parte): tabuleiro sempre
+      estreito e vertical nos dois, colunas corretas (5), um encaixe real
+      simulado em cada modo, menu/resultado conferidos na tela mais larga de
+      computador (1280×800) sem vazamento.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
