@@ -210,6 +210,23 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     jogos. Confirmado emulando toque+retrato via CDP: `jogo.stage.giro`
     fica `0` aqui (antes vinha `90`) e continua `90` sem alteração num outro
     jogo (Encaixe Certo) testado do mesmo jeito.
+17. **No computador, a coluna de botões passa da esquerda pra direita —
+    tabuleiro mais perto do centro** — a correção 15 reservava a coluna de
+    pausa/ajuda/som na ESQUERDA, e centralizava cartela+tabuleiro como grupo
+    dentro do espaço que sobrava depois dela; como essa reserva só existia de
+    um lado, o grupo inteiro saía centralizado DENTRO da área sobrando, mas
+    deslocado pra DIREITA em relação à tela toda (a reserva à esquerda não
+    tinha equivalente à direita). O humano mandou um mockup: cartela quase
+    encostada na borda esquerda, tabuleiro visivelmente mais perto do meio da
+    tela, botões no canto oposto (direita). A coluna de botões virou direita
+    (`colunaDireitaX = L - margemLateral - 72`) e a área de conteúdo passou a
+    nascer direto na borda esquerda (`area.x = margemLateral`, sem mais somar
+    a largura da coluna) — a mesma conta de centralização do grupo dentro da
+    área (inalterada) agora produz o resultado do mockup, só espelhado.
+    Testado via CDP nos 3 níveis (profundidade 2/3/4): cartela nunca invade a
+    coluna de botões em nenhum dos três (a folga vertical entre o fim dos
+    botões e o início da cartela nunca zera, mesmo no Difícil, onde a cartela
+    é mais alta).
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

@@ -431,15 +431,20 @@ export class GameScene extends Scene {
 
     const margemLateral = 44;
     if (this._desktop) {
-      // No computador os botões viram uma COLUNA na lateral esquerda (ver
-      // HUD abaixo) — quem reserva espaço é a ESQUERDA, não o topo. A área
-      // de conteúdo (cartela + tabuleiro) começa à DIREITA dessa coluna.
+      // No computador os botões viram uma COLUNA na lateral DIREITA (ver HUD
+      // abaixo) — reservar espaço à direita, e não à esquerda, deixa a área de
+      // conteúdo (cartela + tabuleiro) encostada na borda esquerda, com o
+      // tabuleiro caindo bem mais perto do centro real da tela — antes, com a
+      // coluna reservada à esquerda, o grupo inteiro (já centralizado DENTRO
+      // da área sobrando) ficava deslocado pra direita como um todo, porque a
+      // área em si começava depois da coluna. Pedido do humano com um
+      // mockup: cartela quase na borda, tabuleiro mais ao meio, botões no
+      // canto oposto.
       this._topo = espaco.md;
       const larguraColunaBotoes = 72 + 32;
-      const areaX = margemLateral + larguraColunaBotoes;
-      this._areaLargura = L - areaX - margemLateral;
+      this._areaLargura = L - margemLateral * 2 - larguraColunaBotoes;
       this._areaAltura = A - this._topo - 30;
-      this.area = new Node({ x: areaX, y: this._topo });
+      this.area = new Node({ x: margemLateral, y: this._topo });
     } else {
       // 110 deixava ~12px de sobra entre a base dos botões (20 + 72 de
       // altura) e o topo do tabuleiro — meio inútil, e o vão ficava mais
@@ -460,13 +465,13 @@ export class GameScene extends Scene {
 
     // ------------------------------------------------------------------ HUD
     // No celular, os 3 botões formam uma FILEIRA no topo esquerdo (pedido do
-    // humano numa referência anterior). No computador sobra espaço na
-    // LATERAL (a cartela+tabuleiro não usam a largura toda) — então os 3
-    // viram uma COLUNA ali, aproveitando essa folga em vez de deixar o topo
-    // carregado (pedido do humano: "o botão pode ir pra lateral").
-    const btnX1 = margemLateral;
-    const btnX2 = this._desktop ? margemLateral : margemLateral + 88;
-    const btnX3 = this._desktop ? margemLateral : margemLateral + 88 * 2;
+    // humano numa referência anterior). No computador eles viram uma COLUNA
+    // no canto superior DIREITO — do lado OPOSTO à cartela (que agora encosta
+    // na borda esquerda, ver acima) — em vez de competir por espaço com ela.
+    const colunaDireitaX = L - margemLateral - 72;
+    const btnX1 = this._desktop ? colunaDireitaX : margemLateral;
+    const btnX2 = this._desktop ? colunaDireitaX : margemLateral + 88;
+    const btnX3 = this._desktop ? colunaDireitaX : margemLateral + 88 * 2;
     const btnY1 = espaco.md;
     const btnY2 = this._desktop ? espaco.md + 88 : espaco.md;
     const btnY3 = this._desktop ? espaco.md + 88 * 2 : espaco.md;
