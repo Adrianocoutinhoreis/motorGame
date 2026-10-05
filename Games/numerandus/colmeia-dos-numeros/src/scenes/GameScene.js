@@ -98,6 +98,11 @@ class Hexagono extends Node {
     // sinalizando a diferença mesmo sem hover.
     this.removivel = false;
     this.hoverRemocao = false;
+    // Esta peça, na posição em que está agora, já somou ponto no placar?
+    // Usado só por `_removerPeca`, pra saber se precisa descontar ao tirá-la
+    // (uma peça ERRADA do encaixe livre do Difícil nunca somou — ver
+    // `_encaixarLivre`).
+    this.contouComoAcerto = false;
   }
 
   /** Mantém desenho, caixa lógica e ponto de registro com o mesmo tamanho. */
@@ -592,6 +597,16 @@ export class GameScene extends Scene {
     this._restaurarContornos();
 
     const slot = this._lugarMaisPerto(peca);
+
+    if (slot && this.nivel.encaixeLivre) {
+      // Difícil: qualquer peça serve em qualquer lugar vazio, na rotação que
+      // estiver — certa ou errada, ela fica ali, sem nenhum aviso. O aluno
+      // só descobre comparando os números com o olho, e tira a errada depois
+      // (`_removerPeca`) — ver `_encaixarLivre`.
+      this._encaixarLivre(peca, slot);
+      return;
+    }
+
     if (slot && this._validarEncaixe(slot, peca)) {
       this._encaixar(peca, slot);
       return;
@@ -660,6 +675,9 @@ export class GameScene extends Scene {
   _encaixar(peca, slot) {
     peca.colocada = true;
     peca.errosEncaixe = 0;
+    // Só chega aqui já validada (`_validarEncaixe` passou) — sempre conta
+    // como acerto de verdade. Ver `contouComoAcerto` em `_encaixarLivre`.
+    peca.contouComoAcerto = true;
     // No Médio/Difícil a peça continua tocável mesmo colocada (ver
     // `_removerPeca`); no Fácil ela trava no lugar, como sempre.
     peca.interativo = !!this.nivel.permitirRemoverPeca;
@@ -685,10 +703,51 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Tira do tabuleiro uma peça já encaixada (só existe no Difícil — ver
+   * Só no Difícil (`encaixeLivre`): encaixa a peça onde o aluno soltou, CERTA
+   * OU ERRADA, sem piscar âmbar nem tocar som — `_validarEncaixe` ainda roda,
+   * mas só decide se CONTA ponto, não se a peça pode ficar ali. Uma peça
+   * errada fica visível na colmeia até o próprio aluno perceber (comparando
+   * os números com o olho, igual ao brinquedo de verdade) e tirar
+   * (`_removerPeca`) pra tentar de novo.
+   */
+  _encaixarLivre(peca, slot) {
+    const correta = this._validarEncaixe(slot, peca);
+
+    peca.colocada = true;
+    peca.errosEncaixe = correta ? 0 : peca.errosEncaixe + 1;
+    peca.contouComoAcerto = correta;
+    peca.interativo = true;
+    peca.removivel = true;
+    if (peca.botaoGirar) { peca.botaoGirar.visible = false; peca.botaoGirar.interativo = false; }
+    slot.ocupada = true;
+    slot.peca = peca;
+    slot.contorno.visible = false;
+
+    peca.definirRaio(this.raioTabuleiro);
+    Tween.removerDe(peca);
+    Tween.para(peca, { x: slot.x, y: slot.y }, 180, Easing.suaveSaida);
+
+    if (!correta) {
+      // Nenhum aviso — nem pisca, nem som. Só não soma ponto: `_colocadas`/
+      // `placar.acertos` seguem contando só peças de verdade certas, então o
+      // "X / 6 PEÇAS" do HUD nunca mente mesmo com a colmeia visualmente cheia.
+      this._tentativasErradas += 1;
+      return;
+    }
+
+    if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
+    this._colocadas += 1;
+    this.placar.acertar(1);
+    this._atualizarProgresso();
+  }
+
+  /**
+   * Tira do tabuleiro uma peça já encaixada (Médio e Difícil — ver
    * `permitirRemoverPeca` no config.js) e devolve pra bandeja, igual a peça
-   * de verdade saindo do encaixe físico. Não conta como erro: a criança está
-   * desfazendo a própria jogada, não errando uma nova.
+   * de verdade saindo do encaixe físico. Nunca conta como um erro NOVO (a
+   * criança está desfazendo a própria jogada); se a peça retirada era uma
+   * peça ERRADA do encaixe livre do Difícil (`contouComoAcerto` falso), ela
+   * nunca tinha somado ponto, então também não desconta nada ao sair.
    */
   _removerPeca(peca) {
     if (this.pausada || this.placar.encerrado || this._arrastando) return;
@@ -706,8 +765,14 @@ export class GameScene extends Scene {
     peca.definirRaio(this.raioBandeja);
     if (peca.botaoGirar) { peca.botaoGirar.visible = true; peca.botaoGirar.interativo = true; }
 
-    this._colocadas = Math.max(0, this._colocadas - 1);
-    this.placar.acertos = Math.max(0, this.placar.acertos - 1);
+    // Só desconta se esta peça tinha mesmo somado ponto (`_encaixar` ou
+    // `_encaixarLivre` com acerto) — uma peça ERRADA do encaixe livre nunca
+    // somou, então tirá-la não pode subtrair o que não foi contado.
+    if (peca.contouComoAcerto) {
+      this._colocadas = Math.max(0, this._colocadas - 1);
+      this.placar.acertos = Math.max(0, this.placar.acertos - 1);
+      peca.contouComoAcerto = false;
+    }
     this._atualizarProgresso();
 
     // Mesmo destino de uma peça recusada (`_soltarArrasto`): acima dos

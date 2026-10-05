@@ -127,6 +127,14 @@ export default {
   //     azul fraco, que acende forte ao passar o mouse por cima — o aviso
   //     visual de que aquela peça, diferente das travadas, pode ser pega de
   //     volta (ver `Hexagono.removivel`/`hoverRemocao`).
+  //   `encaixeLivre` — só no Difícil: QUALQUER peça serve em QUALQUER lugar
+  //     vazio, na rotação que estiver no momento de soltar — certa ou
+  //     errada, ela fica ali, sem piscar âmbar nem tocar som de erro (ver
+  //     `_encaixarLivre`). O Médio continua travando só a peça/rotação certa
+  //     no lugar certo (como sempre), com o aviso de erro de sempre; a
+  //     diferença do Difícil é deixar o aluno "ir pondo e tirando" sozinho,
+  //     comparando os números com o olho até formar a colmeia de verdade —
+  //     só conta ponto quando a peça posta é mesmo a certa.
   // Ver `GameScene._raioTolerancia`/`_validarEncaixe`/`_removerPeca`.
   niveis: [
     {
@@ -145,7 +153,7 @@ export default {
       id: 3, nome: 'Difícil', descricao: 'Compare as vizinhas', amostra: '⬡⬡⬡', cor: '#DC2626',
       meta: 6, rotacaoAleatoria: true, tolerancia: 0.82,
       destacarSlotCorreto: false, contornosDiscretos: true, validarVizinhos: true,
-      permitirRemoverPeca: true,
+      permitirRemoverPeca: true, encaixeLivre: true,
     },
   ],
 
