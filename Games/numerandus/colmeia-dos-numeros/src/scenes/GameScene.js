@@ -1,5 +1,5 @@
 import {
-  Scene, Node, TextNode, IconButton, SoundToggle, PauseScreen, HelpScreen,
+  Scene, Node, TextNode, Icone, IconButton, SoundToggle, PauseScreen, HelpScreen,
   Background, Panel, Tween, Easing, ScoreSystem, ESTADOS, rand, espaco, alvoAcessivel,
 } from '../../engine/index.js';
 
@@ -479,6 +479,37 @@ export class GameScene extends Scene {
     this.adicionar(this.progressoTexto);
     this._atualizarProgresso();
 
+    /**
+     * Cronômetro REGRESSIVO — só no Difícil (`tempoLimiteSegundos`). Dá
+     * senso de urgência, mas sem cobrar: chegar a "0:00" não acontece nada
+     * (sem derrota, sem reiniciar) — o jogo inteiro é "sem derrota", e isto
+     * não muda essa regra. Lê `this.game.tempoJogando`, o MESMO relógio que
+     * o motor já pausa sozinho durante Pausa/Ajuda (ver `Game._tempoJogando`)
+     * e que vira `tempoSegundos` no fim da partida — mesmo padrão do
+     * cronômetro ao vivo do Jogo da Ordenação, só que regressivo aqui em vez
+     * de progressivo, porque este nível quer parecer um desafio contra o
+     * tempo, não só informar quanto já passou.
+     */
+    if (this.nivel.tempoLimiteSegundos) {
+      this._tempoLimiteSegundos = this.nivel.tempoLimiteSegundos;
+      const yRelogio = espaco.md + 24 + 32;
+      this.adicionar(new Icone('relogio', {
+        x: L / 2 - 58, y: yRelogio - 13, tamanho: 26, cor: '#F5EAD6',
+      }));
+      this._textoRelogio = new TextNode('', {
+        x: L / 2 - 28,
+        y: yRelogio,
+        alinhamento: 'left',
+        linhaBase: 'middle',
+        tamanho: 22,
+        peso: '700',
+        cor: '#F5EAD6',
+      });
+      this.adicionar(this._textoRelogio);
+      this._relogioSegundoMostrado = -1;
+      this._atualizarRelogio();
+    }
+
     // ---------------------------------------------------------------- pausa
     this.pausa = new PauseScreen({
       largura: L,
@@ -870,6 +901,22 @@ export class GameScene extends Scene {
       return;
     }
     super.atualizar(dt);
+    if (this._tempoLimiteSegundos) this._atualizarRelogio();
+  }
+
+  /**
+   * Só troca o texto quando o SEGUNDO inteiro muda — mesma otimização do
+   * Jogo da Ordenação, pra não reescrever o mesmo "2:59" sessenta vezes por
+   * segundo. `Math.ceil` (não `floor`) pra mostrar o limite CHEIO assim que
+   * a partida começa, em vez de já nascer um segundo pra trás.
+   */
+  _atualizarRelogio() {
+    const restante = Math.max(0, Math.ceil(this._tempoLimiteSegundos - this.game.tempoJogando));
+    if (restante === this._relogioSegundoMostrado) return;
+    this._relogioSegundoMostrado = restante;
+    const min = Math.floor(restante / 60);
+    const seg = restante % 60;
+    this._textoRelogio.texto = `${min}:${String(seg).padStart(2, '0')}`;
   }
 
   // --------------------------------------------------------------- auxiliares

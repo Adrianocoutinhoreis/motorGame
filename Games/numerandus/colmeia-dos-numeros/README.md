@@ -48,6 +48,14 @@ continua recusando qualquer outra peça por cima — a peça só volta pra bande
 nesse caso; é preciso tirar a que está lá primeiro. Só no Fácil a peça com
 número errado ainda é recusada na hora (pisca âmbar + som).
 
+O Difícil também ganhou um cronômetro REGRESSIVO (`tempoLimiteSegundos` no
+`config.js`, 3 minutos por padrão), só pra dar senso de urgência — chegar a
+"0:00" não acontece nada (sem derrota, sem reiniciar); o jogo inteiro continua
+"sem derrota" (`registrarDerrota: false`). Lê `this.game.tempoJogando`, o
+MESMO relógio que o motor já pausa sozinho durante Pausa/Ajuda e que vira
+`tempoSegundos` no fim da partida — mesmo padrão do cronômetro ao vivo do
+Jogo da Ordenação, só que regressivo em vez de progressivo.
+
 **Bug corrigido: acerto dependia da ordem em que as peças eram colocadas.**
 Uma versão anterior de `_validarEncaixe` também conferia, só no Difícil, se o
 número virado pra cada peça vizinha JÁ colocada combinava (`validarVizinhos`).
