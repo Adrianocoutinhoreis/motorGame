@@ -17,6 +17,32 @@
 <link rel="stylesheet" href="./engine/theme/tokens.css">
 
 <!--
+  Desliga o giro automático do `#palco` em celular de pé (tokens.css) SÓ
+  NESTE JOGO. Esse giro existe pra jogos sempre-paisagem (1280×720, o resto
+  da coleção): um celular em pé deita o conteúdo 90° pra aproveitar mais
+  tela. Mas este jogo é RESPONSIVO (ver src/config.js) — em celular ele já
+  escolhe um canvas VERTICAL (720×1280) de propósito, pra ficar igual ao
+  brinquedo físico segurado em pé. Girar um canvas JÁ vertical deita ele de
+  novo, o oposto do que o jogo quer. O resto do tokens.css continua igual;
+  só essa regra é anulada, e só na própria página deste jogo.
+-->
+<style>
+  @media (orientation: portrait) and (pointer: coarse) {
+    #palco {
+      width: 100vw !important;
+      height: 100vh !important;
+      transform: none !important;
+    }
+    /* A dica "GIRE O APARELHO" (mesma condição, de propósito, no tokens.css
+       original) existe porque o jogo girou — aqui ele não gira, então a
+       dica ficaria mentindo pro aluno que já está na posição certa. */
+    #aviso-orientacao {
+      display: none !important;
+    }
+  }
+</style>
+
+<!--
   Ícone embutido como data: URI. Sem ele, o navegador pede /favicon.ico na RAIZ
   do servidor — uma requisição para fora da pasta do jogo, que dá 404 no AVA.
   Embutido, o ícone não custa arquivo nem requisição.

@@ -191,6 +191,25 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
       estreito e vertical nos dois, colunas corretas (5), um encaixe real
       simulado em cada modo, menu/resultado conferidos na tela mais larga de
       computador (1280×800) sem vazamento.
+16. **Giro automático do motor desligado SÓ neste jogo** — depois da correção
+    15, um teste num celular de pé de verdade mostrou o tabuleiro deitado de
+    novo, em vez de vertical como a referência pedia ("é necessário ter o
+    tabuleiro totalmente vertical como essa referência"). Causa: o motor
+    (`engine/theme/tokens.css`) gira `#palco` 90° automaticamente sempre que
+    o aparelho está em pé e tem toque (`@media (orientation: portrait) and
+    (pointer: coarse)`) — pensado pra jogos sempre-paisagem (1280×720, o
+    resto da coleção inteira), que desperdiçariam 75% da tela sem o giro.
+    Mas este jogo, em celular, já escolhe um canvas PORTRAIT (720×1280,
+    correção 13) de propósito — o giro automático deitava um canvas que já
+    tinha nascido vertical, o oposto do pedido. Corrigido com um `<style>`
+    dentro do PRÓPRIO `index.html` deste jogo (não em `tokens.css`, que é
+    compartilhado por toda a coleção): anula o `transform`/`width`/`height`
+    do giro e também esconde a dica "GIRE O APARELHO" (mesma condição, mesmo
+    motivo — ela existe porque o jogo gira, e aqui ele não gira mais) — só
+    nesta página; o mecanismo original continua intacto pra todos os outros
+    jogos. Confirmado emulando toque+retrato via CDP: `jogo.stage.giro`
+    fica `0` aqui (antes vinha `90`) e continua `90` sem alteração num outro
+    jogo (Encaixe Certo) testado do mesmo jeito.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
