@@ -17,15 +17,22 @@ já colocada. Pratica comparação de números (reconhecer iguais) e orientaçã
 espacial (girar até a peça "olhar" pro lado certo). Sem ordem certa pra
 seguir, sem derrota: errar só demora mais, a peça volta pra bandeja.
 
-No nível 3 ("Difícil"), uma peça já encaixada continua tocável: tocar nela de
-novo tira ela do tabuleiro e devolve pra bandeja (`permitirRemoverPeca` no
-`config.js`, `GameScene._removerPeca`). Só nesse nível o encaixe também
-precisa bater com as peças vizinhas já coladas (`validarVizinhos`), então uma
-criança pode colocar uma peça sem comparar direito com o vizinho e só
-perceber o problema depois — sem um jeito de tirá-la, ficaria travada numa
-peça que ela mesma colocou. Remover não conta como erro (é desfazer a própria
-jogada, não uma tentativa nova); nos níveis Fácil e Médio a peça colocada
-continua travada, como sempre.
+Nos níveis 2 e 3 ("Médio" e "Difícil"), uma peça já encaixada continua
+tocável: tocar nela de novo tira ela do tabuleiro e devolve pra bandeja
+(`permitirRemoverPeca` no `config.js`, `GameScene._removerPeca`). No Difícil
+o encaixe também precisa bater com as peças vizinhas já coladas
+(`validarVizinhos`), então uma criança pode colocar uma peça sem comparar
+direito com o vizinho e só perceber o problema depois — sem um jeito de
+tirá-la, ficaria travada numa peça que ela mesma colocou. Remover não conta
+como erro (é desfazer a própria jogada, não uma tentativa nova); só no Fácil a
+peça colocada continua travada, como sempre.
+
+Uma peça removível ganha um anel azul fraco (`Hexagono.removivel`), sempre
+visível — o aviso de que, diferente de uma peça travada, aquela pode ser pega
+de volta. Passar o mouse por cima acende o anel bem mais forte
+(`hoverRemocao`, via `entrar`/`sair` do `Input.js`); no toque não existe
+"passar por cima" antes de encostar, por isso o anel fraco já fica sempre
+ligado, servindo de aviso também pra quem usa o dedo.
 
 ## Como os números foram conferidos
 

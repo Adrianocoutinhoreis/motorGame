@@ -91,6 +91,13 @@ class Hexagono extends Node {
     this.numeros = opcoes.numeros;
     this.passos = 0;
     this.brilho = 0;
+    // Marca uma peça já encaixada que ainda pode ser retirada (Médio/Difícil
+    // — ver `permitirRemoverPeca` no config.js). `hoverRemocao` acende mais
+    // forte quando o mouse está em cima; no toque não existe "passar por
+    // cima" antes de encostar, então o anel fraco já fica sempre visível,
+    // sinalizando a diferença mesmo sem hover.
+    this.removivel = false;
+    this.hoverRemocao = false;
   }
 
   /** Mantém desenho, caixa lógica e ponto de registro com o mesmo tamanho. */
@@ -153,6 +160,22 @@ class Hexagono extends Node {
     for (let k = 0; k < 6; k++) {
       const mid = ((-120 + 60 * k + 30) * Math.PI) / 180;
       ctx.fillText(String(this.numeros[k]), r * 0.62 * Math.cos(mid), r * 0.62 * Math.sin(mid));
+    }
+    if (this.removivel) {
+      ctx.beginPath();
+      for (let k = 0; k < 6; k++) {
+        const a = ((-120 + 60 * k) * Math.PI) / 180;
+        const px = r * Math.cos(a);
+        const py = r * Math.sin(a);
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      // Fraco sempre (avisa, mesmo sem hover, que esta peça é diferente das
+      // travadas) e forte com o mouse em cima (`hoverRemocao`) — o convite
+      // "pode pegar de volta" pedido para o Médio e o Difícil.
+      ctx.strokeStyle = this.hoverRemocao ? 'rgba(37, 99, 235, 0.95)' : 'rgba(37, 99, 235, 0.35)';
+      ctx.lineWidth = this.hoverRemocao ? 7 : 4;
+      ctx.stroke();
     }
     if (this.brilho > 0) {
       ctx.beginPath();
@@ -374,12 +397,20 @@ export class GameScene extends Scene {
       }
 
       peca.on('apertar', (ponto) => {
-        // No Difícil, a peça já colocada continua tocável: tocar nela de novo
-        // é como tirá-la do tabuleiro de verdade, pra criança reconsiderar
-        // uma peça que encaixou sem comparar direito com as vizinhas.
+        // No Médio/Difícil, a peça já colocada continua tocável: tocar nela
+        // de novo é como tirá-la do tabuleiro de verdade, pra criança
+        // reconsiderar uma peça que encaixou sem comparar direito com as
+        // vizinhas.
         if (peca.colocada) { this._removerPeca(peca); return; }
         this._pegarPeca(peca, ponto);
       });
+      // Hover (só existe de verdade com mouse — toque não tem "passar por
+      // cima" antes de encostar): acende o anel azul da peça colocada quando
+      // o ponteiro entra/sai dela. `noSobPonto` só considera nós
+      // `interativo`, e a peça colocada continua interativa justamente pra
+      // isso (ver `_encaixar`).
+      peca.on('entrar', () => { peca.hoverRemocao = peca.colocada && peca.removivel; });
+      peca.on('sair', () => { peca.hoverRemocao = false; });
       this.area.adicionar(peca);
 
       // A aresta do hexágono na diagonal de 45° fica a ~0.9×raio do centro
@@ -618,9 +649,10 @@ export class GameScene extends Scene {
   _encaixar(peca, slot) {
     peca.colocada = true;
     peca.errosEncaixe = 0;
-    // No Difícil a peça continua tocável mesmo colocada (ver `_removerPeca`);
-    // nos outros níveis ela trava no lugar, como sempre.
+    // No Médio/Difícil a peça continua tocável mesmo colocada (ver
+    // `_removerPeca`); no Fácil ela trava no lugar, como sempre.
     peca.interativo = !!this.nivel.permitirRemoverPeca;
+    peca.removivel = !!this.nivel.permitirRemoverPeca;
     if (peca.botaoGirar) { peca.botaoGirar.visible = false; peca.botaoGirar.interativo = false; }
     slot.ocupada = true;
     slot.peca = peca;
@@ -658,6 +690,8 @@ export class GameScene extends Scene {
     slot.contorno.visible = true;
 
     peca.colocada = false;
+    peca.removivel = false;
+    peca.hoverRemocao = false;
     peca.definirRaio(this.raioBandeja);
     if (peca.botaoGirar) { peca.botaoGirar.visible = true; peca.botaoGirar.interativo = true; }
 

@@ -119,10 +119,14 @@ export default {
   //   `validarVizinhos` — só no Difícil: o encaixe também precisa bater com
   //     qualquer peça vizinha JÁ colocada, não só com a central (por isso o
   //     nome "Compare as vizinhas");
-  //   `permitirRemoverPeca` — só no Difícil: tocar numa peça já encaixada a
-  //     tira do tabuleiro e devolve pra bandeja, pra criança reconsiderar uma
-  //     peça que colocou sem comparar direito com as vizinhas (pedido depois
-  //     de ver a criança travada numa peça já colocada sem jeito de tirá-la).
+  //   `permitirRemoverPeca` — no Médio e no Difícil: tocar numa peça já
+  //     encaixada a tira do tabuleiro e devolve pra bandeja, pra criança
+  //     reconsiderar uma peça que colocou sem comparar direito com as
+  //     vizinhas (pedido depois de ver a criança travada numa peça já
+  //     colocada sem jeito de tirá-la). A peça assim marcada ganha um anel
+  //     azul fraco, que acende forte ao passar o mouse por cima — o aviso
+  //     visual de que aquela peça, diferente das travadas, pode ser pega de
+  //     volta (ver `Hexagono.removivel`/`hoverRemocao`).
   // Ver `GameScene._raioTolerancia`/`_validarEncaixe`/`_removerPeca`.
   niveis: [
     {
@@ -135,6 +139,7 @@ export default {
       id: 2, nome: 'Médio', descricao: 'Gire e encaixe', amostra: '⬡⬡', cor: '#F59E0B',
       meta: 6, rotacaoAleatoria: true, tolerancia: 1.0,
       destacarSlotCorreto: false, contornosDiscretos: false, validarVizinhos: false,
+      permitirRemoverPeca: true,
     },
     {
       id: 3, nome: 'Difícil', descricao: 'Compare as vizinhas', amostra: '⬡⬡⬡', cor: '#DC2626',
