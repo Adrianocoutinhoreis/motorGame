@@ -373,7 +373,13 @@ export class GameScene extends Scene {
         peca.rotation = peca.passos * 60;
       }
 
-      peca.on('apertar', (ponto) => this._pegarPeca(peca, ponto));
+      peca.on('apertar', (ponto) => {
+        // No Difícil, a peça já colocada continua tocável: tocar nela de novo
+        // é como tirá-la do tabuleiro de verdade, pra criança reconsiderar
+        // uma peça que encaixou sem comparar direito com as vizinhas.
+        if (peca.colocada) { this._removerPeca(peca); return; }
+        this._pegarPeca(peca, ponto);
+      });
       this.area.adicionar(peca);
 
       // A aresta do hexágono na diagonal de 45° fica a ~0.9×raio do centro
@@ -612,7 +618,9 @@ export class GameScene extends Scene {
   _encaixar(peca, slot) {
     peca.colocada = true;
     peca.errosEncaixe = 0;
-    peca.interativo = false;
+    // No Difícil a peça continua tocável mesmo colocada (ver `_removerPeca`);
+    // nos outros níveis ela trava no lugar, como sempre.
+    peca.interativo = !!this.nivel.permitirRemoverPeca;
     if (peca.botaoGirar) { peca.botaoGirar.visible = false; peca.botaoGirar.interativo = false; }
     slot.ocupada = true;
     slot.peca = peca;
@@ -631,6 +639,37 @@ export class GameScene extends Scene {
     this._colocadas += 1;
     this.placar.acertar(1);
     this._atualizarProgresso();
+  }
+
+  /**
+   * Tira do tabuleiro uma peça já encaixada (só existe no Difícil — ver
+   * `permitirRemoverPeca` no config.js) e devolve pra bandeja, igual a peça
+   * de verdade saindo do encaixe físico. Não conta como erro: a criança está
+   * desfazendo a própria jogada, não errando uma nova.
+   */
+  _removerPeca(peca) {
+    if (this.pausada || this.placar.encerrado || this._arrastando) return;
+    if (!peca.colocada || !this.nivel.permitirRemoverPeca) return;
+    const slot = this.slots.find((s) => s.peca === peca);
+    if (!slot) return;
+
+    slot.ocupada = false;
+    slot.peca = null;
+    slot.contorno.visible = true;
+
+    peca.colocada = false;
+    peca.definirRaio(this.raioBandeja);
+    if (peca.botaoGirar) { peca.botaoGirar.visible = true; peca.botaoGirar.interativo = true; }
+
+    this._colocadas = Math.max(0, this._colocadas - 1);
+    this.placar.acertos = Math.max(0, this.placar.acertos - 1);
+    this._atualizarProgresso();
+
+    // Mesmo destino de uma peça recusada (`_soltarArrasto`): acima dos
+    // painéis, atrás das outras peças e dos botões de girar.
+    this.area.adicionarEm(this.indiceBasePecas, peca);
+    Tween.removerDe(peca);
+    Tween.para(peca, { x: peca.trayX, y: peca.trayY }, 220, Easing.suaveSaida);
   }
 
   _girarPeca(peca) {

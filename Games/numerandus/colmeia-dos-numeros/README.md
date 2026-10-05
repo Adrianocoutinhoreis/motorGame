@@ -17,6 +17,16 @@ já colocada. Pratica comparação de números (reconhecer iguais) e orientaçã
 espacial (girar até a peça "olhar" pro lado certo). Sem ordem certa pra
 seguir, sem derrota: errar só demora mais, a peça volta pra bandeja.
 
+No nível 3 ("Difícil"), uma peça já encaixada continua tocável: tocar nela de
+novo tira ela do tabuleiro e devolve pra bandeja (`permitirRemoverPeca` no
+`config.js`, `GameScene._removerPeca`). Só nesse nível o encaixe também
+precisa bater com as peças vizinhas já coladas (`validarVizinhos`), então uma
+criança pode colocar uma peça sem comparar direito com o vizinho e só
+perceber o problema depois — sem um jeito de tirá-la, ficaria travada numa
+peça que ela mesma colocou. Remover não conta como erro (é desfazer a própria
+jogada, não uma tentativa nova); nos níveis Fácil e Médio a peça colocada
+continua travada, como sempre.
+
 ## Como os números foram conferidos
 
 Este é o achado mais importante do jogo, então fica registrado aqui: as 7
