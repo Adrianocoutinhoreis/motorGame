@@ -116,9 +116,6 @@ export default {
   //   `contornosDiscretos` — só no Difícil: os contornos vazios ficam quase
   //     apagados, só o mais próximo do arrasto acende (não indica se é o
   //     lugar CERTO, só o mais perto);
-  //   `validarVizinhos` — só no Difícil: o encaixe também precisa bater com
-  //     qualquer peça vizinha JÁ colocada, não só com a central (por isso o
-  //     nome "Compare as vizinhas");
   //   `permitirRemoverPeca` — no Médio e no Difícil: tocar numa peça já
   //     encaixada a tira do tabuleiro e devolve pra bandeja, pra criança
   //     reconsiderar uma peça que colocou sem comparar direito com as
@@ -134,25 +131,28 @@ export default {
   //     no lugar certo (como sempre), com o aviso de erro de sempre; a
   //     diferença do Difícil é deixar o aluno "ir pondo e tirando" sozinho,
   //     comparando os números com o olho até formar a colmeia de verdade —
-  //     só conta ponto quando a peça posta é mesmo a certa.
+  //     só conta ponto quando a peça posta é mesmo a certa (slot e rotação
+  //     exatos da peça, não comparação com vizinho — ver "por que não
+  //     comparar também com os vizinhos" em `GameScene._validarEncaixe`,
+  //     sobre um bug de ordem real que essa comparação causava).
   // Ver `GameScene._raioTolerancia`/`_validarEncaixe`/`_removerPeca`.
   niveis: [
     {
       id: 1, nome: 'Fácil', descricao: 'Já vem alinhada', amostra: '⬡', cor: '#22C55E',
       meta: 6, rotacaoAleatoria: false, tolerancia: 1.2,
       destacarSlotCorreto: true, errosParaDica: 3,
-      contornosDiscretos: false, validarVizinhos: false,
+      contornosDiscretos: false,
     },
     {
       id: 2, nome: 'Médio', descricao: 'Gire e encaixe', amostra: '⬡⬡', cor: '#F59E0B',
       meta: 6, rotacaoAleatoria: true, tolerancia: 1.0,
-      destacarSlotCorreto: false, contornosDiscretos: false, validarVizinhos: false,
+      destacarSlotCorreto: false, contornosDiscretos: false,
       permitirRemoverPeca: true,
     },
     {
       id: 3, nome: 'Difícil', descricao: 'Compare as vizinhas', amostra: '⬡⬡⬡', cor: '#DC2626',
       meta: 6, rotacaoAleatoria: true, tolerancia: 0.82,
-      destacarSlotCorreto: false, contornosDiscretos: true, validarVizinhos: true,
+      destacarSlotCorreto: false, contornosDiscretos: true,
       permitirRemoverPeca: true, encaixeLivre: true,
     },
   ],

@@ -32,21 +32,6 @@ const SLOTS = [
 ];
 
 /**
- * Pares de peças VIZINHAS entre si (além de cada uma tocar a central) — numa
- * flor de 7 hexágonos toda aresta é encontro de duas peças, nunca só
- * "pontinha" (ver README, achado da revisão do protótipo). `ja`/`jb` são os
- * triângulos de cada lado que se tocam.
- */
-const ANEL = [
-  { a: 0, ja: 2, b: 1, jb: 5 },
-  { a: 1, ja: 3, b: 2, jb: 0 },
-  { a: 2, ja: 4, b: 3, jb: 1 },
-  { a: 3, ja: 5, b: 4, jb: 2 },
-  { a: 4, ja: 0, b: 5, jb: 3 },
-  { a: 5, ja: 1, b: 0, jb: 4 },
-];
-
-/**
  * Distância do centro da flor até o centro de cada peça vizinha, em raios.
  * Pra dois hexágonos do MESMO tamanho encostarem aresta com aresta sem
  * sobrar vão nem se sobrepor, o centro a centro é `raio * √3` — não um
@@ -70,11 +55,6 @@ const ESCALA_PECAS_TABULEIRO = 0.96;
 const CORES_POR_NUMERO = {
   1: '#2E8B7C', 2: '#D959A8', 3: '#4A3FA6', 4: '#E8B93B', 5: '#C2A878', 6: '#C1364B',
 };
-
-/** Número que aparece na posição-de-tela `j` (0..5), dada a peça girada `passos` vezes de 60°. */
-function numeroEm(numeros, j, passos) {
-  return numeros[(((j - passos) % 6) + 6) % 6];
-}
 
 /**
  * Hexágono de 6 triângulos numerados — a peça (e também a peça central e os
@@ -637,44 +617,38 @@ export class GameScene extends Scene {
   }
 
   /**
-   * A peça encaixa em `slot`? Compara o número que toca a central E, pra
-   * cada vizinho do anel que JÁ está colocado, o número que toca ele também.
+   * A peça está na posição física exata da foto da montagem final? As duas
+   * checagens abaixo (slot e rotação) são as ÚNICAS que importam, e não
+   * dependem de mais nada no tabuleiro — nem de quem já está colocado do
+   * lado, nem da ordem em que as peças entraram.
+   *
+   * **Por que não comparar também com os vizinhos já colocados.** Uma versão
+   * anterior desta função também conferia o número virado pra cada peça
+   * vizinha JÁ colocada (só no Difícil). Isso criava um bug de ORDEM, sério
+   * no Difícil depois do encaixe livre (`_encaixarLivre`): se o vizinho
+   * estivesse errado no MOMENTO do encaixe, a checagem recusava uma peça
+   * certa, na rotação certa, no lugar certo dela — e ela ficava marcada como
+   * errada PRA SEMPRE, mesmo depois do vizinho ser corrigido depois (achado
+   * real, reproduzido: colocar a peça errada do slot vizinho, depois a certa
+   * do slot ao lado — ela não contava ponto; corrigir o vizinho depois não
+   * consertava). `numeros` já vem transcrito direto da foto da montagem final
+   * (ver comentário de `SLOTS`, no topo do arquivo): slot certo + rotação
+   * certa (`passos % 6 === 0`) já GARANTE sozinho que toda aresta desta peça
+   * — central e as duas que tocam vizinhas — bate, porque é exatamente a
+   * posição que a foto registrou. Checar o vizinho de novo não pegava nenhum
+   * erro a mais; só criava essa dependência de ordem.
    */
   _validarEncaixe(slot, peca) {
     const slotIndex = this.slots.indexOf(slot);
-    // Cada peça possui uma única posição na solução. Aceitar apenas uma
-    // coincidência com a central podia deixar a montagem sem saída.
+    // Cada peça possui uma única posição na solução.
     if (peca.slotCorreto !== slotIndex) return false;
 
-    // `numeros` já vem transcrito na rotação exata da foto da montagem final
-    // (ver comentário de `SLOTS`, no topo do arquivo) — só `passos % 6 === 0`
-    // é fisicamente correto. Conferir só a aresta que toca a central não
-    // basta: uma peça com número repetido (ex.: a do topo, com três "3" e
-    // dois "6") pode ter uma rotação ERRADA que bate essa única aresta por
-    // coincidência (achado real: passos=5 também mostra "6" pro centro ali).
-    // Sem esta checagem a peça entra torta e trava quem tentar encaixar do
-    // lado errado dela depois.
-    if (((peca.passos % 6) + 6) % 6 !== 0) return false;
-
-    const tocaCentral = numeroEm(peca.numeros, slot.def.pieceJ, peca.passos);
-    if (tocaCentral !== NUMEROS_CENTRAL[slot.def.seedK]) return false;
-
-    if (!this.nivel.validarVizinhos) return true;
-
-    for (const par of ANEL) {
-      let jPeca = null;
-      let outroSlot = null;
-      let jOutro = null;
-      if (par.a === slotIndex) { jPeca = par.ja; outroSlot = this.slots[par.b]; jOutro = par.jb; }
-      else if (par.b === slotIndex) { jPeca = par.jb; outroSlot = this.slots[par.a]; jOutro = par.ja; }
-      else continue;
-
-      if (!outroSlot.ocupada) continue;
-      const valorPeca = numeroEm(peca.numeros, jPeca, peca.passos);
-      const valorOutro = numeroEm(outroSlot.peca.numeros, jOutro, outroSlot.peca.passos);
-      if (valorPeca !== valorOutro) return false;
-    }
-    return true;
+    // Uma peça com número repetido (ex.: a do topo, com três "3" e dois "6")
+    // pode ter uma rotação ERRADA que, por coincidência, ainda mostra o
+    // número certo numa aresta isolada (achado real: passos=5 na peça do
+    // topo também mostra "6" pro centro). Só `passos % 6 === 0` é a rotação
+    // de verdade.
+    return ((peca.passos % 6) + 6) % 6 === 0;
   }
 
   _encaixar(peca, slot) {

@@ -80,11 +80,15 @@
 ## 4. Mecânica
 
 - [x] Regras implementadas conforme a definição — girar + arrastar + ímã de encaixe +
-      validação de número (central sempre; vizinhas já coladas só no Difícil, via
-      `validarVizinhos`), testado nos 3 níveis via chamada direta aos métodos da cena —
-      inclusive o caso em que uma peça bate com a central por coincidência de número
-      repetido mas não com a peça vizinha já colocada: aceita sem `validarVizinhos`
-      (Fácil/Médio), recusada corretamente com ele (Difícil)
+      validação de slot e rotação exatos (`_validarEncaixe`), testado nos 3 níveis via
+      chamada direta aos métodos da cena — inclusive o caso em que uma peça bate com a
+      central por coincidência de número repetido mas na rotação ERRADA (achado real: a
+      peça do topo, com três "3" e dois "6", também mostra "6" pro centro em `passos=5`):
+      recusada corretamente em todos os níveis. Uma checagem adicional contra peças
+      vizinhas já coladas (`validarVizinhos`, só Difícil) foi removida depois: ela criava
+      um bug de ORDEM no encaixe livre (uma peça certa, posta ao lado de uma errada
+      ainda não corrigida, ficava marcada como errada pra sempre) — ver README,
+      "Bug corrigido: acerto dependia da ordem"
 - [x] Feedback **imediato** de acerto — visual (peça assenta com tween, contador avança) e
       som (`soltar_peca.mp3`)
 - [x] Feedback **imediato** de erro (número errado) — visual (contorno pisca âmbar, nunca

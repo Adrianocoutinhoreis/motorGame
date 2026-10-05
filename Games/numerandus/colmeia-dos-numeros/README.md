@@ -22,13 +22,9 @@ bandeja.
 
 Nos níveis 2 e 3 ("Médio" e "Difícil"), uma peça já encaixada continua
 tocável: tocar nela de novo tira ela do tabuleiro e devolve pra bandeja
-(`permitirRemoverPeca` no `config.js`, `GameScene._removerPeca`). No Difícil
-o encaixe também precisa bater com as peças vizinhas já coladas
-(`validarVizinhos`), então uma criança pode colocar uma peça sem comparar
-direito com o vizinho e só perceber o problema depois — sem um jeito de
-tirá-la, ficaria travada numa peça que ela mesma colocou. Remover não conta
-como erro (é desfazer a própria jogada, não uma tentativa nova); só no Fácil a
-peça colocada continua travada, como sempre.
+(`permitirRemoverPeca` no `config.js`, `GameScene._removerPeca`). Remover não
+conta como erro (é desfazer a própria jogada, não uma tentativa nova); só no
+Fácil a peça colocada continua travada, como sempre.
 
 Uma peça removível ganha um anel azul fraco (`Hexagono.removivel`), sempre
 visível — o aviso de que, diferente de uma peça travada, aquela pode ser pega
@@ -51,6 +47,23 @@ quando as 6 estão realmente certas. Um slot já ocupado (certo ou errado)
 continua recusando qualquer outra peça por cima — é preciso tirar a que está
 lá primeiro. No Médio nada disso muda: continua travando só a peça/rotação
 certa no lugar certo, com o aviso de erro de sempre (pisca âmbar + som).
+
+**Bug corrigido: acerto dependia da ordem em que as peças eram colocadas.**
+Uma versão anterior de `_validarEncaixe` também conferia, só no Difícil, se o
+número virado pra cada peça vizinha JÁ colocada combinava (`validarVizinhos`).
+Isso parecia reforçar o "Compare as vizinhas", mas criava um bug sério depois
+do encaixe livre: se o vizinho estivesse ERRADO no momento do encaixe, a
+checagem recusava uma peça certa — na rotação certa, no lugar certo dela — e
+ela ficava marcada como errada PRA SEMPRE, mesmo depois do vizinho ser
+corrigido (reproduzido: pôr a peça errada ao lado, depois a certa — não
+contava ponto; corrigir o vizinho depois não consertava a que já estava
+certa). Como `numeros` já vem transcrito direto da foto da montagem final
+(ver seção abaixo), slot certo + rotação certa (`passos % 6 === 0`) já
+GARANTE sozinho que toda aresta da peça bate — central e as que tocam
+vizinhas. Comparar com o vizinho de novo não pegava nenhum erro a mais; só
+criava essa dependência de ordem. Removido: `_validarEncaixe` agora só
+confere slot e rotação (as duas únicas coisas que realmente definem a posição
+certa), sem depender de mais nada no tabuleiro.
 
 ## Como os números foram conferidos
 
@@ -170,11 +183,10 @@ brinquedo real, e esses vieram das fotos de referência (ver seção acima).
   plano original cogitava um nível sem indicação nenhuma de posição (mais
   fiel ao brinquedo físico, onde não existe contorno); a versão atual chega
   perto disso com `contornosDiscretos` (os contornos ficam quase apagados,
-  só o mais próximo do arrasto acende, sem indicar se é o lugar CERTO) e
-  `validarVizinhos` (o encaixe também precisa bater com as peças vizinhas já
-  coladas, não só com a central — por isso a descrição "Compare as
-  vizinhas"). Remover o contorno por inteiro continua registrado como
-  possível v2, não como bug.
+  só o mais próximo do arrasto acende, sem indicar se é o lugar CERTO) e o
+  encaixe livre, que tira qualquer ajuda automática de acerto/erro (ver seção
+  acima). Remover o contorno por inteiro continua registrado como possível
+  v2, não como bug.
 - **Testado só com chamada direta aos métodos da cena** (`--preparar` do
   `captura-cena.mjs`) — nenhum evento de ponteiro real (toque/arrasto de
   verdade) foi disparado ainda. Ver Pendências do Dino: o mesmo limite do
