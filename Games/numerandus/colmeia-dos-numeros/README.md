@@ -58,6 +58,21 @@ com as 7 já na posição E rotação corretas da montagem final. A partir delas
   batem — nenhuma peça toca outra só na "pontinha" sem regra, porque com a
   central presente a flor fica completa (7 hexágonos, sem lado faltando).
 
+## Bug corrigido: rotação errada aceita por coincidência de número repetido
+
+`_validarEncaixe` conferia só a aresta que toca a peça central antes de
+aceitar o encaixe. Pelo menos a peça do topo (`numeros: [3, 3, 3, 6, 6, 5]`,
+com dois "6" e três "3") tem uma segunda rotação (`passos=5`, 300°) que
+também mostra um "6" virado pra central, por pura coincidência dos números
+repetidos — e essa rotação ERRADA, com as outras 5 arestas da peça viradas
+pro lado errado, passava no teste e entrava na colmeia. A criança via a peça
+torta encaixada, e a vizinha certa não tinha mais como entrar do lado dela.
+Corrigido exigindo também `passos % 6 === 0` — a única rotação verdadeira,
+igual à foto da montagem final de onde `numeros` foi transcrito (ver seção
+"Como os números foram conferidos"). Conferido com uma varredura das 6
+peças × 6 rotações cada, tabuleiro vazio: antes da correção a peça do topo
+aceitava duas rotações, depois só a correta.
+
 ## Como rodar localmente
 
 O motor usa módulos ES, então abrir o `index.html` por `file://` **não funciona**

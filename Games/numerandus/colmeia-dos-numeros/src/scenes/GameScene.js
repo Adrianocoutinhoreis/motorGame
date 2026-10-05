@@ -625,6 +625,17 @@ export class GameScene extends Scene {
     // Cada peça possui uma única posição na solução. Aceitar apenas uma
     // coincidência com a central podia deixar a montagem sem saída.
     if (peca.slotCorreto !== slotIndex) return false;
+
+    // `numeros` já vem transcrito na rotação exata da foto da montagem final
+    // (ver comentário de `SLOTS`, no topo do arquivo) — só `passos % 6 === 0`
+    // é fisicamente correto. Conferir só a aresta que toca a central não
+    // basta: uma peça com número repetido (ex.: a do topo, com três "3" e
+    // dois "6") pode ter uma rotação ERRADA que bate essa única aresta por
+    // coincidência (achado real: passos=5 também mostra "6" pro centro ali).
+    // Sem esta checagem a peça entra torta e trava quem tentar encaixar do
+    // lado errado dela depois.
+    if (((peca.passos % 6) + 6) % 6 !== 0) return false;
+
     const tocaCentral = numeroEm(peca.numeros, slot.def.pieceJ, peca.passos);
     if (tocaCentral !== NUMEROS_CENTRAL[slot.def.seedK]) return false;
 
