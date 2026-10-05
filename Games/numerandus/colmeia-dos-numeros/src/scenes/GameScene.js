@@ -157,8 +157,9 @@ class Hexagono extends Node {
       ctx.closePath();
       // Fraco sempre (avisa, mesmo sem hover, que esta peça é diferente das
       // travadas) e forte com o mouse em cima (`hoverRemocao`) — o convite
-      // "pode pegar de volta" pedido para o Médio e o Difícil.
-      ctx.strokeStyle = this.hoverRemocao ? 'rgba(37, 99, 235, 0.95)' : 'rgba(37, 99, 235, 0.35)';
+      // "pode pegar de volta" pedido para o Médio e o Difícil. Branco (não
+      // azul) pra não competir com as cores saturadas das próprias peças.
+      ctx.strokeStyle = this.hoverRemocao ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.35)';
       ctx.lineWidth = this.hoverRemocao ? 7 : 4;
       ctx.stroke();
     }

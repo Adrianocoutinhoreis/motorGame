@@ -121,7 +121,7 @@ export default {
   //     reconsiderar uma peça que colocou sem comparar direito com as
   //     vizinhas (pedido depois de ver a criança travada numa peça já
   //     colocada sem jeito de tirá-la). A peça assim marcada ganha um anel
-  //     azul fraco, que acende forte ao passar o mouse por cima — o aviso
+  //     branco fraco, que acende forte ao passar o mouse por cima — o aviso
   //     visual de que aquela peça, diferente das travadas, pode ser pega de
   //     volta (ver `Hexagono.removivel`/`hoverRemocao`).
   //   `encaixeLivre` — no Médio e no Difícil: QUALQUER peça serve em

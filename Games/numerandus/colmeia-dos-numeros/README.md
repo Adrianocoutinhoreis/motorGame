@@ -26,7 +26,7 @@ tocável: tocar nela de novo tira ela do tabuleiro e devolve pra bandeja
 conta como erro (é desfazer a própria jogada, não uma tentativa nova); só no
 Fácil a peça colocada continua travada, como sempre.
 
-Uma peça removível ganha um anel azul fraco (`Hexagono.removivel`), sempre
+Uma peça removível ganha um anel branco fraco (`Hexagono.removivel`), sempre
 visível — o aviso de que, diferente de uma peça travada, aquela pode ser pega
 de volta. Passar o mouse por cima acende o anel bem mais forte
 (`hoverRemocao`, via `entrar`/`sair` do `Input.js`); no toque não existe
