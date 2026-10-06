@@ -11,15 +11,31 @@
  *   1. Não é "classificar por cor" — é COPIAR UM PADRÃO: cada trilha tem uma
  *      coluna correspondente na cartela, mostrando exatamente que formato E
  *      que cor vai em cada posição.
- *   2. A ORDEM importa — a trilha só aceita a próxima peça da sequência da
- *      coluna, de baixo pra cima (a peça "cai" pro espaço vazio mais baixo,
- *      igual à física do brinquedo), não qualquer peça certa em qualquer
- *      posição livre.
+ *   2. A ORDEM importa — mas não mais no INSTANTE do encaixe (ver próximo
+ *      parágrafo): a comparação com a cartela, posição por posição, só
+ *      acontece ao confirmar.
  *
- * Mecânica nova (não reaproveita o sistema de encaixe geométrico do Encaixe
- * Certo/Quantidade Certa — aqui não há nó/entalhe: qualquer peça cabe
- * fisicamente em qualquer trilha, quem decide é a comparação visual com a
- * cartela). Reaproveita, sim, o padrão geral de arraste com ímã/tolerância e
+ * **Mecânica revista (2ª versão, depois de jogar a 1ª com o humano):** a
+ * versão original validava cada peça NO INSTANTE do encaixe (só a certa, na
+ * ordem certa, entrava — errada ou fora de ordem tremia e voltava). O humano
+ * pediu pra mudar pra "encaixe livre + Confirmar", igual ao Colmeia dos
+ * Números/Material Dourado: QUALQUER peça entra em QUALQUER trilha livremente
+ * (sem feedback de certo/errado na hora), e só ao tocar CONFIRMAR o jogo
+ * compara o tabuleiro inteiro com a cartela. Bateu: uma ESTRELA acende e uma
+ * cartela NOVA nasce (o jogo ganhou RODADAS, uma por estrela da meta —
+ * `nivel.meta` — igual ao Material Dourado; `nivel.trilhas` continua sendo a
+ * forma FIXA do tabuleiro, 5 colunas, não mais "quantas trilhas pra vencer").
+ * Errou: só demora mais (RE-02, nunca desconta) — a partir do 3º erro
+ * seguido NESTA cartela, o jogo mostra a composição certa se montando
+ * sozinha no tabuleiro (holofote + cascata) e volta pro que a criança tinha,
+ * pra ela mesma corrigir (ver `GameScene._mostrarDicaTabuleiro`). Ganhou
+ * também um cronômetro CRESCENTE (sobe, nunca pune, sem limite) — antes não
+ * tinha nenhum relógio.
+ *
+ * Mecânica de encaixe em si não reaproveita o sistema de encaixe geométrico
+ * do Encaixe Certo/Quantidade Certa — aqui não há nó/entalhe: qualquer peça
+ * cabe fisicamente em qualquer trilha, quem decide é a comparação visual com
+ * a cartela. Reaproveita, sim, o padrão geral de arraste com ímã/tolerância e
  * o algoritmo de várias fileiras (`porLinha`) que o Quantidade Certa usa pra
  * caber muitas peças soltas numa bandeja só.
  *
@@ -68,10 +84,15 @@ export default {
    * `trilhas` é sempre 5 — o brinquedo físico tem exatamente 5 colunas
    * fixas na prancha (foto de referência do humano, com "1 2 3 4 5" escrito
    * à mão do lado de cada uma); não é um parâmetro de dificuldade, é a forma
-   * do tabuleiro. O eixo de dificuldade real é "sequência mais longa pra
-   * acertar, na ordem certa" (ver planejamento, seção 3): `profundidade` é
+   * FIXA do tabuleiro, igual em toda cartela de toda rodada. O eixo de
+   * dificuldade real é "sequência mais longa pra acertar": `profundidade` é
    * quantas peças tem cada coluna da cartela / cada trilha.
-   * `meta` = `trilhas` (uma pontuação por trilha completada por inteiro).
+   * `meta` agora é quantas CARTELAS (rodadas) o nível pede — não mais
+   * "trilhas de uma cartela só" (mecânica revista, ver o comentário no topo
+   * do arquivo): cada cartela só conta quando o tabuleiro INTEIRO bate com
+   * ela, ao confirmar. Continua valendo 5 nos três níveis por coincidência
+   * numérica com a versão antiga, não por regra — pode mudar sem relação
+   * nenhuma com `trilhas`.
    */
   niveis: [
     {
@@ -102,15 +123,15 @@ export default {
       desenho: (ctx, l, a) => desenharCenaTutorial(ctx, l, a, { passo: 1 }),
     },
     {
-      titulo: 'Arraste a peça certa até a trilha',
-      texto: 'Pegue na bandeja a peça com o MESMO formato e a MESMA cor da cartela, e arraste '
-        + 'até a trilha dela.',
+      titulo: 'Arraste as peças pras trilhas',
+      texto: 'Pegue as peças da bandeja e arraste pras trilhas, na ordem que quiser — você pode '
+        + 'trocar de ideia e tirar uma peça a qualquer momento, só tocar nela.',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 2, t }),
     },
     {
-      titulo: 'Respeite a ordem da cartela',
-      texto: 'A trilha só aceita a PRÓXIMA peça da sequência — se não for a vez dela, a peça '
-        + 'treme e volta pra bandeja.',
+      titulo: 'Toque CONFIRMAR quando terminar',
+      texto: 'Preencheu as 5 trilhas do seu jeito? Toque em CONFIRMAR pra ver se ficou igual à '
+        + 'cartela. Se não bateu, só demora mais — ajuste e confirme de novo.',
       desenho: (ctx, l, a) => desenharCenaTutorial(ctx, l, a, { passo: 3 }),
     },
   ],
@@ -118,11 +139,13 @@ export default {
   // ------------------------------------------------------------------ áudio
   /**
    * Reaproveita os 3 sons já padronizados no resto da coleção: `acertoSOS`
-   * (vitória), `soltar_peca` (encaixe correto — mesmo som de "assentar" do
+   * (vitória do NÍVEL inteiro), `soltar_peca` (toca em QUALQUER encaixe —
+   * certo ou errado, já que o encaixe agora é livre — e de novo em cada
+   * peça-fantasma da dica se montando sozinha; mesmo som de "assentar" do
    * Encaixe Certo/Quantidade Certa/Material Dourado/Dino/Geométrico/Chave
-   * Mágica) e `error.MP3` (peça errada ou fora de ordem — mesmo arquivo do
-   * Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa).
-   * Nenhum som novo precisou ser gravado.
+   * Mágica) e `error.MP3` (toca só ao CONFIRMAR errado, não mais por peça —
+   * mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave
+   * Mágica/Quantidade Certa). Nenhum som novo precisou ser gravado.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
@@ -144,15 +167,19 @@ export default {
   },
 
   // -------------------------------------------------------------------- AVA
-  /** Sem vidas, sem derrota — errar a ordem só demora mais, mesma decisão do Encaixe Certo/Quantidade Certa. */
+  /** Sem vidas, sem derrota — errar ao confirmar só demora mais, mesma decisão do Encaixe Certo/Quantidade Certa. */
   registrarDerrota: false,
 
-  /** RE-03: o placar mostra "N TRILHAS", cada uma representando uma coluna da cartela reproduzida por inteiro. */
-  unidadePlacar: { singular: 'trilha', plural: 'trilhas' },
+  /**
+   * RE-03: o placar mostra "N CARTELAS" — cada cartela só conta quando o
+   * tabuleiro INTEIRO bate com ela ao confirmar (mecânica revista; antes
+   * era "N TRILHAS", uma por coluna de uma cartela só).
+   */
+  unidadePlacar: { singular: 'cartela', plural: 'cartelas' },
 
   mostrarTempo: true,
-  /** Sem relógio ao vivo no HUD — decisão do humano: o tabuleiro de verdade não tem cronômetro. */
-  mostrarCronometro: false,
+  /** Cronômetro CRESCENTE no HUD — pedido do humano na mecânica revista (antes não tinha nenhum relógio). Só informativo: nunca pune, sem limite. */
+  mostrarCronometro: true,
 };
 
 // ---------------------------------------------------------------------------
@@ -297,18 +324,34 @@ function desenharCenaTutorial(ctx, l, a, opcoes = {}) {
     const yPeca = yBandeja + (yTrilha - yBandeja) * k;
     desenharPecaTutorial(ctx, alvo.forma, alvo.cor, tam, xPeca, yPeca);
   } else {
-    // Trilha parcialmente preenchida: a peça de baixo já encaixou (cor
-    // sólida), a próxima (destacada) é a vez — as de cima ainda são
-    // fantasma — mostra a ordem em progresso, nunca já pronta.
+    // Trilha já CHEIA (as 3 peças da sequência, todas em cor sólida — nada
+    // mais de fantasma, diferente da versão anterior deste desenho) mais um
+    // botão CONFIRMAR embaixo — ilustra o passo novo: preencher tudo e só
+    // depois tocar em Confirmar, não mais "a vez certa" peça por peça.
     const alturaColuna = SEQUENCIA_TUTORIAL.length * tam + (SEQUENCIA_TUTORIAL.length - 1) * gap;
-    const yBase = a / 2 + alturaColuna / 2 - tam;
+    const yBase = a * 0.42 + alturaColuna / 2 - tam;
     const xTrilha = l / 2;
 
     SEQUENCIA_TUTORIAL.forEach((cel, i) => {
       const y = yBase - i * (tam + gap);
-      if (i === 0) desenharPecaTutorial(ctx, cel.forma, cel.cor, tam, xTrilha, y);
-      else desenharFantasmaTutorial(ctx, cel.forma, cel.cor, tam, xTrilha, y, i === 1);
+      desenharPecaTutorial(ctx, cel.forma, cel.cor, tam, xTrilha, y);
     });
+
+    const larguraBotao = 150;
+    const alturaBotao = 46;
+    const xBotao = xTrilha - larguraBotao / 2;
+    const yBotao = yBase + tam * 0.6 + gap * 2;
+    ctx.save();
+    ctx.fillStyle = '#16A34A';
+    ctx.beginPath();
+    ctx.roundRect(xBotao, yBotao, larguraBotao, alturaBotao, alturaBotao / 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '700 18px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('CONFIRMAR', xTrilha, yBotao + alturaBotao / 2 + 1);
+    ctx.restore();
   }
 
   ctx.restore();

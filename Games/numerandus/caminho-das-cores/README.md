@@ -12,10 +12,20 @@ Esta pasta é **autossuficiente**: pode ser enviada sozinha para o AVA.
 Um jogo de **copiar um padrão**: uma cartela de referência mostra, numa coluna
 por trilha, a sequência exata de peças geométricas (formato **e** cor, numa
 ordem específica, de baixo pra cima) que aquela trilha precisa reproduzir. A
-criança **arrasta** cada peça solta da bandeja até a trilha certa — a trilha só
-aceita a peça da vez (a próxima da sequência); peça certa fora de ordem, ou
-peça errada, treme e volta. Pratica comparação visual, reconhecimento de
-forma+cor simultâneo e sequenciamento — não é classificação por cor.
+criança **arrasta** peças soltas da bandeja até QUALQUER trilha, em QUALQUER
+ordem — **encaixe livre**, igual ao Colmeia dos Números/Material Dourado: nada
+é validado no instante do encaixe, só quando ela mesma toca **CONFIRMAR**. Se o
+tabuleiro inteiro bater com a cartela, uma ESTRELA acende e uma cartela NOVA
+nasce (o jogo tem várias RODADAS, uma por estrela da meta — igual ao Material
+Dourado); se não bater, só demora mais — a partir do 3º erro seguido NESTA
+cartela, o jogo mostra a composição certa se montando sozinha no tabuleiro
+(holofote + cascata) e volta pro que a criança tinha, pra ela mesma corrigir.
+Pratica comparação visual, reconhecimento de forma+cor simultâneo e
+sequenciamento — não é classificação por cor.
+
+> **Mecânica revista** depois de jogar a 1ª versão com o humano — ver a
+> correção 21, mais abaixo, pra todo o histórico da mudança (a versão original
+> validava cada peça no instante do encaixe, sem Confirmar nem rodadas).
 
 ## Como os dados do jogo foram definidos
 
@@ -264,6 +274,48 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     ficam à esquerda dele, mesmo passo de 88px da fileira do celular) —
     célula vertical única (`espaco.md`) nos três, em vez de três alturas
     diferentes.
+21. **Mecânica revista: encaixe livre + Confirmar + rodadas, igual ao
+    Material Dourado/Colmeia dos Números** — depois de jogar a 1ª versão
+    (validação no instante do encaixe: só a peça certa, na ordem certa,
+    entrava), o humano pediu uma mudança grande: "não será mais automático
+    ao encaixar as peças corretamente, o aluno terá que confirmar". Mudanças:
+    - **Encaixe livre** (`Trilha.pecas`, um array por posição em vez do
+      contador `proximo` de antes): QUALQUER peça entra em QUALQUER trilha
+      vazia, certa ou errada, sem feedback na hora — a trilha vira uma PILHA
+      (só a peça do TOPO sai ao tocar; as de baixo ficam presas até ela sair).
+      A comparação com a cartela só acontece ao confirmar.
+    - **Botão CONFIRMAR** novo (`Button`, canto da zona reservada à direita no
+      computador, mesma fileira dos ícones no celular): compara o tabuleiro
+      INTEIRO com a cartela, posição por posição.
+    - **Rodadas**: bateu — acende uma estrela (`PainelEstrelas`, nova) e uma
+      cartela NOVA nasce (`_novaCartela`, chamado de novo); `nivel.meta` virou
+      "quantas cartelas" em vez de "quantas trilhas de uma cartela só" —
+      `nivel.trilhas` continua sendo a forma FIXA do tabuleiro (5 colunas).
+    - **Dica progressiva** (mesmo padrão do Material Dourado): a partir do 3º
+      erro seguido NESTA cartela, um holofote (`VeuComBuraco`, câmera local —
+      não reaproveita a classe do Material Dourado, cada jogo tem a sua)
+      escurece tudo menos o tabuleiro, e a composição certa se monta sozinha,
+      peça por peça, em cascata, nas 5 trilhas em paralelo — as peças REAIS
+      da criança só ficam escondidas (nunca destruídas), reaparecendo iguais
+      depois. Repete a cada novo erro, não só da primeira vez.
+    - **Cronômetro CRESCENTE** (`config.mostrarCronometro` virou `true`): o
+      jogo ganhou um relógio que só sobe, puramente informativo — antes não
+      tinha nenhum.
+    - **Bug achado na implementação**: o próprio motor dispara o evento
+      `toque` (apertar-e-soltar-no-mesmo-nó) sempre que uma peça ARRASTADA
+      termina o arrasto — ela continua "sob o dedo" no ponto de soltar, então
+      todo encaixe bem-sucedido também contava como um toque na peça recém
+      colocada, e o listener de "toque remove a peça" desfazia o encaixe no
+      mesmo gesto. Corrigido com uma marca (`_ultimaPecaEncaixada`) que
+      ignora esse toque espúrio específico, sem afetar toques de verdade
+      (separados no tempo) pra tirar uma peça depois. Achado e corrigido
+      durante o teste com arrasto sintético via `PointerEvent` real — os
+      testes com chamada direta a `_encaixarLivre()` não o pegavam, porque
+      não passam pelo `Input` de verdade.
+    - **Celular ganhou uma 2ª fileira de HUD**: estrelas+relógio (fixos no
+      topo, como no computador) e pausa/ajuda/som/confirmar (fileira própria,
+      colada na cartela) precisavam de mais altura reservada no topo — `180`
+      no lugar do `102` de antes (só cabia uma fileira).
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
@@ -300,12 +352,14 @@ Ao terminar uma partida (este jogo nunca tem derrota — ver seção 5 do
 { type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel, jogo: "caminho-das-cores" }
 ```
 
-`totalPerguntas` é o número de trilhas da rodada (`meta`: 3, 4 ou 5).
-`acertos` conta cada TRILHA completada por inteiro — toda a sequência da
-coluna reproduzida, não cada peça isolada. `erros` conta tentativas de
-soltar uma peça errada (formato/cor não bate) OU fora de ordem (peça certa,
-mas não é a vez dela) — cada uma só demora mais, nunca desconta acertos nem
-estrelas (RE-02).
+`totalPerguntas` é `nivel.meta` — quantas CARTELAS (rodadas) o nível pede,
+não mais "quantas trilhas de uma cartela só" (mecânica revista, ver a
+correção 21). `acertos` conta cada CARTELA confirmada certa — o tabuleiro
+INTEIRO batendo com a cartela de uma vez, não cada trilha isolada. `erros`
+conta cada vez que a criança tocou CONFIRMAR com o tabuleiro errado — cada
+uma só demora mais (a partir da 3ª seguida NESTA cartela, o jogo mostra a
+composição certa — ver `GameScene._mostrarDicaTabuleiro`), nunca desconta
+acertos nem estrelas (RE-02).
 
 O jogo não conhece aluno, `lo_id`, `activity_id`, XP ou nota — isso é do AVA.
 
@@ -318,7 +372,7 @@ caminho-das-cores/
 ├── src/
 │   ├── config.js   identidade, 3 níveis, tutorial (com desenho auxiliar), contrato
 │   ├── main.js     ponto de entrada
-│   └── scenes/     GameScene.js — cartela, trilhas, bandeja, arraste
+│   └── scenes/     GameScene.js — cartela, trilhas, bandeja, arraste, confirmar, dica
 ├── assets/         só áudio (as peças são desenhadas por código, sem imagem)
 ├── CHECKLIST.md    passos para concluir o jogo
 └── README.md       este arquivo
@@ -332,9 +386,9 @@ usam imagem** — círculo, quadrado, triângulo e pentágono são desenhados vi
 
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
-| `acertoSOS.wav` | Áudio, vitória | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
-| `soltar_peca.mp3` | Áudio, peça encaixada na trilha | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
-| `error.MP3` | Áudio, peça errada ou fora de ordem | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
+| `acertoSOS.wav` | Áudio, vitória do NÍVEL inteiro | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
+| `soltar_peca.mp3` | Áudio, peça encaixada (QUALQUER encaixe, certo ou errado — encaixe livre, ver correção 21) e cada peça-fantasma da dica se montando | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
+| `error.MP3` | Áudio, CONFIRMAR errado (não mais por peça — mecânica revista) | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 
 ## Pendências conhecidas
 

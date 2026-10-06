@@ -12,24 +12,25 @@
 - [x] Objetivo pedagógico escrito em uma frase — comparar formato e cor com uma cartela
       de referência e reproduzir a mesma sequência em cada trilha, na ordem certa
 - [x] Faixa etária confirmada e coerente com o design (6-7 anos, 1º ano — alvos grandes,
-      sem leitura obrigatória, ritmo livre sem cronômetro regressivo)
-- [x] Mecânica descrita em até 3 frases (ver README, seção "O que é")
-- [x] Níveis definidos: 3 (Fácil/Médio/Difícil), o eixo é "trilhas × peças por trilha"
-      (3×2, 4×3, 5×4) — mais trilhas pra comparar E sequência mais longa pra acertar
-- [x] Condição de **vitória** definida e mensurável — todas as trilhas viram cópia fiel
-      da cartela (`ScoreSystem` com `total = nivel.trilhas`)
+      sem leitura obrigatória, ritmo livre com cronômetro CRESCENTE e só informativo)
+- [x] Mecânica descrita em até 3 frases (ver README, seção "O que é" — mecânica revista:
+      encaixe livre + Confirmar + rodadas, ver correção 21 do README)
+- [x] Níveis definidos: 3 (Fácil/Médio/Difícil), o eixo é "profundidade da sequência"
+      (2/3/4 peças por trilha) — `trilhas` é sempre 5 (forma fixa do tabuleiro físico)
+- [x] Condição de **vitória** definida e mensurável — `nivel.meta` cartelas (rodadas)
+      confirmadas com o tabuleiro inteiro batendo com a cartela (`ScoreSystem`)
 - [x] Condição de **derrota** definida (ou registrado que não existe derrota) — **não
-      existe**: sem vidas, sem cronômetro regressivo, errar só demora mais (mesma decisão
-      do Encaixe Certo/Quantidade Certa)
+      existe**: sem vidas, confirmar errado só demora mais (mesma decisão do Encaixe
+      Certo/Quantidade Certa/Material Dourado)
 - [x] `src/config.js` preenchido por inteiro (sem texto de exemplo sobrando)
 - [x] **Regras educacionais conferidas** (`docs/REGRAS-EDUCACIONAIS.md`), uma a uma:
   - [x] RE-01 — `textoEmCaixaAlta: true`; textos de tutorial/HUD passam pelo motor, que
         já caixa-alta sozinho
-  - [x] RE-02 — a cena nunca chama `placar.errar()`; tentativa errada só incrementa
+  - [x] RE-02 — a cena nunca chama `placar.errar()`; CONFIRMAR errado só incrementa
         `_tentativasErradas`, somado manualmente no `resultado` do `_terminar` — nunca
         desconta acerto nem estrela
-  - [x] RE-03 — `unidadePlacar: { singular: 'trilha', plural: 'trilhas' }` — o placar
-        mostra "N TRILHAS"
+  - [x] RE-03 — `unidadePlacar: { singular: 'cartela', plural: 'cartelas' }` — o placar
+        mostra "N CARTELAS" (antes "N TRILHAS", mecânica antiga)
   - [x] RE-04 — `_terminar` não passa `estrelas` em `irPara('resultado', …)`
 
 ## 2. Assets
@@ -55,8 +56,9 @@
 - [x] **Menu** com JOGAR e COMO JOGAR (de fábrica, via `templates/jogo-base`)
 - [x] **Tutorial** com 3 passos ilustrados e puláveis — narração ainda pendente (ver seção 2)
 - [x] **Seleção de nível** (3 níveis)
-- [x] **Partida** com HUD legível (pausa, ajuda, som — sem vidas, sem relógio ao vivo:
-      o brinquedo físico não tem cronômetro, `config.mostrarCronometro: false`)
+- [x] **Partida** com HUD legível (pausa, ajuda, som, Confirmar, estrelas de progresso por
+      cartela, cronômetro CRESCENTE só informativo — `config.mostrarCronometro: true`,
+      mecânica revista)
 - [x] **Pausa** com continuar / recomeçar / sair
 - [x] **Ajuda** na partida (regra RE-05): `HelpScreen` abre por cima, `Tween.pausarTodos()`
       + `this.pausada = true` param o jogo atrás, `_cancelarArrastoEmCurso()` devolve
@@ -71,19 +73,21 @@
 
 ## 4. Mecânica
 
-- [x] Regras implementadas conforme a definição (cartela fixa + trilhas que só aceitam
-      a próxima peça da sequência, formato E cor, nessa ordem — testado via CDP, ver seção 7)
-- [x] Feedback **imediato** de acerto (visual: peça aparece na trilha + pulinho na
-      trilha via `_celebrarSlot`; som: `config.audio.acerto`)
-- [x] Feedback **imediato** de erro (visual: tremor da peça via `_tremerEVoltar`; som:
-      `config.audio.erro`), sem tom punitivo — nunca custa vida nem tempo
+- [x] Regras implementadas conforme a definição revista (encaixe livre nas trilhas + botão
+      CONFIRMAR compara o tabuleiro inteiro com a cartela — testado via CDP, ver seção 7)
+- [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
+      `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
+- [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via
+      `_sacudirErro`; som: `config.audio.erro`), sem tom punitivo — nunca custa vida nem
+      tempo; a partir do 3º erro seguido nesta cartela, mostra a composição certa se
+      montando sozinha (`_mostrarDicaTabuleiro`) e volta pro que a criança tinha
 - [x] Dificuldade dos níveis testada de verdade — capturas de tela dos 3 níveis conferidas
       (ver histórico da sessão): tabuleiro cabe sem cortar nem no Difícil (22 peças,
-      5 trilhas × 4 + 2 distratoras)
-- [x] Nenhum estado travado: a única "fase" é arrastar; sem fase de animação bloqueante
-      que precisasse de `Watchdog` (ao contrário do Quantidade Certa, que tem a chuva de
-      continhas) — N/A, justificado
-- [x] Reiniciar limpa todo o estado — `_construirRodada()` roda do zero a cada
+      5 trilhas × 4 + 2 distratoras), inclusive com a dica rodando (holofote + cascata)
+- [x] Nenhum estado travado: `_aguardandoAvanco` trava Confirmar/arrasto só durante a
+      demonstração da dica e o intervalo entre cartelas — sem `Watchdog` (mesmo raciocínio
+      do Material Dourado: intervalos curtos e fixos, sempre destravados por um `Tween`)
+- [x] Reiniciar limpa todo o estado — `_novaCartela()` roda do zero a cada
       `irPara('jogando', …)`, e o motor recria a cena inteira nesse ponto
 
 ## 5. Contrato do AVA
@@ -94,9 +98,9 @@ Mapeamento semântico **deste** jogo:
 
 | Campo | Significado aqui | Valor típico |
 |---|---|---|
-| `totalPerguntas` | número de trilhas da rodada (`nivel.trilhas`) | 3, 4 ou 5 |
-| `acertos` | trilhas completadas por inteiro (sequência inteira certa, na ordem) | 0 a `totalPerguntas` |
-| `erros` | tentativas de soltar peça errada OU certa fora de ordem (nunca desconta) | 0+ |
+| `totalPerguntas` | cartelas (rodadas) da meta do nível (`nivel.meta`) | 5 |
+| `acertos` | cartelas confirmadas certas (tabuleiro inteiro batendo de uma vez) | 0 a `totalPerguntas` |
+| `erros` | vezes que confirmou com o tabuleiro errado (nunca desconta) | 0+ |
 | `nivel` | `nivel.id` do config | 1, 2 ou 3 |
 | `jogo` | slug estável | `caminho-das-cores` |
 
@@ -143,10 +147,20 @@ Mapeamento semântico **deste** jogo:
       pela `teste-entrega-avulsa.mjs`: 50 requisições, todas locais à pasta)
 - [x] Fluxo completo de telas percorrido, sem travar (menu → tutorial → nível → partida
       → resultado, nos 3 níveis, via captura-cena.mjs)
-- [x] **Vitória:** testado via CDP direto na cena (`_soltarArrasto` chamado pra completar
-      todas as trilhas) — `placar.acertos === placar.total`, `encerrado === true`; e via
-      `tools/ava-teste.html`, mensagem chega com os números corretos (acertos=3,
-      erros=0, totalPerguntas=3, nivel=1, jogo="caminho-das-cores", vitoria=true)
+- [x] **Vitória:** testado via CDP direto na cena (mecânica revista: `_encaixarLivre` +
+      `_confirmar` chamados até bater `nivel.meta` cartelas) — `placar.acertos ===
+      placar.total`, `encerrado === true`, estrela acende por cartela, cartela nova nasce
+      a cada acerto (`_rodadaIndex` avança, tabuleiro some e volta vazio)
+- [x] **Encaixe livre + Confirmar + dica**, testado via CDP (22 checagens, ver histórico da
+      sessão): tabuleiro cheio com peças ERRADAS nunca pontua; 2 erros seguidos não mostram
+      nada; o 3º liga o holofote e monta a composição certa em cascata (peças da criança só
+      ficam escondidas, nunca destruídas) e volta igual depois; peça só sai da trilha pelo
+      TOPO da pilha, nunca do meio; tabuleiro certo confirmado acende estrela e avança rodada
+- [x] **Arrasto real** testado com `PointerEvent` sintético de verdade (não só chamada
+      direta a `_encaixarLivre`) — achou e corrigiu um bug (ver correção 21 do README): o
+      próprio Input dispara `toque` no fim de todo arrasto bem-sucedido (a peça continua
+      sob o dedo ao soltar), e o listener de "toque remove a peça" desfazia o encaixe no
+      mesmo gesto; corrigido com a marca `_ultimaPecaEncaixada`
 - [ ] ~~Derrota~~ — não existe (ver seção 1/5)
 - [x] **Replay:** 2 partidas sem recarregar geram exatamente 2 mensagens (testado via
       `tools/ava-teste.html`: 1 mensagem após a 1ª vitória, 2 após a 2ª, sem duplicata)
