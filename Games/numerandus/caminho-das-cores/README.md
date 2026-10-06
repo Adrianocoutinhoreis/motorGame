@@ -227,6 +227,24 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     coluna de botões em nenhum dos três (a folga vertical entre o fim dos
     botões e o início da cartela nunca zera, mesmo no Difícil, onde a cartela
     é mais alta).
+18. **Zona reservada à direita bem maior — tabuleiro de verdade mais ao
+    meio** — a correção 17 reservava só a largura do próprio botão (104px)
+    à direita, o suficiente pra não sobrepor nada, mas cartela+tabuleiro
+    juntos ainda ocupavam quase a tela inteira (pouquíssima folga sobrando
+    pra "centralizar" de verdade) — o tabuleiro continuava terminando bem
+    perto da borda direita. O humano mandou uma captura de referência com um
+    vão bem maior entre o tabuleiro e a borda, os botões meio soltos ali. A
+    zona reservada (`zonaDireita`) subiu pra 340px — bem mais que o botão
+    precisa — e, como `_calcularLayoutDesktop` escolhe o `tam` (e por
+    tabela, a largura de cartela/tabuleiro) em função do espaço DISPONÍVEL
+    (`areaLargura`, que encolhe com a zona maior), isso automaticamente
+    produz peças/colunas um pouco mais estreitas E sobra genuína pra
+    centralizar — não foi só "mover pra esquerda", foi abrir espaço de
+    verdade pro resto da conta funcionar. Testado nos 3 níveis via CDP e
+    captura de tela: o tabuleiro do Fácil passou de terminar em 87,8% da
+    largura da tela para 72,8% (a referência mostrava a borda do tabuleiro
+    por volta de 74,6%) — bem mais perto do meio, sem cortar nada no
+    Difícil (22 peças).
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

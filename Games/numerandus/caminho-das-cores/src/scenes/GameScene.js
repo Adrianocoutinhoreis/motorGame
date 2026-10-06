@@ -441,8 +441,16 @@ export class GameScene extends Scene {
       // mockup: cartela quase na borda, tabuleiro mais ao meio, botões no
       // canto oposto.
       this._topo = espaco.md;
-      const larguraColunaBotoes = 72 + 32;
-      this._areaLargura = L - margemLateral * 2 - larguraColunaBotoes;
+      // Zona reservada à direita pros botões — bem mais larga que o próprio
+      // botão (72+32=104): a referência mais recente mostra um vão GRANDE
+      // entre o tabuleiro e a borda direita, não só o espaço mínimo do
+      // ícone. Reservar essa zona encolhe `areaLargura`, e é isso que faz a
+      // busca de `tam` (em `_calcularLayoutDesktop`) escolher peças/colunas
+      // mais estreitas — sem isso, cartela+tabuleiro quase preenchem a tela
+      // toda e não sobra vão nenhum pra reservar, não importa a largura
+      // pedida aqui.
+      const zonaDireita = 340;
+      this._areaLargura = L - margemLateral - zonaDireita;
       this._areaAltura = A - this._topo - 30;
       this.area = new Node({ x: margemLateral, y: this._topo });
     } else {
