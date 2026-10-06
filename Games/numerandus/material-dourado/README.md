@@ -138,8 +138,18 @@ material-dourado/
 | `assets/audio/progresso.mp3` | Efeito de "estrela acendeu" (progresso de rodada, HUD) | **Cópia** de `assets/audio/carta-correta.mp3` do Jogo da Memória — mesmo arquivo, sem fala, serve pra qualquer "avançou um passo". Cada pasta de jogo precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
 | `assets/audio/tela1.wav` … `tela5.wav` | Narração dos 5 passos do tutorial | Fornecido pelo humano nesta sessão. `id` de cada asset (`tutorialTela1-5`) bate com o `fala` de cada passo em `config.tutorial` — mesmo padrão do Jogo da Memória. |
 | `assets/audio/acertoSOS.wav` | Efeito de vitória (tela de resultado) | **Cópia** do mesmo `acertoSOS.wav` já usado no resto da coleção (Jogo da Memória, Encaixe Certo, Bingo, etc.) — sem fala, serve a qualquer jogo. Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
-| `assets/audio/soltar_peca.mp3` | Clique universal (tocar peça pra somar/tirar, botões de pausa/ajuda/som) | **Cópia** do `soltar_peca.mp3` do Jogo da Ordenação — lá é o som de "peça encaixou", reaproveitado aqui como o clique genérico (`somClique`). Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
+| `assets/audio/soltar_peca.mp3` | Clique da PARTIDA (tocar peça pra somar/tirar, botões de pausa/ajuda/som do HUD do jogo) | **Cópia** do `soltar_peca.mp3` do Jogo da Ordenação — lá é o som de "peça encaixou", reaproveitado aqui como o clique genérico (`somClique`). Cada pasta precisa ser autossuficiente, então o arquivo físico foi copiado, não referenciado entre pastas. |
 | `assets/audio/error.MP3` | Efeito de confirmar errado | **Cópia** do `error.MP3` do Jogo da Memória (`somErro`) — mesmo arquivo (mesmo SHA-256) já usado e aceito como som de erro em Quantidade Certa, mas **ainda não verificado por humano aqui**. Risco real: se soar reprovador, contraria o princípio deste jogo ("errar só demora mais, nunca perde nada") — ouvir com atenção antes de considerar definitivo. |
+
+**Menu e tutorial ficam sem som de clique** (`config.audio.cliqueMenu`/`cliqueTutorial: null`) — pedido
+do humano: `somClique` É o som de "peça encaixou" (ver a linha acima), e não fazia sentido tocar
+"peça encaixando" ao apertar JOGAR no menu ou a seta do tutorial, onde nenhuma peça existe. Isso
+exigiu um ajuste pequeno e genérico no motor (`MenuScreen`/`TutorialScreen` agora checam
+`cliqueMenu`/`cliqueTutorial` antes de caírem no `clique` normal) — nenhum outro jogo da coleção
+muda de som, porque nenhum outro define esses dois campos; a cópia do motor de todos os jogos foi
+re-sincronizada (`node tools/build.mjs`, sem argumento) depois do ajuste, e a independência de toda
+a coleção foi reconferida. A AJUDA dentro da partida (que reaproveita o mesmo `TutorialScreen`)
+também fica sem esse som, de brinde — o clique de verdade da mesa (`somClique`) continua intacto.
 
 Resto do áudio ainda falta: ver "Pendências conhecidas" abaixo.
 

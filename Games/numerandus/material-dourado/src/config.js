@@ -219,10 +219,22 @@ export default {
    * nesse instante) ainda não foi gravado. A narração do tutorial NÃO mora
    * aqui — `passo.fala` (em `tutorial`, acima) aponta direto pro `id` do
    * asset (`tutorialTela1-5`), mesmo padrão do Jogo da Memória.
+   *
+   * `cliqueMenu`/`cliqueTutorial` são `null` de propósito — pedido do
+   * humano: `somClique` É o som de "peça encaixou" (mesmo arquivo do botão
+   * +1/+10/+100, ver acima), e não faz sentido nenhum tocar "peça encaixando"
+   * ao apertar JOGAR no menu ou a seta do tutorial, onde nenhuma peça existe.
+   * `MenuScreen`/`TutorialScreen` caem nesses campos ANTES do `clique`
+   * genérico (`config.audio?.cliqueMenu ?? config.audio?.clique`) — os dois
+   * `null` aqui silenciam só essas duas telas (a AJUDA dentro da partida
+   * também, que reaproveita o mesmo `TutorialScreen`), sem mexer no clique
+   * de verdade da mesa.
    */
   audio: {
     musica: null,
     clique: 'somClique',
+    cliqueMenu: null,
+    cliqueTutorial: null,
     acerto: null,
     erro: 'somErro',
     vitoria: 'acertoSOS',

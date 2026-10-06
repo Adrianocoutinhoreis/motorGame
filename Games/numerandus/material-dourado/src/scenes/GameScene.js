@@ -1076,16 +1076,24 @@ export class GameScene extends Scene {
 
   // -------------------------------------------------------------- desafio
 
+  /**
+   * SEMPRE nas cores padrão (nunca verde) — pedido do humano: o número batia
+   * e o Confirmar já ficava verde sozinho assim que a última peça entrava,
+   * ANTES de a criança sequer tocar em Confirmar. Isso entregava a resposta
+   * de graça (bastava ver a cor, nunca precisava contar/comparar de
+   * verdade). O verde agora só acontece no instante do toque certo em
+   * Confirmar, de propósito (ver `_confirmar`) — não aqui, que roda a cada
+   * +1/+10/+100/remover, bem antes de qualquer confirmação.
+   */
   _atualizarDesafio() {
-    const bateu = this._total === this._rodadaAtual.alvo;
     this.painelDesafio.rotulo = this._rodadaAtual.rotuloDesafio;
     this.painelDesafio.textoDesafio = this._rodadaAtual.textoDesafio;
     this.painelDesafio.total = this._total;
-    this.painelDesafio.bateu = bateu;
+    this.painelDesafio.bateu = false;
 
-    this.botaoConfirmar.cor = bateu ? '#16A34A' : '#E5D9BE';
-    this.botaoConfirmar.corTexto = bateu ? '#FFFFFF' : '#92702B';
-    this.botaoConfirmar.corBorda = bateu ? '#0F7A36' : '#C9B98A';
+    this.botaoConfirmar.cor = '#E5D9BE';
+    this.botaoConfirmar.corTexto = '#92702B';
+    this.botaoConfirmar.corBorda = '#C9B98A';
   }
 
   // -------------------------------------------------------------- ações
@@ -1119,13 +1127,21 @@ export class GameScene extends Scene {
     const bateu = this._total === this._rodadaAtual.alvo;
 
     if (bateu) {
+      // O verde só aparece AQUI, no instante do toque certo — nunca antes
+      // (ver `_atualizarDesafio`, sempre nas cores padrão). É o "hover de
+      // acerto" pedido: a criança só vê verde depois de CONFIRMAR, não só
+      // por ter montado o número certo na mesa.
+      this.painelDesafio.bateu = true;
+      this.botaoConfirmar.cor = '#16A34A';
+      this.botaoConfirmar.corTexto = '#FFFFFF';
+      this.botaoConfirmar.corBorda = '#0F7A36';
+
       if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
       this.placar.acertar(1);
-      // Dispara AQUI, no toque em Confirmar — não em `_avancarRodada`, que só
-      // roda 900ms depois (esperar o "bateu" verde ficar visível antes de
-      // limpar a mesa). Som e animação da estrela precisam reagir junto do
-      // toque que os conquistou, senão ficam parecendo atrasados em relação
-      // à própria ação.
+      // Som e animação da estrela disparam AQUI, no toque em Confirmar — não
+      // em `_avancarRodada`, que só roda 900ms depois (esperar o verde acima
+      // ficar visível antes de limpar a mesa) — senão ficam parecendo
+      // atrasados em relação à própria ação que os conquistou.
       if (this.config.audio?.progresso) this.audio.efeito(this.config.audio.progresso);
       // Índice da estrela que acabou de "ganhar" (0-based) — a rodada que
       // este Confirmar concluiu é a `_rodadaIndex` atual (ainda não
@@ -1207,13 +1223,11 @@ export class GameScene extends Scene {
     this._mostrarVeuDica(true);
     this._total = alvo;
     this._reconstruirMesa({ animado: true });
-    // Só o número troca pro alvo — sem `_atualizarDesafio()` aqui de
-    // propósito: ele pintaria "VOCÊ FORMOU" de verde (`bateu = true`), e a
-    // criança reconheceria "deu certo" pela COR do número, não pela
-    // QUANTIDADE de peças na mesa (o que esta demonstração existe pra
-    // ensinar a olhar). O Confirmar também não muda de cor — continua
-    // travado e neutro, nunca parecendo "já ganhou".
-    this.painelDesafio.total = alvo;
+    // `_atualizarDesafio` nunca pinta de verde (ver o comentário lá — só
+    // `_confirmar` faz isso, no instante do toque certo), então chamar aqui
+    // já troca o número pro alvo sem risco de a criança ler "deu certo" pela
+    // cor em vez de CONTAR as peças, que é o que esta demonstração ensina.
+    this._atualizarDesafio();
     this._dicaTexto.texto = 'OLHA SÓ COMO FICA! DEPOIS É A SUA VEZ';
 
     Tween.de(this)
