@@ -207,6 +207,16 @@ export class IconButton extends Button {
       variante: opcoes.variante ?? 'suave',
     });
     this.tamanhoIcone = opcoes.tamanhoIcone ?? lado * 0.5;
+    /**
+     * Override OPCIONAL só do anel de contorno (passo 3 de `desenhar`), sem
+     * mexer na base 3D de relevo (passo 1) — ausente, os dois continuam
+     * vindo de `corBorda` como sempre (nenhum botão existente muda). Existe
+     * porque um jogo pode querer a sombra/profundidade da base (ela é o que
+     * faz o botão "flutuar" sobre o fundo) sem o traço forte do anel por
+     * cima — ex.: pausa/ajuda ficarem discretos, com só o som (que já é um
+     * estado "ligado") ganhando um anel de verdade.
+     */
+    this.corContorno = opcoes.corContorno ?? null;
   }
 
   desenhar(ctx) {
@@ -233,9 +243,10 @@ export class IconButton extends Button {
     ctx.shadowColor = 'transparent';
 
     // 3. Contorno forte de alto contraste (garante destaque absoluto contra nuvens)
-    const strokeCor = this.corBorda || '#334155';
+    // `corContorno` (ver construtor) pode trocar só isto, sem tocar na base
+    // 3D do passo 1 — ausente, cai no mesmo `corBorda` de sempre.
     ctx.lineWidth = 3.5;
-    ctx.strokeStyle = strokeCor;
+    ctx.strokeStyle = this.corContorno ?? this.corBorda ?? '#334155';
     ctx.stroke();
 
     // 4. Brilho biseado superior (Glossy top highlight)
