@@ -358,6 +358,54 @@ class PainelRelogio extends Node {
   }
 }
 
+/**
+ * Véu com buraco — o "spotlight" de tutorial do degrau 2 da dica
+ * (`GameScene._mostrarDicaPecas`): escurece a tela inteira, MENOS um recorte
+ * retangular (`buraco`) onde a demonstração acontece, igual ao holofote que
+ * apps costumam usar pra guiar o olho num passo a passo. A técnica é a mesma
+ * do letterbox do motor (`Stage.renderizar`, regra `evenodd`): um caminho só,
+ * com o retângulo de fora e o retângulo do buraco — um ponto coberto pelos
+ * dois (dentro do buraco) sai da contagem par e não é pintado; um ponto só no
+ * de fora (o resto da tela) é ímpar e é pintado. Um anel dourado brilhando em
+ * volta do buraco reforça "é AQUI que importa olhar agora".
+ */
+class VeuComBuraco extends Node {
+  constructor(opcoes = {}) {
+    super(opcoes);
+    this.cor = opcoes.cor ?? 'rgba(4, 7, 13, 0.74)';
+    /** Nenhum buraco (tudo escuro) até alguém definir um — ver `_mostrarVeuDica`. */
+    this.buraco = { x: 0, y: 0, largura: 0, altura: 0, raio: 0 };
+  }
+
+  desenhar(ctx) {
+    const { largura: l, altura: a } = this;
+    const {
+      x, y, largura: bl, altura: ba, raio,
+    } = this.buraco;
+    const temBuraco = bl > 0 && ba > 0;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, l, a);
+    if (temBuraco) ctx.roundRect(x, y, bl, ba, raio);
+    ctx.fillStyle = this.cor;
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    if (temBuraco) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(224, 171, 27, 0.9)';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = 'rgba(224, 171, 27, 0.65)';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bl, ba, raio);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
 // Tamanhos das peças na MESA (mesma escala lógica 1280x720 usada no protótipo
 // de design revisado com o humano). A placa fica sem espaço entre os cubos
 // (a borda de cada cubo desenha a grade) e achatada — sem inclinação 3D, só
@@ -387,15 +435,26 @@ const ICONE_UNIDADE = 94;
  *      muito/pouco, passou muito/pouco) — ainda exige a criança decidir o
  *      que fazer, só reduz a "procura cega" (ver `_textoAproximacao`).
  *   2) ERROS_PARA_DICA_PECAS erros: o último recurso — a mesa se monta
- *      SOZINHA com a composição certa por `DURACAO_DEMO_PECAS` ms (peça por
- *      peça, em cascata, com o mesmo som de "encaixou" do toque normal) e
- *      depois volta pro total que a criança tinha antes — ela quem precisa
- *      recolocar as peças, a demonstração nunca confirma a rodada sozinha
- *      (ver `_mostrarDicaPecas`).
+ *      SOZINHA com a composição certa (peça por peça, em cascata, com o
+ *      mesmo som de "encaixou" do toque normal), fica montada um instante
+ *      sobre um véu escuro (`_veuDica`, pra nada mais disputar atenção com a
+ *      demonstração) e desmonta do mesmo jeito, em cascata, antes de voltar
+ *      pro total que a criança tinha antes — ela quem precisa recolocar as
+ *      peças, a demonstração nunca confirma a rodada sozinha (ver
+ *      `_mostrarDicaPecas`).
  */
 const ERROS_PARA_DICA_APROXIMACAO = 3;
 const ERROS_PARA_DICA_PECAS = 6;
-const DURACAO_DEMO_PECAS = 2600;
+// Timing da demonstração do degrau 2 (`_mostrarDicaPecas`/`_animarEntradaPeca`/
+// `_animarSaidaPeca`) — devagar de propósito (pedido do humano, a primeira
+// versão com 110/220ms "piscava" rápido demais pra acompanhar): cada peça de
+// uma coluna nasce/some ATRASO_ENTRE_PECAS depois da anterior, e a duração de
+// cada pop-in/encolhida é DURACAO_POP/DURACAO_SAIDA. ESPERA_MONTADA é a pausa
+// de leitura com tudo já montado, antes de começar a desmontar.
+const ATRASO_ENTRE_PECAS = 190;
+const DURACAO_POP = 360;
+const DURACAO_SAIDA = 320;
+const ESPERA_MONTADA = 1100;
 
 /**
  * GameScene — a partida do Material Dourado.
@@ -443,6 +502,14 @@ export class GameScene extends Scene {
       // motor (MenuScreen etc.), que já leem isso do config.
       mostrarChao: config.mostrarChao ?? true,
     }));
+
+    // Holofote do degrau 2 da dica (`_mostrarDicaPecas`/`VeuComBuraco`) —
+    // nasce invisível (`alpha: 0`) e sem buraco nenhum; `_mostrarVeuDica` o
+    // traz pra FRENTE de tudo (HUD, mesa, bandeja) só na hora de mostrar,
+    // com o recorte em volta da mesa já calculado.
+    this._veuDica = new VeuComBuraco({ largura: L, altura: A });
+    this._veuDica.alpha = 0;
+    this.adicionar(this._veuDica);
 
     // ------------------------------------------------------------- sorteio
     this._rodadas = this._gerarRodadas(this.nivel);
@@ -862,9 +929,9 @@ export class GameScene extends Scene {
   /**
    * Pop-in "se encaixando" — só usado pela demonstração da dica (degrau 2,
    * `_mostrarDicaPecas`). A peça nasce minúscula e cresce até o tamanho
-   * normal, em CASCATA (uma depois da outra, `indice * 110ms` de atraso —
-   * não todas juntas, que pareceria só "aparecer pronto" de novo), com o
-   * mesmo som de "encaixou" do toque normal (`config.audio.clique`) no
+   * normal, em CASCATA (uma depois da outra, `ATRASO_ENTRE_PECAS` entre cada
+   * uma — não todas juntas, que pareceria só "aparecer pronto" de novo), com
+   * o mesmo som de "encaixou" do toque normal (`config.audio.clique`) no
    * instante exato em que cada uma começa a crescer. Precisa de `regX/regY`
    * central só aqui: o ponto de registro padrão das peças da mesa é o canto
    * (0,0, ver `_pilhaLateral`/`_grade`), e crescer a partir do canto pareceria
@@ -877,9 +944,83 @@ export class GameScene extends Scene {
     peca.scaleX = 0;
     peca.scaleY = 0;
     Tween.de(peca)
-      .esperar(indice * 110)
+      .esperar(indice * ATRASO_ENTRE_PECAS)
       .chamar(() => { if (this.config.audio?.clique) this.audio.efeito(this.config.audio.clique); })
-      .entao({ scaleX: 1, scaleY: 1 }, 220, Easing.costasSaida);
+      .entao({ scaleX: 1, scaleY: 1 }, DURACAO_POP, Easing.costasSaida);
+  }
+
+  /**
+   * Encolhida "desencaixando" — o inverso de `_animarEntradaPeca`, mesma
+   * cascata (`ATRASO_ENTRE_PECAS`), usada só na SAÍDA da demonstração
+   * (`_encolherMesa`), quando a composição certa precisa desmontar antes de
+   * a mesa voltar pro total que a criança tinha. A peça já está com o
+   * registro central de quando nasceu (`_animarEntradaPeca` roda sempre
+   * antes), então só encolhe no próprio lugar.
+   */
+  _animarSaidaPeca(peca, indice) {
+    Tween.de(peca)
+      .esperar(indice * ATRASO_ENTRE_PECAS)
+      .entao({ scaleX: 0, scaleY: 0 }, DURACAO_SAIDA, Easing.suaveEntrada);
+  }
+
+  /** Decompõe `valor` nas 3 colunas, na mesma ordem usada por toda a cena. */
+  _decompor(valor) {
+    return {
+      centena: Math.floor(valor / 100),
+      dezena: Math.floor((valor % 100) / 10),
+      unidade: valor % 10,
+    };
+  }
+
+  /**
+   * Retângulo (em coordenadas da CENA, não da coluna) que envolve as 3
+   * caixas da mesa juntas — o "buraco" do holofote da dica (`VeuComBuraco`).
+   * Uma margem (`pad`) maior que o `raio` das próprias caixas (`painelColuna`,
+   * acima) pra o anel dourado do holofote não colar nas bordas delas.
+   */
+  _areaMesaTotal() {
+    const pad = 16;
+    const x0 = this._xColuna[0];
+    const x1 = this._xColuna[2] + this._larguraColuna;
+    return {
+      x: x0 - pad,
+      y: this._yMesaTopo - pad,
+      largura: (x1 - x0) + pad * 2,
+      altura: this._alturaMesa + pad * 2,
+      raio: 26,
+    };
+  }
+
+  /**
+   * Liga/desliga o holofote (`VeuComBuraco`) com uma transição suave (nunca
+   * de golpe). Ao ligar, o buraco é recalculado em volta da mesa de agora
+   * (`_areaMesaTotal`) e o véu — junto com a própria dica de texto, pra ela
+   * continuar legível por cima do escurecido — vai pra FRENTE de tudo: HUD e
+   * bandeja escurecem, a mesa (dentro do buraco) e o texto continuam
+   * intocados.
+   */
+  _mostrarVeuDica(mostrar) {
+    Tween.removerDe(this._veuDica);
+    if (mostrar) {
+      this._veuDica.buraco = this._areaMesaTotal();
+      this._veuDica.paraFrente();
+      this._dicaTexto.paraFrente();
+    }
+    Tween.para(this._veuDica, { alpha: mostrar ? 1 : 0 }, 260, Easing.suave);
+  }
+
+  /**
+   * Desmonta a composição certa da demonstração (degrau 2 da dica) ANTES de
+   * a mesa voltar pro total da criança — sem isto a troca era um corte seco
+   * (as peças certas sumiam e as da criança apareciam no mesmo instante).
+   * Mesma cascata da entrada, só invertida (`_animarSaidaPeca`), nos filhos
+   * de verdade de cada coluna (a ordem de `container.filhos` é a mesma ordem
+   * de criação, então o índice bate com o da entrada).
+   */
+  _encolherMesa() {
+    for (const coluna of [this._colCentena, this._colDezena, this._colUnidade]) {
+      coluna.filhos.forEach((peca, i) => this._animarSaidaPeca(peca, i));
+    }
   }
 
   /**
@@ -1041,31 +1182,46 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Degrau 2 da dica (ver constantes no topo do arquivo): a mesa se monta
-   * SOZINHA com a composição certa por `DURACAO_DEMO_PECAS` ms (peça por
-   * peça, em cascata — `_animarEntradaPeca`) e depois volta pro total que a
-   * criança tinha antes da demonstração. Ela quem precisa recolocar as
-   * peças — isto nunca confirma a rodada sozinho, só MOSTRA. Reusa o mesmo
-   * trava-tudo do intervalo entre rodadas (`_aguardandoAvanco`), então
-   * tocar em +1/+10/+100/Confirmar/numa peça da mesa não faz nada enquanto a
+   * Degrau 2 da dica (ver constantes no topo do arquivo): o holofote liga
+   * (`_mostrarVeuDica`), a mesa se monta SOZINHA com a composição certa em
+   * cascata (`_animarEntradaPeca`), fica montada um instante pra criança
+   * olhar, desmonta na mesma cascata invertida (`_encolherMesa`) e só então
+   * volta pro total que a criança tinha ANTES da demonstração — ela quem
+   * precisa recolocar as peças, isto nunca confirma a rodada sozinho, só
+   * MOSTRA. O tempo de entrada/saída é calculado a partir da MAIOR
+   * quantidade entre as 3 colunas (`maxPecas`): uma composição com só 2
+   * peças termina a cascata bem mais rápido que uma com 9. Reusa o mesmo
+   * trava-tudo do intervalo entre rodadas (`_aguardandoAvanco`), então tocar
+   * em +1/+10/+100/Confirmar/numa peça da mesa não faz nada enquanto a
    * demonstração roda.
    */
   _mostrarDicaPecas() {
     this._aguardandoAvanco = true;
     const totalAnterior = this._total;
+    const alvo = this._rodadaAtual.alvo;
+    const { centena, dezena, unidade } = this._decompor(alvo);
+    const maxPecas = Math.max(centena, dezena, unidade, 1);
+    const duracaoEntrada = (maxPecas - 1) * ATRASO_ENTRE_PECAS + DURACAO_POP;
+    const duracaoSaida = (maxPecas - 1) * ATRASO_ENTRE_PECAS + DURACAO_SAIDA;
 
-    this._total = this._rodadaAtual.alvo;
+    this._mostrarVeuDica(true);
+    this._total = alvo;
     this._reconstruirMesa({ animado: true });
     this._atualizarDesafio();
     this._dicaTexto.texto = 'OLHA SÓ COMO FICA! DEPOIS É A SUA VEZ';
 
-    Tween.de(this).esperar(DURACAO_DEMO_PECAS).chamar(() => {
-      this._total = totalAnterior;
-      this._reconstruirMesa();
-      this._atualizarDesafio();
-      this._aguardandoAvanco = false;
-      this._dicaTexto.texto = this._textoAproximacao();
-    });
+    Tween.de(this)
+      .esperar(duracaoEntrada + ESPERA_MONTADA)
+      .chamar(() => this._encolherMesa())
+      .esperar(duracaoSaida)
+      .chamar(() => {
+        this._total = totalAnterior;
+        this._reconstruirMesa();
+        this._atualizarDesafio();
+        this._mostrarVeuDica(false);
+        this._aguardandoAvanco = false;
+        this._dicaTexto.texto = this._textoAproximacao();
+      });
   }
 
   /**

@@ -49,11 +49,16 @@ errou muito na partida", é "travou NESTA tentativa"):
    "AINDA FALTA MUITO/UM POUCO/BEM POUQUINHO — CONTINUE SOMANDO" ou "PASSOU MUITO/UM POUCO/BEM
    POUQUINHO — TOQUE NUMA PEÇA PRA TIRAR" (`GameScene._textoAproximacao`). Nunca entrega o número:
    só direção (faltou/passou) e uma ideia de distância — ainda exige a criança decidir a peça certa.
-2. **A partir do 6º erro seguido**, o último recurso: a mesa se monta **sozinha** com a composição
-   certa (peça por peça, em cascata, "encaixando" com o mesmo som de sempre) e fica assim por ~2,5s
-   — depois volta pro total que a criança tinha ANTES da demonstração, pra ela mesma recolocar as
-   peças (`GameScene._mostrarDicaPecas`). A demonstração nunca confirma a rodada sozinha, só mostra;
-   e continua se repetindo a cada novo erro depois do 6º, não só da primeira vez.
+2. **A partir do 6º erro seguido**, o último recurso: um holofote escurece a tela inteira EXCETO um
+   recorte em volta da mesa (`VeuComBuraco`, com um anel dourado brilhando na borda — a mesma
+   linguagem visual de "olha aqui" dos tutoriais de app), e dentro dele a mesa se monta **sozinha**
+   com a composição certa, peça por peça, BEM DEVAGAR e em cascata (cada peça nasce ~190ms depois da
+   anterior, "encaixando" com o mesmo som de sempre) — fica montada um instante, desmonta na mesma
+   cascata (ao contrário) e só então volta pro total que a criança tinha ANTES da demonstração, pra
+   ela mesma recolocar as peças (`GameScene._mostrarDicaPecas`). A demonstração nunca confirma a
+   rodada sozinha, só mostra; e continua se repetindo a cada novo erro depois do 6º, não só da
+   primeira vez. (Antes a troca era instantânea e sem destaque nenhum — devagar e com o holofote foi
+   pedido do humano depois de ver a primeira versão: "rápido demais" e "preciso focar nisso".)
 
 ## Como rodar localmente
 
