@@ -183,6 +183,19 @@ export class TutorialScreen extends Scene {
     // Aresta interna das setas, medida a partir do centro da tela.
     const arestaSeta = larguraJogar / 2 + folgaNav;
 
+    // `cliqueTutorial` é um override OPCIONAL, só pros botões DESTA tela (ver
+    // o mesmo mecanismo em `MenuScreen`) — ausente, cai de volta no clique
+    // genérico de sempre. Vale tanto pro tutorial aberto pelo menu quanto pra
+    // AJUDA dentro da partida (`HelpScreen` hospeda este mesmo `TutorialScreen`
+    // com o config da cena de jogo), então um jogo que desligue aqui desliga
+    // nos dois lugares de uma vez, sem precisar duplicar a decisão.
+    // `??` não serve aqui: um jogo que queira SILENCIAR esta tela define
+    // `cliqueTutorial: null` de propósito, e `null ?? x` cairia de volta pro
+    // `clique` genérico mesmo assim. `in` resolve: só cai no genérico quando
+    // a CHAVE nem está no objeto (mesmo mecanismo de `MenuScreen`).
+    const audioCfg = config.audio ?? {};
+    const somCliqueTutorial = 'cliqueTutorial' in audioCfg ? audioCfg.cliqueTutorial : audioCfg.clique;
+
     this.botaoAnterior = new IconButton({
       icone: 'setaEsquerda',
       // No construtor do Button o `x` é a borda ESQUERDA, daí descontar o lado.
@@ -190,7 +203,7 @@ export class TutorialScreen extends Scene {
       y: yNav,
       tamanho: tamanhoSeta,
       audio: this.audio,
-      somToque: config.audio?.clique,
+      somToque: somCliqueTutorial,
       aoTocar: () => this.mostrarPasso(this.indice - 1),
     });
 
@@ -201,7 +214,7 @@ export class TutorialScreen extends Scene {
       y: yNav,
       tamanho: tamanhoSeta,
       audio: this.audio,
-      somToque: config.audio?.clique,
+      somToque: somCliqueTutorial,
       aoTocar: () => this.mostrarPasso(this.indice + 1),
     });
 
@@ -217,7 +230,7 @@ export class TutorialScreen extends Scene {
       y: yNav - 2,
       variante: 'sucesso',
       audio: this.audio,
-      somToque: config.audio?.clique,
+      somToque: somCliqueTutorial,
       aoTocar: () => (this.aoFecharAjuda ? this.aoFecharAjuda() : this._comecar()),
     });
     this.botaoJogar.visible = false;
@@ -256,7 +269,7 @@ export class TutorialScreen extends Scene {
       x: espaco.md,
       y: espaco.md,
       audio: this.audio,
-      somToque: config.audio?.clique,
+      somToque: somCliqueTutorial,
       aoTocar: () => (this.aoFecharAjuda
         ? this.aoFecharAjuda()
         : this.irPara(this.game.dados.voltarPara ?? 'menu')),
@@ -266,7 +279,7 @@ export class TutorialScreen extends Scene {
       audio: this.audio,
       x: L - 96,
       y: espaco.md,
-      somToque: config.audio?.clique,
+      somToque: somCliqueTutorial,
     }));
 
     if (this.passos.length === 0) {

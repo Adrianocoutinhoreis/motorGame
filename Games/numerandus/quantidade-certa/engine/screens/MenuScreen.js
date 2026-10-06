@@ -442,6 +442,21 @@ export class MenuScreen extends Scene {
     const larguraBotao = Math.min(540, L - espaco.xl * 2);
     const xBotoes = L / 2 - larguraBotao / 2;
 
+    // `cliqueMenu` é um override OPCIONAL, só pros botões DESTA tela — ausente
+    // (a imensa maioria dos jogos), cai de volta no clique genérico de sempre
+    // (`config.audio.clique`), então nenhum jogo existente muda de som. Um
+    // jogo que ache o clique genérico sem sentido no menu (ex.: um som de
+    // "peça encaixou" que só faz sentido dentro da partida) define
+    // `cliqueMenu: null` no próprio `config.js`, sem afetar o resto da
+    // coleção nem os outros sons deste mesmo jogo.
+    // `??` não serve aqui: um jogo que queira SILENCIAR o menu define
+    // `cliqueMenu: null` de propósito, e `null ?? x` cairia de volta pro
+    // `clique` genérico mesmo assim (`??` não distingue "null de propósito"
+    // de "campo nunca existiu"). `in` resolve: só cai no genérico quando a
+    // CHAVE nem está no objeto.
+    const audioCfg = config.audio ?? {};
+    const somCliqueMenu = 'cliqueMenu' in audioCfg ? audioCfg.cliqueMenu : audioCfg.clique;
+
     this.botaoJogar = new Button({
       rotulo: 'JOGAR',
       icone: 'jogar',
@@ -453,7 +468,7 @@ export class MenuScreen extends Scene {
       x: xBotoes,
       y: A * 0.364,
       audio: this.audio,
-      somToque: config.audio?.clique,
+      somToque: somCliqueMenu,
       aoTocar: () => this._jogar(),
     });
 
@@ -471,7 +486,7 @@ export class MenuScreen extends Scene {
       // conta "certa" no papel.
       y: A * 0.644,
       audio: this.audio,
-      somToque: config.audio?.clique,
+      somToque: somCliqueMenu,
       aoTocar: () => this.irPara('tutorial', { voltarPara: 'menu' }),
     });
 
@@ -499,7 +514,7 @@ export class MenuScreen extends Scene {
       x: L - 96,
       y: espaco.md,
       tamanho: 72,
-      somToque: config.audio?.clique,
+      somToque: somCliqueMenu,
     }));
 
     // ------------------------------------------------------- áudio e narração
