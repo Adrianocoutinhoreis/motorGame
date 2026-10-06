@@ -61,8 +61,11 @@
 
 - [x] Regras implementadas conforme a definição — "contar e trocar" com revelação progressiva de +10/+100
 - [x] Feedback **imediato** de acerto (visual: verde + texto) — som pendente (sem asset de áudio)
-- [x] Feedback **imediato** de erro (visual: âmbar + texto), sem tom punitivo — som ligado
+- [x] Feedback **imediato** de erro (visual: âmbar + balanço), sem tom punitivo — som ligado
   (`somErro`), mas ainda não confirmado por audição que o próprio TOM do som não é punitivo
+- [x] Dica progressiva pra quem trava na mesma conta (ver README): 3 erros seguidos → pista
+      qualitativa (faltou/passou, muito/pouco); 6 erros seguidos → demonstração animada da
+      composição certa, que depois volta pro estado da criança (nunca confirma sozinha)
 - [x] Dificuldade dos níveis testada de verdade (capturas de tela, não só configurada)
 - [x] Nenhum estado travado: sempre dá para agir ou a partida termina
   - [ ] `Watchdog` — não se aplica: não há fase com toque bloqueado de propósito (sem

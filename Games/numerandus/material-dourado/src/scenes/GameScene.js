@@ -377,6 +377,27 @@ const ICONE_DEZENA_H = 100;
 const ICONE_UNIDADE = 94;
 
 /**
+ * Dica progressiva ao errar o Confirmar repetidas vezes NA MESMA RODADA — a
+ * contagem (`GameScene._errosRodada`) zera a cada número novo, nunca acumula
+ * pela partida inteira (pedido do humano: é "travou NESTA conta", não um
+ * histórico de desempenho). Dois degraus, cada um mais específico que o
+ * anterior, nunca o oposto de "sem derrota" (nenhum deles desconta nada):
+ *
+ *   1) ERROS_PARA_DICA_APROXIMACAO erros: uma pista qualitativa (faltou
+ *      muito/pouco, passou muito/pouco) — ainda exige a criança decidir o
+ *      que fazer, só reduz a "procura cega" (ver `_textoAproximacao`).
+ *   2) ERROS_PARA_DICA_PECAS erros: o último recurso — a mesa se monta
+ *      SOZINHA com a composição certa por `DURACAO_DEMO_PECAS` ms (peça por
+ *      peça, em cascata, com o mesmo som de "encaixou" do toque normal) e
+ *      depois volta pro total que a criança tinha antes — ela quem precisa
+ *      recolocar as peças, a demonstração nunca confirma a rodada sozinha
+ *      (ver `_mostrarDicaPecas`).
+ */
+const ERROS_PARA_DICA_APROXIMACAO = 3;
+const ERROS_PARA_DICA_PECAS = 6;
+const DURACAO_DEMO_PECAS = 2600;
+
+/**
  * GameScene — a partida do Material Dourado.
  *
  * Mecânica "contar e trocar": tocar soma cubinhos, e ao juntar 10 eles se
@@ -441,6 +462,9 @@ export class GameScene extends Scene {
     // isso descontaria a falha da nota final (RE-02) — e aqui a decisão é o
     // oposto, errar ao confirmar só demora mais, nunca perde nada.
     this._tentativasErradas = 0;
+    // Erros só DESTA rodada — degraus de dica progressiva, ver as constantes
+    // no topo do arquivo e `_confirmar`/`_mostrarDicaPecas`.
+    this._errosRodada = 0;
 
     // Trava a mesa/Confirmar durante os 900ms de espera entre um acerto e a
     // próxima rodada nascer — ver `_confirmar`/`_avancarRodada`.
@@ -539,6 +563,20 @@ export class GameScene extends Scene {
       altura: alturaLinhaHud,
     });
     this.adicionar(this.painelDesafio);
+
+    // Dica progressiva (ver constantes no topo do arquivo) — uma linha
+    // discreta no vão que já existia entre o HUD e a mesa, em branco (o
+    // `TextNode` não desenha nada com `texto: ''`) até o primeiro degrau.
+    this._dicaTexto = new TextNode('', {
+      x: L / 2,
+      y: yLinhaHud + alturaLinhaHud + 20,
+      tamanho: 22,
+      peso: '700',
+      cor: '#FBBF24',
+      alinhamento: 'center',
+      linhaBase: 'middle',
+    });
+    this.adicionar(this._dicaTexto);
 
     // ------------------------------------------------------------------ mesa
     // Um painel por coluna (a "bandeja" onde as peças pousam) — sem ele a
@@ -754,8 +792,12 @@ export class GameScene extends Scene {
    * disponível nesse passo, ele encolhe sozinho até caber — assim de 1 a 9
    * peças sempre ficam visíveis dentro da coluna, nunca escondidas nem
    * empurrando a coluna pra fora da tela.
+   *
+   * `animado` (ver `_animarEntradaPeca`) é só pra demonstração da dica
+   * (degrau 2, `_mostrarDicaPecas`) — a mesa de verdade nunca anima ao
+   * reconstruir (ficaria lenta de ver a cada toque de +1/+10/+100).
    */
-  _pilhaLateral(container, imagem, imgW, imgH, qtd, passoBase, aoRemover) {
+  _pilhaLateral(container, imagem, imgW, imgH, qtd, passoBase, aoRemover, animado = false) {
     if (qtd <= 0) return;
     const margem = 16;
     const larguraDisponivel = this._larguraColuna - margem * 2;
@@ -770,6 +812,7 @@ export class GameScene extends Scene {
       });
       peca.on('toque', aoRemover);
       this._darFeedbackToque(peca);
+      if (animado) this._animarEntradaPeca(peca, i);
       container.adicionar(peca);
     }
   }
@@ -787,7 +830,7 @@ export class GameScene extends Scene {
    * da caixa. Com 1 ou 2 fileiras (até 6 cubinhos) sobra espaço de sobra,
    * então o tamanho normal se mantém.
    */
-  _grade(container, imagem, tamBase, qtd, aoRemover) {
+  _grade(container, imagem, tamBase, qtd, aoRemover, animado = false) {
     const margem = 16;
     const gap = 16;
     const porLinha = Math.max(1, Math.floor((this._larguraColuna - margem * 2) / (tamBase + gap)));
@@ -811,11 +854,40 @@ export class GameScene extends Scene {
       });
       peca.on('toque', aoRemover);
       this._darFeedbackToque(peca);
+      if (animado) this._animarEntradaPeca(peca, i);
       container.adicionar(peca);
     }
   }
 
-  _reconstruirMesa() {
+  /**
+   * Pop-in "se encaixando" — só usado pela demonstração da dica (degrau 2,
+   * `_mostrarDicaPecas`). A peça nasce minúscula e cresce até o tamanho
+   * normal, em CASCATA (uma depois da outra, `indice * 110ms` de atraso —
+   * não todas juntas, que pareceria só "aparecer pronto" de novo), com o
+   * mesmo som de "encaixou" do toque normal (`config.audio.clique`) no
+   * instante exato em que cada uma começa a crescer. Precisa de `regX/regY`
+   * central só aqui: o ponto de registro padrão das peças da mesa é o canto
+   * (0,0, ver `_pilhaLateral`/`_grade`), e crescer a partir do canto pareceria
+   * "esticar", não "aparecer".
+   */
+  _animarEntradaPeca(peca, indice) {
+    peca.centralizarAncora();
+    peca.x += peca.largura / 2;
+    peca.y += peca.altura / 2;
+    peca.scaleX = 0;
+    peca.scaleY = 0;
+    Tween.de(peca)
+      .esperar(indice * 110)
+      .chamar(() => { if (this.config.audio?.clique) this.audio.efeito(this.config.audio.clique); })
+      .entao({ scaleX: 1, scaleY: 1 }, 220, Easing.costasSaida);
+  }
+
+  /**
+   * `animado`: só a demonstração da dica (degrau 2, `_mostrarDicaPecas`) pede
+   * `true` — a reconstrução normal (a cada +1/+10/+100/remover) continua
+   * instantânea, como sempre foi.
+   */
+  _reconstruirMesa({ animado = false } = {}) {
     this._limparColuna(this._colCentena);
     this._limparColuna(this._colDezena);
     this._limparColuna(this._colUnidade);
@@ -824,9 +896,9 @@ export class GameScene extends Scene {
     const dezena = Math.floor((this._total % 100) / 10);
     const unidade = this._total % 10;
 
-    this._pilhaLateral(this._colCentena, this.imgCentena, CENTENA_W, CENTENA_H, centena, 60, this._removerCentena);
-    this._pilhaLateral(this._colDezena, this.imgDezena, DEZENA_W, DEZENA_H, dezena, 46, this._removerDezena);
-    this._grade(this._colUnidade, this.imgUnidade, UNIDADE_W, unidade, this._removerUnidade);
+    this._pilhaLateral(this._colCentena, this.imgCentena, CENTENA_W, CENTENA_H, centena, 60, this._removerCentena, animado);
+    this._pilhaLateral(this._colDezena, this.imgDezena, DEZENA_W, DEZENA_H, dezena, 46, this._removerDezena, animado);
+    this._grade(this._colUnidade, this.imgUnidade, UNIDADE_W, unidade, this._removerUnidade, animado);
 
     this._seloCentena.valor = centena;
     this._seloDezena.valor = dezena;
@@ -939,7 +1011,61 @@ export class GameScene extends Scene {
     // (nunca vermelho, nunca trava o jogo): ver `_sacudirErro`.
     if (this.config.audio?.erro) this.audio.efeito(this.config.audio.erro);
     this._tentativasErradas += 1;
+    this._errosRodada += 1;
     this._sacudirErro();
+
+    // Dica progressiva (ver constantes no topo do arquivo): o degrau mais
+    // alto já alcançado vale sempre — passou de 6 erros, toda tentativa
+    // errada seguinte volta a mostrar a demonstração, não só a primeira.
+    if (this._errosRodada >= ERROS_PARA_DICA_PECAS) {
+      this._mostrarDicaPecas();
+    } else if (this._errosRodada >= ERROS_PARA_DICA_APROXIMACAO) {
+      this._dicaTexto.texto = this._textoAproximacao();
+    }
+  }
+
+  /**
+   * Degrau 1 da dica: nunca entrega o número nem o que fazer sozinho — só a
+   * direção (faltou/passou) e uma ideia de distância (muito/pouco/bem
+   * pouquinho). Ainda exige a criança decidir a peça certa, só reduz a
+   * "procura cega" de quem já errou 3 vezes seguidas.
+   */
+  _textoAproximacao() {
+    const diff = this._rodadaAtual.alvo - this._total;
+    const falta = diff > 0;
+    const distancia = Math.abs(diff);
+    const intensidade = distancia >= 30 ? 'MUITO' : distancia >= 10 ? 'UM POUCO' : 'BEM POUQUINHO';
+    return falta
+      ? `AINDA FALTA ${intensidade} — CONTINUE SOMANDO`
+      : `PASSOU ${intensidade} — TOQUE NUMA PEÇA PRA TIRAR`;
+  }
+
+  /**
+   * Degrau 2 da dica (ver constantes no topo do arquivo): a mesa se monta
+   * SOZINHA com a composição certa por `DURACAO_DEMO_PECAS` ms (peça por
+   * peça, em cascata — `_animarEntradaPeca`) e depois volta pro total que a
+   * criança tinha antes da demonstração. Ela quem precisa recolocar as
+   * peças — isto nunca confirma a rodada sozinho, só MOSTRA. Reusa o mesmo
+   * trava-tudo do intervalo entre rodadas (`_aguardandoAvanco`), então
+   * tocar em +1/+10/+100/Confirmar/numa peça da mesa não faz nada enquanto a
+   * demonstração roda.
+   */
+  _mostrarDicaPecas() {
+    this._aguardandoAvanco = true;
+    const totalAnterior = this._total;
+
+    this._total = this._rodadaAtual.alvo;
+    this._reconstruirMesa({ animado: true });
+    this._atualizarDesafio();
+    this._dicaTexto.texto = 'OLHA SÓ COMO FICA! DEPOIS É A SUA VEZ';
+
+    Tween.de(this).esperar(DURACAO_DEMO_PECAS).chamar(() => {
+      this._total = totalAnterior;
+      this._reconstruirMesa();
+      this._atualizarDesafio();
+      this._aguardandoAvanco = false;
+      this._dicaTexto.texto = this._textoAproximacao();
+    });
   }
 
   /**
@@ -970,6 +1096,10 @@ export class GameScene extends Scene {
     if (this._rodadaIndex >= this._rodadas.length) return;
     this._rodadaAtual = this._rodadas[this._rodadaIndex];
     this._total = 0;
+    // Número novo, procura nova — a dica progressiva não carrega erro de uma
+    // rodada pra outra (ver constantes no topo do arquivo).
+    this._errosRodada = 0;
+    this._dicaTexto.texto = '';
     this._reconstruirMesa();
     this._atualizarDesafio();
     this._atualizarBandeja();

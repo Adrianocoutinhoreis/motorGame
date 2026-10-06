@@ -38,9 +38,22 @@ sempre cabem na coluna, nunca escondidas nem empurrando a tela pra baixo. Um sel
 de cada rótulo (CENTENA/DEZENA/UNIDADE) sempre mostra a contagem exata — não depende de contar a
 pilha sobreposta.
 
-Confirmar dá sempre **feedback em texto**, nunca só cor: "MUITO BEM! VOCÊ FORMOU CERTINHO." (verde),
-"AINDA FALTA UM POUCO..." ou "PASSOU DO NÚMERO..." (âmbar — nunca vermelho: errar ao confirmar só
-demora mais, a mesa continua do jeito que estava e a criança ajusta e tenta de novo).
+Confirmar errado nunca é punitivo: a moldura do painel pisca âmbar (nunca vermelho) e o próprio
+botão balança de leve — a mesa continua do jeito que estava, a criança ajusta e tenta de novo, sem
+desconto nenhum (RE-02, `_tentativasErradas` fica só no relatório do AVA).
+
+**Dica progressiva, só NA MESMA conta** (a contagem zera a cada número novo — nunca é "a criança já
+errou muito na partida", é "travou NESTA tentativa"):
+
+1. **A partir do 3º erro seguido**, uma frase qualitativa aparece embaixo do painel de desafio —
+   "AINDA FALTA MUITO/UM POUCO/BEM POUQUINHO — CONTINUE SOMANDO" ou "PASSOU MUITO/UM POUCO/BEM
+   POUQUINHO — TOQUE NUMA PEÇA PRA TIRAR" (`GameScene._textoAproximacao`). Nunca entrega o número:
+   só direção (faltou/passou) e uma ideia de distância — ainda exige a criança decidir a peça certa.
+2. **A partir do 6º erro seguido**, o último recurso: a mesa se monta **sozinha** com a composição
+   certa (peça por peça, em cascata, "encaixando" com o mesmo som de sempre) e fica assim por ~2,5s
+   — depois volta pro total que a criança tinha ANTES da demonstração, pra ela mesma recolocar as
+   peças (`GameScene._mostrarDicaPecas`). A demonstração nunca confirma a rodada sozinha, só mostra;
+   e continua se repetindo a cada novo erro depois do 6º, não só da primeira vez.
 
 ## Como rodar localmente
 
