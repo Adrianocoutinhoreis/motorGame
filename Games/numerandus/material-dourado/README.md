@@ -55,9 +55,11 @@ errou muito na partida", é "travou NESTA tentativa"):
    com a composição certa, peça por peça, BEM DEVAGAR e em cascata (cada peça nasce ~190ms depois da
    anterior, "encaixando" com o mesmo som de sempre) — fica montada um instante, desmonta na mesma
    cascata (ao contrário) e só então volta pro total que a criança tinha ANTES da demonstração, pra
-   ela mesma recolocar as peças (`GameScene._mostrarDicaPecas`). A demonstração nunca confirma a
-   rodada sozinha, só mostra; e continua se repetindo a cada novo erro depois do 6º, não só da
-   primeira vez. (Antes a troca era instantânea e sem destaque nenhum — devagar e com o holofote foi
+   ela mesma recolocar as peças (`GameScene._mostrarDicaPecas`). O número "VOCÊ FORMOU" muda pro
+   alvo, mas de propósito **sem** o verde de acerto (`painelDesafio.bateu` fica `false` durante a
+   demo) — a ideia é a criança reconhecer que bateu contando as PEÇAS na mesa, não lendo uma cor.
+   A demonstração nunca confirma a rodada sozinha, só mostra; e continua se repetindo a cada novo
+   erro depois do 6º, não só da primeira vez. (Antes a troca era instantânea e sem destaque nenhum — devagar e com o holofote foi
    pedido do humano depois de ver a primeira versão: "rápido demais" e "preciso focar nisso".)
 
 ## Como rodar localmente

@@ -1207,7 +1207,13 @@ export class GameScene extends Scene {
     this._mostrarVeuDica(true);
     this._total = alvo;
     this._reconstruirMesa({ animado: true });
-    this._atualizarDesafio();
+    // Só o número troca pro alvo — sem `_atualizarDesafio()` aqui de
+    // propósito: ele pintaria "VOCÊ FORMOU" de verde (`bateu = true`), e a
+    // criança reconheceria "deu certo" pela COR do número, não pela
+    // QUANTIDADE de peças na mesa (o que esta demonstração existe pra
+    // ensinar a olhar). O Confirmar também não muda de cor — continua
+    // travado e neutro, nunca parecendo "já ganhou".
+    this.painelDesafio.total = alvo;
     this._dicaTexto.texto = 'OLHA SÓ COMO FICA! DEPOIS É A SUA VEZ';
 
     Tween.de(this)
