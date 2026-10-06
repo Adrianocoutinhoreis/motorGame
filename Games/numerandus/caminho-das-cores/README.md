@@ -256,6 +256,14 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     coleção muda), que troca só o anel; pausa/ajuda deste jogo passam
     `corContorno: 'transparent'`, mantendo a sombra de base intacta. Motor
     re-sincronizado em toda a coleção depois do ajuste.
+20. **Botões em FILEIRA também no computador** — até aqui só o celular
+    arrumava pausa/ajuda/som numa fileira; no computador eles formavam uma
+    COLUNA no canto superior direito. Referência do humano pediu fileira nos
+    dois formatos. `linhaDireitaX` ancora a fileira pela direita (o último
+    botão, som, termina exatamente em `L - margemLateral`, os anteriores
+    ficam à esquerda dele, mesmo passo de 88px da fileira do celular) —
+    célula vertical única (`espaco.md`) nos três, em vez de três alturas
+    diferentes.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

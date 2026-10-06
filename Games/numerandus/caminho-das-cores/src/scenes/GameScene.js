@@ -472,17 +472,20 @@ export class GameScene extends Scene {
     this.aoDesmontar(this.input.on('cancelar', () => this._soltarArrasto()));
 
     // ------------------------------------------------------------------ HUD
-    // No celular, os 3 botões formam uma FILEIRA no topo esquerdo (pedido do
-    // humano numa referência anterior). No computador eles viram uma COLUNA
-    // no canto superior DIREITO — do lado OPOSTO à cartela (que agora encosta
-    // na borda esquerda, ver acima) — em vez de competir por espaço com ela.
-    const colunaDireitaX = L - margemLateral - 72;
-    const btnX1 = this._desktop ? colunaDireitaX : margemLateral;
-    const btnX2 = this._desktop ? colunaDireitaX : margemLateral + 88;
-    const btnX3 = this._desktop ? colunaDireitaX : margemLateral + 88 * 2;
+    // Em QUALQUER tela os 3 botões formam uma FILEIRA (pedido do humano, com
+    // referência) — só muda o canto: celular no topo ESQUERDO (encostado na
+    // margem), computador no topo DIREITO (do lado oposto à cartela, que
+    // encosta na borda esquerda — ver acima — em vez de competir por espaço
+    // com ela). `linhaDireitaX` ancora pela direita: o último botão (som,
+    // i=2) termina exatamente em `L - margemLateral`, os de antes ficam à
+    // esquerda dele, mesmo passo de 88px da fileira do celular.
+    const linhaDireitaX = (i) => L - margemLateral - 72 - (2 - i) * 88;
+    const btnX1 = this._desktop ? linhaDireitaX(0) : margemLateral;
+    const btnX2 = this._desktop ? linhaDireitaX(1) : margemLateral + 88;
+    const btnX3 = this._desktop ? linhaDireitaX(2) : margemLateral + 88 * 2;
     const btnY1 = espaco.md;
-    const btnY2 = this._desktop ? espaco.md + 88 : espaco.md;
-    const btnY3 = this._desktop ? espaco.md + 88 * 2 : espaco.md;
+    const btnY2 = espaco.md;
+    const btnY3 = espaco.md;
 
     // `corContorno: 'transparent'` só aqui (não no motor): a referência mais
     // recente do humano mostra pausa/ajuda SEM o anel escuro de contorno —
