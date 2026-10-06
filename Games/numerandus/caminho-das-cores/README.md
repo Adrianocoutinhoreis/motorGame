@@ -245,6 +245,17 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     largura da tela para 72,8% (a referência mostrava a borda do tabuleiro
     por volta de 74,6%) — bem mais perto do meio, sem cortar nada no
     Difícil (22 peças).
+19. **Pausa/ajuda sem o anel de contorno — só o som mantém** — outra
+    referência do humano mostrou os ícones de pausa/ajuda SEM o traço escuro
+    ao redor (só a sombra por baixo já dá profundidade), diferente do botão
+    de som, que continua com o anel azul de propósito (ele sinaliza "som
+    ligado", não é só decoração). O `IconButton` do motor usava a MESMA cor
+    (`corBorda`) tanto pro anel quanto pra sombra de base 3D por baixo —
+    apagar uma apagava a outra. Ganhou um campo novo, opcional,
+    `corContorno` (cai em `corBorda` quando ausente — nenhum outro botão da
+    coleção muda), que troca só o anel; pausa/ajuda deste jogo passam
+    `corContorno: 'transparent'`, mantendo a sombra de base intacta. Motor
+    re-sincronizado em toda a coleção depois do ajuste.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

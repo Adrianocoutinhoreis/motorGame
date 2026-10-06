@@ -484,13 +484,19 @@ export class GameScene extends Scene {
     const btnY2 = this._desktop ? espaco.md + 88 : espaco.md;
     const btnY3 = this._desktop ? espaco.md + 88 * 2 : espaco.md;
 
+    // `corContorno: 'transparent'` só aqui (não no motor): a referência mais
+    // recente do humano mostra pausa/ajuda SEM o anel escuro de contorno —
+    // só a sombra/base por baixo (que continua vindo de `corBorda`, intacta)
+    // já dá profundidade — enquanto o som mantém o anel azul de sempre (ele
+    // sinaliza estado "ligado", não é decoração). Nenhum outro jogo muda,
+    // porque nenhum outro passa essa opção.
     this._btnPausa = new IconButton({
-      icone: 'pausa', x: btnX1, y: btnY1, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pausar(),
+      icone: 'pausa', x: btnX1, y: btnY1, audio: this.audio, somToque: config.audio?.clique, corContorno: 'transparent', aoTocar: () => this._pausar(),
     });
     this.adicionar(this._btnPausa);
 
     this._btnAjuda = new IconButton({
-      icone: 'tutorial', x: btnX2, y: btnY2, audio: this.audio, somToque: config.audio?.clique, aoTocar: () => this._pedirAjuda(),
+      icone: 'tutorial', x: btnX2, y: btnY2, audio: this.audio, somToque: config.audio?.clique, corContorno: 'transparent', aoTocar: () => this._pedirAjuda(),
     });
     this.adicionar(this._btnAjuda);
 
