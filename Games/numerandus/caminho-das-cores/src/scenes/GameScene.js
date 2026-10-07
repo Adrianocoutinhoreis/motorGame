@@ -1039,10 +1039,23 @@ export class GameScene extends Scene {
       const dx = posAlvo.x - peca.x;
       const dy = posAlvo.y - peca.y;
       const raio = this._raioTolerancia();
-      const forca = 1 - Math.sqrt(dx * dx + dy * dy) / raio;
+      // SEM `Math.max(0, …)` aqui, longe do slot vazio (`dy` grande — comum
+      // agora que a peça trava no canal assim que cruza a parede, bem antes
+      // de chegar perto do slot de verdade) a "força" virava NEGATIVA — o
+      // ímã inverte pra REPULSÃO e empurra a peça pro lado errado. Isso
+      // bastava pra furar a parede por alguns pixels (achado testando um
+      // arrasto real: a peça escapava do retângulo do canal exatamente
+      // quando distante do slot). `Math.max(0, …)` garante que o ímã só
+      // ATRAI, nunca empurra.
+      const forca = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / raio);
       const FATOR_IMA = 0.3;
       peca.x += dx * forca * FATOR_IMA;
       peca.y += dy * forca * FATOR_IMA;
+      // Re-trava depois do ímã — rede de segurança: nenhuma força deveria
+      // mais furar a parede, mas a colisão é o que garante a regra, não o
+      // ímã (que é só estética de "encaixar satisfatório").
+      peca.x = Math.min(Math.max(peca.x, alvo.x), alvo.x + alvo.largura);
+      peca.y = Math.min(peca.y, alvo.y + alvo.altura);
     }
   }
 

@@ -93,6 +93,12 @@
       certo. `_passouBuraco` lembra se a peça já cruzou NESTE arrasto; fora da faixa do
       buraco a peça não desce, fica presa na linha. Testado via CDP: descer longe do buraco
       nunca atravessa; descer dentro da faixa passa e encaixa na trilha alinhada com ele
+- [x] Bug real corrigido: o ÍMÃ (puxão pro slot vazio mais próximo) conseguia furar a parede —
+      longe do slot de verdade a "força" ficava negativa e virava repulsão, empurrando a peça
+      pra fora do canal já travado pelo clamp. `Math.max(0, forca)` + um re-clamp depois do
+      ímã corrigem. Achado só com um teste que registra a posição a CADA PASSO de um arrasto
+      contínuo (não só o resultado final) e confere todos os pontos contra o retângulo do
+      canal — os testes anteriores (só checando o encaixe final) não pegavam esse furo
 - [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
       `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
 - [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via

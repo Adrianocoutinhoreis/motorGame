@@ -402,6 +402,27 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     bandeja. Testado via CDP: soltar o dedo tentando descer longe do buraco
     (bem no meio do tabuleiro) nunca atravessa a linha; descendo dentro da
     faixa do buraco passa normalmente e encaixa na trilha alinhada com ele.
+26. **Bug real: o ímã conseguia FURAR a parede** — mesmo com as correções
+    22-25, o humano ainda via a peça escapando do canal ("não poderá passar
+    por cima por nenhuma parede", com um círculo marcando o retângulo inteiro
+    da trilha). Testando um arrasto real com registro de posição a cada
+    passo (não só olhar o resultado final), achei a causa: o "ímã" que puxa a
+    peça pro slot vazio mais próximo (`_moverArrasto`, depois do clamp das
+    paredes) usa `forca = 1 - distância/raio` — e quando a peça está LONGE do
+    slot de verdade (comum agora: ela trava no canal assim que cruza
+    qualquer parede, bem antes de chegar perto do slot vazio, que pode estar
+    lá embaixo), `distância > raio` faz `forca` ficar NEGATIVA. Uma força
+    negativa não "puxa menos", ela INVERTE — vira repulsão, e `peca.x +=
+    dx * forca * FATOR_IMA` empurrava a peça pro lado ERRADO, pra fora do
+    canal já travado pelo clamp (alguns pixels só, mas já fura a parede).
+    Duas correções juntas, por segurança: `Math.max(0, forca)` (o ímã só
+    atrai, nunca empurra) e um RE-CLAMP depois do ímã (rede de segurança —
+    quem garante a regra é a colisão, nunca o ímã, que é só estética de
+    "encaixar satisfatório"). Achado com um teste que registra a posição X/Y
+    a cada ~8ms de um arrasto contínuo e depois confere TODOS os pontos
+    contra o retângulo do canal (não só olhar se encaixou certo no final) —
+    os testes anteriores (22/23/25) só checavam o resultado, por isso não
+    pegavam esse furo de alguns pixels no meio do caminho.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
