@@ -87,6 +87,12 @@
       humano depois de ver o tabuleiro sem nenhuma linha: sem parede visível, a colisão do
       arrasto não tem nenhuma pista do porquê a peça trava. Captura de um arrasto real em
       andamento confirma a peça fisicamente parada na borda da primeira parede
+- [x] A linha HORIZONTAL entre a bandeja e o corredor também é parede, com um único "buraco"
+      de passagem (`_buracoXMin`/`_buracoXMax`/`_limitePiscina`, mesmas coordenadas que
+      `TabuleiroVisual` já desenhava) — pedido do humano com um desenho indicando o caminho
+      certo. `_passouBuraco` lembra se a peça já cruzou NESTE arrasto; fora da faixa do
+      buraco a peça não desce, fica presa na linha. Testado via CDP: descer longe do buraco
+      nunca atravessa; descer dentro da faixa passa e encaixa na trilha alinhada com ele
 - [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
       `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
 - [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via

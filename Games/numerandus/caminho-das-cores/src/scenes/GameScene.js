@@ -680,6 +680,17 @@ export class GameScene extends Scene {
     this._painelDireita.y = this._boardY;
     this.area.adicionar(this._painelDireita);
 
+    // O "buraco" — a ÚNICA abertura ligando a bandeja (piscina) ao corredor
+    // horizontal por baixo dela (ver `TabuleiroVisual`, item C do desenho:
+    // mesma conta, mesmas coordenadas, só que aqui é pra COLISÃO, não pra
+    // pintar). Fora dessa faixa de X, a linha entre a piscina e o corredor é
+    // uma parede — `_moverArrasto` só deixa a peça descer por ali.
+    const piscinaW = this._layout.boardWidth - this._layout.padPanelX * 2;
+    const larguraColunaBuraco = (piscinaW - (nivel.trilhas - 1) * this._layout.gapTrilha) / nivel.trilhas;
+    this._buracoXMin = this._boardX + this._layout.padPanelX - 8;
+    this._buracoXMax = this._buracoXMin + larguraColunaBuraco + 16;
+    this._limitePiscina = this._boardY + this._layout.padPanelTopo + this._layout.alturaBandeja;
+
     this._pecas = [];
     this._trilhas = [];
     this._arrastando = null;
@@ -911,9 +922,10 @@ export class GameScene extends Scene {
       Tween.removerDe(peca);
       Tween.para(peca, { scaleX: 1.1, scaleY: 1.1 }, 100, Easing.suaveSaida);
       this._arrastando = peca;
-      // Nenhum canal travado ainda — a peça começa na bandeja, área aberta
-      // (ver `_moverArrasto`).
+      // Nenhum canal travado ainda e ainda não cruzou o buraco — a peça
+      // começa na bandeja, área aberta (ver `_moverArrasto`).
       this._canalPreso = null;
+      this._passouBuraco = false;
     });
 
     peca.on('toque', () => {
@@ -958,15 +970,27 @@ export class GameScene extends Scene {
   _raioTolerancia() { return this._tamPeca * 0.75; }
 
   /**
-   * "Colisão com as paredes" de verdade — não é só uma checagem na hora de
-   * soltar, o próprio ARRASTO é travado: ao cruzar a linha do divisor
-   * (`topoTrilhas`, o `y` onde as trilhas começam — igual pra todas), a peça
-   * TRAVA no canal mais alinhado com onde estava (`_canalPreso`) e o `x` dela
-   * fica PRESO dentro da largura desse canal até voltar pra cima da linha —
-   * nunca escorrega por cima da parede pra outra trilha vizinha, mesmo
-   * arrastando bem devagar. Pedido do humano: "não poderá arrastar por cima
-   * das paredes", igual ao Jogo da Ordenação não deixar uma ficha atravessar
-   * pra uma casa não-vizinha.
+   * "Colisão com as paredes" de verdade, em TRÊS zonas (não é só uma checagem
+   * na hora de soltar, o próprio ARRASTO é travado):
+   *
+   *   1) BANDEJA (piscina) — acima de `_limitePiscina`: livre, nenhuma
+   *      parede ali, a peça anda pra qualquer lado.
+   *   2) A linha da bandeja pro corredor só tem UMA abertura — o "buraco"
+   *      (`_buracoXMin`/`_buracoXMax`, mesma posição que `TabuleiroVisual`
+   *      desenha). Fora dessa faixa de X, aquela linha é parede: a peça não
+   *      desce, fica presa bem em cima dela (`_passouBuraco` controla isso —
+   *      só vira `true` no instante em que ela cruza DENTRO da faixa do
+   *      buraco, e volta a `false` se ela subir de novo pra bandeja).
+   *   3) Depois do buraco, o CORREDOR horizontal (entre a linha da bandeja e
+   *      o topo das trilhas) liga a TODAS as 5 — livre em X. Só ao descer
+   *      mais, pra DENTRO de uma trilha, a peça TRAVA no canal mais alinhado
+   *      com onde estava (`_canalPreso`) e o `x` fica PRESO na largura desse
+   *      canal até voltar pro corredor — nunca escorrega por cima da parede
+   *      lateral pra uma trilha vizinha, mesmo arrastando bem devagar.
+   *
+   * Pedido do humano: "a regra é arrastar até passar pelo espaço inicial,
+   * não poderá passar por cima" (o buraco) — igual ao Jogo da Ordenação não
+   * deixar uma ficha atravessar pra uma casa não-vizinha.
    */
   _moverArrasto(ponto) {
     const peca = this._arrastando;
@@ -978,14 +1002,30 @@ export class GameScene extends Scene {
     const topoTrilhas = this._trilhas[0].y;
     const fundoTrilhas = topoTrilhas + this._trilhas[0].altura;
 
-    if (novoY <= topoTrilhas) {
-      // Ainda na bandeja/corredor aberto — livre, nenhuma parede ali.
+    if (novoY <= this._limitePiscina) {
+      // Bandeja — livre, e ainda não cruzou o buraco (se tinha cruzado antes
+      // e voltou pra cima, precisa cruzar de novo pra descer outra vez).
+      this._passouBuraco = false;
       this._canalPreso = null;
     } else {
-      if (!this._canalPreso) this._canalPreso = this._canalMaisProximo(peca.x);
-      const canal = this._canalPreso;
-      novoX = Math.min(Math.max(novoX, canal.x), canal.x + canal.largura);
-      novoY = Math.min(novoY, fundoTrilhas);
+      if (!this._passouBuraco) {
+        if (novoX >= this._buracoXMin && novoX <= this._buracoXMax) {
+          this._passouBuraco = true;
+        } else {
+          novoY = this._limitePiscina; // parede — não desce fora do buraco
+        }
+      }
+      if (this._passouBuraco) {
+        if (novoY <= topoTrilhas) {
+          // Corredor horizontal — livre em X, liga a qualquer trilha.
+          this._canalPreso = null;
+        } else {
+          if (!this._canalPreso) this._canalPreso = this._canalMaisProximo(novoX);
+          const canal = this._canalPreso;
+          novoX = Math.min(Math.max(novoX, canal.x), canal.x + canal.largura);
+          novoY = Math.min(novoY, fundoTrilhas);
+        }
+      }
     }
 
     peca.x = novoX;
@@ -1244,6 +1284,7 @@ export class GameScene extends Scene {
     const peca = this._arrastando;
     this._arrastando = null;
     this._canalPreso = null;
+    this._passouBuraco = false;
     peca.arrastando = false;
     peca.scaleX = 1; peca.scaleY = 1;
     for (const trilha of this._trilhas ?? []) trilha.destacada = false;

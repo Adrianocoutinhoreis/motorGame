@@ -381,6 +381,27 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     ainda) mostrando a peça fisicamente parada bem na borda da primeira
     parede, com a parede visível ao lado — prova visual de que as duas coisas
     (parede desenhada + colisão de verdade) coexistem.
+25. **A linha da bandeja pro corredor também é parede — só tem UM buraco** —
+    a correção 23 só travava a peça nas paredes LATERAIS (entre as 5
+    trilhas); a linha HORIZONTAL entre a bandeja e o corredor por baixo dela
+    continuava livre em qualquer X. O humano mandou um desenho (seta
+    indicando o caminho: desce pela abertura à esquerda, não direto por
+    qualquer ponto da linha) — "a regra é arrastar até passar pelo espaço
+    inicial, não poderá passar por cima". O "espaço inicial" É o buraco que o
+    `TabuleiroVisual` já desenhava (item C do desenho — a única abertura
+    ligando a piscina ao corredor, alinhada com a trilha 0), só que antes ele
+    era só decoração; agora `_moverArrasto` usa as MESMAS coordenadas
+    (`_buracoXMin`/`_buracoXMax`/`_limitePiscina`, calculadas uma vez em
+    `aoEntrar` com a conta idêntica à do desenho) pra travar: fora da faixa
+    do buraco, aquela linha vira parede de verdade — a peça simplesmente não
+    desce, fica presa bem em cima dela. Um novo estado (`_passouBuraco`)
+    lembra se a peça já cruzou por ali NESTE arrasto; uma vez dentro do
+    corredor, ele liga livremente às 5 trilhas (só a parede lateral de cada
+    uma, da correção 23, continua valendo pra entrar numa trilha específica)
+    — só precisa cruzar o buraco de novo se voltar pra cima da linha da
+    bandeja. Testado via CDP: soltar o dedo tentando descer longe do buraco
+    (bem no meio do tabuleiro) nunca atravessa a linha; descendo dentro da
+    faixa do buraco passa normalmente e encaixa na trilha alinhada com ele.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
