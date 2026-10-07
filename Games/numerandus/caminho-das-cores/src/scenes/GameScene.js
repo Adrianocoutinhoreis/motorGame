@@ -240,20 +240,28 @@ class Trilha extends Node {
 }
 
 /**
- * Tabuleiro visual imitando o painel físico de MDF do vídeo — um retângulo
- * único de madeira escura (piscina, divisor e trilhas sem nenhuma linha/vão
- * entre as partes, pedido do humano), dentro de uma moldura de madeira clara.
- * `padPanelX`/`padPanelTopo` são as MESMAS margens que `GameScene` usa pra
- * posicionar peça/trilha dentro dessa área — por isso o retângulo aqui bate
- * exatamente com onde as peças (nós à parte, ver `Peca`/`Trilha`) se sentam.
+ * Tabuleiro visual imitando o painel físico de MDF do vídeo — paredes
+ * (madeira clara) de VERDADE entre a bandeja e as trilhas, e entre as 5
+ * colunas: pedido do humano depois de ver o tabuleiro sem nenhuma linha —
+ * sem elas à vista, a colisão de `GameScene._moverArrasto` (a peça arrastada
+ * não atravessa esses mesmos vãos) fica sem nenhuma pista visual do PORQUÊ a
+ * peça trava ali. As paredes aqui são exatamente os vãos que a colisão
+ * respeita (`gapTrilha`/`espessuraDivisor`) — nunca só decoração.
  */
 class TabuleiroVisual extends Node {
   constructor(opcoes) {
     super(opcoes);
-    this.corFundo = '#E1D3C1'; // Madeira clara
+    this.corFundo = '#E1D3C1'; // Madeira clara (também a cor da PAREDE)
     this.corCanaleta = '#8A6E59'; // Madeira escura/fundo
+
+    this.tamPeca = opcoes.tamPeca;
+    this.gapTrilha = opcoes.gapTrilha;
     this.padPanelX = opcoes.padPanelX;
     this.padPanelTopo = opcoes.padPanelTopo;
+    this.alturaBandeja = opcoes.alturaBandeja;
+    this.espessuraDivisor = 10;
+    this.numTrilhas = opcoes.numTrilhas;
+    this.alturaCanaletaHoriz = this.tamPeca + 12;
   }
 
   desenhar(ctx) {
@@ -273,26 +281,45 @@ class TabuleiroVisual extends Node {
     ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.stroke();
 
-    // 2. Canaleta única (Madeira Escura) — piscina, divisor e trilhas num só
-    // retângulo contínuo, SEM nenhum vão/linha claro entre as partes (pedido
-    // do humano: o tabuleiro de verdade não tem essas emendas visíveis). As
-    // posições/alturas de peça, divisor e trilha continuam vindo das MESMAS
-    // contas de sempre (`alturaBandeja`/`espessuraDivisor`/trilhas, usadas só
-    // em `GameScene._novaCartela`/`_calcularLayout*` pra posicionar peça e
-    // trilha) — só o DESENHO deixou de recortar essas partes em retângulos
-    // separados com vão entre eles.
-    const areaX = this.padPanelX;
-    const areaY = this.padPanelTopo;
-    const areaW = this.largura - this.padPanelX * 2;
-    const areaH = this.altura - this.padPanelTopo - this.padPanelX;
+    // 2. Canaletas (Madeira Escura) — piscina, canaleta horizontal e as 5
+    // trilhas verticais, cada uma um retângulo À PARTE: o vão claro que sobra
+    // entre elas (a cor de fundo mostrando por baixo) É a parede — a mesma
+    // largura (`gapTrilha`) e altura (`espessuraDivisor`) que
+    // `GameScene._moverArrasto`/`_dentroDoCanal` usam pra travar o arrasto.
     ctx.fillStyle = this.corCanaleta;
-    ctx.fillRect(areaX, areaY, areaW, areaH);
 
-    // Sombra interna, ao redor da área inteira — dá profundidade sem precisar
-    // de nenhuma linha interna.
+    // A. Piscina no topo
+    const piscinaX = this.padPanelX;
+    const piscinaY = this.padPanelTopo;
+    const piscinaW = this.largura - this.padPanelX * 2;
+    const piscinaH = this.alturaBandeja;
+    ctx.fillRect(piscinaX, piscinaY, piscinaW, piscinaH);
+
+    // B. Canaleta Horizontal
+    const chY = piscinaY + piscinaH + this.espessuraDivisor;
+    const chH = this.alturaCanaletaHoriz;
+    ctx.fillRect(piscinaX, chY, piscinaW, chH);
+
+    // C. Buraco na esquerda (ligação da piscina com a canaleta horizontal)
+    const larguraColuna = (piscinaW - (this.numTrilhas - 1) * this.gapTrilha) / this.numTrilhas;
+    const inicioXTrilhas = piscinaX;
+    const buracoW = larguraColuna + 16;
+    ctx.fillRect(inicioXTrilhas - 8, piscinaY + piscinaH, buracoW, this.espessuraDivisor);
+
+    // D. Trilhas verticais
+    for (let i = 0; i < this.numTrilhas; i++) {
+      const tx = inicioXTrilhas + i * (larguraColuna + this.gapTrilha);
+      const ty = chY + chH;
+      const tw = larguraColuna;
+      const th = this.altura - this.padPanelX - ty;
+      ctx.fillRect(tx, ty, tw, th);
+    }
+
+    // Sombras internas nas canaletas, pra dar profundidade.
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 3;
-    ctx.strokeRect(areaX, areaY, areaW, areaH);
+    ctx.strokeRect(piscinaX, piscinaY, piscinaW, piscinaH);
+    ctx.strokeRect(piscinaX, chY, piscinaW, chH);
 
     ctx.restore();
   }
@@ -642,8 +669,12 @@ export class GameScene extends Scene {
     this._painelDireita = new TabuleiroVisual({
       largura: this._layout.boardWidth,
       altura: this._layout.boardHeight,
+      tamPeca: this._layout.tam,
+      gapTrilha: this._layout.gapTrilha,
       padPanelX: this._layout.padPanelX,
       padPanelTopo: this._layout.padPanelTopo,
+      alturaBandeja: this._layout.alturaBandeja,
+      numTrilhas: nivel.trilhas,
     });
     this._painelDireita.x = this._boardX;
     this._painelDireita.y = this._boardY;

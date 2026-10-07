@@ -364,6 +364,23 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     trilha 0, nunca na 4 mesmo o dedo tendo chegado lá; e confirmado que
     subir de volta pra bandeja e descer num canal diferente funciona
     normalmente (não fica "preso" pra sempre no primeiro canal visitado).
+24. **As linhas/paredes voltam a aparecer** — a correção 22 tirou TODAS as
+    linhas do tabuleiro (virou um retângulo único) e a 23 fez a colisão
+    passar a travar o próprio arrasto, não só a entrega — mas sem nenhuma
+    linha à vista, a colisão fica sem nenhuma pista visual do PORQUÊ a peça
+    trava no meio do caminho (pra quem está vendo, ela só "para sozinha" sem
+    motivo aparente). O humano pediu de volta: "as paredes deverão estar no
+    tabuleiro, porém na hora do drag drop o geométrico não poderá passar por
+    cima dessas paredes" — ou seja, as DUAS coisas juntas, não uma ou outra.
+    `TabuleiroVisual.desenhar()` voltou a ser a versão de antes da correção 22
+    (piscina/canaleta horizontal/5 trilhas como retângulos separados, com o
+    vão claro — `gapTrilha`/`espessuraDivisor` — aparecendo entre eles), sem
+    tocar em NADA da lógica de colisão das correções 22/23 (que nunca
+    dependeu do desenho — sempre foi geometria pura, `trilha.x`/`largura`).
+    Capturado um arrasto real em andamento (`pointermove` sem soltar o dedo
+    ainda) mostrando a peça fisicamente parada bem na borda da primeira
+    parede, com a parede visível ao lado — prova visual de que as duas coisas
+    (parede desenhada + colisão de verdade) coexistem.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

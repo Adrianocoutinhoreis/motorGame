@@ -82,6 +82,11 @@
       via CDP com uma sequência longa de `pointermove` (arrasto contínuo de verdade, não só
       2-3 pontos) atravessando 3 trilhas sem soltar, e reentrando num canal diferente depois
       de voltar pra área aberta
+- [x] As paredes aparecem DE VERDADE no tabuleiro (`TabuleiroVisual`: piscina/canaleta
+      horizontal/5 trilhas como retângulos separados, com o vão claro entre eles) — pedido do
+      humano depois de ver o tabuleiro sem nenhuma linha: sem parede visível, a colisão do
+      arrasto não tem nenhuma pista do porquê a peça trava. Captura de um arrasto real em
+      andamento confirma a peça fisicamente parada na borda da primeira parede
 - [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
       `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
 - [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via
