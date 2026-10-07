@@ -75,6 +75,10 @@
 
 - [x] Regras implementadas conforme a definição revista (encaixe livre nas trilhas + botão
       CONFIRMAR compara o tabuleiro inteiro com a cartela — testado via CDP, ver seção 7)
+- [x] "Colisão com as paredes" no arrasto (`_dentroDoCanal`): uma trilha só aceita a peça se
+      o centro dela estiver DENTRO da largura do canal — soltar no vão entre duas trilhas
+      vizinhas, ou ainda na bandeja (acima do divisor), nunca encaixa, mesmo perto de um
+      slot vazio; testado via CDP com arrasto `PointerEvent` real nos 3 cenários
 - [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
       `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
 - [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via

@@ -316,6 +316,34 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
       topo, como no computador) e pausa/ajuda/som/confirmar (fileira própria,
       colada na cartela) precisavam de mais altura reservada no topo — `180`
       no lugar do `102` de antes (só cabia uma fileira).
+22. **Tabuleiro sem nenhuma linha interna + "colisão com as paredes" no
+    arrasto** — o humano mandou uma captura com X vermelho em cima de TODAS as
+    linhas claras do tabuleiro (a emenda entre a bandeja e as trilhas, e os
+    vãos entre as 5 colunas) pedindo pra tirar — o tabuleiro de verdade não
+    tem essas emendas à vista. `TabuleiroVisual.desenhar()` virou um retângulo
+    de madeira escura ÚNICO (piscina+divisor+trilhas), sem recortar nada em
+    pedaços com vão entre eles; as posições de peça/trilha continuam vindo das
+    mesmas contas de layout de sempre, só o DESENHO simplificou.
+    Junto, pediu pra mudar a regra de arrasto — "parecido com o Jogo da
+    Ordenação", que só aceita um movimento pra uma casa VIZINHA vazia, nunca
+    "solte perto o bastante" — e "colisão com as paredes": antes, soltar a
+    peça gerava um ímã de raio generoso até o slot vazio mais próximo de
+    QUALQUER trilha, então dava pra "pular" por cima do vão entre duas trilhas
+    vizinhas só por estar perto o bastante de alguma delas. Agora
+    (`_dentroDoCanal`) uma trilha só aceita a peça se o CENTRO dela estiver
+    DENTRO da largura do canal — o vão de 14px entre colunas (`gapTrilha`)
+    vira uma parede de verdade, mesmo sem nenhuma linha desenhada ali: soltar
+    bem em cima do vão não encaixa em nenhuma das duas trilhas vizinhas, por
+    mais perto que pareça visualmente. Verticalmente, como `Trilha.y/altura`
+    já cobrem só o trecho ABAIXO do divisor (nunca a bandeja), uma peça ainda
+    não arrastada pra baixo do divisor automaticamente não encaixa em
+    trilha nenhuma — "tem que arrastar até achar espaço", não só soltar perto.
+    A regra "só a peça do TOPO da pilha sai ao tocar" (correção 21) já cobria
+    o "não poder mexer se cima/baixo não estiver vazio" pedido junto.
+    Testado via CDP com arrasto `PointerEvent` real em 3 cenários: soltar NO
+    MEIO do vão entre duas trilhas não encaixa em nenhuma; soltar DENTRO do
+    canal de verdade encaixa; soltar ainda na área da bandeja (acima do
+    divisor) não encaixa mesmo com o X alinhado a uma trilha.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

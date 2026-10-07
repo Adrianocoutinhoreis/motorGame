@@ -239,24 +239,21 @@ class Trilha extends Node {
   }
 }
 
-/** Tabuleiro visual imitando o painel físico de MDF do vídeo. */
+/**
+ * Tabuleiro visual imitando o painel físico de MDF do vídeo — um retângulo
+ * único de madeira escura (piscina, divisor e trilhas sem nenhuma linha/vão
+ * entre as partes, pedido do humano), dentro de uma moldura de madeira clara.
+ * `padPanelX`/`padPanelTopo` são as MESMAS margens que `GameScene` usa pra
+ * posicionar peça/trilha dentro dessa área — por isso o retângulo aqui bate
+ * exatamente com onde as peças (nós à parte, ver `Peca`/`Trilha`) se sentam.
+ */
 class TabuleiroVisual extends Node {
   constructor(opcoes) {
     super(opcoes);
     this.corFundo = '#E1D3C1'; // Madeira clara
     this.corCanaleta = '#8A6E59'; // Madeira escura/fundo
-
-    this.tamPeca = opcoes.tamPeca;
-    this.gapTrilha = opcoes.gapTrilha;
     this.padPanelX = opcoes.padPanelX;
     this.padPanelTopo = opcoes.padPanelTopo;
-    this.alturaBandeja = opcoes.alturaBandeja;
-    this.espessuraDivisor = 10;
-    this.numTrilhas = opcoes.numTrilhas;
-    this.alturaCanaletaHoriz = this.tamPeca + 12;
-    this.gapSlot = opcoes.gapSlot;
-    this.padTrilhaY = opcoes.padTrilhaY;
-    this.profundidade = opcoes.profundidade;
   }
 
   desenhar(ctx) {
@@ -276,41 +273,26 @@ class TabuleiroVisual extends Node {
     ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.stroke();
 
-    // 2. Canaletas (Madeira Escura)
+    // 2. Canaleta única (Madeira Escura) — piscina, divisor e trilhas num só
+    // retângulo contínuo, SEM nenhum vão/linha claro entre as partes (pedido
+    // do humano: o tabuleiro de verdade não tem essas emendas visíveis). As
+    // posições/alturas de peça, divisor e trilha continuam vindo das MESMAS
+    // contas de sempre (`alturaBandeja`/`espessuraDivisor`/trilhas, usadas só
+    // em `GameScene._novaCartela`/`_calcularLayout*` pra posicionar peça e
+    // trilha) — só o DESENHO deixou de recortar essas partes em retângulos
+    // separados com vão entre eles.
+    const areaX = this.padPanelX;
+    const areaY = this.padPanelTopo;
+    const areaW = this.largura - this.padPanelX * 2;
+    const areaH = this.altura - this.padPanelTopo - this.padPanelX;
     ctx.fillStyle = this.corCanaleta;
+    ctx.fillRect(areaX, areaY, areaW, areaH);
 
-    // A. Piscina no topo
-    const piscinaX = this.padPanelX;
-    const piscinaY = this.padPanelTopo;
-    const piscinaW = this.largura - this.padPanelX * 2;
-    const piscinaH = this.alturaBandeja;
-    ctx.fillRect(piscinaX, piscinaY, piscinaW, piscinaH);
-
-    // B. Canaleta Horizontal
-    const chY = piscinaY + piscinaH + this.espessuraDivisor;
-    const chH = this.alturaCanaletaHoriz;
-    ctx.fillRect(piscinaX, chY, piscinaW, chH);
-
-    // C. Buraco na esquerda (ligação da piscina com a canaleta horizontal)
-    const larguraColuna = (piscinaW - (this.numTrilhas - 1) * this.gapTrilha) / this.numTrilhas;
-    const inicioXTrilhas = piscinaX;
-    const buracoW = larguraColuna + 16;
-    ctx.fillRect(inicioXTrilhas - 8, piscinaY + piscinaH, buracoW, this.espessuraDivisor);
-
-    // D. Trilhas verticais
-    for (let i = 0; i < this.numTrilhas; i++) {
-       const tx = inicioXTrilhas + i * (larguraColuna + this.gapTrilha);
-       const ty = chY + chH;
-       const tw = larguraColuna;
-       const th = this.altura - this.padPanelX - ty;
-       ctx.fillRect(tx, ty, tw, th);
-    }
-
-    // Sombras internas nas canaletas para dar profundidade (opcional)
+    // Sombra interna, ao redor da área inteira — dá profundidade sem precisar
+    // de nenhuma linha interna.
     ctx.strokeStyle = 'rgba(0,0,0,0.2)';
     ctx.lineWidth = 3;
-    ctx.strokeRect(piscinaX, piscinaY, piscinaW, piscinaH);
-    ctx.strokeRect(piscinaX, chY, piscinaW, chH);
+    ctx.strokeRect(areaX, areaY, areaW, areaH);
 
     ctx.restore();
   }
@@ -660,15 +642,8 @@ export class GameScene extends Scene {
     this._painelDireita = new TabuleiroVisual({
       largura: this._layout.boardWidth,
       altura: this._layout.boardHeight,
-      tamPeca: this._layout.tam,
-      gapTrilha: this._layout.gapTrilha,
       padPanelX: this._layout.padPanelX,
       padPanelTopo: this._layout.padPanelTopo,
-      alturaBandeja: this._layout.alturaBandeja,
-      numTrilhas: nivel.trilhas,
-      gapSlot: this._layout.gapSlot,
-      padTrilhaY: this._layout.padTrilhaY,
-      profundidade: nivel.profundidade,
     });
     this._painelDireita.x = this._boardX;
     this._painelDireita.y = this._boardY;
@@ -924,27 +899,41 @@ export class GameScene extends Scene {
     });
   }
 
-  _trilhaMaisProxima(x, y) {
-    let melhor = null;
-    let menor = Infinity;
-    for (const trilha of this._trilhas) {
-      if (trilha.completa()) continue;
-      const alvo = trilha.posicaoProximoEncaixe();
-      const d = (x - alvo.x) ** 2 + (y - alvo.y) ** 2;
-      if (d < menor) { menor = d; melhor = trilha; }
-    }
-    return melhor;
+  /**
+   * "Colisão com as paredes": a peça só pertence ao CANAL desta trilha se o
+   * centro dela estiver DENTRO da largura do canal — nunca só "perto o
+   * bastante". O vão entre colunas (`gapTrilha`) vira uma parede de verdade:
+   * nenhuma trilha reclama um ponto que caia nele, mesmo que esteja bem
+   * perto de alguma vizinha. Pedido do humano: parecido com o Jogo da
+   * Ordenação, onde o movimento só vale pra uma casa de verdade, nunca "solte
+   * em qualquer lugar perto".
+   */
+  _dentroDoCanal(trilha, x) {
+    return x >= trilha.x && x <= trilha.x + trilha.largura;
   }
 
-  /** Raio generoso — motricidade fina de 6-7 anos, mesmo raciocínio do Encaixe Certo/Quantidade Certa. */
+  /** Nome mantido por compatibilidade com quem já chama — não depende mais de distância, só do canal (ver `_dentroDoCanal`). */
+  _trilhaMaisProxima(x) {
+    for (const trilha of this._trilhas) {
+      if (trilha.completa()) continue;
+      if (this._dentroDoCanal(trilha, x)) return trilha;
+    }
+    return null;
+  }
+
+  /** Raio só do ÍMÃ (puxão suave pro slot exato depois de já ter cruzado a parede) — não decide mais quem aceita a peça, ver `_dentroDaTolerancia`. */
   _raioTolerancia() { return this._tamPeca * 0.75; }
 
+  /**
+   * Dentro do canal (`_dentroDoCanal`) E dentro da altura da trilha — como
+   * `Trilha.y`/`altura` cobrem só o trecho ABAIXO do divisor (nunca a
+   * piscina/bandeja, ver `_novaCartela`), isso já barra sozinho uma peça que
+   * ainda não desceu até lá. Verticalmente qualquer altura do canal serve —
+   * a peça cai pro espaço vazio mais baixo (`indiceVazio`), não precisa ser
+   * soltada bem em cima do slot exato.
+   */
   _dentroDaTolerancia(trilha, x, y) {
-    const alvo = trilha.posicaoProximoEncaixe();
-    if (!alvo) return false;
-    const raio = this._raioTolerancia();
-    const d = (x - alvo.x) ** 2 + (y - alvo.y) ** 2;
-    return d <= raio ** 2;
+    return this._dentroDoCanal(trilha, x) && y >= trilha.y && y <= trilha.y + trilha.altura;
   }
 
   _moverArrasto(ponto) {
