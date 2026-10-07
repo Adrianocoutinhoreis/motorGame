@@ -880,6 +880,9 @@ export class GameScene extends Scene {
       Tween.removerDe(peca);
       Tween.para(peca, { scaleX: 1.1, scaleY: 1.1 }, 100, Easing.suaveSaida);
       this._arrastando = peca;
+      // Nenhum canal travado ainda — a peça começa na bandeja, área aberta
+      // (ver `_moverArrasto`).
+      this._canalPreso = null;
     });
 
     peca.on('toque', () => {
@@ -899,55 +902,68 @@ export class GameScene extends Scene {
     });
   }
 
-  /**
-   * "Colisão com as paredes": a peça só pertence ao CANAL desta trilha se o
-   * centro dela estiver DENTRO da largura do canal — nunca só "perto o
-   * bastante". O vão entre colunas (`gapTrilha`) vira uma parede de verdade:
-   * nenhuma trilha reclama um ponto que caia nele, mesmo que esteja bem
-   * perto de alguma vizinha. Pedido do humano: parecido com o Jogo da
-   * Ordenação, onde o movimento só vale pra uma casa de verdade, nunca "solte
-   * em qualquer lugar perto".
-   */
+  /** O ponto `x` cai dentro da largura do canal desta trilha? */
   _dentroDoCanal(trilha, x) {
     return x >= trilha.x && x <= trilha.x + trilha.largura;
   }
 
-  /** Nome mantido por compatibilidade com quem já chama — não depende mais de distância, só do canal (ver `_dentroDoCanal`). */
-  _trilhaMaisProxima(x) {
+  /**
+   * Canal cujo CENTRO está mais perto de `x` — usado só no instante em que a
+   * peça cruza a linha do divisor vindo de cima (ver `_moverArrasto`), pra
+   * decidir em qual dos 5 ela "entra".
+   */
+  _canalMaisProximo(x) {
+    let melhor = this._trilhas[0];
+    let menor = Infinity;
     for (const trilha of this._trilhas) {
-      if (trilha.completa()) continue;
-      if (this._dentroDoCanal(trilha, x)) return trilha;
+      const centro = trilha.x + trilha.largura / 2;
+      const d = Math.abs(x - centro);
+      if (d < menor) { menor = d; melhor = trilha; }
     }
-    return null;
+    return melhor;
   }
 
-  /** Raio só do ÍMÃ (puxão suave pro slot exato depois de já ter cruzado a parede) — não decide mais quem aceita a peça, ver `_dentroDaTolerancia`. */
+  /** Raio do ÍMÃ (puxão suave pro slot exato depois de já estar dentro de um canal). */
   _raioTolerancia() { return this._tamPeca * 0.75; }
 
   /**
-   * Dentro do canal (`_dentroDoCanal`) E dentro da altura da trilha — como
-   * `Trilha.y`/`altura` cobrem só o trecho ABAIXO do divisor (nunca a
-   * piscina/bandeja, ver `_novaCartela`), isso já barra sozinho uma peça que
-   * ainda não desceu até lá. Verticalmente qualquer altura do canal serve —
-   * a peça cai pro espaço vazio mais baixo (`indiceVazio`), não precisa ser
-   * soltada bem em cima do slot exato.
+   * "Colisão com as paredes" de verdade — não é só uma checagem na hora de
+   * soltar, o próprio ARRASTO é travado: ao cruzar a linha do divisor
+   * (`topoTrilhas`, o `y` onde as trilhas começam — igual pra todas), a peça
+   * TRAVA no canal mais alinhado com onde estava (`_canalPreso`) e o `x` dela
+   * fica PRESO dentro da largura desse canal até voltar pra cima da linha —
+   * nunca escorrega por cima da parede pra outra trilha vizinha, mesmo
+   * arrastando bem devagar. Pedido do humano: "não poderá arrastar por cima
+   * das paredes", igual ao Jogo da Ordenação não deixar uma ficha atravessar
+   * pra uma casa não-vizinha.
    */
-  _dentroDaTolerancia(trilha, x, y) {
-    return this._dentroDoCanal(trilha, x) && y >= trilha.y && y <= trilha.y + trilha.altura;
-  }
-
   _moverArrasto(ponto) {
     const peca = this._arrastando;
     if (!peca) return;
     const local = this.area.globalParaLocal(ponto.x, ponto.y);
-    peca.x = local.x + this._deslocX;
-    peca.y = local.y + this._deslocY;
+    let novoX = local.x + this._deslocX;
+    let novoY = local.y + this._deslocY;
 
-    const alvo = this._trilhaMaisProxima(peca.x, peca.y);
-    const perto = alvo && this._dentroDaTolerancia(alvo, peca.x, peca.y);
-    for (const trilha of this._trilhas) trilha.destacada = perto && trilha === alvo;
+    const topoTrilhas = this._trilhas[0].y;
+    const fundoTrilhas = topoTrilhas + this._trilhas[0].altura;
 
-    if (perto) {
+    if (novoY <= topoTrilhas) {
+      // Ainda na bandeja/corredor aberto — livre, nenhuma parede ali.
+      this._canalPreso = null;
+    } else {
+      if (!this._canalPreso) this._canalPreso = this._canalMaisProximo(peca.x);
+      const canal = this._canalPreso;
+      novoX = Math.min(Math.max(novoX, canal.x), canal.x + canal.largura);
+      novoY = Math.min(novoY, fundoTrilhas);
+    }
+
+    peca.x = novoX;
+    peca.y = novoY;
+
+    const alvo = this._canalPreso && !this._canalPreso.completa() ? this._canalPreso : null;
+    for (const trilha of this._trilhas) trilha.destacada = trilha === alvo;
+
+    if (alvo) {
       const posAlvo = alvo.posicaoProximoEncaixe();
       const dx = posAlvo.x - peca.x;
       const dy = posAlvo.y - peca.y;
@@ -960,11 +976,13 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Encaixe LIVRE: solta perto de qualquer trilha com espaço e ela entra na
-   * posição vazia mais baixa, CERTA OU ERRADA — nada é validado aqui, só
-   * quando a criança confirma (`_confirmar`). Fora de alcance de qualquer
-   * trilha com espaço, a peça só volta pra bandeja (nunca treme feio —
-   * errar não existe mais nesta etapa, só ao confirmar).
+   * Encaixe LIVRE: solta dentro de um canal com espaço e a peça entra na
+   * posição vazia mais baixa DELE, CERTA OU ERRADA — nada é validado aqui, só
+   * quando a criança confirma (`_confirmar`). Como `_moverArrasto` já travou
+   * o `x` dentro do canal (`_canalPreso`) o tempo todo, chegar aqui fora de
+   * um canal só acontece se a peça nunca cruzou o divisor (solta ainda na
+   * bandeja) — nesse caso só volta pra bandeja (nunca treme feio: errar não
+   * existe mais nesta etapa, só ao confirmar).
    */
   _soltarArrasto() {
     const peca = this._arrastando;
@@ -975,8 +993,9 @@ export class GameScene extends Scene {
     Tween.removerDe(peca);
     Tween.para(peca, { scaleX: 1, scaleY: 1 }, 120, Easing.suaveSaida);
 
-    const alvo = this._trilhaMaisProxima(peca.x, peca.y);
-    if (alvo && this._dentroDaTolerancia(alvo, peca.x, peca.y)) {
+    const alvo = this._canalPreso;
+    this._canalPreso = null;
+    if (alvo && !alvo.completa()) {
       this._encaixarLivre(peca, alvo);
       return;
     }
@@ -1193,6 +1212,7 @@ export class GameScene extends Scene {
     if (!this._arrastando) return;
     const peca = this._arrastando;
     this._arrastando = null;
+    this._canalPreso = null;
     peca.arrastando = false;
     peca.scaleX = 1; peca.scaleY = 1;
     for (const trilha of this._trilhas ?? []) trilha.destacada = false;

@@ -344,6 +344,26 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     MEIO do vão entre duas trilhas não encaixa em nenhuma; soltar DENTRO do
     canal de verdade encaixa; soltar ainda na área da bandeja (acima do
     divisor) não encaixa mesmo com o X alinhado a uma trilha.
+23. **Colisão de verdade, não só checagem na hora de soltar** — a correção 22
+    só validava NO INSTANTE DE SOLTAR (arrastar livremente por cima de
+    qualquer parede e só então largar dentro de um canal continuava
+    funcionando, o dedo podia atravessar o vão sem problema). O humano
+    corrigiu: "não poderá arrastar por cima das paredes" é o PRÓPRIO ARRASTO
+    que precisa travar, não só a entrega final. Agora `_moverArrasto` trava um
+    `_canalPreso` assim que a peça cruza a linha do divisor (o canal cujo
+    CENTRO está mais alinhado com onde ela estava) e PRENDE o `x` dela dentro
+    da largura desse canal pro resto do arrasto — tentar arrastar bem devagar
+    pra uma trilha vizinha, sem soltar o dedo, trava na parede e não atravessa,
+    por mais longe que o dedo vá. Só volta a ficar livre em X subindo de volta
+    pra cima da linha do divisor (a bandeja/corredor aberto, sem parede
+    nenhuma) — dali dá pra atravessar livremente até alinhar com outro canal e
+    descer de novo. Testado via CDP com uma sequência LONGA de `pointermove`
+    (arrasto contínuo, não só 2-3 pontos): arrastando bem devagar da trilha 0
+    até onde ficaria a trilha 4 (atravessando as 3 do meio) sem soltar o dedo,
+    o X da peça nunca passa da borda do canal 0, e soltar lá encaixa na
+    trilha 0, nunca na 4 mesmo o dedo tendo chegado lá; e confirmado que
+    subir de volta pra bandeja e descer num canal diferente funciona
+    normalmente (não fica "preso" pra sempre no primeiro canal visitado).
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
