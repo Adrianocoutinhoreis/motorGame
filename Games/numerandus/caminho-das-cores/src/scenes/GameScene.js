@@ -310,17 +310,41 @@ class TabuleiroVisual extends Node {
     const chH = this.alturaCanaletaHoriz;
     ctx.fillRect(piscinaX, chY, piscinaW, chH);
 
-    // B.1 Abertura (decorativa) bem embaixo da coluna do espaço — corta a
-    // divisória e metade da canaleta horizontal com a cor CLARA (mesma da
-    // parede), como uma "boca de chute" indicando "é aqui que desce".
+    // B.1 Abertura bem embaixo da coluna do espaço — corta a divisória E A
+    // CANALETA INTEIRA (não só metade) com a cor clara da parede, com borda
+    // dourada (mesma cor do destaque do espaço, ver `GridBandeja`) e uma
+    // seta pra baixo dentro dela — precisa ser INEQUÍVOCA (pedido do humano
+    // depois de uma primeira versão pequena/discreta demais: parecia um
+    // glitch, não uma passagem de verdade).
     if (this.aberturaLargura > 0) {
+      const ax = this.aberturaX;
+      const ay = piscinaY + piscinaH;
+      const aw = this.aberturaLargura;
+      const ah = this.espessuraDivisor + chH;
+
       ctx.fillStyle = this.corFundo;
-      ctx.fillRect(
-        this.aberturaX,
-        piscinaY + piscinaH,
-        this.aberturaLargura,
-        this.espessuraDivisor + chH * 0.5,
-      );
+      ctx.beginPath();
+      ctx.roundRect(ax, ay, aw, ah, [0, 0, 8, 8]);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(224, 171, 27, 0.9)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Seta pra baixo, centralizada na abertura.
+      const cx = ax + aw / 2;
+      const cy = ay + ah / 2;
+      const metade = Math.min(aw, ah) * 0.22;
+      ctx.fillStyle = '#E0AB1B';
+      ctx.beginPath();
+      ctx.moveTo(cx - metade, cy - metade * 0.6);
+      ctx.lineTo(cx + metade, cy - metade * 0.6);
+      ctx.lineTo(cx, cy + metade * 0.8);
+      ctx.closePath();
+      ctx.fill();
+
       ctx.fillStyle = this.corCanaleta;
     }
 

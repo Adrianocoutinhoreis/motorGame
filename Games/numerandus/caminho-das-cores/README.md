@@ -486,10 +486,16 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     - **Abertura visível na divisória, embaixo da coluna do espaço**
       (`TabuleiroVisual.aberturaX`/`aberturaLargura`) — pedido do humano: a
       peça só "sumia" da grade sem nenhuma pista de que ali é uma passagem de
-      verdade pra baixo. Corta a divisória (e metade da canaleta horizontal)
-      com a cor clara da parede, exatamente na faixa X da coluna 0 da grade —
-      decorativo (não leva a lugar fisicamente, a peça some e reaparece
-      animada), só explica visualmente a casa do espaço.
+      verdade pra baixo. Primeira versão cortava só metade da canaleta
+      horizontal, sem borda — pequena e discreta demais: o humano mandou um
+      recorte da própria captura perguntando "consegue ver abertura aqui?",
+      e dava pra ver que lia como um pedaço de fundo errado, não como uma
+      passagem. Reforçada: agora corta a divisória E a canaleta horizontal
+      INTEIRAS (não só metade), com borda dourada tracejada (mesma cor do
+      destaque do espaço, pra ligar visualmente as duas) e uma seta pra baixo
+      desenhada dentro dela — inequívoco mesmo pequeno. Continua decorativo
+      (não leva a lugar fisicamente, a peça some e reaparece animada por
+      cima), só explica visualmente a casa do espaço.
     - **Bug real: depois de 1-2 peças saírem/voltarem, a bandeja travava —
       "as outras não conseguem mais ir pro objetivo, nem remover peças"**
       (relato do humano, com captura mostrando só 2 peças numa única trilha).
