@@ -9,16 +9,17 @@
 
 ## 1. Definição
 
-- [x] Objetivo pedagógico escrito em uma frase — comparar formato e cor com uma cartela
+- [x] Objetivo pedagógico escrito em uma frase — comparar formato e cor com um cartão
       de referência e reproduzir a mesma sequência em cada trilha, na ordem certa
-- [x] Faixa etária confirmada e coerente com o design (6-7 anos, 1º ano — alvos grandes,
-      sem leitura obrigatória, ritmo livre com cronômetro CRESCENTE e só informativo)
-- [x] Mecânica descrita em até 3 frases (ver README, seção "O que é" — mecânica revista:
-      encaixe livre + Confirmar + rodadas, ver correção 21 do README)
-- [x] Níveis definidos: 3 (Fácil/Médio/Difícil), o eixo é "profundidade da sequência"
-      (2/3/4 peças por trilha) — `trilhas` é sempre 5 (forma fixa do tabuleiro físico)
-- [x] Condição de **vitória** definida e mensurável — `nivel.meta` cartelas (rodadas)
-      confirmadas com o tabuleiro inteiro batendo com a cartela (`ScoreSystem`)
+- [x] Faixa etária confirmada e coerente com o design (4 a 7 anos — alvos grandes,
+      sem leitura obrigatória, dois jeitos de mover a peça: arrastar ou tocar-e-tocar)
+- [x] Mecânica descrita em até 3 frases (ver README, seção "O que é" — versão atual
+      desde 2026-10-08, correção 29)
+- [x] Níveis definidos: 3, seguindo os cartões do brinquedo — Fácil (uma cor por trilha,
+      2 peças), Médio (uma cor por trilha, 4 peças), Difícil (cores misturadas, 4 peças);
+      `trilhas` é sempre 5
+- [x] Condição de **vitória** definida e mensurável — `nivel.meta` (3) cartões
+      confirmados com o tabuleiro inteiro batendo com o cartão (`ScoreSystem`)
 - [x] Condição de **derrota** definida (ou registrado que não existe derrota) — **não
       existe**: sem vidas, confirmar errado só demora mais (mesma decisão do Encaixe
       Certo/Quantidade Certa/Material Dourado)
@@ -29,8 +30,8 @@
   - [x] RE-02 — a cena nunca chama `placar.errar()`; CONFIRMAR errado só incrementa
         `_tentativasErradas`, somado manualmente no `resultado` do `_terminar` — nunca
         desconta acerto nem estrela
-  - [x] RE-03 — `unidadePlacar: { singular: 'cartela', plural: 'cartelas' }` — o placar
-        mostra "N CARTELAS" (antes "N TRILHAS", mecânica antiga)
+  - [x] RE-03 — `unidadePlacar: { singular: 'cartão', plural: 'cartões' }` — o placar
+        mostra "N CARTÕES" (conferido na tela de resultado)
   - [x] RE-04 — `_terminar` não passa `estrelas` em `irPara('resultado', …)`
 
 ## 2. Assets
@@ -56,13 +57,12 @@
 - [x] **Menu** com JOGAR e COMO JOGAR (de fábrica, via `templates/jogo-base`)
 - [x] **Tutorial** com 3 passos ilustrados e puláveis — narração ainda pendente (ver seção 2)
 - [x] **Seleção de nível** (3 níveis)
-- [x] **Partida** com HUD legível (pausa, ajuda, som, Confirmar, estrelas de progresso por
-      cartela, cronômetro CRESCENTE só informativo — `config.mostrarCronometro: true`,
-      mecânica revista)
+- [x] **Partida** com HUD legível (pausa, ajuda, som, CONFIRMAR, estrelas de progresso por
+      cartão, cronômetro CRESCENTE só informativo)
 - [x] **Pausa** com continuar / recomeçar / sair
 - [x] **Ajuda** na partida (regra RE-05): `HelpScreen` abre por cima, `Tween.pausarTodos()`
-      + `this.pausada = true` param o jogo atrás, `_cancelarArrastoEmCurso()` devolve
-      qualquer peça em arrasto pra bandeja antes de abrir
+      + `this.pausada = true` param o jogo atrás, `_cancelarGesto()` devolve qualquer peça
+      em arrasto pro lugar dela no monte antes de abrir
   - [x] O tempo NÃO corre enquanto a ajuda está aberta (`atualizar(dt)` retorna cedo
         quando `pausada`, só atualiza pausa/ajuda)
   - [x] Os mesmos 3 passos do `config.tutorial` servem tanto ao "como jogar" do menu
@@ -73,54 +73,32 @@
 
 ## 4. Mecânica
 
-- [x] Regras implementadas conforme a definição revista (encaixe livre nas trilhas + botão
-      CONFIRMAR compara o tabuleiro inteiro com a cartela — testado via CDP, ver seção 7)
-- [x] **Etapa 1 — bandeja-grade** (`GridBandeja`, correção 27 do README): grade tipo
-      "jogo dos 15" com exatamente 1 vazio; uma peça só anda se estiver na mesma
-      linha/coluna do vazio, e desliza em CADEIA (tudo que está no meio anda 1 casa) num
-      gesto só, sempre em LINHA RETA (nunca "L"). O arrasto segue o dedo livremente, sem
-      nenhuma colisão durante o gesto — a validade só é decidida ao soltar
-      (`_calcularDeslize`), igual ao Jogo da Ordenação. Testado via CDP: grade sempre nasce
-      com 1 vazio no espaço; peça fora do eixo do vazio sempre volta sem mudar de célula;
-      deslize parcial move só quem precisa e nunca mexe no vazio
-- [x] **A porta (ESPAÇO)** é uma casa FIXA (linha de baixo, coluna 0) — deslizar uma peça
-      pra lá é um compromisso imediato (sem "espera"): ela sai da grade na hora e uma seta
-      nasce sobre cada trilha ainda não cheia (`SetaColuna`/`_mostrarSetas`). Testado via
-      CDP: deslize completo até o espaço só sai de verdade quando existe trilha livre; com
-      as 5 trilhas cheias, chegar no espaço só ocupa a casa (nunca fica peça presa sem saída)
-- [x] **Etapa 2 — escolha por TOQUE, não mais por arrasto**: tocar a seta já encaixa a peça
-      na posição mais baixa vazia da trilha escolhida — 1 toque = 1 decisão, sem passo de
-      confirmar à parte. Testado via CDP: toque na seta encaixa na trilha certa, as setas
-      somem depois da escolha
-- [x] **Retirar é a MESMA porta, ao contrário**: só a peça do TOPO da pilha (LIFO, `Trilha`
-      não mudou), e só volta se o espaço da grade estiver livre naquele instante — senão um
-      tremor avisa "ainda não dá" (nunca um erro de verdade). Testado via CDP: retirada
-      funciona com o espaço livre e é bloqueada (com tremor, sem mudar nada de estado) com
-      o espaço ocupado
-- [x] **A grade se reconstrói (`_montarGrade`/`_recompactarGrade`) a cada saída ou retirada**
-      — correção 28 do README: um tamanho FIXO de células deixava 2 vazios depois de uma
-      saída e 0 depois de uma retirada (bug real relatado pelo humano: a bandeja travava
-      depois de 1-2 peças). Testado via CDP com uma sequência de 5 saídas intercaladas com
-      2 retiradas: a grade tem SEMPRE exatamente 1 vazio em cada passo, nunca trava
-- [x] **Abertura visível na divisória embaixo da coluna do espaço** (correção 28 do README,
-      `TabuleiroVisual.aberturaX`) — pedido do humano: sem ela, a peça só "sumia" sem
-      nenhuma pista visual de que ali é uma passagem de verdade. Primeira versão era
-      discreta demais (o humano achou que era um glitch) — reforçada com borda dourada
-      tracejada e uma seta pra baixo, corte na divisória E canaleta inteiras
-- [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
-      `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
-- [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via
-      `_sacudirErro`; som: `config.audio.erro`), sem tom punitivo — nunca custa vida nem
-      tempo; a partir do 3º erro seguido nesta cartela, mostra a composição certa se
-      montando sozinha (`_mostrarDicaTabuleiro`) e volta pro que a criança tinha
-- [x] Dificuldade dos níveis testada de verdade — capturas de tela dos 3 níveis conferidas
-      (ver histórico da sessão): tabuleiro cabe sem cortar nem no Difícil (22 peças,
-      5 trilhas × 4 + 2 distratoras), inclusive com a dica rodando (holofote + cascata)
-- [x] Nenhum estado travado: `_aguardandoAvanco` trava Confirmar/arrasto só durante a
-      demonstração da dica e o intervalo entre cartelas — sem `Watchdog` (mesmo raciocínio
-      do Material Dourado: intervalos curtos e fixos, sempre destravados por um `Tween`)
-- [x] Reiniciar limpa todo o estado — `_novaCartela()` roda do zero a cada
-      `irPara('jogando', …)`, e o motor recria a cena inteira nesse ponto
+- [x] Regras implementadas conforme o README ("O que é"): monte solto com as peças exatas
+      do cartão (sem distratoras), caminho animado pela abertura, CONFIRMAR compara tudo
+- [x] **Tocar-e-tocar** (o jeito ensinado no tutorial): tocar na peça a escolhe (brilho +
+      pulinho contínuo; as trilhas livres piscam com uma seta); tocar numa trilha a manda;
+      tocar na mesma peça ou fora desfaz a escolha
+- [x] **Arrastar só no Fácil** (`arrastar: true`): soltar em qualquer ponto da trilha (do
+      corredor pra baixo) manda a peça; fora de uma trilha, ela volta ao monte. No Médio e
+      no Difícil um arrasto só escolhe a peça (testado: no Médio a peça não segue o dedo e
+      fica escolhida; no Fácil segue e vai pra trilha)
+- [x] **Caminho**: a peça vai até a abertura, desce, corre o corredor e cai na posição mais
+      baixa vazia (`_percorrer`, velocidade constante). A vaga é reservada no instante da
+      decisão, então várias peças podem estar voando ao mesmo tempo sem colidir
+- [x] **Retirar**: só a peça do TOPO sai (volta ao monte pelo mesmo caminho, num lugar
+      livre); uma de baixo só balança
+- [x] **CONFIRMAR** só acende com as 5 trilhas cheias e nenhuma peça voando — toque
+      acidental antes disso não conta erro
+- [x] Feedback **imediato** de encaixe (a peça assenta com um "squash" e `soltarPeca`)
+- [x] **Ajuda em degraus** ao CONFIRMAR errado, sem tom punitivo (RE-02): 1º erro marca as
+      peças fora do lugar (anel tracejado + balanço) e faz as certas brilharem verde; 2º
+      erro também pisca a coluna do cartão de cada trilha com erro; 3º em diante monta o
+      tabuleiro certo sozinho (holofote + cascata) e depois marca as peças
+- [x] Cartão certo: estrela, comemoração em cascata, `acertoSOS`, cartão novo
+- [x] Dificuldade dos níveis conferida em captura nos dois formatos (computador e celular)
+- [x] Nenhum estado travado: `_aguardandoAvanco` só trava durante a demonstração e o
+      intervalo entre cartões, sempre destravado por um `Tween`
+- [x] Reiniciar limpa todo o estado — o motor recria a cena em `irPara('jogando', …)`
 
 ## 5. Contrato do AVA
 
@@ -130,8 +108,8 @@ Mapeamento semântico **deste** jogo:
 
 | Campo | Significado aqui | Valor típico |
 |---|---|---|
-| `totalPerguntas` | cartelas (rodadas) da meta do nível (`nivel.meta`) | 5 |
-| `acertos` | cartelas confirmadas certas (tabuleiro inteiro batendo de uma vez) | 0 a `totalPerguntas` |
+| `totalPerguntas` | cartões da meta do nível (`nivel.meta`) | 3 |
+| `acertos` | cartões confirmados certos (tabuleiro inteiro batendo de uma vez) | 0 a `totalPerguntas` |
 | `erros` | vezes que confirmou com o tabuleiro errado (nunca desconta) | 0+ |
 | `nivel` | `nivel.id` do config | 1, 2 ou 3 |
 | `jogo` | slug estável | `caminho-das-cores` |
@@ -151,18 +129,15 @@ Mapeamento semântico **deste** jogo:
 
 ## 6. Acessibilidade
 
-- [x] Todo alvo tocável tem no mínimo 64×64 px lógicos — peças calculadas entre 56 e
-      120px lógicos conforme o nível (`_calcularLayout`), nunca abaixo do piso
-- [x] Espaço suficiente entre alvos (`gapBandeja`/`gapTrilha` fixos, nunca comprimidos
-      a zero pelo algoritmo de ajuste)
+- [x] Todo alvo tocável tem no mínimo 64×64 px lógicos — peças de 66 a 100px conforme
+      nível e formato; a trilha inteira (bem mais larga que a peça) é o alvo de soltar
+- [x] Espaço suficiente entre alvos (monte numa grade invisível com folga; trilhas
+      separadas por ripas)
 - [x] Contraste de texto e de elementos essenciais em nível AA (texto do motor já
-      segue o design system; peças têm contorno escuro próprio, não dependem só da cor
-      de fundo)
+      segue o design system; peças têm contorno escuro próprio)
 - [ ] Cor **nunca** é o único portador de significado — **pendência real**: a
-      comparação é formato **e** cor juntos (não só cor), o que já ajuda, mas o jogo
-      não tem um segundo canal (textura/ícone) pra quem não distingue bem as 6 cores do
-      banco — mesma pendência de acessibilidade já registrada no Jogo das Cores,
-      herdada aqui por usar um banco de cores parecido
+      comparação é formato **e** cor juntos, mas vermelho/verde e vermelho/laranja (as
+      cores do brinquedo) se confundem pra parte das crianças; sem segundo canal ainda
 - [x] Nenhuma ação exige saber ler: tutorial 100% ilustrado, narração é a única
       pendência (texto de apoio nunca é a única via)
 - [x] Som pode ser desligado (`SoundToggle` no HUD), preferência é do motor (`AudioBus`)
@@ -177,37 +152,23 @@ Mapeamento semântico **deste** jogo:
       (11/11 — jogo serve de fora do projeto, 3 áudios carregam, sem postMessage fora de iframe)
 - [x] Jogo abre por `node tools/serve.mjs` sem nenhuma requisição externa (confirmado
       pela `teste-entrega-avulsa.mjs`: 50 requisições, todas locais à pasta)
-- [x] Fluxo completo de telas percorrido, sem travar (menu → tutorial → nível → partida
-      → resultado, nos 3 níveis, via captura-cena.mjs)
-- [x] **Vitória:** testado via CDP direto na cena (mecânica revista: `_encaixarLivre` +
-      `_confirmar` chamados até bater `nivel.meta` cartelas) — `placar.acertos ===
-      placar.total`, `encerrado === true`, estrela acende por cartela, cartela nova nasce
-      a cada acerto (`_rodadaIndex` avança, tabuleiro some e volta vazio)
-- [x] **Encaixe livre + Confirmar + dica**, testado via CDP (22 checagens, ver histórico da
-      sessão): tabuleiro cheio com peças ERRADAS nunca pontua; 2 erros seguidos não mostram
-      nada; o 3º liga o holofote e monta a composição certa em cascata (peças da criança só
-      ficam escondidas, nunca destruídas) e volta igual depois; peça só sai da trilha pelo
-      TOPO da pilha, nunca do meio; tabuleiro certo confirmado acende estrela e avança rodada
-- [x] **Arrasto real na grade** testado com `PointerEvent` sintético de verdade (etapa 1,
-      correção 27 do README) — deslize parcial e completo, peça fora do eixo do vazio
-      (bounce-back), saída pelo espaço, toque na seta (etapa 2) e retirada do topo da
-      trilha (com espaço livre/ocupado), tudo verificado passo a passo, não só o resultado
-      final de cada gesto
+- [x] Fluxo de partida percorrido via `captura-cena.mjs` nos 3 níveis (computador) e no
+      Médio/Fácil em formato celular (`--janela=390,844`)
+- [x] **Gestos e regras**, testados em navegador headless chamando os tratadores de gesto
+      da cena (`_aoApertar`/`_aoArrastar`/`_aoSoltar`) com coordenadas reais: CONFIRMAR
+      apagado com tabuleiro vazio e durante o voo, aceso só depois; toque nele vazio não
+      conta erro; metade das peças por arrasto e metade por tocar-e-tocar chegam todas na
+      trilha certa; retirar o topo devolve ao monte e apaga o CONFIRMAR; peça de baixo
+      não sai
+- [x] **Confirmar errado**: 1º erro marca 4 peças (trilha 2 invertida), 2º acende a coluna
+      2 do cartão; 3º roda a demonstração e devolve as peças da criança
+- [x] **Vitória:** 3 cartões seguidos levam à tela de resultado ("3 CARTÕES")
 - [ ] ~~Derrota~~ — não existe (ver seção 1/5)
-- [x] **Replay:** 2 partidas sem recarregar geram exatamente 2 mensagens (testado via
-      `tools/ava-teste.html`: 1 mensagem após a 1ª vitória, 2 após a 2ª, sem duplicata)
-- [x] **Sem duplicata:** nenhuma mensagem extra observada entre a 1ª e a 2ª vitória
-- [x] `tools/ava-teste.html`: a mensagem chega ao pai e passa em **todas** as regras do
-      validador embutido (0 regras com falha)
-- [ ] Testado em iframe pequeno, médio e grande sem cortar nem deformar — **pendente**,
-      só testado no tamanho padrão do `captura-cena.mjs`/`ava-teste.html`
-- [x] Testado com **toque**: chamada direta aos métodos da cena E `PointerEvent` sintético
-      de verdade (`pointerdown`/`pointermove`/`pointerup`, `pointerType: 'touch'`) disparado
-      no `<canvas>`, convertendo coordenada lógica→tela via `stage.escala`/`deslocX`/`deslocY`
-      — nenhum toque de dedo real num tablet ainda
-- [x] **Pausa cancela arrasto em curso:** testado via CDP — peça em arrasto some do
-      estado `_arrastando`, perde o flag `arrastando` e volta pra célula original da grade
-      ao chamar `_pausar()` no meio de um drag
+- [ ] **Replay / sem duplicata / validador do `ava-teste.html`** — **refazer** com a
+      mecânica nova (o contrato não mudou: `_terminar` é o mesmo, mas não foi re-testado)
+- [ ] Testado em iframe pequeno, médio e grande sem cortar nem deformar — **pendente**
+- [ ] Testado com **toque de dedo real** num tablet/celular — **pendente**
+- [ ] Testado após trocar de aba e voltar — **pendente** (mecanismo genérico do motor)
 - [ ] Testado após trocar de aba e voltar — **pendente**; mecanismo é genérico do motor
       (mesma pausa automática usada em toda a coleção), não testado isoladamente aqui
 

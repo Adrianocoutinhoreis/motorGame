@@ -4,30 +4,76 @@ Atividade educativa construída com o **Motor Educandus**.
 Esta pasta é **autossuficiente**: pode ser enviada sozinha para o AVA.
 
 - **Slug (campo `jogo` do AVA):** `caminho-das-cores`
-- **Faixa etária:** 6 a 7 anos (1º ano)
-- **Criado em:** 2026-10-01
+- **Faixa etária:** 4 a 7 anos
+- **Criado em:** 2026-10-01 · **Mecânica atual desde:** 2026-10-08
 
 ## O que é
 
-Um jogo de **copiar um padrão**: uma cartela de referência mostra, numa coluna
-por trilha, a sequência exata de peças geométricas (formato **e** cor, numa
-ordem específica, de baixo pra cima) que aquela trilha precisa reproduzir. A
-criança **arrasta** peças soltas da bandeja até QUALQUER trilha, em QUALQUER
-ordem — **encaixe livre**, igual ao Colmeia dos Números/Material Dourado: nada
-é validado no instante do encaixe, só quando ela mesma toca **CONFIRMAR**. Se o
-tabuleiro inteiro bater com a cartela, uma ESTRELA acende e uma cartela NOVA
-nasce (o jogo tem várias RODADAS, uma por estrela da meta — igual ao Material
-Dourado); se não bater, só demora mais — a partir do 3º erro seguido NESTA
-cartela, o jogo mostra a composição certa se montando sozinha no tabuleiro
-(holofote + cascata) e volta pro que a criança tinha, pra ela mesma corrigir.
-Pratica comparação visual, reconhecimento de forma+cor simultâneo e
-sequenciamento — não é classificação por cor.
+Um jogo de **copiar um padrão**, fiel ao brinquedo físico do vídeo de
+referência. Um **cartão** mostra, numa coluna por trilha, que peça vai em cada
+posição (cor **e** forma, de baixo pra cima). A criança leva as peças do
+**monte** até as **5 trilhas** e confere tocando em **CONFIRMAR**.
 
-> **Mecânica revista** depois de jogar a 1ª versão com o humano — ver a
-> correção 21, mais abaixo, pra todo o histórico da mudança (a versão original
-> validava cada peça no instante do encaixe, sem Confirmar nem rodadas).
+### Regras (versão atual)
 
-## Como os dados do jogo foram definidos
+- **As peças são as do brinquedo:** 5 cores (vermelho, laranja, verde,
+  amarelo, azul) × 4 formas (quadrado, triângulo, círculo, pentágono), cada
+  combinação uma vez só, **sem peça sobrando**. Cada peça do monte tem
+  exatamente um lugar certo, então dá pra chegar lá por eliminação.
+- **O caminho:** a ripa entre o monte e as trilhas tem UMA abertura, à
+  esquerda (borda dourada + seta). Toda peça sai por ali, corre o corredor e
+  desce a trilha até o fundo, **animada sozinha**. A criança não precisa
+  guiar a peça com precisão.
+- **Tocar na peça e depois na trilha** — o jeito que o tutorial ensina. A
+  peça escolhida brilha e fica pulando de leve; as trilhas livres piscam com
+  uma seta.
+- **Arrastar só no Fácil** (`arrastar: true` no nível): lá dá também pra
+  arrastar e soltar em qualquer ponto da trilha. No Médio e no Difícil um
+  arrasto não move a peça — só a escolhe, como um toque, pra quem tenta
+  arrastar por instinto nunca ficar sem resposta.
+- **Tirar uma peça:** tocar na peça do TOPO da trilha. Ela volta ao monte
+  pelo mesmo caminho. Uma peça de baixo só balança.
+- **CONFIRMAR** só acende com as 5 trilhas cheias (um toque acidental antes
+  disso não conta como erro).
+- **Ajuda em degraus**, contada só no cartão atual, nunca descontando nada
+  (RE-02):
+  1. 1º erro: as peças fora do lugar ganham um anel tracejado e balançam; as
+     certas brilham verde por um instante. O anel some quando a peça sai da
+     trilha.
+  2. 2º erro: além disso, a coluna do cartão de cada trilha com erro pisca.
+  3. 3º erro em diante: o tabuleiro certo se monta sozinho (holofote +
+     cascata) e volta pro que a criança tinha; depois, as marcas do 1º erro.
+- **Rodadas:** cada cartão certo acende uma estrela; o nível pede `meta`
+  cartões (3 nos três níveis).
+
+### Níveis — seguem os cartões do brinquedo
+
+| Nível | Cartão | Peças por trilha | No monte |
+|---|---|---|---|
+| Fácil | uma cor por trilha (`monocor`) | 2 | 10 |
+| Médio | uma cor por trilha (`monocor`), como no vídeo | 4 | 20 |
+| Difícil | cores misturadas (`misturada`), como os outros cartões do vídeo | 4 | 20 |
+
+### Layout
+
+- **Celular (retrato):** HUD numa fileira no topo, o cartão em cima da
+  prancha com a **coluna N exatamente sobre a trilha N**, CONFIRMAR grande
+  embaixo, ao alcance do polegar.
+- **Computador (paisagem):** prancha à direita; à esquerda, de cima pra
+  baixo: botões, estrelas + relógio, o cartão e o CONFIRMAR logo embaixo
+  dele (ordem pedida pelo humano com uma imagem de referência, 2026-10-08).
+- Números **1 a 5** embaixo das colunas do cartão e das trilhas (como os
+  escritos à mão na prancha física). Enquanto uma peça é arrastada sobre uma
+  trilha, a coluna do cartão correspondente acende.
+- A prancha imita o brinquedo: MDF claro, moldura e ripas brancas.
+
+> **Histórico:** a seção abaixo registra as versões anteriores (grade
+> deslizante, colisão com paredes, validação no encaixe) e as leituras do
+> vídeo que levaram até aqui. Ela descreve mecânicas que **não existem mais**;
+> a regra que vale é a de cima. A correção 29 resume a mudança para a versão
+> atual.
+
+## Histórico — como os dados do jogo foram definidos
 
 Referência única: um vídeo de celular (`numerandus/1 ano/caminho_da_cores`,
 141s, gravado na vertical) mostrando o brinquedo físico — uma prancha com
@@ -524,6 +570,20 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
       passo que a grade tinha EXATAMENTE 1 vazio, pegava a falha antes da
       correção e confirma depois.
 
+29. **Volta ao brinquedo do vídeo (2026-10-08)** — assistindo o vídeo de
+    novo, quadro a quadro, ficou claro que a grade deslizante da correção 27
+    não existe no brinquedo (lá o monte é solto) e, pior, quase não deslizava:
+    o vazio nunca saía da casa do ESPAÇO enquanto havia trilha livre, então só
+    as peças da coluna 0 e da última linha se mexiam (3 de 11 no Fácil, 6 de 22
+    no Difícil, medido por simulação). O vídeo também mostrou que as peças são
+    exatamente 5 cores × 4 formas, sem sobra, e que existem cartões de uma cor
+    por coluna e cartões misturados. A mecânica foi refeita do zero (ver "O
+    que é", no topo): monte solto, caminho animado pela abertura, arrastar OU
+    tocar-e-tocar, CONFIRMAR só com tudo cheio, ajuda em degraus por peça e
+    por coluna do cartão, níveis pelos tipos de cartão, cartão alinhado às
+    trilhas e números 1-5. Saíram a grade, as setas, as distratoras e toda a
+    colisão das correções 22-26.
+
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
 > correções 6-8) veio de uma edição direta no arquivo `GameScene.js`, fora
@@ -559,14 +619,11 @@ Ao terminar uma partida (este jogo nunca tem derrota — ver seção 5 do
 { type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel, jogo: "caminho-das-cores" }
 ```
 
-`totalPerguntas` é `nivel.meta` — quantas CARTELAS (rodadas) o nível pede,
-não mais "quantas trilhas de uma cartela só" (mecânica revista, ver a
-correção 21). `acertos` conta cada CARTELA confirmada certa — o tabuleiro
-INTEIRO batendo com a cartela de uma vez, não cada trilha isolada. `erros`
-conta cada vez que a criança tocou CONFIRMAR com o tabuleiro errado — cada
-uma só demora mais (a partir da 3ª seguida NESTA cartela, o jogo mostra a
-composição certa — ver `GameScene._mostrarDicaTabuleiro`), nunca desconta
-acertos nem estrelas (RE-02).
+`totalPerguntas` é `nivel.meta` — quantos CARTÕES o nível pede (3).
+`acertos` conta cada cartão confirmado certo — o tabuleiro INTEIRO batendo
+com o cartão. `erros` conta cada CONFIRMAR com o tabuleiro errado; como o
+botão só acende com as 5 trilhas cheias, um toque acidental num tabuleiro
+incompleto não conta. Errar nunca desconta acertos nem estrelas (RE-02).
 
 O jogo não conhece aluno, `lo_id`, `activity_id`, XP ou nota — isso é do AVA.
 
@@ -579,8 +636,9 @@ caminho-das-cores/
 ├── src/
 │   ├── config.js   identidade, 3 níveis, tutorial (com desenho auxiliar), contrato
 │   ├── main.js     ponto de entrada
-│   └── scenes/     GameScene.js — cartela, trilhas, bandeja, arraste, confirmar, dica
+│   └── scenes/     GameScene.js — cartão, prancha, monte, caminho, confirmar, ajuda
 ├── assets/         só áudio (as peças são desenhadas por código, sem imagem)
+│                   — o vídeo de referência NÃO deve ir no pacote (ver Pendências)
 ├── CHECKLIST.md    passos para concluir o jogo
 └── README.md       este arquivo
 ```
@@ -593,29 +651,33 @@ usam imagem** — círculo, quadrado, triângulo e pentágono são desenhados vi
 
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
-| `acertoSOS.wav` | Áudio, vitória do NÍVEL inteiro | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
-| `soltar_peca.mp3` | Áudio, peça encaixada (QUALQUER encaixe, certo ou errado — encaixe livre, ver correção 21) e cada peça-fantasma da dica se montando | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
-| `error.MP3` | Áudio, CONFIRMAR errado (não mais por peça — mecânica revista) | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
+| `acertoSOS.wav` | Áudio, cada cartão confirmado certo | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
+| `soltar_peca.mp3` | Áudio, peça chegando ao fundo da trilha e cada peça da demonstração se montando | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
+| `error.MP3` | Áudio, CONFIRMAR errado | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 
 ## Pendências conhecidas
 
 - **`error.MP3` não foi ouvido aqui** — ficha "não verificada", mesma
   pendência já registrada nos outros jogos que usam este arquivo.
-- **Sem narração do tutorial** — os 3 passos não têm `fala:` (nenhum áudio
-  gravado ainda para este jogo).
+- **Sem narração** — o público (4-7 anos) não lê, então o jogo precisa de
+  voz: os 3 passos do tutorial (`fala:` em `config.tutorial`) e uma frase
+  curta a cada cartão novo. Adiado de propósito (2026-10-08), pra gravar
+  depois da mecânica nova ser aprovada.
+- **O vídeo de referência (28 MB) está dentro de `assets/`** — fora do git,
+  mas DENTRO da pasta que vai pro AVA. Mover pra `fontes/` antes de publicar.
 - **Sem áudio de clique genérico** (`config.audio.clique` continua `null`) —
   mesma decisão já usada no Encaixe Certo/Jogo da Ordenação/Quantidade Certa.
 - **Origem/licença de `soltar_peca.mp3` e `acertoSOS.wav`** — mesma pendência
   já registrada nos outros jogos que usam esses arquivos.
-- **Testado com chamada direta aos métodos da cena, com toque sintético via
-  `PointerEvent`/CDP e via `tools/ava-teste.html`** — nenhum evento de toque
-  disparado por um dedo de verdade num tablet ainda.
 - **Não testado em tablet real, nem em iframe pequeno/médio/grande** — mesma
   bateria de testes ainda pendente do resto da coleção.
-- **Paleta de 6 cores × 4 formatos é uma proposta do planejamento**, revisada
-  uma vez por feedback visual direto do humano — ainda não calibrada com
-  crianças de verdade jogando (inclusive quanto a acessibilidade para
-  daltonismo, pendência já registrada no Jogo das Cores).
+- **Daltonismo** — as 5 cores são as do brinquedo (vermelho, laranja, verde,
+  amarelo, azul); vermelho/verde e vermelho/laranja se confundem pra parte das
+  crianças. A forma ajuda, mas a cor também decide. Não calibrado com
+  crianças jogando.
+- **Testado em navegador headless** (arrastar, tocar-e-tocar, retirar,
+  CONFIRMAR certo/errado, os 3 degraus de ajuda, fim do nível) chamando os
+  tratadores de gesto da cena — ainda não com toque real num tablet.
 
 ## Atualizar o motor neste jogo
 
