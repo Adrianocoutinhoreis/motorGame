@@ -97,6 +97,14 @@
       tremor avisa "ainda não dá" (nunca um erro de verdade). Testado via CDP: retirada
       funciona com o espaço livre e é bloqueada (com tremor, sem mudar nada de estado) com
       o espaço ocupado
+- [x] **A grade se reconstrói (`_montarGrade`/`_recompactarGrade`) a cada saída ou retirada**
+      — correção 28 do README: um tamanho FIXO de células deixava 2 vazios depois de uma
+      saída e 0 depois de uma retirada (bug real relatado pelo humano: a bandeja travava
+      depois de 1-2 peças). Testado via CDP com uma sequência de 5 saídas intercaladas com
+      2 retiradas: a grade tem SEMPRE exatamente 1 vazio em cada passo, nunca trava
+- [x] **Abertura visível na divisória embaixo da coluna do espaço** (correção 28 do README,
+      `TabuleiroVisual.aberturaX`) — pedido do humano: sem ela, a peça só "sumia" sem
+      nenhuma pista visual de que ali é uma passagem de verdade
 - [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
       `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
 - [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via

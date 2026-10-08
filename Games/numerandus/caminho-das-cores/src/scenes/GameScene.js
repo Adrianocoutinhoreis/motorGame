@@ -245,12 +245,16 @@ class Trilha extends Node {
  * vista, as regras de movimentação (quem pode ir aonde) ficam sem nenhuma
  * pista visual do PORQUÊ — lição registrada no `README.md` (correção 24).
  *
- * Não existe mais um "buraco"/corredor físico ligando a piscina (bandeja) às
+ * Não existe mais um "buraco"/corredor físico LIGANDO a piscina (bandeja) às
  * trilhas — na mecânica atual (ver doc da classe `GameScene`) uma peça sai
  * da bandeja pela casa fixa do ESPAÇO (dentro da própria grade,
  * `GridBandeja`) e reaparece numa trilha por uma animação de voo, não por um
- * caminho arrastado. A faixa escura entre a piscina e as trilhas continua só
- * por estética (divisória de madeira), sem abertura nenhuma.
+ * caminho arrastado. Mas a divisória logo ABAIXO da coluna do espaço tem uma
+ * abertura (`aberturaX`/`aberturaLargura`) — só pra dar uma pista visual de
+ * que ali é uma passagem de verdade pra baixo (pedido do humano: sem ela, a
+ * peça só "sumia" da grade sem nenhum indício do porquê); não leva a lugar
+ * nenhum fisicamente, a peça some e reaparece animada, a abertura é só
+ * decoração que explica a casa do espaço.
  */
 class TabuleiroVisual extends Node {
   constructor(opcoes) {
@@ -266,6 +270,8 @@ class TabuleiroVisual extends Node {
     this.espessuraDivisor = 10;
     this.numTrilhas = opcoes.numTrilhas;
     this.alturaCanaletaHoriz = this.tamPeca + 12;
+    this.aberturaX = opcoes.aberturaX;
+    this.aberturaLargura = opcoes.aberturaLargura;
   }
 
   desenhar(ctx) {
@@ -299,10 +305,24 @@ class TabuleiroVisual extends Node {
     const piscinaH = this.alturaBandeja;
     ctx.fillRect(piscinaX, piscinaY, piscinaW, piscinaH);
 
-    // B. Canaleta Horizontal (só divisória — sem abertura, ver doc da classe)
+    // B. Canaleta Horizontal (só divisória — ver doc da classe)
     const chY = piscinaY + piscinaH + this.espessuraDivisor;
     const chH = this.alturaCanaletaHoriz;
     ctx.fillRect(piscinaX, chY, piscinaW, chH);
+
+    // B.1 Abertura (decorativa) bem embaixo da coluna do espaço — corta a
+    // divisória e metade da canaleta horizontal com a cor CLARA (mesma da
+    // parede), como uma "boca de chute" indicando "é aqui que desce".
+    if (this.aberturaLargura > 0) {
+      ctx.fillStyle = this.corFundo;
+      ctx.fillRect(
+        this.aberturaX,
+        piscinaY + piscinaH,
+        this.aberturaLargura,
+        this.espessuraDivisor + chH * 0.5,
+      );
+      ctx.fillStyle = this.corCanaleta;
+    }
 
     // C. Trilhas verticais
     const larguraColuna = (piscinaW - (this.numTrilhas - 1) * this.gapTrilha) / this.numTrilhas;
@@ -328,10 +348,13 @@ class TabuleiroVisual extends Node {
 /**
  * Grade visual da bandeja (etapa 1) — uma raia fina por célula DE VERDADE
  * (as que sobram fora da conta, numa última linha incompleta, não têm raia:
- * não existem pro quebra-cabeça — ver `GameScene._celulasReais`) e um
- * destaque dourado tracejado na casa do ESPAÇO, a porta fixa de saída. Sem
- * essa raia a regra "só anda quem tem vizinho vazio" ficaria sem nenhuma
- * pista visual — mesma lição das paredes do `TabuleiroVisual`.
+ * não existem pro quebra-cabeça — ver `GameScene._celulasReais`/
+ * `_montarGrade`) e um destaque dourado tracejado na casa do ESPAÇO, a porta
+ * fixa de saída (seu tamanho e a posição do espaço mudam ao vivo conforme a
+ * bandeja esvazia ou recebe uma peça de volta — `_montarGrade` atualiza
+ * `celulas`/`espacoLinha`/`espacoColuna` direto nesta instância). Sem essa
+ * raia a regra "só anda quem tem vizinho vazio" ficaria sem nenhuma pista
+ * visual — mesma lição das paredes do `TabuleiroVisual`.
  */
 class GridBandeja extends Node {
   constructor(opcoes) {
@@ -746,6 +769,23 @@ export class GameScene extends Scene {
     }
 
     this._tamPeca = this._layout.tam;
+
+    // Largura da GRADE da bandeja (etapa 1), em colunas — essa sim constante
+    // pro nível inteiro (mesma conta de `layout.porLinha`, pensada pra
+    // largura disponível). A ALTURA (em linhas) e a casa do ESPAÇO, ao
+    // contrário, mudam ao vivo (ver `_montarGrade`): cada peça que sai pelo
+    // espaço ou volta de uma trilha muda quantas peças a bandeja tem, e a
+    // grade é refeita do tamanho exato (peças + 1 vazio) toda vez — sem
+    // isso, perder ou ganhar uma peça sem encolher/crescer a grade deixaria
+    // 0 ou 2 vazios nela, e tanto o arrasto (`_calcularDeslize`) quanto a
+    // retirada (`_tentarRetirarDaTrilha`) só reconhecem UM vazio só.
+    this._gradeColunas = this._layout.porLinha;
+
+    const pitchGrade = this._layout.tam + this._layout.gapBandeja;
+    const piscinaW = this._layout.boardWidth - this._layout.padPanelX * 2;
+    const larguraGrade = this._gradeColunas * pitchGrade - this._layout.gapBandeja;
+    this._gradeOffsetX = Math.max(0, (piscinaW - larguraGrade) / 2);
+
     this._painelDireita = new TabuleiroVisual({
       largura: this._layout.boardWidth,
       altura: this._layout.boardHeight,
@@ -755,35 +795,22 @@ export class GameScene extends Scene {
       padPanelTopo: this._layout.padPanelTopo,
       alturaBandeja: this._layout.alturaBandeja,
       numTrilhas: nivel.trilhas,
+      // Abertura na divisória, bem embaixo da COLUNA do espaço (coluna 0 da
+      // grade) — pedido do humano depois de ver a peça só "sumir" sem
+      // nenhuma pista visual de que ali é uma passagem de verdade pra baixo.
+      aberturaX: this._layout.padPanelX + this._gradeOffsetX,
+      aberturaLargura: this._layout.tam,
     });
     this._painelDireita.x = this._boardX;
     this._painelDireita.y = this._boardY;
     this.area.adicionar(this._painelDireita);
 
-    // Dimensões da GRADE da bandeja (etapa 1) — constantes pro nível inteiro
-    // (mesma quantidade de peças em toda cartela do mesmo nível, só o
-    // CONTEÚDO muda a cada rodada, ver `_novaCartela`). `layout.porLinha` já
-    // é a largura em colunas (mesma conta de antes, pensada pra largura
-    // disponível); a altura em linhas agora soma +1 pela casa do vazio. O
-    // ESPAÇO (porta fixa de saída) é sempre a última linha, primeira coluna
-    // — ver doc da classe `GameScene`.
-    const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
-    this._gradeColunas = this._layout.porLinha;
-    this._gradeLinhas = Math.ceil((totalPecasBandeja + 1) / this._gradeColunas);
-    this._espacoLinha = this._gradeLinhas - 1;
-    this._espacoColuna = 0;
-
-    const pitchGrade = this._layout.tam + this._layout.gapBandeja;
-    const piscinaW = this._layout.boardWidth - this._layout.padPanelX * 2;
-    const larguraGrade = this._gradeColunas * pitchGrade - this._layout.gapBandeja;
-    this._gradeOffsetX = Math.max(0, (piscinaW - larguraGrade) / 2);
-
     this._gradeBandeja = new GridBandeja({
       tam: this._layout.tam,
       gap: this._layout.gapBandeja,
-      celulas: this._celulasReais(),
-      espacoLinha: this._espacoLinha,
-      espacoColuna: this._espacoColuna,
+      celulas: [],
+      espacoLinha: 0,
+      espacoColuna: 0,
     });
     this._gradeBandeja.x = this._boardX + this._layout.padPanelX + this._gradeOffsetX;
     this._gradeBandeja.y = this._boardY + this._layout.padPanelTopo;
@@ -846,30 +873,18 @@ export class GameScene extends Scene {
     this.area.adicionar(this._cartela);
 
     // Grade da bandeja (etapa 1) — todas as peças soltas (certas das trilhas
-    // + distratoras) mais UM vazio, embaralhadas pelas células REAIS da
-    // grade; o vazio nasce sempre na casa do espaço (`_espacoLinha/Coluna`),
-    // pra criança já ver a "porta" aberta no começo de cada cartela.
-    const celulas = this._celulasReais();
-    this._gradeBandeja.celulas = celulas;
-    const celulasForaDoEspaco = celulas.filter(
-      (c) => !(c.linha === this._espacoLinha && c.coluna === this._espacoColuna),
-    );
+    // + distratoras), embaralhadas, mais UM vazio (`_montarGrade` decide o
+    // tamanho certo e põe o vazio sempre na casa do espaço), pra criança já
+    // ver a "porta" aberta no começo de cada cartela.
     const pecasDados = rand.embaralhar([...sequencias.flat(), ...distratoras]);
-
-    this._grade = Array.from({ length: this._gradeLinhas }, () => new Array(this._gradeColunas).fill('VOID'));
-    for (const { linha, coluna } of celulas) this._grade[linha][coluna] = null;
-
-    pecasDados.forEach((dado, indice) => {
-      const { linha, coluna } = celulasForaDoEspaco[indice];
-      const peca = new Peca(dado.forma, dado.cor, layout.tam);
-      peca.linha = linha;
-      peca.coluna = coluna;
-      this._grade[linha][coluna] = peca;
-      const pos = this._posicaoCelula(linha, coluna);
+    const pecas = pecasDados.map((dado) => new Peca(dado.forma, dado.cor, layout.tam));
+    this._montarGrade(pecas);
+    for (const peca of pecas) {
+      const pos = this._posicaoCelula(peca.linha, peca.coluna);
       peca.x = pos.x; peca.y = pos.y;
       this.area.adicionar(peca);
       this._ligarTogues(peca);
-    });
+    }
 
     // trilhas — a coluna estica pra preencher a largura toda do tabuleiro
     const piscinaW = layout.boardWidth - layout.padPanelX * 2;
@@ -891,23 +906,90 @@ export class GameScene extends Scene {
 
   /**
    * Lista, em ordem de leitura (linha a linha, esquerda pra direita), toda
-   * célula REAL da grade — peças + o vazio, total `totalPecasBandeja + 1`.
-   * Só a ÚLTIMA linha pode ficar incompleta (sobra da divisão por
-   * `_gradeColunas`); o resto da grade (`this._grade`, ver `_novaCartela`)
-   * marca essas sobras como `'VOID'` — não fazem parte do quebra-cabeça,
-   * nunca recebem peça nem participam de um deslize.
+   * célula REAL de uma grade `linhas`×`_gradeColunas` com `totalCelulas`
+   * ocupáveis. Só a ÚLTIMA linha pode ficar incompleta (sobra da divisão);
+   * o resto da grade (`this._grade`, ver `_montarGrade`) marca essas sobras
+   * como `'VOID'` — não fazem parte do quebra-cabeça, nunca recebem peça
+   * nem participam de um deslize.
    */
-  _celulasReais() {
-    const nivel = this.nivel;
-    const totalCelulas = nivel.trilhas * nivel.profundidade + nivel.distratoras + 1;
+  _celulasReais(totalCelulas, linhas) {
     const celulas = [];
     let restantes = totalCelulas;
-    for (let l = 0; l < this._gradeLinhas; l++) {
+    for (let l = 0; l < linhas; l++) {
       const nestaLinha = Math.min(this._gradeColunas, restantes);
       for (let c = 0; c < nestaLinha; c++) celulas.push({ linha: l, coluna: c });
       restantes -= nestaLinha;
     }
     return celulas;
+  }
+
+  /**
+   * (Re)constrói `this._grade` do ZERO pra conter EXATAMENTE as peças de
+   * `pecas` — uma célula a mais que peças, pro vazio do espaço (que também é
+   * recalculado aqui: sempre a ÚLTIMA linha, primeira coluna, da grade do
+   * tamanho ATUAL). Usada tanto pra montar a bandeja de uma cartela nova
+   * (`_novaCartela`) quanto pra REORGANIZAR a grade depois que o total de
+   * peças nela muda de verdade — uma sai pelo espaço (`_sairPelaEspaco`) ou
+   * uma volta de uma trilha (`_tentarRetirarDaTrilha`).
+   *
+   * Isso existe porque o tamanho da grade é FIXO em células (linhas ×
+   * colunas) só entre um deslize e outro — perder ou ganhar uma peça sem
+   * encolher/crescer a grade deixaria 0 ou 2 vazios nela (uma grade de N+1
+   * células com N-1 peças tem DOIS vazios; com N+1 peças não tem NENHUM), e
+   * tanto `_calcularDeslize` quanto `_tentarRetirarDaTrilha` só reconhecem
+   * UM vazio só. `_montarGrade` é o que garante sempre exatamente 1, do
+   * tamanho certo pro total de peças do momento.
+   *
+   * Só define `peca.linha/coluna` nas próprias peças — quem posiciona o nó
+   * de verdade (`peca.x/y`, com ou sem tween) é cada chamador, que sabe se é
+   * uma cartela nascendo (sem animação) ou uma reorganização ao vivo (com).
+   */
+  _montarGrade(pecas) {
+    this._gradeLinhas = Math.max(1, Math.ceil((pecas.length + 1) / this._gradeColunas));
+    this._espacoLinha = this._gradeLinhas - 1;
+    this._espacoColuna = 0;
+
+    const celulas = this._celulasReais(pecas.length + 1, this._gradeLinhas);
+    const semEspaco = celulas.filter(
+      (c) => !(c.linha === this._espacoLinha && c.coluna === this._espacoColuna),
+    );
+
+    this._grade = Array.from({ length: this._gradeLinhas }, () => new Array(this._gradeColunas).fill('VOID'));
+    for (const { linha, coluna } of celulas) this._grade[linha][coluna] = null;
+
+    pecas.forEach((peca, indice) => {
+      const { linha, coluna } = semEspaco[indice];
+      this._grade[linha][coluna] = peca;
+      peca.linha = linha;
+      peca.coluna = coluna;
+    });
+
+    this._gradeBandeja.celulas = celulas;
+    this._gradeBandeja.espacoLinha = this._espacoLinha;
+    this._gradeBandeja.espacoColuna = this._espacoColuna;
+  }
+
+  /**
+   * Reorganiza a grade ao vivo depois que o total de peças NELA muda (uma
+   * saiu ou voltou) — lê quem sobrou em `this._grade`, manda pro
+   * `_montarGrade` (que decide o tamanho novo e a casa do espaço de novo) e
+   * anima cada peça pro slot novo dela. A maioria nem muda de lugar; só
+   * desliza quem ficou depois do "buraco" na ordem de leitura.
+   */
+  _recompactarGrade() {
+    const restantes = [];
+    for (let l = 0; l < this._gradeLinhas; l++) {
+      for (let c = 0; c < this._gradeColunas; c++) {
+        const cel = this._grade[l][c];
+        if (cel && cel !== 'VOID') restantes.push(cel);
+      }
+    }
+    this._montarGrade(restantes);
+    for (const peca of restantes) {
+      const pos = this._posicaoCelula(peca.linha, peca.coluna);
+      Tween.removerDe(peca);
+      Tween.para(peca, { x: pos.x, y: pos.y }, 220, Easing.suave);
+    }
   }
 
   /** Centro (coordenadas do PAI, `this.area`) da célula `linha,coluna` da grade da bandeja. */
@@ -1204,31 +1286,41 @@ export class GameScene extends Scene {
       return;
     }
 
+    if (resultado.saiuPeloEspaco) {
+      // `_sairPelaEspaco` já chama `_recompactarGrade`, que reconstrói a
+      // grade (tamanho novo, espaço recalculado) e reanima TODAS as peças
+      // que sobraram — incluindo as que `_calcularDeslize` já deslocou. Não
+      // precisa (e não deveria) animar `deslocados` aqui também: a
+      // recompactação é quem manda na posição final de cada uma.
+      this._sairPelaEspaco(peca);
+      return;
+    }
+
     for (const outra of resultado.deslocados) {
       const pos = this._posicaoCelula(outra.linha, outra.coluna);
       Tween.para(outra, { x: pos.x, y: pos.y }, 180, Easing.suave);
     }
-
-    if (resultado.saiuPeloEspaco) {
-      this._sairPelaEspaco(peca);
-    } else {
-      const pos = this._posicaoCelula(peca.linha, peca.coluna);
-      Tween.para(peca, { x: pos.x, y: pos.y }, 180, Easing.suave);
-    }
+    const pos = this._posicaoCelula(peca.linha, peca.coluna);
+    Tween.para(peca, { x: pos.x, y: pos.y }, 180, Easing.suave);
   }
 
   /**
    * A peça cruzou a casa do espaço — decisão DEFINITIVA de mandá-la pra uma
    * trilha (ver doc da classe `GameScene`: "commit imediato, sem volta
    * atrás"). Fica "em escolha" (some da grade, ainda não é de nenhuma
-   * trilha) enquanto uma seta nasce sobre cada coluna disponível.
+   * trilha) enquanto uma seta nasce sobre cada coluna disponível. A bandeja
+   * ficou com uma peça a menos — `_recompactarGrade` encolhe a grade pro
+   * tamanho certo de novo (ver doc de `_montarGrade` pro porquê disso ser
+   * necessário).
    */
   _sairPelaEspaco(peca) {
+    const posEspaco = this._posicaoCelula(this._espacoLinha, this._espacoColuna);
+    this._recompactarGrade();
+
     peca.linha = -1; peca.coluna = -1;
     this._pecaEmEscolha = peca;
     this._escolhendoColuna = true;
     peca.paraFrente();
-    const posEspaco = this._posicaoCelula(this._espacoLinha, this._espacoColuna);
     Tween.removerDe(peca);
     Tween.para(peca, {
       x: posEspaco.x, y: posEspaco.y + this._layout.tam * 0.7, scaleX: 1.15, scaleY: 1.15,
@@ -1294,8 +1386,12 @@ export class GameScene extends Scene {
    * "ainda não dá" — nunca um erro de verdade.
    */
   _tentarRetirarDaTrilha(trilha, indice) {
-    const vazio = this._celulaVazia();
-    const espacoLivre = vazio && vazio.linha === this._espacoLinha && vazio.coluna === this._espacoColuna;
+    // Checa a própria casa do espaço DIRETO — nunca via "ache o vazio da
+    // grade" (`_celulaVazia`): essa pergunta só faz sentido quando existe
+    // exatamente 1 vazio, e é exatamente essa garantia que está sendo
+    // verificada aqui (depende de toda retirada/saída passar por
+    // `_montarGrade`/`_recompactarGrade` — ver doc de lá).
+    const espacoLivre = this._grade[this._espacoLinha][this._espacoColuna] === null;
     if (!espacoLivre) {
       this._sacudirPeca(trilha.pecas[indice]);
       return;
@@ -1305,12 +1401,13 @@ export class GameScene extends Scene {
     peca.trilha = null;
     peca.indiceTrilha = -1;
     peca.trancada = false;
+    // A bandeja ganhou uma peça de volta — `_recompactarGrade` cresce a
+    // grade pro tamanho certo (ver doc de `_montarGrade`) e já anima todo
+    // mundo, inclusive esta peça, pro slot dela.
     this._grade[this._espacoLinha][this._espacoColuna] = peca;
     peca.linha = this._espacoLinha;
     peca.coluna = this._espacoColuna;
-    const pos = this._posicaoCelula(peca.linha, peca.coluna);
-    Tween.removerDe(peca);
-    Tween.para(peca, { x: pos.x, y: pos.y }, 200, Easing.suaveSaida);
+    this._recompactarGrade();
   }
 
   /** Tremor pequeno — feedback de "ainda não dá", nunca punitivo (ver `_sacudirErro`, o irmão deste pro botão Confirmar). */

@@ -482,6 +482,41 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
       sem erro, com a grade nova também nascendo com 1 vazio no espaço.
       Conferido visualmente em desktop E celular (retrato) — grade, porta e
       setas aparecem do jeito esperado nos dois.
+28. **Dois ajustes na correção 27, achados com uso de verdade pelo humano:**
+    - **Abertura visível na divisória, embaixo da coluna do espaço**
+      (`TabuleiroVisual.aberturaX`/`aberturaLargura`) — pedido do humano: a
+      peça só "sumia" da grade sem nenhuma pista de que ali é uma passagem de
+      verdade pra baixo. Corta a divisória (e metade da canaleta horizontal)
+      com a cor clara da parede, exatamente na faixa X da coluna 0 da grade —
+      decorativo (não leva a lugar fisicamente, a peça some e reaparece
+      animada), só explica visualmente a casa do espaço.
+    - **Bug real: depois de 1-2 peças saírem/voltarem, a bandeja travava —
+      "as outras não conseguem mais ir pro objetivo, nem remover peças"**
+      (relato do humano, com captura mostrando só 2 peças numa única trilha).
+      Causa: a grade tinha um tamanho FIXO em células desde a correção 27,
+      mas cada peça que sai ou volta muda quantas peças cabem nela — uma
+      grade de N+1 células com N-1 peças (uma saiu) tem DOIS vazios, não um;
+      com N+1 peças (uma voltou) não tem NENHUM. Tanto `_calcularDeslize`
+      (acha "o" vazio pra decidir se um arrasto é válido) quanto
+      `_tentarRetirarDaTrilha` (só libera se "o" vazio é o espaço) dependiam
+      de existir exatamente UM — com dois vazios, o errado podia ser achado
+      primeiro; com zero, nada mais se movia nunca mais (igual ao relato).
+      Corrigido com `_montarGrade`/`_recompactarGrade`: toda vez que o total
+      de peças na bandeja muda de verdade (saída ou retirada), a grade é
+      refeita do tamanho exato (peças + 1), com o espaço recalculado (sempre
+      última linha, primeira coluna) e as peças que sobraram reorganizadas
+      (animadas pro slot novo — a maioria nem muda de lugar, só quem ficava
+      depois do "buraco" na ordem de leitura desliza). `_tentarRetirarDaTrilha`
+      também passou a checar a própria casa do espaço DIRETO
+      (`this._grade[espacoLinha][espacoColuna] === null`), não mais via "ache
+      o vazio" — mais simples e não depende de só existir um (defesa extra,
+      mesma lição da correção 26: a regra tem que se garantir sozinha).
+      Achado reproduzindo o relato via CDP (chamadas diretas a
+      `_calcularDeslize`/`_sairPelaEspaco`/`_escolherColuna`/
+      `_tentarRetirarDaTrilha`, sem atalho nenhum bagunçando a grade) — uma
+      sequência de 5 saídas intercaladas com 2 retiradas, verificando a cada
+      passo que a grade tinha EXATAMENTE 1 vazio, pegava a falha antes da
+      correção e confirma depois.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,
