@@ -36,6 +36,8 @@
  *   --saida=arquivo  caminho do PNG, relativo à raiz (padrão .capturas/captura-<hora>.png)
  *   --clip=x,y,l,a   recorta a região (em px CSS) em vez da tela inteira
  *   --escala=N       multiplica a resolução do print/recorte (padrão 2)
+ *   --janela=L,A     tamanho da janela do navegador (padrão 1280,860) — ex.:
+ *                    390,844 pra ver um jogo responsivo no formato celular
  *
  * O primeiro argumento aceita três formas: um `dir` de `Games/` (vira
  * `Games/<dir>/index.html`), um caminho `.html` do projeto (ex.:
@@ -124,7 +126,7 @@ class CDP {
 // --------------------------------------------------------------- argumentos
 
 function analisarArgumentos(argv) {
-  const opcoes = { porta: 8099, nivel: 0, espera: 300, escala: 2 };
+  const opcoes = { porta: 8099, nivel: 0, espera: 300, escala: 2, janela: '1280,860' };
   const posicionais = [];
   for (const arg of argv) {
     const m = arg.match(/^--([\w-]+)=([\s\S]*)$/);
@@ -168,7 +170,7 @@ async function principal() {
     '--no-default-browser-check',
     '--disable-extensions',
     '--disable-gpu',
-    '--window-size=1280,860',
+    `--window-size=${opcoes.janela}`,
     '--mute-audio',
   ], { stdio: 'ignore' });
 
