@@ -46,7 +46,7 @@
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [x] Ficha de transcrição criada para os 3 áudios existentes
+- [x] Ficha de transcrição criada para os 4 áudios existentes
 - [ ] Transcrições **confirmadas ouvindo** — só 2 dos 3 áudios são "confirmado por
       natureza" (sem fala); `error.MP3` ainda precisa ser ouvido (mesma pendência
       compartilhada com Geométrico/Memória/Chave Mágica/Quantidade Certa, mesma cópia)
@@ -94,7 +94,8 @@
       peças fora do lugar (anel tracejado + balanço) e faz as certas brilharem verde; 2º
       erro também pisca a coluna do cartão de cada trilha com erro; 3º em diante monta o
       tabuleiro certo sozinho (holofote + cascata) e depois marca as peças
-- [x] Cartão certo: estrela, comemoração em cascata, `acertoSOS`, cartão novo
+- [x] Cartão certo: estrela, comemoração em cascata, `somProgresso` (o brilho da estrela do
+      Material Dourado), cartão novo; `acertoSOS` só na tela final
 - [x] Dificuldade dos níveis conferida em captura nos dois formatos (computador e celular)
 - [x] Nenhum estado travado: `_aguardandoAvanco` só trava durante a demonstração e o
       intervalo entre cartões, sempre destravado por um `Tween`

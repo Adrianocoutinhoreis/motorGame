@@ -651,7 +651,8 @@ usam imagem** — círculo, quadrado, triângulo e pentágono são desenhados vi
 
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
-| `acertoSOS.wav` | Áudio, cada cartão confirmado certo | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
+| `acertoSOS.wav` | Áudio, vitória do nível (tela final) | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
+| `progresso.mp3` | Áudio, estrela acendendo a cada cartão certo | Cópia do `progresso.mp3` do Material Dourado (mesmo SHA-256), que é cópia de `carta-correta.mp3` do Jogo da Memória — sem fala |
 | `soltar_peca.mp3` | Áudio, peça chegando ao fundo da trilha e cada peça da demonstração se montando | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
 | `error.MP3` | Áudio, CONFIRMAR errado | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
 

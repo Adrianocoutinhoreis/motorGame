@@ -102,12 +102,14 @@ export default {
   // ------------------------------------------------------------------ áudio
   /**
    * `soltarPeca` toca quando a peça chega ao fundo da trilha; `somErro` no
-   * CONFIRMAR errado; `acertoSOS` a cada cartão certo.
+   * CONFIRMAR errado; `somProgresso` (o brilho da estrela, o mesmo do
+   * Material Dourado) a cada cartão certo; `acertoSOS` só na tela final.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
     { id: 'somErro', src: './assets/audio/error.MP3' },
+    { id: 'somProgresso', src: './assets/audio/progresso.mp3' },
   ],
 
   mascote: { telas: [] },
@@ -118,6 +120,7 @@ export default {
     acerto: 'soltarPeca',
     erro: 'somErro',
     vitoria: 'acertoSOS',
+    progresso: 'somProgresso',
     derrota: null,
     abertura: null,
   },

@@ -1162,7 +1162,9 @@ export class GameScene extends Scene {
   _acertouCartao() {
     this._aguardandoAvanco = true;
     this._atualizarConfirmar();
-    if (this.config.audio?.vitoria) this.audio.efeito(this.config.audio.vitoria);
+    // O brilho da estrela (mesmo som do Material Dourado); o `vitoria` fica
+    // só pra tela final, tocado pelo motor.
+    if (this.config.audio?.progresso) this.audio.efeito(this.config.audio.progresso);
 
     // Comemoração: cada peça pula, trilha por trilha, de baixo pra cima.
     for (const trilha of this._trilhas) {
