@@ -75,30 +75,28 @@
 
 - [x] Regras implementadas conforme a definição revista (encaixe livre nas trilhas + botão
       CONFIRMAR compara o tabuleiro inteiro com a cartela — testado via CDP, ver seção 7)
-- [x] "Colisão com as paredes" de verdade NO PRÓPRIO ARRASTO (não só na hora de soltar):
-      `_moverArrasto` trava um `_canalPreso` ao cruzar a linha do divisor e prende o `x` da
-      peça dentro da largura desse canal até ela subir de volta pra bandeja — tentar
-      atravessar devagar pra uma trilha vizinha sem soltar o dedo trava na parede; testado
-      via CDP com uma sequência longa de `pointermove` (arrasto contínuo de verdade, não só
-      2-3 pontos) atravessando 3 trilhas sem soltar, e reentrando num canal diferente depois
-      de voltar pra área aberta
-- [x] As paredes aparecem DE VERDADE no tabuleiro (`TabuleiroVisual`: piscina/canaleta
-      horizontal/5 trilhas como retângulos separados, com o vão claro entre eles) — pedido do
-      humano depois de ver o tabuleiro sem nenhuma linha: sem parede visível, a colisão do
-      arrasto não tem nenhuma pista do porquê a peça trava. Captura de um arrasto real em
-      andamento confirma a peça fisicamente parada na borda da primeira parede
-- [x] A linha HORIZONTAL entre a bandeja e o corredor também é parede, com um único "buraco"
-      de passagem (`_buracoXMin`/`_buracoXMax`/`_limitePiscina`, mesmas coordenadas que
-      `TabuleiroVisual` já desenhava) — pedido do humano com um desenho indicando o caminho
-      certo. `_passouBuraco` lembra se a peça já cruzou NESTE arrasto; fora da faixa do
-      buraco a peça não desce, fica presa na linha. Testado via CDP: descer longe do buraco
-      nunca atravessa; descer dentro da faixa passa e encaixa na trilha alinhada com ele
-- [x] Bug real corrigido: o ÍMÃ (puxão pro slot vazio mais próximo) conseguia furar a parede —
-      longe do slot de verdade a "força" ficava negativa e virava repulsão, empurrando a peça
-      pra fora do canal já travado pelo clamp. `Math.max(0, forca)` + um re-clamp depois do
-      ímã corrigem. Achado só com um teste que registra a posição a CADA PASSO de um arrasto
-      contínuo (não só o resultado final) e confere todos os pontos contra o retângulo do
-      canal — os testes anteriores (só checando o encaixe final) não pegavam esse furo
+- [x] **Etapa 1 — bandeja-grade** (`GridBandeja`, correção 27 do README): grade tipo
+      "jogo dos 15" com exatamente 1 vazio; uma peça só anda se estiver na mesma
+      linha/coluna do vazio, e desliza em CADEIA (tudo que está no meio anda 1 casa) num
+      gesto só, sempre em LINHA RETA (nunca "L"). O arrasto segue o dedo livremente, sem
+      nenhuma colisão durante o gesto — a validade só é decidida ao soltar
+      (`_calcularDeslize`), igual ao Jogo da Ordenação. Testado via CDP: grade sempre nasce
+      com 1 vazio no espaço; peça fora do eixo do vazio sempre volta sem mudar de célula;
+      deslize parcial move só quem precisa e nunca mexe no vazio
+- [x] **A porta (ESPAÇO)** é uma casa FIXA (linha de baixo, coluna 0) — deslizar uma peça
+      pra lá é um compromisso imediato (sem "espera"): ela sai da grade na hora e uma seta
+      nasce sobre cada trilha ainda não cheia (`SetaColuna`/`_mostrarSetas`). Testado via
+      CDP: deslize completo até o espaço só sai de verdade quando existe trilha livre; com
+      as 5 trilhas cheias, chegar no espaço só ocupa a casa (nunca fica peça presa sem saída)
+- [x] **Etapa 2 — escolha por TOQUE, não mais por arrasto**: tocar a seta já encaixa a peça
+      na posição mais baixa vazia da trilha escolhida — 1 toque = 1 decisão, sem passo de
+      confirmar à parte. Testado via CDP: toque na seta encaixa na trilha certa, as setas
+      somem depois da escolha
+- [x] **Retirar é a MESMA porta, ao contrário**: só a peça do TOPO da pilha (LIFO, `Trilha`
+      não mudou), e só volta se o espaço da grade estiver livre naquele instante — senão um
+      tremor avisa "ainda não dá" (nunca um erro de verdade). Testado via CDP: retirada
+      funciona com o espaço livre e é bloqueada (com tremor, sem mudar nada de estado) com
+      o espaço ocupado
 - [x] Feedback **imediato** de encaixe (visual: peça se move pro slot; som:
       `config.audio.acerto`, toca pra QUALQUER peça — certa ou errada, encaixe livre)
 - [x] Feedback **imediato** de CONFIRMAR errado (visual: tabuleiro e botão balançam via
@@ -180,11 +178,11 @@ Mapeamento semântico **deste** jogo:
       nada; o 3º liga o holofote e monta a composição certa em cascata (peças da criança só
       ficam escondidas, nunca destruídas) e volta igual depois; peça só sai da trilha pelo
       TOPO da pilha, nunca do meio; tabuleiro certo confirmado acende estrela e avança rodada
-- [x] **Arrasto real** testado com `PointerEvent` sintético de verdade (não só chamada
-      direta a `_encaixarLivre`) — achou e corrigiu um bug (ver correção 21 do README): o
-      próprio Input dispara `toque` no fim de todo arrasto bem-sucedido (a peça continua
-      sob o dedo ao soltar), e o listener de "toque remove a peça" desfazia o encaixe no
-      mesmo gesto; corrigido com a marca `_ultimaPecaEncaixada`
+- [x] **Arrasto real na grade** testado com `PointerEvent` sintético de verdade (etapa 1,
+      correção 27 do README) — deslize parcial e completo, peça fora do eixo do vazio
+      (bounce-back), saída pelo espaço, toque na seta (etapa 2) e retirada do topo da
+      trilha (com espaço livre/ocupado), tudo verificado passo a passo, não só o resultado
+      final de cada gesto
 - [ ] ~~Derrota~~ — não existe (ver seção 1/5)
 - [x] **Replay:** 2 partidas sem recarregar geram exatamente 2 mensagens (testado via
       `tools/ava-teste.html`: 1 mensagem após a 1ª vitória, 2 após a 2ª, sem duplicata)
@@ -198,8 +196,8 @@ Mapeamento semântico **deste** jogo:
       no `<canvas>`, convertendo coordenada lógica→tela via `stage.escala`/`deslocX`/`deslocY`
       — nenhum toque de dedo real num tablet ainda
 - [x] **Pausa cancela arrasto em curso:** testado via CDP — peça em arrasto some do
-      estado `_arrastando`, perde o flag `arrastando` e volta pra posição da bandeja ao
-      chamar `_pausar()` no meio de um drag
+      estado `_arrastando`, perde o flag `arrastando` e volta pra célula original da grade
+      ao chamar `_pausar()` no meio de um drag
 - [ ] Testado após trocar de aba e voltar — **pendente**; mecanismo é genérico do motor
       (mesma pausa automática usada em toda a coleção), não testado isoladamente aqui
 

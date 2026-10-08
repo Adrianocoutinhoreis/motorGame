@@ -423,6 +423,65 @@ correções feitas pelo humano depois de leituras erradas do vídeo:
     contra o retângulo do canal (não só olhar se encaixou certo no final) —
     os testes anteriores (22/23/25) só checavam o resultado, por isso não
     pegavam esse furo de alguns pixels no meio do caminho.
+27. **Mecânica reformulada em DUAS etapas — a bandeja virou uma grade
+    deslizante** — depois de várias rodadas de ajuste na colisão (correções
+    22-26), o humano decidiu que o problema de verdade não era a colisão em
+    si, e sim o MODELO de manipulação inteiro: "precisamos fazer com que os
+    geométricos usem as regras de movimentação do Jogo da Ordenação" (só anda
+    quem tem vizinho vazio). Isso trocou TODO o sistema de arrasto livre +
+    paredes das correções 22-26 por um desenho novo, discutido e decidido
+    com o humano antes de qualquer código (ver histórico da conversa):
+    - **Etapa 1 — bandeja-grade.** A bandeja virou uma grade tipo "jogo dos
+      15" (`GridBandeja`), com exatamente UM vazio por vez. Uma peça só anda
+      se estiver na mesma linha/coluna do vazio — e arrastar uma peça distante
+      desliza ela (e tudo que estava NO MEIO) em CADEIA, num gesto só, sempre
+      em LINHA RETA (nunca dobra em "L" — decisão explícita, pra não ter
+      ambiguidade de "qual caminho vale" pra uma criança de 6-7 anos). O
+      arrasto em si segue o dedo LIVREMENTE (sem nenhuma colisão durante o
+      gesto, ao contrário das correções 22-26) — a validade só é decidida ao
+      SOLTAR (`_calcularDeslize`), exatamente como o Jogo da Ordenação: erro
+      não existe aqui, só volta pro lugar.
+    - **A porta (ESPAÇO).** Uma casa FIXA, sempre a mesma (linha de baixo,
+      coluna 0), é a única saída da grade. Deslizar uma peça pra dentro dela
+      é um COMPROMISSO imediato — ela sai da bandeja na hora (sem estado de
+      "espera"), e uma seta nasce sobre cada trilha ainda não cheia.
+    - **Etapa 2 — escolha por toque, não mais por arrasto.** Um toque na
+      seta (`SetaColuna`) já encaixa a peça na trilha escolhida, na posição
+      mais baixa vazia — 1 toque = 1 decisão, sem passo de confirmar à parte.
+      Essa troca (arrasto → toque) foi sugestão do próprio humano e elimina de
+      vez toda a categoria de bug das correções 22-26 (colisão furando parede
+      durante um arrasto): não existe mais arrasto nenhum entre bandeja e
+      trilha.
+    - **Retirar é a MESMA porta, no sentido contrário.** Continua só a peça
+      do TOPO da pilha (LIFO, `Trilha` não mudou nada aqui) — mas agora ela só
+      volta se o ESPAÇO da grade estiver livre NAQUELE instante; senão, um
+      tremor avisa "ainda não dá" (nunca um erro de verdade).
+    - **Peça sem trilha livre nunca fica presa sem saída.** Como
+      `distratoras` deixa o total de peças MAIOR que a capacidade das 5
+      trilhas, é possível todas as trilhas encherem antes de a bandeja
+      esvaziar. `_calcularDeslize` só trata a chegada na casa do espaço como
+      "saída de verdade" se existir alguma trilha não cheia — sem isso, a
+      peça só ocupa a casa do espaço como uma célula qualquer (mesmo
+      comportamento de hoje: alguma peça distratora pode nunca sair da
+      bandeja, e isso sempre foi aceitável).
+    - **O que NÃO mudou:** Confirmar, rodadas/estrelas e a dica animada depois
+      de 3 erros (correção 21) continuam exatamente iguais — eles só olham
+      pro estado final das trilhas, nunca pra como a peça chegou lá.
+    - O `TabuleiroVisual` perdeu o "buraco"/corredor físico (correção 25) —
+      sem arrasto entre bandeja e trilha, não existe mais caminho nenhum pra
+      desenhar ali; a faixa entre as duas zonas virou só decoração (divisória
+      de madeira sólida).
+    - Testado via CDP: grade sempre nasce com 1 vazio (no espaço); peça fora
+      do eixo do vazio sempre volta sem mudar de célula; deslize parcial move
+      só quem precisa e NUNCA mexe no vazio; deslize completo até o espaço
+      exatamente quando existe trilha livre; toque na seta encaixa na trilha
+      certa; retirar só funciona com o espaço livre (tremor quando ocupado);
+      com as 5 trilhas cheias, chegar no espaço não dispara mais a saída.
+      Confirmar com o tabuleiro certo (peças raspadas direto da grade, forma
+      e cor batendo com cada `sequencia`) acende a estrela e troca de cartela
+      sem erro, com a grade nova também nascendo com 1 vazio no espaço.
+      Conferido visualmente em desktop E celular (retrato) — grade, porta e
+      setas aparecem do jeito esperado nos dois.
 
 > **Nota técnica:** boa parte da reestruturação de layout desta seção
 > (`TabuleiroVisual`, cartela e tabuleiro centralizados como um conjunto só,

@@ -4,28 +4,42 @@ import {
 } from '../../engine/index.js';
 
 /**
- * Caminho das Cores — mecânica de COPIAR UM PADRÃO, não de classificar por
- * cor (correção do humano durante o planejamento, depois de uma primeira
- * leitura errada do vídeo).
+ * Caminho das Cores — mecânica de COPIAR UM PADRÃO, em DUAS etapas (desenho
+ * revisto com o humano depois da primeira versão de "encaixe livre por
+ * arrasto direto na trilha" — ver `README.md`, correções 21 a 26, pra
+ * história completa da mecânica antiga).
  *
- * Uma CARTELA mostra, numa coluna por trilha, a sequência exata de peças
- * (formato E cor, não só cor) que aquela trilha precisa reproduzir, de baixo
- * pra cima. A criança arrasta peças soltas da BANDEJA até QUALQUER trilha,
- * em QUALQUER ordem — "encaixe livre" (mesmo mecanismo do Colmeia dos
- * Números): nada é validado no instante do encaixe, só quando ela mesma
- * toca CONFIRMAR. Se o tabuleiro inteiro bater com a cartela, a estrela da
- * rodada acende e uma cartela NOVA nasce (até completar a meta do nível —
- * igual ao Material Dourado: várias rodadas, uma estrela por rodada). Se não
- * bater, só demora mais (RE-02: nunca desconta) — a partir do 3º erro
- * seguido NESTA cartela, o jogo mostra a composição certa se montando
- * sozinha no tabuleiro (holofote + cascata, como no Material Dourado) e
- * depois volta pro que a criança tinha, pra ela mesma corrigir.
+ * ETAPA 1 — a BANDEJA é uma GRADE deslizante (tipo "jogo dos 15"), com as
+ * mesmas regras de movimentação do Jogo da Ordenação: só anda quem tem uma
+ * casa vizinha vazia. Só existe UM vazio por vez; arrastar uma peça que está
+ * na MESMA linha/coluna do vazio desliza ela (e tudo que estava entre ela e
+ * o vazio) em CADEIA, em linha reta, num gesto só — nunca dobra em "L" (ver
+ * `_calcularDeslize`). Uma casa fixa, sempre a mesma (linha de baixo, coluna
+ * 0 — "o ESPAÇO"), é a única porta de saída: deslizar uma peça pra dentro
+ * dela já é a decisão de mandá-la pra uma trilha, sem volta.
+ *
+ * ETAPA 2 — ao sair pelo espaço, a peça fica "em escolha" e uma seta nasce
+ * sobre cada trilha ainda não cheia (`SetaColuna`/`_mostrarSetas`); um toque
+ * na seta já encaixa a peça na posição mais baixa vazia daquela trilha —
+ * sem passo de confirmar à parte (1 toque = 1 decisão). RETIRAR uma peça só
+ * é possível pela do TOPO da pilha (LIFO, ver `Trilha`), e ela só volta se o
+ * espaço da grade estiver livre naquele instante (a mesma porta, nos dois
+ * sentidos).
+ *
+ * Por cima das duas etapas, o resto da mecânica não mudou nada: a criança
+ * monta o tabuleiro em QUALQUER ordem, nada é validado até ela tocar
+ * CONFIRMAR. Se o tabuleiro inteiro bater com a cartela, a estrela da rodada
+ * acende e uma cartela NOVA nasce (até completar a meta do nível — igual ao
+ * Material Dourado: várias rodadas, uma estrela por rodada). Se não bater,
+ * só demora mais (RE-02: nunca desconta) — a partir do 3º erro seguido
+ * NESTA cartela, o jogo mostra a composição certa se montando sozinha no
+ * tabuleiro (holofote + cascata, como no Material Dourado) e depois volta
+ * pro que a criança tinha, pra ela mesma corrigir.
  *
  * Ao contrário do Encaixe Certo/Quantidade Certa, aqui NÃO existe encaixe
  * geométrico (nó/entalhe) — no brinquedo físico qualquer peça cabe
  * fisicamente em qualquer trilha; quem filtra é a comparação com a cartela,
- * não a forma da peça. O ímã/tolerância de arrasto e o algoritmo de várias
- * fileiras da bandeja (`porLinha`) são reaproveitados do Quantidade Certa.
+ * não a forma da peça.
  *
  * Decisões registradas no artefato de planejamento, antes desta implementação
  * começar:
@@ -132,9 +146,13 @@ function tracarForma(ctx, forma, tam) {
 /**
  * Peça solta e arrastável — um formato numa cor. `trancada` marca "já está
  * numa trilha" (ver `Trilha`): continua interativa (`toque` tira ela de
- * volta pra bandeja), só não pode mais ser ARRASTADA. Sem papel nenhum até
- * ser colocada — nada é validado no instante do encaixe (encaixe livre, ver
- * doc da classe `GameScene`), só quando a própria criança confirma.
+ * volta pra bandeja, se o espaço da grade estiver livre), só não pode mais
+ * ser ARRASTADA. `linha`/`coluna` é a posição dela na GRADE da bandeja
+ * (etapa 1, ver `GameScene._grade`) — `-1,-1` enquanto está "em escolha"
+ * (fora da grade, ainda não encaixada em nenhuma trilha) ou já numa trilha.
+ * Sem papel nenhum até ser colocada numa trilha — nada é validado no
+ * instante do encaixe (encaixe livre, ver doc da classe `GameScene`), só
+ * quando a própria criança confirma.
  */
 class Peca extends Node {
   constructor(forma, cor, tam) {
@@ -146,9 +164,9 @@ class Peca extends Node {
     this.tam = tam;
     this.arrastando = false;
     this.trancada = false;
-    this.trayX = 0;
-    this.trayY = 0;
-    /** @type {Trilha|null} a trilha onde está encaixada, ou `null` se solta na bandeja. */
+    this.linha = -1;
+    this.coluna = -1;
+    /** @type {Trilha|null} a trilha onde está encaixada, ou `null` se solta na bandeja/em escolha. */
     this.trilha = null;
     this.indiceTrilha = -1;
   }
@@ -191,7 +209,6 @@ class Trilha extends Node {
     this.gapSlot = gapSlot;
     this.padY = padY;
     this.pecas = new Array(sequencia.length).fill(null);
-    this.destacada = false;
   }
 
   completa() { return this.pecas.every((p) => p !== null); }
@@ -213,40 +230,27 @@ class Trilha extends Node {
     };
   }
 
-  /** Posição do próximo encaixe vazio (a mais baixa), ou `null` se já está cheia. */
-  posicaoProximoEncaixe() {
-    const i = this.indiceVazio();
-    return i === -1 ? null : this._centroDoSlot(i);
-  }
-
-  /**
-   * SEM silhueta do que falta — nem formato, nem contorno pontilhado. Mostrar
-   * a forma esperada na própria trilha entregava a resposta de graça. O
-   * canal de madeira em si é pintado pelo `TabuleiroVisual`, por baixo; as
-   * peças já colocadas são NÓS DE VERDADE (`Peca`, filhos da mesma `area`,
-   * ver `GameScene`), não algo que a trilha desenha — aqui só sobra o realce
-   * de arrasto.
-   */
-  desenhar(ctx) {
-    if (this.destacada) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
-      ctx.beginPath();
-      ctx.roundRect(0, 0, this.largura, this.altura, 10);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
+  // SEM silhueta do que falta — nem formato, nem contorno pontilhado. Mostrar
+  // a forma esperada na própria trilha entregava a resposta de graça. O
+  // canal de madeira em si é pintado pelo `TabuleiroVisual`, por baixo; as
+  // peças já colocadas são NÓS DE VERDADE (`Peca`, filhos da mesma `area`,
+  // ver `GameScene`), não algo que a trilha desenha — não sobra nada pra
+  // desenhar aqui (etapa 2 é só clique na seta, ver `SetaColuna`), por isso
+  // nem sobrescreve `desenhar` (o padrão de `Node` não pinta nada).
 }
 
 /**
  * Tabuleiro visual imitando o painel físico de MDF do vídeo — paredes
- * (madeira clara) de VERDADE entre a bandeja e as trilhas, e entre as 5
- * colunas: pedido do humano depois de ver o tabuleiro sem nenhuma linha —
- * sem elas à vista, a colisão de `GameScene._moverArrasto` (a peça arrastada
- * não atravessa esses mesmos vãos) fica sem nenhuma pista visual do PORQUÊ a
- * peça trava ali. As paredes aqui são exatamente os vãos que a colisão
- * respeita (`gapTrilha`/`espessuraDivisor`) — nunca só decoração.
+ * (madeira clara) de VERDADE entre as 5 colunas das trilhas: sem elas à
+ * vista, as regras de movimentação (quem pode ir aonde) ficam sem nenhuma
+ * pista visual do PORQUÊ — lição registrada no `README.md` (correção 24).
+ *
+ * Não existe mais um "buraco"/corredor físico ligando a piscina (bandeja) às
+ * trilhas — na mecânica atual (ver doc da classe `GameScene`) uma peça sai
+ * da bandeja pela casa fixa do ESPAÇO (dentro da própria grade,
+ * `GridBandeja`) e reaparece numa trilha por uma animação de voo, não por um
+ * caminho arrastado. A faixa escura entre a piscina e as trilhas continua só
+ * por estética (divisória de madeira), sem abertura nenhuma.
  */
 class TabuleiroVisual extends Node {
   constructor(opcoes) {
@@ -283,9 +287,9 @@ class TabuleiroVisual extends Node {
 
     // 2. Canaletas (Madeira Escura) — piscina, canaleta horizontal e as 5
     // trilhas verticais, cada uma um retângulo À PARTE: o vão claro que sobra
-    // entre elas (a cor de fundo mostrando por baixo) É a parede — a mesma
-    // largura (`gapTrilha`) e altura (`espessuraDivisor`) que
-    // `GameScene._moverArrasto`/`_dentroDoCanal` usam pra travar o arrasto.
+    // entre as trilhas (a cor de fundo mostrando por baixo) é a parede entre
+    // colunas — decorativo aqui, a grade da bandeja (`GridBandeja`) é quem
+    // desenha as próprias raias da etapa 1.
     ctx.fillStyle = this.corCanaleta;
 
     // A. Piscina no topo
@@ -295,18 +299,14 @@ class TabuleiroVisual extends Node {
     const piscinaH = this.alturaBandeja;
     ctx.fillRect(piscinaX, piscinaY, piscinaW, piscinaH);
 
-    // B. Canaleta Horizontal
+    // B. Canaleta Horizontal (só divisória — sem abertura, ver doc da classe)
     const chY = piscinaY + piscinaH + this.espessuraDivisor;
     const chH = this.alturaCanaletaHoriz;
     ctx.fillRect(piscinaX, chY, piscinaW, chH);
 
-    // C. Buraco na esquerda (ligação da piscina com a canaleta horizontal)
+    // C. Trilhas verticais
     const larguraColuna = (piscinaW - (this.numTrilhas - 1) * this.gapTrilha) / this.numTrilhas;
     const inicioXTrilhas = piscinaX;
-    const buracoW = larguraColuna + 16;
-    ctx.fillRect(inicioXTrilhas - 8, piscinaY + piscinaH, buracoW, this.espessuraDivisor);
-
-    // D. Trilhas verticais
     for (let i = 0; i < this.numTrilhas; i++) {
       const tx = inicioXTrilhas + i * (larguraColuna + this.gapTrilha);
       const ty = chY + chH;
@@ -321,6 +321,81 @@ class TabuleiroVisual extends Node {
     ctx.strokeRect(piscinaX, piscinaY, piscinaW, piscinaH);
     ctx.strokeRect(piscinaX, chY, piscinaW, chH);
 
+    ctx.restore();
+  }
+}
+
+/**
+ * Grade visual da bandeja (etapa 1) — uma raia fina por célula DE VERDADE
+ * (as que sobram fora da conta, numa última linha incompleta, não têm raia:
+ * não existem pro quebra-cabeça — ver `GameScene._celulasReais`) e um
+ * destaque dourado tracejado na casa do ESPAÇO, a porta fixa de saída. Sem
+ * essa raia a regra "só anda quem tem vizinho vazio" ficaria sem nenhuma
+ * pista visual — mesma lição das paredes do `TabuleiroVisual`.
+ */
+class GridBandeja extends Node {
+  constructor(opcoes) {
+    super(opcoes);
+    this.tam = opcoes.tam;
+    this.gap = opcoes.gap;
+    this.celulas = opcoes.celulas;
+    this.espacoLinha = opcoes.espacoLinha;
+    this.espacoColuna = opcoes.espacoColuna;
+  }
+
+  desenhar(ctx) {
+    const pitch = this.tam + this.gap;
+    ctx.save();
+    for (const { linha, coluna } of this.celulas) {
+      const x = coluna * pitch;
+      const y = linha * pitch;
+      const ehEspaco = linha === this.espacoLinha && coluna === this.espacoColuna;
+      ctx.beginPath();
+      ctx.roundRect(x, y, this.tam, this.tam, 8);
+      if (ehEspaco) {
+        ctx.fillStyle = 'rgba(224, 171, 27, 0.22)';
+        ctx.fill();
+        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = 'rgba(224, 171, 27, 0.9)';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+/**
+ * Seta de "solte aqui" — nasce sobre cada trilha ainda não cheia quando uma
+ * peça sai pelo espaço e está "em escolha" (ver `GameScene._mostrarSetas`).
+ * Um TOQUE nela encaixa a peça ali mesmo, sem passo de confirmar à parte.
+ * Alvo de toque generoso (56×56) mesmo a seta sendo visualmente menor —
+ * perfil 4-7 anos não mira com precisão de adulto.
+ */
+class SetaColuna extends Node {
+  constructor(opcoes) {
+    super({
+      ...opcoes, largura: 56, altura: 56, regX: 28, regY: 28, interativo: true,
+    });
+  }
+
+  desenhar(ctx) {
+    ctx.save();
+    ctx.fillStyle = '#FBBF24';
+    ctx.strokeStyle = '#B45309';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(10, 8);
+    ctx.lineTo(46, 8);
+    ctx.lineTo(28, 48);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 }
@@ -494,6 +569,11 @@ export class GameScene extends Scene {
     // Trava a mesa/Confirmar durante a demonstração da dica e durante o
     // intervalo entre uma cartela certa e a próxima nascer.
     this._aguardandoAvanco = false;
+    // Trava a grade/Confirmar enquanto uma peça está "em escolha" (saiu pelo
+    // espaço, ainda não tocou numa seta — ver `_sairPelaEspaco`/`_escolherColuna`).
+    this._escolhendoColuna = false;
+    this._pecaEmEscolha = null;
+    this._setas = [];
 
     this.adicionar(new Background({
       largura: L,
@@ -680,18 +760,36 @@ export class GameScene extends Scene {
     this._painelDireita.y = this._boardY;
     this.area.adicionar(this._painelDireita);
 
-    // O "buraco" — a ÚNICA abertura ligando a bandeja (piscina) ao corredor
-    // horizontal por baixo dela (ver `TabuleiroVisual`, item C do desenho:
-    // mesma conta, mesmas coordenadas, só que aqui é pra COLISÃO, não pra
-    // pintar). Fora dessa faixa de X, a linha entre a piscina e o corredor é
-    // uma parede — `_moverArrasto` só deixa a peça descer por ali.
-    const piscinaW = this._layout.boardWidth - this._layout.padPanelX * 2;
-    const larguraColunaBuraco = (piscinaW - (nivel.trilhas - 1) * this._layout.gapTrilha) / nivel.trilhas;
-    this._buracoXMin = this._boardX + this._layout.padPanelX - 8;
-    this._buracoXMax = this._buracoXMin + larguraColunaBuraco + 16;
-    this._limitePiscina = this._boardY + this._layout.padPanelTopo + this._layout.alturaBandeja;
+    // Dimensões da GRADE da bandeja (etapa 1) — constantes pro nível inteiro
+    // (mesma quantidade de peças em toda cartela do mesmo nível, só o
+    // CONTEÚDO muda a cada rodada, ver `_novaCartela`). `layout.porLinha` já
+    // é a largura em colunas (mesma conta de antes, pensada pra largura
+    // disponível); a altura em linhas agora soma +1 pela casa do vazio. O
+    // ESPAÇO (porta fixa de saída) é sempre a última linha, primeira coluna
+    // — ver doc da classe `GameScene`.
+    const totalPecasBandeja = nivel.trilhas * nivel.profundidade + nivel.distratoras;
+    this._gradeColunas = this._layout.porLinha;
+    this._gradeLinhas = Math.ceil((totalPecasBandeja + 1) / this._gradeColunas);
+    this._espacoLinha = this._gradeLinhas - 1;
+    this._espacoColuna = 0;
 
-    this._pecas = [];
+    const pitchGrade = this._layout.tam + this._layout.gapBandeja;
+    const piscinaW = this._layout.boardWidth - this._layout.padPanelX * 2;
+    const larguraGrade = this._gradeColunas * pitchGrade - this._layout.gapBandeja;
+    this._gradeOffsetX = Math.max(0, (piscinaW - larguraGrade) / 2);
+
+    this._gradeBandeja = new GridBandeja({
+      tam: this._layout.tam,
+      gap: this._layout.gapBandeja,
+      celulas: this._celulasReais(),
+      espacoLinha: this._espacoLinha,
+      espacoColuna: this._espacoColuna,
+    });
+    this._gradeBandeja.x = this._boardX + this._layout.padPanelX + this._gradeOffsetX;
+    this._gradeBandeja.y = this._boardY + this._layout.padPanelTopo;
+    this.area.adicionar(this._gradeBandeja);
+
+    this._grade = [];
     this._trilhas = [];
     this._arrastando = null;
     this._novaCartela();
@@ -728,7 +826,13 @@ export class GameScene extends Scene {
     const { trilhas: sequencias, distratoras } = gerarRodada(nivel);
 
     this._cartela?.removerDoPai();
-    for (const p of this._pecas) p.removerDoPai();
+    this._pecaEmEscolha?.removerDoPai();
+    this._pecaEmEscolha = null;
+    this._escolhendoColuna = false;
+    this._mostrarSetas(false);
+    for (const linha of this._grade ?? []) {
+      for (const cel of linha) if (cel && cel !== 'VOID') cel.removerDoPai();
+    }
     for (const trilha of this._trilhas) {
       for (const peca of trilha.pecas) peca?.removerDoPai();
       trilha.removerDoPai();
@@ -741,28 +845,29 @@ export class GameScene extends Scene {
     this._cartela.y = this._cartelaY;
     this.area.adicionar(this._cartela);
 
-    // peças soltas, no topo do painel
+    // Grade da bandeja (etapa 1) — todas as peças soltas (certas das trilhas
+    // + distratoras) mais UM vazio, embaralhadas pelas células REAIS da
+    // grade; o vazio nasce sempre na casa do espaço (`_espacoLinha/Coluna`),
+    // pra criança já ver a "porta" aberta no começo de cada cartela.
+    const celulas = this._celulasReais();
+    this._gradeBandeja.celulas = celulas;
+    const celulasForaDoEspaco = celulas.filter(
+      (c) => !(c.linha === this._espacoLinha && c.coluna === this._espacoColuna),
+    );
     const pecasDados = rand.embaralhar([...sequencias.flat(), ...distratoras]);
-    this._pecas = [];
-    const celulaBandeja = layout.tam + layout.gapBandeja;
+
+    this._grade = Array.from({ length: this._gradeLinhas }, () => new Array(this._gradeColunas).fill('VOID'));
+    for (const { linha, coluna } of celulas) this._grade[linha][coluna] = null;
+
     pecasDados.forEach((dado, indice) => {
-      const linha = Math.floor(indice / layout.porLinha);
-      const inicioLinha = linha * layout.porLinha;
-      const nestaLinha = Math.min(layout.porLinha, pecasDados.length - inicioLinha);
-      const coluna = indice - inicioLinha;
-      const larguraLinha = nestaLinha * layout.tam + (nestaLinha - 1) * layout.gapBandeja;
-
-      const piscinaW = layout.boardWidth - layout.padPanelX * 2;
-      const inicioX = this._boardX + layout.padPanelX + (piscinaW - larguraLinha) / 2 + layout.tam / 2;
-      const topoY = this._boardY + layout.padPanelTopo + layout.tam / 2;
-
+      const { linha, coluna } = celulasForaDoEspaco[indice];
       const peca = new Peca(dado.forma, dado.cor, layout.tam);
-      const px = inicioX + coluna * celulaBandeja;
-      const py = topoY + linha * (layout.tam + layout.gapBandeja);
-      peca.x = px; peca.y = py;
-      peca.trayX = px; peca.trayY = py;
+      peca.linha = linha;
+      peca.coluna = coluna;
+      this._grade[linha][coluna] = peca;
+      const pos = this._posicaoCelula(linha, coluna);
+      peca.x = pos.x; peca.y = pos.y;
       this.area.adicionar(peca);
-      this._pecas.push(peca);
       this._ligarTogues(peca);
     });
 
@@ -782,6 +887,37 @@ export class GameScene extends Scene {
 
     this._errosRodada = 0;
     this._atualizarTextoHud();
+  }
+
+  /**
+   * Lista, em ordem de leitura (linha a linha, esquerda pra direita), toda
+   * célula REAL da grade — peças + o vazio, total `totalPecasBandeja + 1`.
+   * Só a ÚLTIMA linha pode ficar incompleta (sobra da divisão por
+   * `_gradeColunas`); o resto da grade (`this._grade`, ver `_novaCartela`)
+   * marca essas sobras como `'VOID'` — não fazem parte do quebra-cabeça,
+   * nunca recebem peça nem participam de um deslize.
+   */
+  _celulasReais() {
+    const nivel = this.nivel;
+    const totalCelulas = nivel.trilhas * nivel.profundidade + nivel.distratoras + 1;
+    const celulas = [];
+    let restantes = totalCelulas;
+    for (let l = 0; l < this._gradeLinhas; l++) {
+      const nestaLinha = Math.min(this._gradeColunas, restantes);
+      for (let c = 0; c < nestaLinha; c++) celulas.push({ linha: l, coluna: c });
+      restantes -= nestaLinha;
+    }
+    return celulas;
+  }
+
+  /** Centro (coordenadas do PAI, `this.area`) da célula `linha,coluna` da grade da bandeja. */
+  _posicaoCelula(linha, coluna) {
+    const layout = this._layout;
+    const pitch = layout.tam + layout.gapBandeja;
+    return {
+      x: this._boardX + layout.padPanelX + this._gradeOffsetX + coluna * pitch + layout.tam / 2,
+      y: this._boardY + layout.padPanelTopo + linha * pitch + layout.tam / 2,
+    };
   }
 
   /**
@@ -811,7 +947,10 @@ export class GameScene extends Scene {
     const montar = (tam) => {
       const larguraUtilBandeja = boardWidth - padPanelX * 2;
       const porLinha = Math.max(1, Math.floor((larguraUtilBandeja + gapBandeja) / (tam + gapBandeja)));
-      const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
+      // +1: a grade da bandeja (etapa 1) sempre tem UMA casa vazia a mais que
+      // peças (o "espaço" — ver `GameScene._celulasReais`), não é só uma
+      // lista compacta de itens.
+      const totalLinhas = Math.ceil((totalPecasBandeja + 1) / porLinha);
       const alturaBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja;
       const alturaTrilhas = nivel.profundidade * tam + (nivel.profundidade - 1) * gapSlot + padTrilhaY * 2;
       const alturaCanaletaHoriz = tam + 12;
@@ -872,7 +1011,10 @@ export class GameScene extends Scene {
 
       const larguraUtilBandeja = boardWidth - padPanelX * 2;
       const porLinha = Math.max(1, Math.floor((larguraUtilBandeja + gapBandeja) / (tam + gapBandeja)));
-      const totalLinhas = Math.ceil(totalPecasBandeja / porLinha);
+      // +1: a grade da bandeja (etapa 1) sempre tem UMA casa vazia a mais que
+      // peças (o "espaço" — ver `GameScene._celulasReais`), não é só uma
+      // lista compacta de itens.
+      const totalLinhas = Math.ceil((totalPecasBandeja + 1) / porLinha);
       const alturaBandeja = totalLinhas * tam + (totalLinhas - 1) * gapBandeja;
       const alturaTrilhas = nivel.profundidade * tam + (nivel.profundidade - 1) * gapSlot + padTrilhaY * 2;
       const alturaCanaletaHoriz = tam + 12;
@@ -906,13 +1048,14 @@ export class GameScene extends Scene {
   // --------------------------------------------------------------- arrasto
 
   /**
-   * Liga tanto o ARRASTO (peça solta na bandeja, `apertar` inicia) quanto o
-   * TOQUE de remover (peça já encaixada numa trilha — só funciona se for a
+   * Liga tanto o ARRASTO (peça na grade da bandeja, `apertar` inicia) quanto
+   * o TOQUE de retirar (peça já encaixada numa trilha — só funciona se for a
    * do TOPO da pilha dela). A mesma peça usa os dois conforme `trancada`.
    */
   _ligarTogues(peca) {
     peca.on('apertar', (ponto) => {
-      if (this.pausada || this.placar.encerrado || this._arrastando || this._aguardandoAvanco) return;
+      if (this.pausada || this.placar.encerrado || this._arrastando) return;
+      if (this._aguardandoAvanco || this._escolhendoColuna) return;
       if (peca.trancada) return; // já numa trilha: sai por toque, não por arrasto
       const local = this.area.globalParaLocal(ponto.x, ponto.y);
       this._deslocX = peca.x - local.x;
@@ -922,170 +1065,213 @@ export class GameScene extends Scene {
       Tween.removerDe(peca);
       Tween.para(peca, { scaleX: 1.1, scaleY: 1.1 }, 100, Easing.suaveSaida);
       this._arrastando = peca;
-      // Nenhum canal travado ainda e ainda não cruzou o buraco — a peça
-      // começa na bandeja, área aberta (ver `_moverArrasto`).
-      this._canalPreso = null;
-      this._passouBuraco = false;
+      this._origemArrasto = { linha: peca.linha, coluna: peca.coluna };
     });
 
     peca.on('toque', () => {
-      // O Input dispara 'toque' sempre que apertar e soltar caem no MESMO nó
-      // — e uma peça ARRASTADA continua embaixo do dedo até soltar, então
-      // todo arrasto bem-sucedido termina com um 'toque' nela também, no
-      // mesmo gesto. `_ultimaPecaEncaixada` (setado em `_encaixarLivre`,
-      // chamado ANTES deste handler na mesma sequência síncrona do Input)
-      // marca exatamente esse caso pra ignorar — sem isso, encaixar uma peça
-      // a desencaixava no ato.
-      if (this._ultimaPecaEncaixada === peca) { this._ultimaPecaEncaixada = null; return; }
       if (this.pausada || this.placar.encerrado || this._aguardandoAvanco) return;
-      if (!peca.trancada) return;
+      if (!peca.trancada) return; // peça solta na grade não tem ação de toque
       const trilha = peca.trilha;
       if (!trilha || trilha.indiceTopo() !== peca.indiceTrilha) return; // só o topo sai
-      this._removerDaTrilha(trilha, peca.indiceTrilha);
+      this._tentarRetirarDaTrilha(trilha, peca.indiceTrilha);
     });
   }
 
-  /** O ponto `x` cai dentro da largura do canal desta trilha? */
-  _dentroDoCanal(trilha, x) {
-    return x >= trilha.x && x <= trilha.x + trilha.largura;
-  }
-
-  /**
-   * Canal cujo CENTRO está mais perto de `x` — usado só no instante em que a
-   * peça cruza a linha do divisor vindo de cima (ver `_moverArrasto`), pra
-   * decidir em qual dos 5 ela "entra".
-   */
-  _canalMaisProximo(x) {
-    let melhor = this._trilhas[0];
-    let menor = Infinity;
-    for (const trilha of this._trilhas) {
-      const centro = trilha.x + trilha.largura / 2;
-      const d = Math.abs(x - centro);
-      if (d < menor) { menor = d; melhor = trilha; }
+  /** Posição (linha,coluna) do ÚNICO vazio da grade, ou `null` (nunca deveria acontecer). */
+  _celulaVazia() {
+    for (let l = 0; l < this._gradeLinhas; l++) {
+      for (let c = 0; c < this._gradeColunas; c++) {
+        if (this._grade[l][c] === null) return { linha: l, coluna: c };
+      }
     }
-    return melhor;
+    return null;
   }
 
-  /** Raio do ÍMÃ (puxão suave pro slot exato depois de já estar dentro de um canal). */
-  _raioTolerancia() { return this._tamPeca * 0.75; }
+  /**
+   * A fileira (linha, se `vertical`, senão coluna) inteira que passa por
+   * `fixo`, como uma lista de células em ORDEM — parada no primeiro `'VOID'`
+   * (só existe no fim da última linha, nunca "sanduichado" — ver
+   * `_celulasReais`). É o "trilho reto" por onde um deslize em cadeia anda.
+   */
+  _lane(vertical, fixo) {
+    const lane = [];
+    const n = vertical ? this._gradeLinhas : this._gradeColunas;
+    for (let i = 0; i < n; i++) {
+      const linha = vertical ? i : fixo;
+      const coluna = vertical ? fixo : i;
+      if (this._grade[linha][coluna] === 'VOID') break;
+      lane.push({ linha, coluna });
+    }
+    return lane;
+  }
 
   /**
-   * "Colisão com as paredes" de verdade, em TRÊS zonas (não é só uma checagem
-   * na hora de soltar, o próprio ARRASTO é travado):
+   * O CORAÇÃO da etapa 1 — regras de movimentação do Jogo da Ordenação
+   * (só anda quem tem vizinho vazio), com o "deslizar em cadeia" decidido no
+   * planejamento: `peca` só anda se estiver na MESMA linha OU coluna do
+   * vazio (nunca os dois), em LINHA RETA, nunca dobrando em "L". O quanto
+   * ela anda vem de `pontoSolto` (onde o dedo soltou, já em coordenadas de
+   * `this.area`) projetado no eixo certo — solta na metade do caminho, anda
+   * só a metade; solta em cima do vazio (ou além), desliza até lá.
    *
-   *   1) BANDEJA (piscina) — acima de `_limitePiscina`: livre, nenhuma
-   *      parede ali, a peça anda pra qualquer lado.
-   *   2) A linha da bandeja pro corredor só tem UMA abertura — o "buraco"
-   *      (`_buracoXMin`/`_buracoXMax`, mesma posição que `TabuleiroVisual`
-   *      desenha). Fora dessa faixa de X, aquela linha é parede: a peça não
-   *      desce, fica presa bem em cima dela (`_passouBuraco` controla isso —
-   *      só vira `true` no instante em que ela cruza DENTRO da faixa do
-   *      buraco, e volta a `false` se ela subir de novo pra bandeja).
-   *   3) Depois do buraco, o CORREDOR horizontal (entre a linha da bandeja e
-   *      o topo das trilhas) liga a TODAS as 5 — livre em X. Só ao descer
-   *      mais, pra DENTRO de uma trilha, a peça TRAVA no canal mais alinhado
-   *      com onde estava (`_canalPreso`) e o `x` fica PRESO na largura desse
-   *      canal até voltar pro corredor — nunca escorrega por cima da parede
-   *      lateral pra uma trilha vizinha, mesmo arrastando bem devagar.
+   * Tudo que estava ENTRE a posição original da peça e o destino anda uma
+   * casa em direção a ela (preenchendo o rastro) — a peça cai exatamente no
+   * destino. Se o destino é a própria casa do ESPAÇO (a porta fixa) E ainda
+   * existe alguma trilha não cheia, a peça SAI da grade em vez de ocupá-la
+   * (ver `_sairPelaEspaco`); sem trilha livre, ela só ocupa a casa como
+   * qualquer outra (nunca trava um distrator sem lugar nenhum pra ir).
    *
-   * Pedido do humano: "a regra é arrastar até passar pelo espaço inicial,
-   * não poderá passar por cima" (o buraco) — igual ao Jogo da Ordenação não
-   * deixar uma ficha atravessar pra uma casa não-vizinha.
+   * Devolve `{ deslocados, saiuPeloEspaco }`, ou `null` se o gesto não é um
+   * movimento válido (fora do eixo do vazio, ou não andou o bastante) — a
+   * peça só volta pro lugar, nunca treme feio (errar não existe aqui).
    */
+  _calcularDeslize(peca, pontoSolto) {
+    const vazio = this._celulaVazia();
+    if (!vazio) return null;
+    const mesmaLinha = peca.linha === vazio.linha;
+    const mesmaColuna = peca.coluna === vazio.coluna;
+    if (!mesmaLinha && !mesmaColuna) return null;
+
+    const vertical = mesmaColuna && !mesmaLinha;
+    const fixo = vertical ? peca.coluna : peca.linha;
+    const lane = this._lane(vertical, fixo);
+    const k = lane.findIndex((p) => p.linha === peca.linha && p.coluna === peca.coluna);
+    const b = lane.findIndex((p) => p.linha === vazio.linha && p.coluna === vazio.coluna);
+    if (k === -1 || b === -1) return null;
+
+    const pos = this._posicaoCelula(peca.linha, peca.coluna);
+    const pitch = this._layout.tam + this._layout.gapBandeja;
+    const deltaPx = vertical ? (pontoSolto.y - pos.y) : (pontoSolto.x - pos.x);
+    const sinal = b > k ? 1 : -1;
+    const passosDesejados = Math.round((deltaPx * sinal) / pitch);
+    const passos = Math.max(0, Math.min(passosDesejados, Math.abs(b - k)));
+    if (passos <= 0) return null;
+
+    const t = k + passos * sinal;
+    const deslocados = [];
+    for (let i = k + sinal; ; i += sinal) {
+      const de = lane[i];
+      const para = lane[i - sinal];
+      const movendo = this._grade[de.linha][de.coluna];
+      this._grade[para.linha][para.coluna] = movendo;
+      if (movendo) {
+        movendo.linha = para.linha;
+        movendo.coluna = para.coluna;
+        deslocados.push(movendo);
+      }
+      if (i === t) break;
+    }
+
+    const destino = lane[t];
+    const naCasaDoEspaco = destino.linha === this._espacoLinha && destino.coluna === this._espacoColuna;
+    const temTrilhaLivre = this._trilhas.some((tr) => !tr.completa());
+    const saiuPeloEspaco = naCasaDoEspaco && temTrilhaLivre;
+
+    if (saiuPeloEspaco) {
+      this._grade[destino.linha][destino.coluna] = null;
+    } else {
+      this._grade[destino.linha][destino.coluna] = peca;
+      peca.linha = destino.linha;
+      peca.coluna = destino.coluna;
+    }
+
+    return { deslocados, saiuPeloEspaco };
+  }
+
   _moverArrasto(ponto) {
     const peca = this._arrastando;
     if (!peca) return;
+    // Segue o dedo LIVREMENTE (sem travar em nada) — igual ao Jogo da
+    // Ordenação: a validade do movimento só é decidida ao SOLTAR
+    // (`_calcularDeslize`), nunca durante o arrasto em si.
     const local = this.area.globalParaLocal(ponto.x, ponto.y);
-    let novoX = local.x + this._deslocX;
-    let novoY = local.y + this._deslocY;
-
-    const topoTrilhas = this._trilhas[0].y;
-    const fundoTrilhas = topoTrilhas + this._trilhas[0].altura;
-
-    if (novoY <= this._limitePiscina) {
-      // Bandeja — livre, e ainda não cruzou o buraco (se tinha cruzado antes
-      // e voltou pra cima, precisa cruzar de novo pra descer outra vez).
-      this._passouBuraco = false;
-      this._canalPreso = null;
-    } else {
-      if (!this._passouBuraco) {
-        if (novoX >= this._buracoXMin && novoX <= this._buracoXMax) {
-          this._passouBuraco = true;
-        } else {
-          novoY = this._limitePiscina; // parede — não desce fora do buraco
-        }
-      }
-      if (this._passouBuraco) {
-        if (novoY <= topoTrilhas) {
-          // Corredor horizontal — livre em X, liga a qualquer trilha.
-          this._canalPreso = null;
-        } else {
-          if (!this._canalPreso) this._canalPreso = this._canalMaisProximo(novoX);
-          const canal = this._canalPreso;
-          novoX = Math.min(Math.max(novoX, canal.x), canal.x + canal.largura);
-          novoY = Math.min(novoY, fundoTrilhas);
-        }
-      }
-    }
-
-    peca.x = novoX;
-    peca.y = novoY;
-
-    const alvo = this._canalPreso && !this._canalPreso.completa() ? this._canalPreso : null;
-    for (const trilha of this._trilhas) trilha.destacada = trilha === alvo;
-
-    if (alvo) {
-      const posAlvo = alvo.posicaoProximoEncaixe();
-      const dx = posAlvo.x - peca.x;
-      const dy = posAlvo.y - peca.y;
-      const raio = this._raioTolerancia();
-      // SEM `Math.max(0, …)` aqui, longe do slot vazio (`dy` grande — comum
-      // agora que a peça trava no canal assim que cruza a parede, bem antes
-      // de chegar perto do slot de verdade) a "força" virava NEGATIVA — o
-      // ímã inverte pra REPULSÃO e empurra a peça pro lado errado. Isso
-      // bastava pra furar a parede por alguns pixels (achado testando um
-      // arrasto real: a peça escapava do retângulo do canal exatamente
-      // quando distante do slot). `Math.max(0, …)` garante que o ímã só
-      // ATRAI, nunca empurra.
-      const forca = Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy) / raio);
-      const FATOR_IMA = 0.3;
-      peca.x += dx * forca * FATOR_IMA;
-      peca.y += dy * forca * FATOR_IMA;
-      // Re-trava depois do ímã — rede de segurança: nenhuma força deveria
-      // mais furar a parede, mas a colisão é o que garante a regra, não o
-      // ímã (que é só estética de "encaixar satisfatório").
-      peca.x = Math.min(Math.max(peca.x, alvo.x), alvo.x + alvo.largura);
-      peca.y = Math.min(peca.y, alvo.y + alvo.altura);
-    }
+    peca.x = local.x + this._deslocX;
+    peca.y = local.y + this._deslocY;
   }
 
-  /**
-   * Encaixe LIVRE: solta dentro de um canal com espaço e a peça entra na
-   * posição vazia mais baixa DELE, CERTA OU ERRADA — nada é validado aqui, só
-   * quando a criança confirma (`_confirmar`). Como `_moverArrasto` já travou
-   * o `x` dentro do canal (`_canalPreso`) o tempo todo, chegar aqui fora de
-   * um canal só acontece se a peça nunca cruzou o divisor (solta ainda na
-   * bandeja) — nesse caso só volta pra bandeja (nunca treme feio: errar não
-   * existe mais nesta etapa, só ao confirmar).
-   */
   _soltarArrasto() {
     const peca = this._arrastando;
     if (!peca) return;
     this._arrastando = null;
     peca.arrastando = false;
-    for (const trilha of this._trilhas) trilha.destacada = false;
     Tween.removerDe(peca);
     Tween.para(peca, { scaleX: 1, scaleY: 1 }, 120, Easing.suaveSaida);
 
-    const alvo = this._canalPreso;
-    this._canalPreso = null;
-    if (alvo && !alvo.completa()) {
-      this._encaixarLivre(peca, alvo);
+    const resultado = this._calcularDeslize(peca, { x: peca.x, y: peca.y });
+    if (!resultado) {
+      const pos = this._posicaoCelula(this._origemArrasto.linha, this._origemArrasto.coluna);
+      Tween.para(peca, { x: pos.x, y: pos.y }, 160, Easing.suaveSaida);
       return;
     }
-    this._voltarPraBandeja(peca);
+
+    for (const outra of resultado.deslocados) {
+      const pos = this._posicaoCelula(outra.linha, outra.coluna);
+      Tween.para(outra, { x: pos.x, y: pos.y }, 180, Easing.suave);
+    }
+
+    if (resultado.saiuPeloEspaco) {
+      this._sairPelaEspaco(peca);
+    } else {
+      const pos = this._posicaoCelula(peca.linha, peca.coluna);
+      Tween.para(peca, { x: pos.x, y: pos.y }, 180, Easing.suave);
+    }
   }
 
+  /**
+   * A peça cruzou a casa do espaço — decisão DEFINITIVA de mandá-la pra uma
+   * trilha (ver doc da classe `GameScene`: "commit imediato, sem volta
+   * atrás"). Fica "em escolha" (some da grade, ainda não é de nenhuma
+   * trilha) enquanto uma seta nasce sobre cada coluna disponível.
+   */
+  _sairPelaEspaco(peca) {
+    peca.linha = -1; peca.coluna = -1;
+    this._pecaEmEscolha = peca;
+    this._escolhendoColuna = true;
+    peca.paraFrente();
+    const posEspaco = this._posicaoCelula(this._espacoLinha, this._espacoColuna);
+    Tween.removerDe(peca);
+    Tween.para(peca, {
+      x: posEspaco.x, y: posEspaco.y + this._layout.tam * 0.7, scaleX: 1.15, scaleY: 1.15,
+    }, 240, Easing.suaveSaida);
+    if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
+    this._mostrarSetas(true);
+  }
+
+  /** Mostra (ou esconde) a seta de "solte aqui" sobre cada trilha ainda não cheia. */
+  _mostrarSetas(mostrar) {
+    for (const seta of this._setas) { Tween.removerDe(seta); seta.removerDoPai(); }
+    this._setas = [];
+    if (!mostrar) return;
+    for (const trilha of this._trilhas) {
+      if (trilha.completa()) continue;
+      const seta = new SetaColuna({ x: trilha.x + trilha.largura / 2, y: trilha.y - 36 });
+      this.area.adicionar(seta);
+      seta.on('toque', () => this._escolherColuna(trilha));
+      const yBase = seta.y;
+      Tween.de(seta)
+        .entao({ y: yBase - 10 }, 420, Easing.suave)
+        .entao({ y: yBase }, 420, Easing.suave)
+        .emLaco(true);
+      this._setas.push(seta);
+    }
+  }
+
+  /** Toque numa seta (etapa 2) — 1 toque = 1 decisão, sem passo de confirmar à parte. */
+  _escolherColuna(trilha) {
+    if (!this._pecaEmEscolha || this.pausada || this._aguardandoAvanco) return;
+    if (trilha.completa()) return;
+    const peca = this._pecaEmEscolha;
+    this._pecaEmEscolha = null;
+    this._escolhendoColuna = false;
+    this._mostrarSetas(false);
+    this._encaixarLivre(peca, trilha);
+  }
+
+  /**
+   * Encaixe LIVRE: a peça entra na posição vazia mais baixa da trilha
+   * escolhida, CERTA OU ERRADA — nada é validado aqui, só quando a criança
+   * confirma (`_confirmar`).
+   */
   _encaixarLivre(peca, trilha) {
     const indice = trilha.indiceVazio();
     const pos = trilha._centroDoSlot(indice);
@@ -1093,32 +1279,48 @@ export class GameScene extends Scene {
     peca.trilha = trilha;
     peca.indiceTrilha = indice;
     peca.trancada = true;
-    // Ver `_ligarTogues`: o 'toque' que o Input dispara logo depois deste
-    // mesmo soltar (apertou e soltou na peça = mesmo nó) precisa ser
-    // ignorado, senão desfaz o encaixe que acabou de acontecer.
-    this._ultimaPecaEncaixada = peca;
-    this._pecas = this._pecas.filter((p) => p !== peca);
     Tween.removerDe(peca);
-    Tween.para(peca, { x: pos.x, y: pos.y }, 160, Easing.suaveSaida);
+    Tween.para(peca, {
+      x: pos.x, y: pos.y, scaleX: 1, scaleY: 1,
+    }, 220, Easing.suaveSaida);
     if (this.config.audio?.acerto) this.audio.efeito(this.config.audio.acerto);
   }
 
-  /** Tira a peça do topo da pilha e devolve pra bandeja (ver `_ligarTogues`). */
-  _removerDaTrilha(trilha, indice) {
+  /**
+   * Toque na peça do TOPO de uma trilha (ver `_ligarTogues`) — só sai de
+   * verdade se o ESPAÇO da grade estiver livre NESTE instante: é a mesma
+   * porta usada pros dois sentidos (ver doc da classe `GameScene`). Se
+   * alguma outra peça está ocupando o espaço agora, só um tremor avisa
+   * "ainda não dá" — nunca um erro de verdade.
+   */
+  _tentarRetirarDaTrilha(trilha, indice) {
+    const vazio = this._celulaVazia();
+    const espacoLivre = vazio && vazio.linha === this._espacoLinha && vazio.coluna === this._espacoColuna;
+    if (!espacoLivre) {
+      this._sacudirPeca(trilha.pecas[indice]);
+      return;
+    }
     const peca = trilha.pecas[indice];
     trilha.pecas[indice] = null;
     peca.trilha = null;
     peca.indiceTrilha = -1;
     peca.trancada = false;
-    this._pecas.push(peca);
+    this._grade[this._espacoLinha][this._espacoColuna] = peca;
+    peca.linha = this._espacoLinha;
+    peca.coluna = this._espacoColuna;
+    const pos = this._posicaoCelula(peca.linha, peca.coluna);
     Tween.removerDe(peca);
-    Tween.para(peca, { x: peca.trayX, y: peca.trayY }, 200, Easing.suaveSaida);
+    Tween.para(peca, { x: pos.x, y: pos.y }, 200, Easing.suaveSaida);
   }
 
-  /** Volta pra bandeja sem feedback de erro — soltar fora de alcance não é "errar", só não fez nada ainda. */
-  _voltarPraBandeja(peca) {
+  /** Tremor pequeno — feedback de "ainda não dá", nunca punitivo (ver `_sacudirErro`, o irmão deste pro botão Confirmar). */
+  _sacudirPeca(peca) {
+    const xBase = peca.x;
     Tween.removerDe(peca);
-    Tween.para(peca, { x: peca.trayX, y: peca.trayY }, 220, Easing.suaveSaida);
+    Tween.de(peca)
+      .entao({ x: xBase - 6 }, 50, Easing.suaveSaida)
+      .entao({ x: xBase + 6 }, 70, Easing.suave)
+      .entao({ x: xBase }, 50, Easing.suaveSaida);
   }
 
   // -------------------------------------------------------------- confirmar
@@ -1130,7 +1332,7 @@ export class GameScene extends Scene {
    * erro seguido NESTA cartela, mostra a dica (`_mostrarDicaTabuleiro`).
    */
   _confirmar() {
-    if (this.placar.encerrado || this.pausada || this._aguardandoAvanco) return;
+    if (this.placar.encerrado || this.pausada || this._aguardandoAvanco || this._escolhendoColuna) return;
 
     const correto = this._trilhas.every((trilha) => trilha.pecas.every((peca, i) => (
       peca && peca.forma === trilha.sequencia[i].forma && peca.cor === trilha.sequencia[i].cor
@@ -1296,13 +1498,12 @@ export class GameScene extends Scene {
     if (!this._arrastando) return;
     const peca = this._arrastando;
     this._arrastando = null;
-    this._canalPreso = null;
-    this._passouBuraco = false;
     peca.arrastando = false;
     peca.scaleX = 1; peca.scaleY = 1;
-    for (const trilha of this._trilhas ?? []) trilha.destacada = false;
-    peca.x = peca.trayX;
-    peca.y = peca.trayY;
+    Tween.removerDe(peca);
+    const pos = this._posicaoCelula(this._origemArrasto.linha, this._origemArrasto.coluna);
+    peca.x = pos.x;
+    peca.y = pos.y;
   }
 
   _terminar(venceu) {
