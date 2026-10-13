@@ -58,7 +58,8 @@
 - [x] **Tema visual próprio** ('trilhas') nas telas de vitrine — peças subindo pelas margens
       e beirada da prancha no rodapé; desligado na partida (ver README, "Tema das telas
       de vitrine"). Conferido em captura nos formatos computador e celular
-- [x] **Tutorial** com 3 passos ilustrados e puláveis — narração ainda pendente (ver seção 2)
+- [x] **Tutorial** com 4 passos ilustrados e puláveis (incluindo "toque na peça posta pra
+      removê-la"), desenhados no visual atual da partida — narração ainda pendente (ver seção 2)
 - [x] **Seleção de nível** (3 níveis)
 - [x] **Partida** com HUD legível (pausa, ajuda, som, CONFIRMAR, estrelas de progresso por
       cartão, cronômetro CRESCENTE só informativo)

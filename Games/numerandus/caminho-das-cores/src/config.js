@@ -82,7 +82,7 @@ export default {
 
   // --------------------------------------------------------------- tutorial
   /**
-   * 3 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida
+   * 4 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida
    * (regra RE-05). Narração pendente: quando os áudios existirem, cada passo
    * ganha `fala: '<id do asset>'`.
    */
@@ -98,9 +98,14 @@ export default {
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 2, t }),
     },
     {
+      titulo: 'Quer trocar? Toque na peça',
+      texto: 'Escolheu a peça errada? Toque nela, na trilha, e ela volta para o monte. Só a peça de cima pode sair.',
+      desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 3, t }),
+    },
+    {
       titulo: 'Toque em CONFIRMAR',
       texto: 'Com as trilhas cheias, toque em CONFIRMAR. Se uma peça estiver fora do lugar, ela pisca para você trocar.',
-      desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 3, t }),
+      desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 4, t }),
     },
   ],
 
@@ -145,10 +150,26 @@ export default {
 };
 
 // ---------------------------------------------------------------------------
-// Desenho do tutorial — cópia pequena e independente das formas da cena.
+// Desenho do tutorial — cópia pequena e independente do visual da partida
+// (prancha de MDF com moldura e ripas brancas, abertura dourada, cartão com
+// colunas numeradas, dedinho branco). Não importa a cena: o tutorial também
+// é a AJUDA durante a partida e precisa funcionar sozinho.
 // ---------------------------------------------------------------------------
 
-function tracarFormaTutorial(ctx, forma, tam) {
+const VERM = '#EF4444';
+const LARA = '#F97316';
+const VERD = '#22C55E';
+const AMAR = '#FACC15';
+const AZUL = '#3B82F6';
+const DOURADO = '#E0AB1B';
+const RIPA = '#F4EFE6';
+
+const suave = (x) => x * x * (3 - 2 * x);
+const limitar = (x) => Math.max(0, Math.min(1, x));
+/** Progresso de 0 a 1 do tempo t dentro do intervalo [ini, fim]. */
+const trecho = (t, ini, fim) => limitar((t - ini) / (fim - ini));
+
+function tracarForma(ctx, forma, tam) {
   const m = tam / 2;
   ctx.beginPath();
   switch (forma) {
@@ -177,201 +198,401 @@ function tracarFormaTutorial(ctx, forma, tam) {
   }
 }
 
-function peca(ctx, forma, cor, tam, x, y) {
+/** Peça centrada em (x, y). op: rotacao (graus), escala, alfa, elevada (sombra maior), brilho (halo amarelo). */
+function peca(ctx, forma, cor, tam, x, y, op = {}) {
+  const { rotacao = 0, escala = 1, alfa = 1, elevada = false, brilho = 0 } = op;
   ctx.save();
+  ctx.globalAlpha = alfa;
   ctx.translate(x, y);
-  tracarFormaTutorial(ctx, forma, tam);
+  ctx.rotate((rotacao * Math.PI) / 180);
+  ctx.scale(escala, escala);
+  if (brilho > 0) {
+    ctx.beginPath();
+    ctx.arc(0, 0, tam * 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(253, 224, 71, ' + (0.3 + brilho * 0.3) + ')';
+    ctx.fill();
+  }
+  ctx.shadowColor = 'rgba(0,0,0,' + (elevada ? 0.45 : 0.3) + ')';
+  ctx.shadowBlur = elevada ? tam * 0.25 : tam * 0.1;
+  ctx.shadowOffsetY = elevada ? tam * 0.12 : tam * 0.05;
+  tracarForma(ctx, forma, tam);
   ctx.fillStyle = cor;
   ctx.fill();
-  ctx.lineWidth = 1.5;
-  ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = Math.max(1.2, tam * 0.025);
+  ctx.strokeStyle = 'rgba(0,0,0,0.18)';
   ctx.stroke();
   ctx.restore();
 }
 
-const VERMELHO = '#EF4444';
-const AZUL = '#3B82F6';
-const AMARELO = '#FACC15';
-const COLUNA_A = [{ forma: 'quadrado', cor: VERMELHO }, { forma: 'circulo', cor: VERMELHO }, { forma: 'triangulo', cor: VERMELHO }];
-const COLUNA_B = [{ forma: 'triangulo', cor: AZUL }, { forma: 'pentagono', cor: AZUL }, { forma: 'quadrado', cor: AZUL }];
-
-/** Mini prancha: monte em cima, ripa com abertura à esquerda, 2 trilhas. */
-function miniPrancha(ctx, x, y, l, a) {
-  ctx.fillStyle = '#F4EFE6';
-  ctx.beginPath();
-  ctx.roundRect(x, y, l, a, 8);
-  ctx.fill();
-  ctx.fillStyle = '#C8A27A';
-  ctx.fillRect(x + 8, y + 8, l - 16, a - 16);
-  const ripaY = y + a * 0.34;
-  const colL = (l - 16 - 8) / 2;
-  ctx.fillStyle = '#F4EFE6';
-  ctx.fillRect(x + 8 + colL, ripaY, l - 16 - colL, 8);
-  ctx.fillRect(x + 8 + colL, y + a * 0.5, 8, a * 0.5 - 8);
+/** Anel de retorno em volta de uma peça: verde (acerto) ou tracejado branco (fora do lugar). */
+function anel(ctx, x, y, raio, tipo, t) {
   ctx.save();
-  ctx.setLineDash([5, 4]);
-  ctx.strokeStyle = '#E0AB1B';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = Math.max(2.5, raio * 0.12);
   ctx.beginPath();
-  ctx.moveTo(x + 10, ripaY + 4);
-  ctx.lineTo(x + 6 + colL, ripaY + 4);
+  ctx.arc(x, y, raio, 0, Math.PI * 2);
+  if (tipo === 'ok') {
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.95)';
+  } else {
+    ctx.setLineDash([raio * 0.35, raio * 0.25]);
+    ctx.lineDashOffset = -t * 20;
+    ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.7 + 0.3 * Math.sin(t * 4)) + ')';
+  }
   ctx.stroke();
   ctx.restore();
-  return {
-    ripaY, colL, trilha0Cx: x + 8 + colL / 2, trilha1Cx: x + 16 + colL * 1.5, corredorCy: y + a * 0.42, trilhasTopo: y + a * 0.5, fundo: y + a - 8,
+}
+
+/** O dedinho branco da partida: indicador apontando pra BAIXO, ponta em (cx, yPonta), mão de altura h. */
+function dedo(ctx, cx, yPonta, h, alfa = 1) {
+  const partes = [
+    [-0.12, -0.6, 0.24, 0.6, 0.12],
+    [-0.16, -0.94, 0.62, 0.42, 0.13],
+    [-0.3, -0.86, 0.22, 0.3, 0.1],
+    [-0.06, -1.12, 0.46, 0.2, 0.05],
+  ];
+  const tracar = () => {
+    ctx.beginPath();
+    for (const [x, y, l, a, r] of partes) ctx.roundRect(cx + x * h, yPonta + y * h, l * h, a * h, r * h);
   };
+  ctx.save();
+  ctx.globalAlpha = alfa;
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 3;
+  tracar();
+  ctx.lineWidth = Math.max(3, h * 0.1);
+  ctx.strokeStyle = 'rgba(31, 41, 55, 0.9)';
+  ctx.stroke();
+  ctx.shadowColor = 'transparent';
+  tracar();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  ctx.restore();
+}
+
+/** Onda de toque saindo de (x, y); d vai de 0 a 1. */
+function ondaToque(ctx, x, y, raio, d) {
+  if (d <= 0 || d >= 1) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, ' + (1 - d) + ')';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, y, raio * (0.4 + d * 0.9), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * A prancha: moldura branca, MDF, ripa horizontal com a abertura dourada à
+ * esquerda, corredor e 3 trilhas numeradas. Devolve as medidas pra cena
+ * posicionar as peças (tudo em coordenadas do canvas).
+ */
+function prancha(ctx, bx, by, bw, bh, destaqueTrilha = -1) {
+  const mold = bh * 0.035;
+  const x0 = bx + mold;
+  const w0 = bw - mold * 2;
+  const y0 = by + mold;
+  const gap = bw * 0.035;
+  const laneW = (w0 - gap * 2) / 3;
+  const ripaH = bh * 0.035;
+  const ripaY = by + bh * 0.4;
+  const corredorY = ripaY + ripaH;
+  const corredorH = bh * 0.12;
+  const lanesTop = corredorY + corredorH;
+  const numH = bh * 0.08;
+  const lanesBottom = by + bh - mold - numH;
+  const tam = Math.min(laneW * 0.78, (lanesBottom - lanesTop) / 2.4);
+  const g = {
+    bx, by, bw, bh, x0, w0, y0, laneW, gap, ripaY, ripaH, corredorY, corredorH, lanesTop, lanesBottom, numH, tam,
+    laneX: (i) => x0 + i * (laneW + gap),
+    laneCx: (i) => x0 + i * (laneW + gap) + laneW / 2,
+    slotCy: (i) => lanesBottom - tam * 0.12 - tam / 2 - i * (tam * 1.1),
+    corredorCy: corredorY + corredorH / 2,
+    aberturaCx: x0 + laneW / 2,
+  };
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = bh * 0.05;
+  ctx.shadowOffsetY = bh * 0.02;
+  ctx.fillStyle = RIPA;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 8);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+
+  const grad = ctx.createLinearGradient(0, y0, 0, by + bh - mold);
+  grad.addColorStop(0, '#C8A27A');
+  grad.addColorStop(1, '#B48C63');
+  ctx.fillStyle = grad;
+  ctx.fillRect(x0, y0, w0, bh - mold * 2);
+
+  // Ripa horizontal (da borda da abertura até a moldura direita).
+  ctx.fillStyle = RIPA;
+  ctx.fillRect(x0 + laneW, ripaY, w0 - laneW, ripaH);
+  // Abertura: borda dourada tracejada.
+  ctx.setLineDash([5, 4]);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = DOURADO;
+  ctx.beginPath();
+  ctx.moveTo(x0 + 2, ripaY + ripaH / 2);
+  ctx.lineTo(x0 + laneW - 2, ripaY + ripaH / 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (destaqueTrilha >= 0) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+    ctx.beginPath();
+    ctx.roundRect(g.laneX(destaqueTrilha), lanesTop, laneW, lanesBottom - lanesTop, 6);
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = DOURADO;
+    ctx.stroke();
+  }
+  // Ripas verticais entre as trilhas.
+  ctx.fillStyle = RIPA;
+  for (let i = 1; i < 3; i++) ctx.fillRect(g.laneX(i) - gap, lanesTop, gap, lanesBottom - lanesTop);
+
+  ctx.fillStyle = 'rgba(70, 45, 20, 0.75)';
+  ctx.font = '800 ' + Math.round(numH * 0.7) + 'px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 3; i++) ctx.fillText(String(i + 1), g.laneCx(i), lanesBottom + numH * 0.55);
+  ctx.restore();
+  return g;
+}
+
+/** Cartão de referência com 3 colunas, na mesma altura e com as mesmas medidas das trilhas de g. destaque: coluna acesa. */
+function cartao(ctx, cx0, cw, g, colunas, destaque = -1) {
+  const topo = g.lanesTop - g.tam * 0.12;
+  const base = g.lanesBottom + g.numH;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 4;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.roundRect(cx0, topo - g.numH * 0.4, cw, base - topo + g.numH * 0.4, 10);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  colunas.forEach((col, i) => {
+    const x = cx0 + (g.laneX(i) - g.x0) + (cw - g.w0) / 2;
+    ctx.beginPath();
+    ctx.roundRect(x, topo - g.numH * 0.2, g.laneW, g.lanesBottom - topo + g.numH * 0.2 + 2, 6);
+    if (destaque === i) { ctx.fillStyle = 'rgba(253, 224, 71, 0.5)'; ctx.fill(); }
+    ctx.lineWidth = destaque === i ? 3 : 1.8;
+    ctx.strokeStyle = destaque === i ? DOURADO : 'rgba(0,0,0,0.35)';
+    ctx.stroke();
+    col.forEach((cel, k) => peca(ctx, cel.forma, cel.cor, g.tam * 0.85, x + g.laneW / 2, g.slotCy(k)));
+    ctx.fillStyle = 'rgba(31, 41, 55, 0.7)';
+    ctx.font = '800 ' + Math.round(g.numH * 0.7) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(i + 1), x + g.laneW / 2, g.lanesBottom + g.numH * 0.55);
+  });
+  ctx.restore();
+}
+
+// O cartão do exemplo: 3 colunas, 2 peças cada (de baixo pra cima).
+const CARTAO = [
+  [{ forma: 'quadrado', cor: VERM }, { forma: 'circulo', cor: VERM }],
+  [{ forma: 'triangulo', cor: AZUL }, { forma: 'pentagono', cor: AZUL }],
+  [{ forma: 'circulo', cor: VERD }, { forma: 'quadrado', cor: VERD }],
+];
+
+/** Peças soltas do monte (posições relativas à área do monte). */
+const MONTE = [
+  { forma: 'circulo', cor: AZUL, fx: 0.46, fy: 0.5, giro: -8 },
+  { forma: 'triangulo', cor: AMAR, fx: 0.62, fy: 0.42, giro: 10 },
+  { forma: 'quadrado', cor: LARA, fx: 0.78, fy: 0.55, giro: -5 },
+  { forma: 'pentagono', cor: VERD, fx: 0.9, fy: 0.45, giro: 12 },
+  { forma: 'triangulo', cor: VERM, fx: 0.55, fy: 0.72, giro: -12 },
+];
+
+function desenharMonte(ctx, g, ignorar = -1) {
+  MONTE.forEach((m, i) => {
+    if (i === ignorar) return;
+    peca(ctx, m.forma, m.cor, g.tam * 0.8, g.x0 + g.w0 * m.fx, g.y0 + (g.ripaY - g.y0) * m.fy, { rotacao: m.giro });
+  });
+}
+
+/** Posição ao longo de uma lista de pontos, k de 0 a 1, com velocidade uniforme. */
+function percurso(pontos, k) {
+  let total = 0;
+  const seg = [];
+  for (let i = 1; i < pontos.length; i++) {
+    const d = Math.hypot(pontos[i].x - pontos[i - 1].x, pontos[i].y - pontos[i - 1].y);
+    seg.push(d);
+    total += d;
+  }
+  let alvo = k * total;
+  for (let i = 0; i < seg.length; i++) {
+    if (alvo <= seg[i] || i === seg.length - 1) {
+      const f = seg[i] === 0 ? 1 : limitar(alvo / seg[i]);
+      return { x: pontos[i].x + (pontos[i + 1].x - pontos[i].x) * f, y: pontos[i].y + (pontos[i + 1].y - pontos[i].y) * f };
+    }
+    alvo -= seg[i];
+  }
+  return pontos[pontos.length - 1];
+}
+
+function tracejado(ctx, pontos) {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(224, 171, 27, 0.7)';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  pontos.forEach((pt, j) => (j === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y)));
+  ctx.stroke();
+  ctx.restore();
 }
 
 function desenharCenaTutorial(ctx, l, a, opcoes = {}) {
   const { passo, t = 0 } = opcoes;
   ctx.save();
-  const tam = Math.min(46, a * 0.13);
+  const bh = a * 0.94;
+  const by = (a - bh) / 2;
 
   if (passo === 1) {
-    // Cartão à esquerda, trilha à direita; a coluna 1 do cartão "vira" a
-    // trilha 1 — as peças aparecem uma a uma, de baixo pra cima.
-    const cx = l * 0.3;
-    const altura = 3 * tam + 2 * 10 + 24;
-    const y0 = a / 2 - altura / 2;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(cx - tam / 2 - 12, y0, tam + 24, altura, 8);
-    ctx.fill();
-    ctx.stroke();
-    COLUNA_A.forEach((cel, i) => peca(ctx, cel.forma, cel.cor, tam, cx, y0 + altura - 12 - tam / 2 - i * (tam + 10)));
-
-    const tx = l * 0.68;
-    ctx.fillStyle = '#C8A27A';
-    ctx.beginPath();
-    ctx.roundRect(tx - tam / 2 - 12, y0, tam + 24, altura, 8);
-    ctx.fill();
-    const mostradas = Math.min(3, Math.floor((t % 3.2) / 0.8));
-    COLUNA_A.slice(0, mostradas).forEach((cel, i) => peca(ctx, cel.forma, cel.cor, tam, tx, y0 + altura - 12 - tam / 2 - i * (tam + 10)));
-
-    ctx.fillStyle = 'rgba(31,41,55,0.7)';
-    ctx.font = '800 22px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('1', cx, y0 + altura + 26);
-    ctx.fillText('1', tx, y0 + altura + 26);
-    ctx.strokeStyle = 'rgba(90, 90, 120, 0.6)';
-    ctx.setLineDash([6, 5]);
-    ctx.beginPath();
-    ctx.moveTo(cx + tam / 2 + 22, a / 2);
-    ctx.lineTo(tx - tam / 2 - 22, a / 2);
-    ctx.stroke();
+    // Cartão à esquerda, prancha à direita; uma coluna de cada vez acende no
+    // cartão e na trilha de mesmo número.
+    const gapTotal = l * 0.06;
+    const bw = Math.min(bh * 0.86, (l * 0.9 - gapTotal) / 2);
+    const x0 = (l - (bw * 2 + gapTotal)) / 2;
+    const col = Math.floor(t / 1.3) % 3;
+    const g = prancha(ctx, x0 + bw + gapTotal, by, bw, bh, col);
+    desenharMonte(ctx, g, -1);
+    cartao(ctx, x0, bw, g, CARTAO, col);
   } else if (passo === 2) {
-    // Dois toques: na peça (ela brilha), depois na trilha 2 (ela acende) — e
-    // a peça faz o caminho sozinha: abertura, corredor, fundo da trilha.
-    const pl = Math.min(l * 0.6, 300);
-    const pa = a * 0.86;
-    const px = (l - pl) / 2;
-    const py = (a - pa) / 2;
-    const p = miniPrancha(ctx, px, py, pl, pa);
-    peca(ctx, 'circulo', AMARELO, tam * 0.9, px + pl * 0.62, py + pa * 0.17);
-    peca(ctx, 'quadrado', VERMELHO, tam * 0.9, px + pl * 0.82, py + pa * 0.2);
-
-    const pontos = [
-      { x: px + pl * 0.42, y: py + pa * 0.18 },
-      { x: p.trilha0Cx, y: p.ripaY - 4 },
-      { x: p.trilha0Cx, y: p.corredorCy + 8 },
-      { x: p.trilha1Cx, y: p.corredorCy + 8 },
-      { x: p.trilha1Cx, y: p.fundo - tam * 0.6 },
-    ];
-    const ciclo = 4.4;
+    // Toque na peça (ela brilha e pula), toque na trilha 2, e a peça faz o caminho.
+    const bw = Math.min(bh * 0.86, l * 0.5);
+    const g = prancha(ctx, (l - bw) / 2, by, bw, bh, -1);
+    const ciclo = 5.4;
     const tc = ((t % ciclo) + ciclo) % ciclo;
-    const alvoTrilha = { x: p.trilha1Cx, y: p.trilhasTopo + (p.fundo - p.trilhasTopo) * 0.35 };
+    const idx = 0;
+    const trilha = 1;
+    const m = MONTE[idx];
+    const p0 = { x: g.x0 + g.w0 * m.fx, y: g.y0 + (g.ripaY - g.y0) * m.fy };
+    const sel = tc >= 0.7 && tc < 2.6;
+    const tamPeca = g.tam * 0.8;
 
-    // Fases: 0-1s toque na peça; 1-2s toque na trilha; 2-3.8s caminho; resto parada.
-    const escolhida = tc >= 0.45 && tc < 2;
-    const fCaminho = Math.max(0, Math.min(1, (tc - 2) / 1.8));
-    const seg = fCaminho * (pontos.length - 1);
-    const i = Math.min(pontos.length - 2, Math.floor(seg));
-    const k = seg - i;
-    const x = pontos[i].x + (pontos[i + 1].x - pontos[i].x) * k;
-    const y = pontos[i].y + (pontos[i + 1].y - pontos[i].y) * k;
+    const caminho = [
+      p0,
+      { x: g.aberturaCx, y: g.ripaY - g.tam * 0.3 },
+      { x: g.aberturaCx, y: g.corredorCy },
+      { x: g.laneCx(trilha), y: g.corredorCy },
+      { x: g.laneCx(trilha), y: g.slotCy(0) },
+    ];
+    const k = suave(trecho(tc, 2.6, 4.2));
+    const pos = percurso(caminho, k);
 
-    if (tc >= 1 && tc < 2.2) {
-      ctx.fillStyle = 'rgba(253, 224, 71, 0.35)';
-      ctx.fillRect(p.trilha1Cx - p.colL / 2, p.trilhasTopo, p.colL, p.fundo - p.trilhasTopo);
-    }
-    if (fCaminho > 0) {
-      ctx.strokeStyle = 'rgba(224, 171, 27, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([6, 6]);
+    // A trilha escolhida acende entre o 2º toque e a chegada.
+    if (tc >= 2.0 && tc < 4.3) {
+      ctx.fillStyle = 'rgba(253, 224, 71, 0.3)';
       ctx.beginPath();
-      pontos.forEach((pt, j) => (j === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y)));
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    if (escolhida) {
-      ctx.fillStyle = 'rgba(253, 224, 71, 0.55)';
-      ctx.beginPath();
-      ctx.arc(x, y, tam * 0.68, 0, Math.PI * 2);
+      ctx.roundRect(g.laneX(trilha), g.lanesTop, g.laneW, g.lanesBottom - g.lanesTop, 6);
       ctx.fill();
-    }
-    peca(ctx, 'triangulo', AZUL, tam, x, y - (escolhida ? Math.abs(Math.sin(t * 5)) * tam * 0.1 : 0));
-
-    // O "dedo": um círculo que encolhe no ponto tocado, com uma onda saindo.
-    const toque = (cx, cy, inicio) => {
-      const d = tc - inicio;
-      if (d < 0 || d > 0.8) return;
-      ctx.save();
-      ctx.strokeStyle = `rgba(255, 255, 255, ${1 - d / 0.8})`;
       ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(cx, cy, tam * (0.3 + d * 0.6), 0, Math.PI * 2);
+      ctx.strokeStyle = DOURADO;
       ctx.stroke();
-      ctx.fillStyle = 'rgba(31, 41, 55, 0.55)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, tam * (d < 0.3 ? 0.32 - d * 0.2 : 0.26), 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    };
-    toque(pontos[0].x, pontos[0].y, 0.2);
-    toque(alvoTrilha.x, alvoTrilha.y, 1.1);
-  } else {
-    // Duas trilhas cheias, uma peça fora do lugar piscando, e o CONFIRMAR.
-    const pl = Math.min(l * 0.5, 240);
-    const pa = a * 0.62;
-    const px = (l - pl) / 2;
-    const py = a * 0.04;
-    const p = miniPrancha(ctx, px, py, pl, pa);
-    // As 3 peças precisam caber entre o topo e o fundo da trilha.
-    const passoY = (p.fundo - p.trilhasTopo) / 3;
-    const tamPeca = Math.min(tam * 0.85, passoY * 0.88);
-    COLUNA_A.forEach((cel, i) => peca(ctx, cel.forma, cel.cor, tamPeca, p.trilha0Cx, p.fundo - passoY / 2 - i * passoY));
-    const colB = [COLUNA_B[0], COLUNA_B[2], COLUNA_B[1]];
-    colB.forEach((cel, i) => {
-      const y = p.fundo - passoY / 2 - i * passoY;
-      peca(ctx, cel.forma, cel.cor, tamPeca, p.trilha1Cx, y);
-      if (i > 0) {
-        const pulso = 0.5 + 0.5 * Math.sin(t * 4);
-        ctx.save();
-        ctx.setLineDash([6, 4]);
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = `rgba(245, 158, 11, ${0.5 + pulso * 0.5})`;
-        ctx.beginPath();
-        ctx.arc(p.trilha1Cx, y, tamPeca * 0.62, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
+      ctx.fillStyle = RIPA;
+      for (let i = 1; i < 3; i++) ctx.fillRect(g.laneX(i) - g.gap, g.lanesTop, g.gap, g.lanesBottom - g.lanesTop);
+    }
+    desenharMonte(ctx, g, idx);
+    if (k > 0) tracejado(ctx, caminho);
+    peca(ctx, m.forma, m.cor, tamPeca * (k > 0 ? 1.05 : 1), pos.x, pos.y - (sel && k === 0 ? Math.abs(Math.sin(t * 5)) * tamPeca * 0.1 : 0), {
+      rotacao: m.giro * (1 - k), elevada: k > 0 && k < 1, brilho: sel && k === 0 ? 1 : 0, alfa: trecho(tc, 0, 0.25),
     });
 
-    const lb = 190;
-    const ab = 52;
-    const xb = l / 2 - lb / 2;
-    const yb = py + pa + 18;
-    ctx.fillStyle = '#16A34A';
+    // O dedo: 1º toque na peça, depois vai até a trilha 2 e toca nela.
+    const alvoDedo = { x: g.laneCx(trilha), y: g.lanesTop + g.tam * 0.6 };
+    const mover = suave(trecho(tc, 1.3, 2.0));
+    const dx = p0.x + (alvoDedo.x - p0.x) * mover;
+    const dy = p0.y + (alvoDedo.y - p0.y) * mover;
+    const alfaDedo = Math.min(trecho(tc, 0.2, 0.5), 1 - trecho(tc, 2.3, 2.7));
+    const bate = (tc > 0.5 && tc < 0.9) || (tc > 2.0 && tc < 2.3) ? 5 : 0;
+    if (alfaDedo > 0) dedo(ctx, dx, dy - tamPeca * 0.15 + bate, g.tam * 1.1, alfaDedo);
+    ondaToque(ctx, p0.x, p0.y, g.tam * 0.5, trecho(tc, 0.5, 1.2));
+    ondaToque(ctx, alvoDedo.x, alvoDedo.y, g.tam * 0.5, trecho(tc, 2.0, 2.7));
+  } else if (passo === 3) {
+    // Trilha 2 com duas peças; tocar na de cima faz ela voltar pro monte.
+    const bw = Math.min(bh * 0.86, l * 0.5);
+    const g = prancha(ctx, (l - bw) / 2, by, bw, bh, -1);
+    const ciclo = 5.4;
+    const tc = ((t % ciclo) + ciclo) % ciclo;
+    const lane = 1;
+    const tamPeca = g.tam * 0.8;
+    const base = { forma: 'pentagono', cor: AZUL };
+    const topo = { forma: 'circulo', cor: AMAR };
+    const destino = { x: g.x0 + g.w0 * 0.62, y: g.y0 + (g.ripaY - g.y0) * 0.5 };
+
+    const caminho = [
+      { x: g.laneCx(lane), y: g.slotCy(1) },
+      { x: g.laneCx(lane), y: g.corredorCy },
+      { x: g.aberturaCx, y: g.corredorCy },
+      { x: g.aberturaCx, y: g.ripaY - g.tam * 0.3 },
+      destino,
+    ];
+    const k = suave(trecho(tc, 1.3, 3.1));
+    const pos = percurso(caminho, k);
+
+    desenharMonte(ctx, g, -1);
+    peca(ctx, base.forma, base.cor, tamPeca, g.laneCx(lane), g.slotCy(0));
+    if (k > 0) tracejado(ctx, caminho);
+    peca(ctx, topo.forma, topo.cor, tamPeca, pos.x, pos.y, {
+      rotacao: k * -10, elevada: k > 0 && k < 1, brilho: tc >= 0.9 && tc < 1.4 ? 1 : 0,
+    });
+    const alfaDedo = Math.min(trecho(tc, 0.2, 0.5), 1 - trecho(tc, 1.5, 1.9));
+    const bate = tc > 0.7 && tc < 1.1 ? 5 : 0;
+    if (alfaDedo > 0) dedo(ctx, g.laneCx(lane), g.slotCy(1) - tamPeca * 0.15 + bate, g.tam * 1.1, alfaDedo);
+    ondaToque(ctx, g.laneCx(lane), g.slotCy(1), g.tam * 0.5, trecho(tc, 0.9, 1.6));
+  } else {
+    // Cartão à esquerda, prancha cheia no meio (a trilha 2 com as peças
+    // trocadas) e o botão CONFIRMAR à direita; o dedo toca nele e as peças
+    // ganham o retorno: anel verde nas certas, tracejado na errada.
+    const gapTotal = l * 0.04;
+    const botaoL = Math.min(l * 0.24, 200);
+    const bw = Math.min(bh * 0.78, (l * 0.92 - botaoL - gapTotal * 2) / 2);
+    const x0 = (l - (bw * 2 + botaoL + gapTotal * 2)) / 2;
+    const g = prancha(ctx, x0 + bw + gapTotal, by, bw, bh, -1);
+    cartao(ctx, x0, bw, g, CARTAO, -1);
+
+    const cheio = [CARTAO[0], [CARTAO[1][1], CARTAO[1][0]], CARTAO[2]]; // a do meio está trocada
+    const ciclo = 5;
+    const tc = ((t % ciclo) + ciclo) % ciclo;
+    const revelar = tc >= 1.3;
+    cheio.forEach((col, i) => col.forEach((cel, k) => {
+      const x = g.laneCx(i);
+      const y = g.slotCy(k);
+      peca(ctx, cel.forma, cel.cor, g.tam * 0.8, x, y);
+      if (revelar) anel(ctx, x, y, g.tam * 0.52, i === 1 ? 'revisar' : 'ok', t);
+    }));
+
+    const bx = x0 + bw * 2 + gapTotal * 2;
+    const bhBotao = Math.min(a * 0.2, 56);
+    const byBotao = a / 2 - bhBotao / 2;
+    const apertado = tc > 0.6 && tc < 1.3;
+    ctx.save();
+    ctx.translate(0, apertado ? 3 : 0);
+    ctx.fillStyle = '#15803D';
     ctx.beginPath();
-    ctx.roundRect(xb, yb, lb, ab, ab / 2);
+    ctx.roundRect(bx, byBotao + 4, botaoL, bhBotao, bhBotao / 2);
+    ctx.fill();
+    ctx.fillStyle = '#22C55E';
+    ctx.beginPath();
+    ctx.roundRect(bx, byBotao, botaoL, bhBotao, bhBotao / 2);
     ctx.fill();
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '800 20px system-ui, sans-serif';
+    ctx.font = '800 ' + Math.round(bhBotao * 0.38) + 'px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('CONFIRMAR', l / 2, yb + ab / 2 + 1);
+    ctx.fillText('CONFIRMAR', bx + botaoL / 2, byBotao + bhBotao / 2 + 1);
+    ctx.restore();
+
+    const alfaDedo = Math.min(trecho(tc, 0.1, 0.4), 1 - trecho(tc, 1.4, 1.8));
+    if (alfaDedo > 0) dedo(ctx, bx + botaoL * 0.82, byBotao + bhBotao * 0.7 + (apertado ? 5 : 0), bhBotao * 1.15, alfaDedo);
+    ondaToque(ctx, bx + botaoL * 0.82, byBotao + bhBotao * 0.7, bhBotao * 0.8, trecho(tc, 0.6, 1.3));
   }
 
   ctx.restore();

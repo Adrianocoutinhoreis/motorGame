@@ -31,7 +31,7 @@ posição (cor **e** forma, de baixo pra cima). A criança leva as peças do
   arrastar e soltar em qualquer ponto da trilha. No Médio e no Difícil um
   arrasto não move a peça — só a escolhe, como um toque, pra quem tenta
   arrastar por instinto nunca ficar sem resposta.
-- **Tirar uma peça:** tocar na peça do TOPO da trilha. Ela volta ao monte
+- **Tirar uma peça** (explicado no passo 3 do tutorial): tocar na peça do TOPO da trilha. Ela volta ao monte
   pelo mesmo caminho. Uma peça de baixo só balança.
 - **CONFIRMAR** só acende com as 5 trilhas cheias (um toque acidental antes
   disso não conta como erro).
@@ -67,6 +67,17 @@ posição (cor **e** forma, de baixo pra cima). A criança leva as peças do
   escritos à mão na prancha física). Enquanto uma peça é arrastada sobre uma
   trilha, a coluna do cartão correspondente acende.
 - A prancha imita o brinquedo: MDF claro, moldura e ripas brancas.
+
+### Tutorial
+
+4 passos, com as figuras desenhadas no mesmo visual da partida (prancha de MDF
+com moldura e ripas brancas, abertura dourada, cartão com colunas numeradas,
+dedinho branco, números 1-3): **1** olhe o cartão (uma coluna de cada vez acende
+no cartão e na trilha de mesmo número); **2** toque na peça e na trilha (a peça
+faz o caminho); **3** quer trocar? toque na peça já posta e ela volta ao monte
+(só a de cima sai); **4** toque em CONFIRMAR (anel verde nas peças certas,
+tracejado na fora do lugar). O mesmo tutorial serve de AJUDA na partida (RE-05).
+O arrasto do Fácil não é ensinado — só o toque.
 
 ### Tema das telas de vitrine
 
