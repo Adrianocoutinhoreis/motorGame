@@ -143,6 +143,11 @@ export class Background extends Node {
     const sx = Math.max(0, -area.x);
     const sy = Math.max(0, -area.y);
     this._ceu(ctx, sx, sy);
+    // Tema 'trilhas': o halo e as peças continuam pelas barras (mesma conta do
+    // desenho normal, definida sobre a caixa LÓGICA, então não há costura).
+    if (this.mostrarDecoracoes && this.tema === 'trilhas') {
+      this._desenharDecoracoesTrilhas(ctx, this.largura, this.altura);
+    }
     if (this.mostrarChao) this._chao(ctx, sx, sy);
   }
 
@@ -305,7 +310,10 @@ export class Background extends Node {
       ctx.fillStyle = '#C8A27A';
       ctx.fillRect(-sx, topo, l + sx * 2, 8);
       ctx.fillStyle = 'rgba(244, 239, 230, 0.85)';
-      for (let i = 1; i < 5; i++) ctx.fillRect(l * (i / 5) - 4, topo + 8, 8, a + sy - topo);
+      const passo = l / 5;
+      for (let i = Math.floor(-sx / passo); i <= Math.ceil((l + sx) / passo); i++) {
+        ctx.fillRect(passo * i - 4, topo + 8, 8, a + sy - topo);
+      }
       return;
     }
 
@@ -494,7 +502,9 @@ export class Background extends Node {
     halo.addColorStop(0, 'rgba(167, 139, 250, 0.22)');
     halo.addColorStop(1, 'rgba(167, 139, 250, 0)');
     ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, l, a);
+    // Maior que a caixa lógica de propósito: na passada da sangria o halo
+    // continua pelas barras do letterbox em vez de terminar na borda do jogo.
+    ctx.fillRect(-l, -a, l * 3, a * 3);
 
     const pecas = [
       { x: 0.07, forma: 'quadrado', cor: '#EF4444', tam: 54, alfa: 0.22, velocidade: 13, fase: 700, giro: 14 },
@@ -505,6 +515,15 @@ export class Background extends Node {
       { x: 0.81, forma: 'pentagono', cor: '#EF4444', tam: 38, alfa: 0.16, velocidade: 9, fase: 240, giro: 10 },
       { x: 0.71, forma: 'quadrado', cor: '#22C55E', tam: 32, alfa: 0.15, velocidade: 11, fase: 460, giro: -6 },
       { x: 0.91, forma: 'circulo', cor: '#FACC15', tam: 44, alfa: 0.18, velocidade: 8, fase: 90, giro: 0 },
+      // Fora da caixa lógica: só aparecem sobre as barras do letterbox.
+      { x: -0.10, forma: 'triangulo', cor: '#3B82F6', tam: 50, alfa: 0.20, velocidade: 10, fase: 410, giro: 9 },
+      { x: -0.22, forma: 'quadrado', cor: '#FACC15', tam: 42, alfa: 0.16, velocidade: 12, fase: 130, giro: -8 },
+      { x: -0.36, forma: 'circulo', cor: '#EF4444', tam: 48, alfa: 0.18, velocidade: 9, fase: 580, giro: 0 },
+      { x: -0.50, forma: 'pentagono', cor: '#F97316', tam: 40, alfa: 0.15, velocidade: 11, fase: 290, giro: 12 },
+      { x: 1.10, forma: 'quadrado', cor: '#3B82F6', tam: 46, alfa: 0.20, velocidade: 11, fase: 370, giro: -10 },
+      { x: 1.22, forma: 'pentagono', cor: '#FACC15', tam: 52, alfa: 0.17, velocidade: 9, fase: 60, giro: 7 },
+      { x: 1.36, forma: 'triangulo', cor: '#22C55E', tam: 44, alfa: 0.18, velocidade: 12, fase: 520, giro: -12 },
+      { x: 1.50, forma: 'circulo', cor: '#F97316', tam: 40, alfa: 0.15, velocidade: 10, fase: 200, giro: 0 },
     ];
     const altura = a + 140;
     for (const p of pecas) {
