@@ -44,7 +44,8 @@ posição (cor **e** forma, de baixo pra cima). A criança leva as peças do
   3. 3º erro em diante: o tabuleiro certo se monta sozinho (holofote +
      cascata) e volta pro que a criança tinha; depois, as marcas do 1º erro.
 - **Rodadas:** cada cartão certo acende uma estrela; o nível pede `meta`
-  cartões (3 nos três níveis).
+  cartões (3 nos três níveis). A tela final mostra só o tempo, o título e as
+  estrelas — sem a linha "3 CARTÕES" (`mostrarPlacarTexto: false`).
 
 ### Níveis — seguem os cartões do brinquedo
 

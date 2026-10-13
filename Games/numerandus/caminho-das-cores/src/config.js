@@ -131,6 +131,8 @@ export default {
 
   /** RE-03: o placar conta CARTÕES completos. */
   unidadePlacar: { singular: 'cartão', plural: 'cartões' },
+  /** Tela final só com as estrelas, sem a linha "3 CARTÕES" (pedido do humano). */
+  mostrarPlacarTexto: false,
 
   mostrarTempo: true,
   /** Cronômetro CRESCENTE no HUD, como o do celular no vídeo. Só informativo. */

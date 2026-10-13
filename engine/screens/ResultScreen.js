@@ -287,7 +287,12 @@ export class ResultScreen extends Scene {
     const PASSO_TITULO = tipografia.titulo * 1.5;
     const PASSO_ESTRELAS = Estrelas.ALTURA_PADRAO + espaco.md;
     const PASSO_TEMPO = mostrarTempo ? tipografia.apoio * 1.8 : 0;
-    const ALTURA_BLOCO = PASSO_TEMPO + PASSO_TITULO + PASSO_ESTRELAS + tipografia.subtitulo * 1.3;
+    // A linha do placar ("3 CARTÕES") é opcional: `config.mostrarPlacarTexto:
+    // false` a esconde (só as estrelas ficam) e o bloco continua centrado.
+    // Padrão `true` — nenhum jogo existente muda.
+    const mostrarPlacarTexto = config.mostrarPlacarTexto !== false;
+    const ALTURA_BLOCO = PASSO_TEMPO + PASSO_TITULO + PASSO_ESTRELAS
+      + (mostrarPlacarTexto ? tipografia.subtitulo * 1.3 : 0);
     const yTopoBloco = (alturaPainel - ALTURA_BLOCO) / 2;
     const yTitulo = yTopoBloco + PASSO_TEMPO;
 
@@ -382,17 +387,19 @@ export class ResultScreen extends Scene {
     // 8 eram. A REGRA (RE-03: a unidade, não uma fração) não muda — só a
     // palavra que nomeia essa unidade.
     const unidade = config.unidadePlacar ?? { singular: 'ponto', plural: 'pontos' };
-    painel.adicionar(new TextNode(
-      `${pontos} ${pontos === 1 ? unidade.singular : unidade.plural}`,
-      {
-        x: larguraPainel / 2,
-        y: yTitulo + PASSO_TITULO + PASSO_ESTRELAS,
-        tamanho: tipografia.subtitulo,
-        peso: tipografia.pesoForte,
-        cor: cores.tinta,
-        alinhamento: 'center',
-      },
-    ));
+    if (mostrarPlacarTexto) {
+      painel.adicionar(new TextNode(
+        `${pontos} ${pontos === 1 ? unidade.singular : unidade.plural}`,
+        {
+          x: larguraPainel / 2,
+          y: yTitulo + PASSO_TITULO + PASSO_ESTRELAS,
+          tamanho: tipografia.subtitulo,
+          peso: tipografia.pesoForte,
+          cor: cores.tinta,
+          alinhamento: 'center',
+        },
+      ));
+    }
 
     /**
      * Tempo da partida — LINHA OPCIONAL, `config.mostrarTempo` (padrão
