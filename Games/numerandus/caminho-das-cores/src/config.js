@@ -83,27 +83,30 @@ export default {
   // --------------------------------------------------------------- tutorial
   /**
    * 4 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida
-   * (regra RE-05). Narração pendente: quando os áudios existirem, cada passo
-   * ganha `fala: '<id do asset>'`.
+   * (regra RE-05). Cada passo tem a própria narração (`fala` aponta pro `id` do asset).
    */
   tutorial: [
     {
       titulo: 'Olhe o cartão',
+      fala: 'tutorialTela1',
       texto: 'Cada coluna do cartão é uma trilha. Ela mostra a cor e a forma de cada peça, de baixo para cima.',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 1, t }),
     },
     {
       titulo: 'Toque na peça e na trilha',
+      fala: 'tutorialTela2',
       texto: 'Toque na peça que você quer e depois na trilha. A peça passa pela abertura e desce sozinha.',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 2, t }),
     },
     {
       titulo: 'Quer trocar? Toque na peça',
+      fala: 'tutorialTela3',
       texto: 'Escolheu a peça errada? Toque nela, na trilha, e ela volta para o monte. Só a peça de cima pode sair.',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 3, t }),
     },
     {
       titulo: 'Toque em CONFIRMAR',
+      fala: 'tutorialTela4',
       texto: 'Com as trilhas cheias, toque em CONFIRMAR. Se uma peça estiver fora do lugar, ela pisca para você trocar.',
       desenho: (ctx, l, a, t) => desenharCenaTutorial(ctx, l, a, { passo: 4, t }),
     },
@@ -120,6 +123,11 @@ export default {
     { id: 'soltarPeca', src: './assets/audio/soltar_peca.mp3' },
     { id: 'somErro', src: './assets/audio/error.MP3' },
     { id: 'somProgresso', src: './assets/audio/progresso.mp3' },
+    // Narração do tutorial: o id bate com o `fala` de cada passo.
+    { id: 'tutorialTela1', src: './assets/audio/tutorial/Tela001.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial/tela02.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial/tela03.wav' },
+    { id: 'tutorialTela4', src: './assets/audio/tutorial/tela04.wav' },
   ],
 
   mascote: { telas: [] },

@@ -1,0 +1,31 @@
+# tela04 (tela04.wav)
+
+**Status:** 🔴 NÃO VERIFICADA — não foi ouvido
+
+| | |
+|---|---|
+| Arquivo | `assets/audio/tutorial/tela04.wav` |
+| `id` no motor | `tutorialTela4` |
+| Tipo | Narração do tutorial — Passo 4 — "Toque em CONFIRMAR" |
+| Formato | WAV PCM 16 bits, 24 000 Hz, mono |
+| Duração | **8,48 s** |
+| SHA-256 (12 primeiros) | `dd866caef66a` |
+| Origem | Gravado pelo humano para este jogo (2026-10-13). |
+
+## Transcrição
+
+> _**A PREENCHER.** Ouça o arquivo e escreva aqui exatamente o que é dito._
+
+## Como este status foi definido
+
+Quem montou esta ficha não consegue ouvir áudio, e não há ferramenta de transcrição
+instalada neste ambiente. O que existe é só o texto que aparece NA TELA deste passo,
+abaixo — **não é a transcrição**, e a fala gravada pode ser diferente dele. Falta ouvir
+e conferir se os dois dizem a mesma coisa (a criança lê pouco; é a voz que ensina).
+
+Texto na tela: "Com as trilhas cheias, toque em CONFIRMAR. Se uma peça estiver fora do lugar, ela pisca para você trocar."
+
+## Onde é usado no jogo
+
+`config.tutorial[...].fala` (Passo 4 — "Toque em CONFIRMAR"), tocado pelo `TutorialScreen` ao abrir o passo —
+tanto no "COMO JOGAR" do menu quanto na AJUDA durante a partida (RE-05).

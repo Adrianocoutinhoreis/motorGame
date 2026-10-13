@@ -38,16 +38,19 @@
 
 - [x] Arte produzida — nenhuma imagem: círculo/quadrado/triângulo/pentágono desenhados
       por `Path2D`/arcos direto no canvas (mesmo padrão do Encaixe Certo/Quantidade Certa)
-- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **pendente**:
-      os 3 passos do tutorial não têm `fala:` (nenhuma locução gravada ainda pra este jogo)
+- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **parcial**: os 4
+      passos do tutorial têm `fala:` e áudio gravado (`assets/audio/tutorial/`); falta a frase
+      curta de cada cartão novo
 - [x] Efeitos de acerto e erro presentes (`soltarPeca`/`somErro`, reaproveitados da coleção)
 - [ ] ~~Efeito de clique~~ — decisão deliberada, sem som de clique genérico (mesmo padrão
       do Encaixe Certo/Jogo da Ordenação/Quantidade Certa): `config.audio.clique: null`
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
-- [x] Ficha de transcrição criada para os 4 áudios existentes
-- [ ] Transcrições **confirmadas ouvindo** — só 2 dos 3 áudios são "confirmado por
+- [x] Ficha de transcrição criada para os 8 áudios existentes (as 4 da narração como "não
+      verificada")
+- [ ] Transcrições **confirmadas ouvindo** — **as 4 narrações do tutorial** (`Tela001`,
+      `tela02`, `tela03`, `tela04`) ainda não foram ouvidas; e só 2 dos 3 áudios de efeito são "confirmado por
       natureza" (sem fala); `error.MP3` ainda precisa ser ouvido (mesma pendência
       compartilhada com Geométrico/Memória/Chave Mágica/Quantidade Certa, mesma cópia)
 - [x] Pendências de áudio ainda não gravado/ouvido listadas explicitamente no `README.md`

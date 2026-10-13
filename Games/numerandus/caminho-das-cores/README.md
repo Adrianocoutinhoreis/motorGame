@@ -677,6 +677,7 @@ usam imagem** — círculo, quadrado, triângulo e pentágono são desenhados vi
 | Arquivo | Tipo | Origem / licença |
 |---|---|---|
 | `acertoSOS.wav` | Áudio, vitória do nível (tela final) | Mesmo arquivo já usado pelo Encaixe Certo/Quantidade Certa/coleção Numerandus |
+| `Tela001.wav`, `tela02.wav`, `tela03.wav`, `tela04.wav` | Áudio, narração dos 4 passos do tutorial (`assets/audio/tutorial/`, 7-9 s cada, WAV 24 kHz mono) | Gravados pelo humano para este jogo (2026-10-13) |
 | `progresso.mp3` | Áudio, estrela acendendo a cada cartão certo | Cópia do `progresso.mp3` do Material Dourado (mesmo SHA-256), que é cópia de `carta-correta.mp3` do Jogo da Memória — sem fala |
 | `soltar_peca.mp3` | Áudio, peça chegando ao fundo da trilha e cada peça da demonstração se montando | Mesmo arquivo já usado pelo Encaixe Certo/Material Dourado/Quantidade Certa/Chave Mágica — origem/licença a confirmar, pendência compartilhada com os outros jogos que usam este arquivo |
 | `error.MP3` | Áudio, CONFIRMAR errado | Mesmo arquivo do Colmeia dos Números/Jogo da Memória/Chave Mágica/Quantidade Certa — ainda não ouvido, ver `assets/audio-transcricao/somErro/transcricao.md` |
@@ -685,10 +686,12 @@ usam imagem** — círculo, quadrado, triângulo e pentágono são desenhados vi
 
 - **`error.MP3` não foi ouvido aqui** — ficha "não verificada", mesma
   pendência já registrada nos outros jogos que usam este arquivo.
-- **Sem narração** — o público (4-7 anos) não lê, então o jogo precisa de
-  voz: os 3 passos do tutorial (`fala:` em `config.tutorial`) e uma frase
-  curta a cada cartão novo. Adiado de propósito (2026-10-08), pra gravar
-  depois da mecânica nova ser aprovada.
+- **Narração do tutorial gravada, mas NÃO conferida** — os 4 passos tocam
+  `Tela001`/`tela02`/`tela03`/`tela04` (`assets/audio/tutorial/`, pelo `fala` de
+  cada passo). Ninguém ouviu os arquivos aqui: as fichas em
+  `assets/audio-transcricao/` estão como "não verificada" e só têm o texto da
+  TELA, não a transcrição. Falta ouvir e conferir se a voz diz o mesmo que o
+  texto do passo. Falta também uma frase curta a cada cartão novo.
 - **O vídeo de referência (28 MB) está dentro de `assets/`** — fora do git,
   mas DENTRO da pasta que vai pro AVA. Mover pra `fontes/` antes de publicar.
 - **Sem áudio de clique genérico** (`config.audio.clique` continua `null`) —
