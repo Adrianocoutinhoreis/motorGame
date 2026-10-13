@@ -76,7 +76,7 @@
 - [x] Regras implementadas conforme o README ("O que é"): monte solto com as peças exatas
       do cartão (sem distratoras), caminho animado pela abertura, CONFIRMAR compara tudo
 - [x] **Tocar-e-tocar** (o jeito ensinado no tutorial): tocar na peça a escolhe (brilho +
-      pulinho contínuo; as trilhas livres piscam com uma seta); tocar numa trilha a manda;
+      pulinho contínuo; as trilhas livres piscam com um dedinho branco apontando pra elas); tocar numa trilha a manda;
       tocar na mesma peça ou fora desfaz a escolha
 - [x] **Arrastar só no Fácil** (`arrastar: true`): soltar em qualquer ponto da trilha (do
       corredor pra baixo) manda a peça; fora de uma trilha, ela volta ao monte. No Médio e

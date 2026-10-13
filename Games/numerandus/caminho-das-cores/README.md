@@ -25,8 +25,8 @@ posição (cor **e** forma, de baixo pra cima). A criança leva as peças do
   desce a trilha até o fundo, **animada sozinha**. A criança não precisa
   guiar a peça com precisão.
 - **Tocar na peça e depois na trilha** — o jeito que o tutorial ensina. A
-  peça escolhida brilha e fica pulando de leve; as trilhas livres piscam com
-  uma seta.
+  peça escolhida brilha e fica pulando de leve; as trilhas livres piscam e
+  ganham um dedinho branco apontando pra baixo.
 - **Arrastar só no Fácil** (`arrastar: true` no nível): lá dá também pra
   arrastar e soltar em qualquer ponto da trilha. No Médio e no Difícil um
   arrasto não move a peça — só a escolhe, como um toque, pra quem tenta

@@ -251,20 +251,56 @@ class Trilha extends Node {
       ctx.roundRect(2, 2, this.largura - 4, this.altura - 4, 8);
       ctx.stroke();
       ctx.setLineDash([]);
-      // Setinha no alto da trilha: "pode vir pra cá".
-      const cx = this.largura / 2;
-      const y0 = 10 + pulso * 6;
-      const s = Math.min(16, this.largura * 0.18);
-      ctx.fillStyle = COR_DOURADO;
-      ctx.beginPath();
-      ctx.moveTo(cx - s, y0);
-      ctx.lineTo(cx + s, y0);
-      ctx.lineTo(cx, y0 + s * 1.1);
-      ctx.closePath();
-      ctx.fill();
+      // Dedinho branco no alto da trilha, apontando pra baixo: "toque aqui".
+      const h = Math.min(50, this.largura * 0.55);
+      desenharDedo(ctx, this.largura / 2, 8 + h + pulso * 6, h);
     }
     ctx.restore();
   }
+}
+
+/**
+ * Mão branca com o indicador apontando pra BAIXO; a ponta do dedo fica em
+ * (`cx`, `yPonta`) e a mão inteira tem altura `h`. Contorno escuro limpo:
+ * primeiro todas as partes com traço grosso, depois todas preenchidas por
+ * cima (assim não sobra linha interna entre dedo, palma e punho).
+ */
+function desenharDedo(ctx, cx, yPonta, h) {
+  const u = h;
+  const partes = [
+    // [x, y, largura, altura, raio] em unidades de `h`, origem na ponta do dedo
+    [-0.12, -0.6, 0.24, 0.6, 0.12], // indicador
+    [-0.16, -0.94, 0.62, 0.42, 0.13], // palma (dedos dobrados)
+    [-0.3, -0.86, 0.22, 0.3, 0.1], // polegar
+    [-0.06, -1.12, 0.46, 0.2, 0.05], // punho
+  ];
+  const tracar = () => {
+    ctx.beginPath();
+    for (const [x, y, l, a, r] of partes) ctx.roundRect(cx + x * u, yPonta + y * u, l * u, a * u, r * u);
+  };
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 3;
+  tracar();
+  ctx.lineWidth = Math.max(4, u * 0.1);
+  ctx.strokeStyle = 'rgba(31, 41, 55, 0.9)';
+  ctx.stroke();
+  ctx.shadowColor = 'transparent';
+  tracar();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+  // Dobras dos dedos fechados, na base da palma.
+  ctx.strokeStyle = 'rgba(31, 41, 55, 0.45)';
+  ctx.lineWidth = Math.max(1.5, u * 0.035);
+  ctx.beginPath();
+  for (const fx of [0.16, 0.31]) {
+    ctx.moveTo(cx + fx * u, yPonta - 0.7 * u);
+    ctx.lineTo(cx + fx * u, yPonta - 0.55 * u);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
