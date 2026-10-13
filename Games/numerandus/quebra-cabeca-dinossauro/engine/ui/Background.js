@@ -13,24 +13,28 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto'.
+ * 'bingo', 'quarto', 'trilhas'.
  */
+
+/** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas'];
+
 export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
-    this.mostrarSol = opcoes.mostrarSol ?? (this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto');
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto');
+    this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
@@ -291,6 +295,20 @@ export class Background extends Node {
       return;
     }
 
+    if (this.tema === 'trilhas') {
+      // A beirada da prancha do brinquedo: faixa de madeira escura com uma
+      // borda de MDF clara no topo e as ripas brancas das trilhas descendo.
+      // Sem nenhuma peça desenhada aqui — as peças são o conteúdo do jogo.
+      const topo = a * 0.93;
+      ctx.fillStyle = '#4A3324';
+      ctx.fillRect(-sx, topo, l + sx * 2, a + sy - topo);
+      ctx.fillStyle = '#C8A27A';
+      ctx.fillRect(-sx, topo, l + sx * 2, 8);
+      ctx.fillStyle = 'rgba(244, 239, 230, 0.85)';
+      for (let i = 1; i < 5; i++) ctx.fillRect(l * (i / 5) - 4, topo + 8, 8, a + sy - topo);
+      return;
+    }
+
     if (this.tema === 'quarto') {
       // Prateleira de madeira no rodapé — o "chão" de um quarto de leitura,
       // não uma colina. Friso mais claro no topo simula a borda iluminada da
@@ -326,7 +344,7 @@ export class Background extends Node {
     this._ceu(ctx);
 
     // Sol radiante — nunca nos temas de interior ('quadro', 'bingo', 'quarto')
-    if (this.mostrarSol && this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto') {
+    if (this.mostrarSol && !TEMAS_INTERIOR.includes(this.tema)) {
       const sx = l * 0.88;
       const sy = a * 0.14;
       const brilho = ctx.createRadialGradient(sx, sy, 10, sx, sy, a * 0.28);
@@ -346,7 +364,7 @@ export class Background extends Node {
     }
 
     // Nuvens dinâmicas — não nos temas de interior
-    if (this.tema !== 'quadro' && this.tema !== 'bingo' && this.tema !== 'quarto') {
+    if (!TEMAS_INTERIOR.includes(this.tema)) {
       for (const nuvem of this.nuvens) {
         this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
       }
@@ -357,6 +375,7 @@ export class Background extends Node {
       if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
       if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
       if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
+      if (this.tema === 'trilhas') this._desenharDecoracoesTrilhas(ctx, l, a);
     }
     if (this.mostrarChao) this._chao(ctx);
   }
@@ -458,6 +477,67 @@ export class Background extends Node {
       ctx.fillText(n.txt, n.x * l + desvio, y);
     }
     ctx.restore();
+  }
+
+  /**
+   * Tema 'trilhas' — o Caminho das Cores.
+   *
+   * Peças das 5 cores do brinquedo (as mesmas 4 formas) SOBEM devagar pelas
+   * margens, como bolhas, com alfa baixo (0,15 a 0,22) e fora da faixa central
+   * onde ficam o painel e os cartões. Só aparecem nas telas de vitrine (menu,
+   * níveis, tutorial, resultado): a partida desliga as decorações, porque ali
+   * as peças são o exercício e o cenário não pode ensaiá-lo. Um halo claro
+   * atrás do centro dá volume ao roxo liso sem criar degradê na partida.
+   */
+  _desenharDecoracoesTrilhas(ctx, l, a) {
+    const halo = ctx.createRadialGradient(l / 2, a * 0.45, 20, l / 2, a * 0.45, Math.max(l, a) * 0.6);
+    halo.addColorStop(0, 'rgba(167, 139, 250, 0.22)');
+    halo.addColorStop(1, 'rgba(167, 139, 250, 0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(0, 0, l, a);
+
+    const pecas = [
+      { x: 0.07, forma: 'quadrado', cor: '#EF4444', tam: 54, alfa: 0.22, velocidade: 13, fase: 700, giro: 14 },
+      { x: 0.19, forma: 'circulo', cor: '#3B82F6', tam: 40, alfa: 0.17, velocidade: 9, fase: 520, giro: 0 },
+      { x: 0.29, forma: 'triangulo', cor: '#FACC15', tam: 34, alfa: 0.15, velocidade: 11, fase: 160, giro: -10 },
+      { x: 0.09, forma: 'pentagono', cor: '#22C55E', tam: 46, alfa: 0.19, velocidade: 10, fase: 340, giro: 8 },
+      { x: 0.93, forma: 'triangulo', cor: '#F97316', tam: 56, alfa: 0.22, velocidade: 12, fase: 610, giro: -12 },
+      { x: 0.81, forma: 'pentagono', cor: '#EF4444', tam: 38, alfa: 0.16, velocidade: 9, fase: 240, giro: 10 },
+      { x: 0.71, forma: 'quadrado', cor: '#22C55E', tam: 32, alfa: 0.15, velocidade: 11, fase: 460, giro: -6 },
+      { x: 0.91, forma: 'circulo', cor: '#FACC15', tam: 44, alfa: 0.18, velocidade: 8, fase: 90, giro: 0 },
+    ];
+    const altura = a + 140;
+    for (const p of pecas) {
+      const y = altura - ((this._t * p.velocidade + p.fase) % altura) - 70;
+      const desvio = Math.sin(this._t / 4 + p.fase) * 8;
+      ctx.save();
+      ctx.globalAlpha = p.alfa;
+      ctx.translate(p.x * l + desvio, y);
+      ctx.rotate(((p.giro + Math.sin(this._t / 5 + p.fase) * 6) * Math.PI) / 180);
+      ctx.beginPath();
+      const m = p.tam / 2;
+      if (p.forma === 'circulo') {
+        ctx.arc(0, 0, m * 0.92, 0, Math.PI * 2);
+      } else if (p.forma === 'quadrado') {
+        ctx.roundRect(-m * 0.88, -m * 0.88, m * 1.76, m * 1.76, p.tam * 0.1);
+      } else if (p.forma === 'triangulo') {
+        ctx.moveTo(0, -m * 0.92);
+        ctx.lineTo(m * 0.94, m * 0.84);
+        ctx.lineTo(-m * 0.94, m * 0.84);
+        ctx.closePath();
+      } else {
+        for (let i = 0; i < 5; i++) {
+          const ang = -Math.PI / 2 + i * ((2 * Math.PI) / 5);
+          const px = m * 0.96 * Math.cos(ang);
+          const py = m * 0.08 + m * 0.96 * Math.sin(ang);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      }
+      ctx.fillStyle = p.cor;
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   /**

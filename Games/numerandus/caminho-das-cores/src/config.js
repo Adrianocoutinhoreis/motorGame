@@ -38,11 +38,16 @@ export default {
     : { largura: 720, altura: 1280 }),
   corLetterbox: '#241A33',
 
-  tema: 'quarto',
+  // Tema próprio ('trilhas', ver `engine/ui/Background.js`): peças subindo
+  // pelas margens e a beirada da prancha no rodapé. Vale pras telas de
+  // vitrine (menu, níveis, tutorial, resultado); a PARTIDA desliga as duas
+  // coisas por conta própria (ver `scenes/GameScene.js`), porque ali as
+  // peças são o exercício e o fundo precisa ficar liso.
+  tema: 'trilhas',
   corCeuTopo: '#2E2150',
   corCeuBase: '#2E2150',
-  mostrarDecoracoes: false,
-  mostrarChao: false,
+  mostrarDecoracoes: true,
+  mostrarChao: true,
 
   /** Regra RE-01: todo texto exibido em CAIXA ALTA. */
   textoEmCaixaAlta: true,
@@ -62,15 +67,15 @@ export default {
    */
   niveis: [
     {
-      id: 1, nome: 'Fácil', descricao: 'Uma cor por trilha', amostra: '2 peças por trilha', cor: '#16A34A',
+      id: 1, nome: 'Fácil', descricao: 'Uma cor', amostra: '2 peças', cor: '#16A34A',
       meta: 3, trilhas: 5, profundidade: 2, cartela: 'monocor', arrastar: true,
     },
     {
-      id: 2, nome: 'Médio', descricao: 'Uma cor por trilha', amostra: '4 peças por trilha', cor: '#F59E0B',
+      id: 2, nome: 'Médio', descricao: 'Uma cor', amostra: '4 peças', cor: '#F59E0B',
       meta: 3, trilhas: 5, profundidade: 4, cartela: 'monocor',
     },
     {
-      id: 3, nome: 'Difícil', descricao: 'Cores misturadas', amostra: '4 peças por trilha', cor: '#DC2626',
+      id: 3, nome: 'Difícil', descricao: 'Misturadas', amostra: '4 peças', cor: '#DC2626',
       meta: 3, trilhas: 5, profundidade: 4, cartela: 'misturada',
     },
   ],

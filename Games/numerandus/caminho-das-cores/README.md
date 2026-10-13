@@ -68,6 +68,19 @@ posição (cor **e** forma, de baixo pra cima). A criança leva as peças do
   trilha, a coluna do cartão correspondente acende.
 - A prancha imita o brinquedo: MDF claro, moldura e ripas brancas.
 
+### Tema das telas de vitrine
+
+Menu, escolha de nível, tutorial e resultado usam o tema próprio **'trilhas'**
+(`engine/ui/Background.js`): peças das 5 cores do brinquedo (as mesmas 4
+formas) subindo devagar pelas margens, em tom bem suave (alfa 0,15-0,22, nunca
+na faixa central), um halo claro atrás do conteúdo e, no rodapé, a beirada da
+prancha — madeira escura com borda de MDF e as ripas brancas. A **partida
+desliga o enfeite e o chão** (`GameScene` passa `mostrarDecoracoes: false`):
+ali as peças são o exercício e o fundo fica liso. A placa do título é a lisa
+(`PlacaTituloLimpa`) — sem peça nenhuma desenhada nela, mesma regra do Jogo das
+Formas. Nas cartas de nível os textos ficaram curtos ("2 PEÇAS", "UMA COR",
+"MISTURADAS") pra caber também no formato celular.
+
 > **Histórico:** a seção abaixo registra as versões anteriores (grade
 > deslizante, colisão com paredes, validação no encaixe) e as leituras do
 > vídeo que levaram até aqui. Ela descreve mecânicas que **não existem mais**;

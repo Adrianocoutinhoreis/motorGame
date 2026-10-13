@@ -55,6 +55,9 @@
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR (de fábrica, via `templates/jogo-base`)
+- [x] **Tema visual próprio** ('trilhas') nas telas de vitrine — peças subindo pelas margens
+      e beirada da prancha no rodapé; desligado na partida (ver README, "Tema das telas
+      de vitrine"). Conferido em captura nos formatos computador e celular
 - [x] **Tutorial** com 3 passos ilustrados e puláveis — narração ainda pendente (ver seção 2)
 - [x] **Seleção de nível** (3 níveis)
 - [x] **Partida** com HUD legível (pausa, ajuda, som, CONFIRMAR, estrelas de progresso por
