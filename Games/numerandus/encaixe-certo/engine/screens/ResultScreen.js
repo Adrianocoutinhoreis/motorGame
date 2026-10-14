@@ -212,7 +212,7 @@ export class ResultScreen extends Scene {
     // ela, qualquer jogo que NÃO defina `config.corCeuTopo`/`corCeuBase`
     // (a maioria) cairia num `ReferenceError` (`temaInterior is not defined`)
     // bem aqui, na primeira linha da tela de resultado.
-    const temaInterior = ['quadro', 'bingo', 'quarto', 'trilhas'].includes(config.tema ?? 'construcao');
+    const temaInterior = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco'].includes(config.tema ?? 'construcao');
 
     // Mesmo canteiro de obras do menu e da partida, em vez de um céu vazio.
     // A tela de resultado é a última coisa que a criança vê da atividade; com

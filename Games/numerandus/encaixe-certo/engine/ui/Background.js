@@ -13,34 +13,41 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto', 'trilhas'.
+ * 'bingo', 'quarto', 'trilhas', 'espaco'.
  */
 
 /** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
-const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas'];
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco'];
 
 export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
     this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
      *  nenhuma. Existe porque um jogo pode preferir o cenário mais limpo,
      *  sem o piso disputando espaço com o conteúdo da partida. */
     this.mostrarChao = opcoes.mostrarChao ?? true;
+    /**
+     * `(ctx) => void` opcional, chamado no fim de `pintarSangria`, em
+     * coordenadas LÓGICAS. Para a cena prolongar pelas barras do letterbox um
+     * desenho seu que encosta na borda (sem isso ele para seco na beirada da
+     * área de 1280×720). Desenhe exatamente o que a passada normal desenha.
+     */
+    this.desenharNaSangria = opcoes.desenharNaSangria ?? null;
 
     /**
      * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
@@ -147,6 +154,22 @@ export class Background extends Node {
     // desenho normal, definida sobre a caixa LÓGICA, então não há costura).
     if (this.mostrarDecoracoes && this.tema === 'trilhas') {
       this._desenharDecoracoesTrilhas(ctx, this.largura, this.altura);
+    }
+    // Tema 'espaco': estrelas E planetas continuam pelas barras. Os planetas
+    // são desenhados nas MESMAS coordenadas lógicas da passada normal — o
+    // recorte do `Stage` só deixa aparecer o pedaço de fora da caixa, então um
+    // planeta que encosta na borda segue inteiro em vez de parar seco nela.
+    if (this.mostrarDecoracoes && this.tema === 'espaco') {
+      this._desenharDecoracoesEspaco(ctx, this.largura, this.altura, sx, sy);
+    }
+    // O pedaço do cenário que é da CENA e encosta na borda (ex.: o planeta de
+    // destino da Corrida Espacial) continua pelas barras pelo mesmo princípio.
+    if (this.desenharNaSangria) {
+      try {
+        this.desenharNaSangria(ctx);
+      } catch (err) {
+        console.error('[motor] Background: desenharNaSangria falhou:', err);
+      }
     }
     if (this.mostrarChao) this._chao(ctx, sx, sy);
   }
@@ -384,6 +407,7 @@ export class Background extends Node {
       if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
       if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
       if (this.tema === 'trilhas') this._desenharDecoracoesTrilhas(ctx, l, a);
+      if (this.tema === 'espaco') this._desenharDecoracoesEspaco(ctx, l, a);
     }
     if (this.mostrarChao) this._chao(ctx);
   }
@@ -483,6 +507,76 @@ export class Background extends Node {
       ctx.globalAlpha = n.alfa;
       ctx.font = `800 ${n.tam}px system-ui, sans-serif`;
       ctx.fillText(n.txt, n.x * l + desvio, y);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Tema 'espaco' — a Corrida Espacial.
+   *
+   * Céu de noite com estrelas PARADAS: nenhuma cintila nem pisca (diretriz de
+   * `METODO-JOGOS-NUMERANDUS.md` §3.A — brilho estável, nunca oscilação). Dois
+   * planetas apagados (opacidade 0,10–0,14) balançam devagar nas margens, sem
+   * nome nem número: o cenário não pode competir com a pista da partida.
+   */
+  _desenharDecoracoesEspaco(ctx, l, a, sx = 0, sy = 0) {
+    this._desenharEstrelasEspaco(ctx, sx, sy);
+
+    const planetas = [
+      // Posições escolhidas para o vão da partida E do menu: entre as pistas e
+      // o painel de baixo, e na coluna livre à direita dos botões do menu.
+      { x: 0.04, y: 0.97, r: 84, cor: '#A78BFA', alfa: 0.12, anel: false, periodo: 9, fase: 0 },
+      { x: 0.84, y: 0.66, r: 30, cor: '#F9A8D4', alfa: 0.14, anel: true, periodo: 11, fase: 2.2 },
+      { x: 0.36, y: 0.21, r: 20, cor: '#5EEAD4', alfa: 0.10, anel: false, periodo: 8, fase: 4.1 },
+    ];
+    for (const p of planetas) {
+      const bal = Math.sin((this._t / p.periodo) * Math.PI * 2 + p.fase) * 6;
+      ctx.save();
+      ctx.globalAlpha = p.alfa;
+      ctx.translate(p.x * l, p.y * a + bal);
+      ctx.fillStyle = p.cor;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.anel) {
+        ctx.strokeStyle = p.cor;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.r * 1.8, p.r * 0.42, -0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  /**
+   * As estrelas do tema 'espaco', determinísticas e ancoradas numa grade de
+   * 160 px da caixa LÓGICA — mesma lição da onda do tema 'formas': a passada
+   * da sangria e a da cena desenham as MESMAS estrelas, sem costura na junção.
+   * Nada de `Math.random()` aqui.
+   */
+  _desenharEstrelasEspaco(ctx, sx = 0, sy = 0) {
+    const PASSO = 160;
+    const hash = (i, j, k) => {
+      const v = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    ctx.save();
+    ctx.fillStyle = '#FFFFFF';
+    for (let i = Math.floor(-sx / PASSO); i <= Math.ceil((this.largura + sx) / PASSO); i++) {
+      for (let j = Math.floor(-sy / PASSO); j <= Math.ceil((this.altura + sy) / PASSO); j++) {
+        for (let k = 0; k < 3; k++) {
+          ctx.globalAlpha = 0.25 + hash(i, j, k + 10) * 0.55;
+          ctx.beginPath();
+          ctx.arc(
+            i * PASSO + hash(i, j, k) * PASSO,
+            j * PASSO + hash(i, j, k + 5) * PASSO,
+            0.6 + hash(i, j, k + 20) * 1.6,
+            0, Math.PI * 2,
+          );
+          ctx.fill();
+        }
+      }
     }
     ctx.restore();
   }

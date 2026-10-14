@@ -408,6 +408,13 @@ Isso é verificado em `tools/testes.mjs`, sem navegador, com um `ctx` de mentira
 chamadas: todo nó do desenho normal tem de existir no mesmo lugar no desenho com sangria. É
 verificação de GEOMETRIA porque o defeito era geométrico — a medição de cor na junção passava.
 
+**Sprite que encosta na borda também pode continuar**, desde que seja desenhado nas MESMAS
+coordenadas lógicas nas duas passadas: o recorte do `Stage` só deixa aparecer, na sangria, o
+pedaço de fora da caixa. É o que o tema `'espaco'` faz com os planetas dele. Para um desenho
+**da cena** que encosta na borda, passe **`desenharNaSangria: (ctx) => …`** ao `Background`
+— chamado no fim de `pintarSangria`, em coordenadas lógicas. A Corrida Espacial usa isso para
+o planeta de destino, que antes parava seco na borda direita e aparecia cortado nas barras.
+
 **Sucede:** `fundo.jpg`, `BG.jpg`, `fd.jpg` (um JPEG de fundo por jogo).
 
 ---
