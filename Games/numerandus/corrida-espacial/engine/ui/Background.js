@@ -1,0 +1,887 @@
+import { Node } from '../core/Node.js';
+import { cores } from '../theme/tokens.js';
+
+/**
+ * Background — o cenário padrão das telas do motor.
+ *
+ * Céu em degradê, sol, nuvens e colinas, tudo vetorial. Existe para que as
+ * telas de menu, tutorial, níveis e resultado compartilhem um mesmo ambiente
+ * sem que cada jogo precise produzir arte de fundo — e sem carregar um JPEG de
+ * fundo por tela, como faziam os originais (`fundo.jpg`, `BG.jpg`, `fd.jpg`).
+ *
+ * As nuvens se movem devagar: sinal de que a tela está viva, sem competir com
+ * o conteúdo pela atenção da criança.
+ *
+ * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
+ * 'bingo', 'quarto', 'trilhas', 'espaco'.
+ */
+
+/** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco'];
+
+export class Background extends Node {
+  constructor(opcoes = {}) {
+    super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
+
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco'
+    this.corCeuTopo = opcoes.corCeuTopo
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : cores.ceuProfundo);
+    this.corCeuBase = opcoes.corCeuBase
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : cores.ceu);
+    this.corColina = opcoes.corColina ?? '#86EFAC';
+    this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
+    // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
+    // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
+    // parede/tinta.
+    this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco');
+    this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
+    /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
+     *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
+     *  nenhuma. Existe porque um jogo pode preferir o cenário mais limpo,
+     *  sem o piso disputando espaço com o conteúdo da partida. */
+    this.mostrarChao = opcoes.mostrarChao ?? true;
+    /**
+     * `(ctx) => void` opcional, chamado no fim de `pintarSangria`, em
+     * coordenadas LÓGICAS. Para a cena prolongar pelas barras do letterbox um
+     * desenho seu que encosta na borda (sem isso ele para seco na beirada da
+     * área de 1280×720). Desenhe exatamente o que a passada normal desenha.
+     */
+    this.desenharNaSangria = opcoes.desenharNaSangria ?? null;
+
+    /**
+     * Tema 'formas': as PEÇAS aparecem só nas telas de vitrine.
+     *
+     * Na partida isto vem `false`, e não é economia de desenho: atrás da grade,
+     * círculos e triângulos coloridos no céu competem com as peças que a criança
+     * precisa distinguir de verdade. O cenário não pode ensaiar o exercício.
+     */
+    this.mostrarPecas = opcoes.mostrarPecas ?? true;
+
+    /**
+     * Camada distante: formas enormes, brancas, quase invisíveis. Dão volume ao
+     * céu sem nomear forma nenhuma, então ficam mesmo na partida.
+     */
+    this.pecasDistantes = [
+      { tipo: 'circulo', x: 0.16, y: 0.26, lado: 330, alfa: 0.10, giro: 0, velocidade: 0.004 },
+      { tipo: 'triangulo', x: 0.79, y: 0.35, lado: 300, alfa: 0.09, giro: 18, velocidade: 0.003 },
+      { tipo: 'quadrado', x: 0.50, y: 0.72, lado: 260, alfa: 0.07, giro: -12, velocidade: 0.005 },
+    ];
+
+    /**
+     * As quatro peças do jogo, nas cores delas.
+     *
+     * **As posições saem do vão que a interface do menu deixa, medido — não de
+     * "esquerda e direita".** A primeira tentativa punha duas peças em x 0,11 e
+     * 0,23 por essa intuição, e renderizar mostrou as duas sumidas: a PLACA tem
+     * 740 px e ocupa de 0,21 a 0,79 (bem mais que os botões, que vão de 0,29 a
+     * 0,71), e o MASCOTE cobre de 0,015 a 0,31 abaixo de y 0,29.
+     *
+     * O que de fato sobra:
+     *   coluna direita   x 0,72 a 1,00  ·  y 0,28 a 0,82   (menos o botão de som)
+     *   canto alto-esq.  x 0,04 a 0,19  ·  y 0,10 a 0,26   (acima do mascote)
+     *
+     * O alfa é 0,90, e não 0,58: sobre o halo claro, meia opacidade transformava
+     * o laranja em marrom desbotado. Peça que não se reconhece pela cor não está
+     * cumprindo o papel de ser a peça do jogo.
+     */
+    /**
+     * **As peças FLUTUAM no lugar; não derivam.** É a diferença entre um móbile e
+     * um desfile, e aqui ela é funcional: a 0,008 por segundo uma peça caminha
+     * 0,24 da tela em meio minuto, ou seja, o posicionamento medido acima se
+     * desfaz enquanto a criança ainda está no menu — a peça vai parar atrás da
+     * placa. Balanço vertical mantém a composição de pé para sempre.
+     *
+     * `periodo` em segundos e `balanco` em pixels; `fase` desencontra as peças
+     * para não subirem e descerem em bloco.
+     */
+    this.pecas = [
+      { tipo: 'circulo', x: 0.10, y: 0.19, lado: 110, alfa: 0.90, giro: 0, cor: 'azul', periodo: 6.5, balanco: 11, fase: 0.0 },
+      { tipo: 'retangulo', x: 0.855, y: 0.32, lado: 140, alfa: 0.90, giro: -6, cor: 'roxo', periodo: 7.5, balanco: 13, fase: 1.7 },
+      { tipo: 'quadrado', x: 0.775, y: 0.50, lado: 96, alfa: 0.90, giro: 14, cor: 'laranja', periodo: 5.5, balanco: 10, fase: 3.1 },
+      { tipo: 'triangulo', x: 0.895, y: 0.65, lado: 112, alfa: 0.90, giro: -8, cor: 'verde', periodo: 8.0, balanco: 12, fase: 4.6 },
+      { tipo: 'circulo', x: 0.845, y: 0.19, lado: 46, alfa: 0.40, giro: 0, periodo: 4.5, balanco: 8, fase: 2.2 },
+      { tipo: 'triangulo', x: 0.965, y: 0.44, lado: 58, alfa: 0.30, giro: 25, periodo: 6.0, balanco: 9, fase: 5.3 },
+    ];
+
+    this._t = 0;
+    this.nuvens = [
+      { x: 0.10, y: 0.14, escala: 1.0, velocidade: 0.010 },
+      { x: 0.45, y: 0.09, escala: 0.75, velocidade: 0.014 },
+      { x: 0.78, y: 0.18, escala: 0.88, velocidade: 0.008 },
+    ];
+  }
+
+  atualizar(dt) {
+    super.atualizar(dt);
+    this._t += dt;
+    for (const nuvem of this.nuvens) {
+      nuvem.x += nuvem.velocidade * dt;
+      if (nuvem.x > 1.25) nuvem.x = -0.25;
+    }
+    // Só as DISTANTES derivam. Elas são enormes e sem forma reconhecível, então
+    // atravessar a tela não desarruma nada — é o que dá a paralaxe. As peças da
+    // frente flutuam no lugar (ver `this.pecas`), e por isso não aparecem aqui.
+    for (const peca of this.pecasDistantes) {
+      peca.x += peca.velocidade * dt;
+      if (peca.x > 1.35) peca.x = -0.35;
+    }
+  }
+
+  /**
+   * Pinta o cenário PARA ALÉM da área lógica, cobrindo as barras do letterbox.
+   *
+   * O `Stage` chama isto num passe próprio, recortado só no anel de fora, antes
+   * de desenhar a cena recortada na área lógica. É o que faz as barras laterais
+   * desaparecerem sem cortar nada do jogo e sem mexer na geometria medida.
+   *
+   * **Só as camadas contínuas.** Céu e chão são degradê e faixa horizontal: não
+   * têm posição própria, então continuam. Sol, nuvens, peças e guindaste ficam
+   * de fora — um sol repetido na barra seriam dois sóis.
+   *
+   * **A costura não aparece porque os degradês continuam definidos sobre a caixa
+   * LÓGICA.** O canvas prolonga a última parada de cor para fora dela, então a
+   * barra recebe a continuação exata do que está na borda, e não uma segunda
+   * versão do degradê recalculada num tamanho maior.
+   *
+   * @param {object} area retângulo em px lógicos que cobre o canvas inteiro
+   */
+  pintarSangria(ctx, area) {
+    const sx = Math.max(0, -area.x);
+    const sy = Math.max(0, -area.y);
+    this._ceu(ctx, sx, sy);
+    // Tema 'trilhas': o halo e as peças continuam pelas barras (mesma conta do
+    // desenho normal, definida sobre a caixa LÓGICA, então não há costura).
+    if (this.mostrarDecoracoes && this.tema === 'trilhas') {
+      this._desenharDecoracoesTrilhas(ctx, this.largura, this.altura);
+    }
+    // Tema 'espaco': estrelas E planetas continuam pelas barras. Os planetas
+    // são desenhados nas MESMAS coordenadas lógicas da passada normal — o
+    // recorte do `Stage` só deixa aparecer o pedaço de fora da caixa, então um
+    // planeta que encosta na borda segue inteiro em vez de parar seco nela.
+    if (this.mostrarDecoracoes && this.tema === 'espaco') {
+      this._desenharDecoracoesEspaco(ctx, this.largura, this.altura, sx, sy);
+    }
+    // O pedaço do cenário que é da CENA e encosta na borda (ex.: o planeta de
+    // destino da Corrida Espacial) continua pelas barras pelo mesmo princípio.
+    if (this.desenharNaSangria) {
+      try {
+        this.desenharNaSangria(ctx);
+      } catch (err) {
+        console.error('[motor] Background: desenharNaSangria falhou:', err);
+      }
+    }
+    if (this.mostrarChao) this._chao(ctx, sx, sy);
+  }
+
+  /**
+   * O céu: degradê e, quando o tema tem, o halo de luz. Vai primeiro, sempre.
+   *
+   * `sx`/`sy` são a sangria em px lógicos de cada lado — 0 no desenho normal,
+   * porque o recorte do `Stage` já limita e pintar fora seria trabalho jogado
+   * fora a cada quadro.
+   */
+  _ceu(ctx, sx = 0, sy = 0) {
+    const l = this.largura;
+    const a = this.altura;
+    const px = -sx;
+    const py = -sy;
+    const pl = l + sx * 2;
+    const pa = a + sy * 2;
+
+    if (this.tema === 'formas') {
+      const ceu = ctx.createLinearGradient(0, 0, l * 0.4, a);
+      ceu.addColorStop(0, '#4338CA');
+      ceu.addColorStop(0.55, '#6366F1');
+      ceu.addColorStop(1, '#22D3EE');
+      ctx.fillStyle = ceu;
+      ctx.fillRect(px, py, pl, pa);
+
+      if (this.mostrarSol) {
+        const hx = l * 0.84;
+        const hy = a * 0.18;
+        const halo = ctx.createRadialGradient(hx, hy, 20, hx, hy, a * 0.55);
+        halo.addColorStop(0, 'rgba(255, 255, 255, 0.42)');
+        halo.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = halo;
+        ctx.fillRect(px, py, pl, pa);
+      }
+      return;
+    }
+
+    if (this.tema === 'bingo') {
+      const ceu = ctx.createLinearGradient(0, 0, l * 0.2, a);
+      ceu.addColorStop(0, '#0F172A');
+      ceu.addColorStop(0.5, '#1E1B4B');
+      ceu.addColorStop(1, '#0F172A');
+      ctx.fillStyle = ceu;
+      ctx.fillRect(px, py, pl, pa);
+
+      const hx = l * 0.5;
+      const hy = a * 0.35;
+      const halo = ctx.createRadialGradient(hx, hy, 40, hx, hy, a * 0.65);
+      halo.addColorStop(0, 'rgba(56, 189, 248, 0.15)');
+      halo.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(px, py, pl, pa);
+      return;
+    }
+
+    const ceu = ctx.createLinearGradient(0, 0, 0, a * 0.85);
+    ceu.addColorStop(0, this.corCeuTopo);
+    ceu.addColorStop(1, this.corCeuBase);
+    ctx.fillStyle = ceu;
+    ctx.fillRect(px, py, pl, pa);
+  }
+
+  /**
+   * O chão: colinas, faixa de base ou piso, conforme o tema. Vai por ÚLTIMO
+   * entre as camadas contínuas — as nuvens do tema 'campo' passam ATRÁS das
+   * colinas, e trocar essa ordem mudaria o cenário.
+   */
+  _chao(ctx, sx = 0, sy = 0) {
+    const l = this.largura;
+    const a = this.altura;
+
+    if (this.tema === 'formas') {
+      // Faixa de base: silhueta, para o chão existir sem virar colina.
+      //
+      // **Os nós da onda são ancorados na grade de 60 px da caixa lógica**, e não
+      // no início da sangria. Foi o defeito que o humano viu como "uma pequena
+      // quebra no background": com sangria de 80, começar em -80 punha os nós em
+      // -80, -20, 40, 100…, enquanto a passada da cena os punha em 0, 60, 120… —
+      // duas ondas de FASE diferente, e um degrau visível de 1 px na silhueta,
+      // exatamente na junção. Ancorando, as duas passadas desenham a MESMA curva.
+      const PASSO = 60;
+      const inicio = Math.floor(-sx / PASSO) * PASSO;
+      const limite = l + sx;
+      let fim = inicio;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(30, 27, 75, 0.55)';
+      ctx.beginPath();
+      ctx.moveTo(inicio, a + sy);
+      ctx.lineTo(inicio, a * 0.84);
+      for (let x = inicio; x <= limite; x += PASSO) {
+        ctx.quadraticCurveTo(
+          x + PASSO / 2, a * 0.84 - 18 * Math.sin(x / 150),
+          x + PASSO, a * 0.84,
+        );
+        fim = x + PASSO;
+      }
+      ctx.lineTo(fim, a + sy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    if (this.tema === 'construcao') {
+      // Areia clara e dessaturada, não laranja — ver `_desenharCanteiroConstrucao`.
+      const topoChao = a * 0.82;
+      ctx.fillStyle = '#E8DDC7';
+      ctx.fillRect(-sx, topoChao, l + sx * 2, a + sy - topoChao);
+      ctx.fillStyle = '#CDBE9F'; // um passo mais escura, só para a borda do piso ler
+      ctx.fillRect(-sx, topoChao, l + sx * 2, 12);
+      return;
+    }
+
+    if (this.tema === 'quadro') {
+      // A bandeja de giz do quadro-negro, não uma colina — é o chão de uma
+      // sala de aula, não de um campo. Faixa de madeira com o pó de giz
+      // ACUMULADO nela, sempre nas mesmas posições (determinístico: nada de
+      // `Math.random()` aqui, ou a sangria pintaria um pó DIFERENTE do da
+      // passada normal, como o comentário da onda do tema 'formas' já explica
+      // para o caso dele).
+      const topoBandeja = a * 0.9;
+      ctx.fillStyle = '#8B6239';
+      ctx.fillRect(-sx, topoBandeja, l + sx * 2, a + sy - topoBandeja);
+      ctx.fillStyle = '#5B3F26'; // friso mais escuro no topo da bandeja
+      ctx.fillRect(-sx, topoBandeja, l + sx * 2, 8);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      const inicio = Math.floor(-sx / 40) * 40;
+      const limite = l + sx;
+      for (let x = inicio; x <= limite; x += 40) {
+        ctx.beginPath();
+        ctx.arc(x + 6, topoBandeja + 18, 1.6, 0, Math.PI * 2);
+        ctx.arc(x + 24, topoBandeja + 24, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+
+    if (this.tema === 'bingo') {
+      const topoChao = a * 0.88;
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+      ctx.fillRect(-sx, topoChao, l + sx * 2, a + sy - topoChao);
+      ctx.fillStyle = '#38BDF8';
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(-sx, topoChao, l + sx * 2, 4);
+      ctx.restore();
+      return;
+    }
+
+    if (this.tema === 'trilhas') {
+      // A beirada da prancha do brinquedo: faixa de madeira escura com uma
+      // borda de MDF clara no topo e as ripas brancas das trilhas descendo.
+      // Sem nenhuma peça desenhada aqui — as peças são o conteúdo do jogo.
+      const topo = a * 0.93;
+      ctx.fillStyle = '#4A3324';
+      ctx.fillRect(-sx, topo, l + sx * 2, a + sy - topo);
+      ctx.fillStyle = '#C8A27A';
+      ctx.fillRect(-sx, topo, l + sx * 2, 8);
+      ctx.fillStyle = 'rgba(244, 239, 230, 0.85)';
+      const passo = l / 5;
+      for (let i = Math.floor(-sx / passo); i <= Math.ceil((l + sx) / passo); i++) {
+        ctx.fillRect(passo * i - 4, topo + 8, 8, a + sy - topo);
+      }
+      return;
+    }
+
+    if (this.tema === 'quarto') {
+      // Prateleira de madeira no rodapé — o "chão" de um quarto de leitura,
+      // não uma colina. Friso mais claro no topo simula a borda iluminada da
+      // tábua, como no tema 'quadro' faz para a bandeja de giz.
+      const topoPrateleira = a * 0.9;
+      ctx.fillStyle = '#7C2D12';
+      ctx.fillRect(-sx, topoPrateleira, l + sx * 2, a + sy - topoPrateleira);
+      ctx.fillStyle = '#B45309';
+      ctx.fillRect(-sx, topoPrateleira, l + sx * 2, 8);
+      return;
+    }
+
+    if (this.mostrarColinas) {
+      this._colina(ctx, a * 0.78, this.corColinaFundo, 0.9, sx, sy);
+      this._colina(ctx, a * 0.86, this.corColina, 1.15, sx, sy);
+      ctx.fillStyle = this.corColina;
+      ctx.fillRect(-sx, a * 0.92, l + sx * 2, a * 0.08 + sy);
+    }
+  }
+
+  desenhar(ctx) {
+    const l = this.largura;
+    const a = this.altura;
+
+    // O tema 'formas' desenha o céu INTEIRO por conta própria — degradê, halo e
+    // camadas — em vez de herdar o céu claro com sol e nuvens fofas. Sai daqui
+    // logo, para não pagar um desenho que seria coberto em seguida.
+    if (this.tema === 'formas') {
+      this._desenharCeuGeometrico(ctx, l, a);
+      return;
+    }
+
+    this._ceu(ctx);
+
+    // Sol radiante — nunca nos temas de interior ('quadro', 'bingo', 'quarto')
+    if (this.mostrarSol && !TEMAS_INTERIOR.includes(this.tema)) {
+      const sx = l * 0.88;
+      const sy = a * 0.14;
+      const brilho = ctx.createRadialGradient(sx, sy, 10, sx, sy, a * 0.28);
+      brilho.addColorStop(0, 'rgba(253, 224, 71, 0.95)');
+      brilho.addColorStop(0.5, 'rgba(254, 240, 138, 0.4)');
+      brilho.addColorStop(1, 'rgba(253, 224, 71, 0)');
+      ctx.fillStyle = brilho;
+      ctx.beginPath();
+      ctx.arc(sx, sy, a * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sol vetorial amigável
+      ctx.fillStyle = '#FACC15';
+      ctx.beginPath();
+      ctx.arc(sx, sy, a * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Nuvens dinâmicas — não nos temas de interior
+    if (!TEMAS_INTERIOR.includes(this.tema)) {
+      for (const nuvem of this.nuvens) {
+        this._nuvem(ctx, nuvem.x * l, nuvem.y * a, 90 * nuvem.escala);
+      }
+    }
+
+    if (this.mostrarDecoracoes) {
+      if (this.tema === 'construcao') this._desenharCanteiroConstrucao(ctx, l, a);
+      if (this.tema === 'quadro') this._desenharDecoracoesQuadro(ctx, l, a);
+      if (this.tema === 'bingo') this._desenharDecoracoesBingo(ctx, l, a);
+      if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
+      if (this.tema === 'trilhas') this._desenharDecoracoesTrilhas(ctx, l, a);
+      if (this.tema === 'espaco') this._desenharDecoracoesEspaco(ctx, l, a);
+    }
+    if (this.mostrarChao) this._chao(ctx);
+  }
+
+  /**
+   * Tema 'bingo' — o cenário acolhedor e dinâmico do Bingo da Adição e Subtração.
+   *
+   * Fichas circulares com símbolos matemáticos (+, -, =) e números flutuam
+   * suavemente nas margens da tela com baixa opacidade (0.08 a 0.14), dando vida
+   * ao cenário sem poluir visualmente nem disputar a atenção de crianças neurodivergentes.
+   */
+  _desenharDecoracoesBingo(ctx, l, a) {
+    const itens = [
+      { x: 0.11, y: 0.22, tam: 64, alfa: 0.12, txt: '+', cor: '#38BDF8', periodo: 6.0, balanco: 8, fase: 0 },
+      { x: 0.88, y: 0.24, tam: 72, alfa: 0.14, txt: 'B', cor: '#F472B6', periodo: 7.2, balanco: 10, fase: 1.5 },
+      { x: 0.90, y: 0.68, tam: 68, alfa: 0.12, txt: '-', cor: '#FBBF24', periodo: 5.8, balanco: 9, fase: 3.2 },
+      { x: 0.09, y: 0.72, tam: 60, alfa: 0.10, txt: '7', cor: '#34D399', periodo: 6.5, balanco: 7, fase: 4.8 },
+      { x: 0.84, y: 0.48, tam: 52, alfa: 0.09, txt: '3', cor: '#A78BFA', periodo: 8.0, balanco: 8, fase: 2.1 },
+    ];
+
+    for (const item of itens) {
+      const bal = item.periodo
+        ? Math.sin((this._t / item.periodo) * Math.PI * 2 + item.fase) * item.balanco
+        : 0;
+      ctx.save();
+      ctx.globalAlpha = item.alfa;
+      ctx.translate(item.x * l, item.y * a + bal);
+
+      // Círculo da ficha com borda suave
+      ctx.fillStyle = item.cor;
+      ctx.beginPath();
+      ctx.arc(0, 0, item.tam / 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Símbolo central
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${Math.round(item.tam * 0.48)}px Outfit, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.txt, 0, 1);
+
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Tema 'quarto' — o quarto de leitura do Jogo da Ordenação.
+   *
+   * Números soltos em círculos foram a primeira tentativa aqui e não convenceram:
+   * liam como enfeite de outro jogo colado na parede, não como o quarto. Um
+   * "livro" solto também já foi tentado antes e retirado por pedido — o
+   * tabuleiro é a única peça de leitura que importa nesta tela. Um facho de
+   * abajur também já esteve aqui e saiu por pedido — a parede em si já é uma
+   * lousa verde (ver `corCeuTopo`/`corCeuBase` e `_chao`), sem precisar de um
+   * "sol" de canto para ficar acolhedora.
+   *
+   * O que fica são números de giz branco subindo devagar pela lousa — o
+   * conteúdo do próprio jogo, mas sem virar ícone parado: sempre na mesma
+   * velocidade, sem girar nem balançar, um único movimento simples.
+   */
+  _desenharDecoracoesQuarto(ctx, l, a) {
+    // Cada número deriva de verdade (sobe e reaparece por baixo), não o
+    // balanço no lugar que as outras decorações usam — é o que faz ler como
+    // algo subindo pela parede, não como mais uma peça flutuante.
+    //
+    // `fase` é escolhida para que, em t=0, os seis já apareçam ESPALHADOS pela
+    // altura visível (não empilhados perto do chão): fase grande = nasce perto
+    // do teto, fase pequena = nasce perto da prateleira. Sem esse espalhamento
+    // inicial, os seis nascem juntos na faixa que acabou de reaparecer por
+    // baixo e ficam invisíveis (atrás da prateleira) por vários segundos.
+    //
+    // `x` cobre os dois lados da tela (0,08 a 0,32 à esquerda, 0,68 a 0,92 à
+    // direita) — não só um canto — deixando livre a faixa central onde o
+    // painel do nível e o tabuleiro da partida ficam.
+    const numeros = [
+      { x: 0.82, txt: '5', tam: 30, alfa: 0.22, velocidade: 14, fase: 730 },
+      { x: 0.18, txt: '2', tam: 24, alfa: 0.17, velocidade: 10, fase: 610 },
+      { x: 0.92, txt: '9', tam: 27, alfa: 0.20, velocidade: 12, fase: 490 },
+      { x: 0.08, txt: '0', tam: 20, alfa: 0.15, velocidade: 9, fase: 370 },
+      { x: 0.68, txt: '7', tam: 23, alfa: 0.16, velocidade: 11, fase: 250 },
+      { x: 0.32, txt: '3', tam: 19, alfa: 0.14, velocidade: 8, fase: 130 },
+    ];
+    const altura = a + 60;
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Giz branco puro — não o creme quente usado sobre a madeira do rascunho
+    // anterior, que sumiria contra uma lousa escura.
+    ctx.fillStyle = '#FFFFFF';
+    for (const n of numeros) {
+      const y = altura - ((this._t * n.velocidade + n.fase) % altura);
+      const desvio = Math.sin(this._t / 4 + n.fase) * 6;
+      ctx.globalAlpha = n.alfa;
+      ctx.font = `800 ${n.tam}px system-ui, sans-serif`;
+      ctx.fillText(n.txt, n.x * l + desvio, y);
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Tema 'espaco' — a Corrida Espacial.
+   *
+   * Céu de noite com estrelas PARADAS: nenhuma cintila nem pisca (diretriz de
+   * `METODO-JOGOS-NUMERANDUS.md` §3.A — brilho estável, nunca oscilação). Dois
+   * planetas apagados (opacidade 0,10–0,14) balançam devagar nas margens, sem
+   * nome nem número: o cenário não pode competir com a pista da partida.
+   */
+  _desenharDecoracoesEspaco(ctx, l, a, sx = 0, sy = 0) {
+    this._desenharEstrelasEspaco(ctx, sx, sy);
+
+    const planetas = [
+      // Posições escolhidas para o vão da partida E do menu: entre as pistas e
+      // o painel de baixo, e na coluna livre à direita dos botões do menu.
+      { x: 0.04, y: 0.97, r: 84, cor: '#A78BFA', alfa: 0.12, anel: false, periodo: 9, fase: 0 },
+      { x: 0.84, y: 0.66, r: 30, cor: '#F9A8D4', alfa: 0.14, anel: true, periodo: 11, fase: 2.2 },
+      { x: 0.36, y: 0.21, r: 20, cor: '#5EEAD4', alfa: 0.10, anel: false, periodo: 8, fase: 4.1 },
+    ];
+    for (const p of planetas) {
+      const bal = Math.sin((this._t / p.periodo) * Math.PI * 2 + p.fase) * 6;
+      ctx.save();
+      ctx.globalAlpha = p.alfa;
+      ctx.translate(p.x * l, p.y * a + bal);
+      ctx.fillStyle = p.cor;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.anel) {
+        ctx.strokeStyle = p.cor;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.r * 1.8, p.r * 0.42, -0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  /**
+   * As estrelas do tema 'espaco', determinísticas e ancoradas numa grade de
+   * 160 px da caixa LÓGICA — mesma lição da onda do tema 'formas': a passada
+   * da sangria e a da cena desenham as MESMAS estrelas, sem costura na junção.
+   * Nada de `Math.random()` aqui.
+   */
+  _desenharEstrelasEspaco(ctx, sx = 0, sy = 0) {
+    const PASSO = 160;
+    const hash = (i, j, k) => {
+      const v = Math.sin(i * 127.1 + j * 311.7 + k * 74.7) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    ctx.save();
+    ctx.fillStyle = '#FFFFFF';
+    for (let i = Math.floor(-sx / PASSO); i <= Math.ceil((this.largura + sx) / PASSO); i++) {
+      for (let j = Math.floor(-sy / PASSO); j <= Math.ceil((this.altura + sy) / PASSO); j++) {
+        for (let k = 0; k < 3; k++) {
+          ctx.globalAlpha = 0.25 + hash(i, j, k + 10) * 0.55;
+          ctx.beginPath();
+          ctx.arc(
+            i * PASSO + hash(i, j, k) * PASSO,
+            j * PASSO + hash(i, j, k + 5) * PASSO,
+            0.6 + hash(i, j, k + 20) * 1.6,
+            0, Math.PI * 2,
+          );
+          ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Tema 'trilhas' — o Caminho das Cores.
+   *
+   * Peças das 5 cores do brinquedo (as mesmas 4 formas) SOBEM devagar pelas
+   * margens, como bolhas, com alfa baixo (0,15 a 0,22) e fora da faixa central
+   * onde ficam o painel e os cartões. Só aparecem nas telas de vitrine (menu,
+   * níveis, tutorial, resultado): a partida desliga as decorações, porque ali
+   * as peças são o exercício e o cenário não pode ensaiá-lo. Um halo claro
+   * atrás do centro dá volume ao roxo liso sem criar degradê na partida.
+   */
+  _desenharDecoracoesTrilhas(ctx, l, a) {
+    const halo = ctx.createRadialGradient(l / 2, a * 0.45, 20, l / 2, a * 0.45, Math.max(l, a) * 0.6);
+    halo.addColorStop(0, 'rgba(167, 139, 250, 0.22)');
+    halo.addColorStop(1, 'rgba(167, 139, 250, 0)');
+    ctx.fillStyle = halo;
+    // Maior que a caixa lógica de propósito: na passada da sangria o halo
+    // continua pelas barras do letterbox em vez de terminar na borda do jogo.
+    ctx.fillRect(-l, -a, l * 3, a * 3);
+
+    const pecas = [
+      { x: 0.07, forma: 'quadrado', cor: '#EF4444', tam: 54, alfa: 0.22, velocidade: 13, fase: 700, giro: 14 },
+      { x: 0.19, forma: 'circulo', cor: '#3B82F6', tam: 40, alfa: 0.17, velocidade: 9, fase: 520, giro: 0 },
+      { x: 0.29, forma: 'triangulo', cor: '#FACC15', tam: 34, alfa: 0.15, velocidade: 11, fase: 160, giro: -10 },
+      { x: 0.09, forma: 'pentagono', cor: '#22C55E', tam: 46, alfa: 0.19, velocidade: 10, fase: 340, giro: 8 },
+      { x: 0.93, forma: 'triangulo', cor: '#F97316', tam: 56, alfa: 0.22, velocidade: 12, fase: 610, giro: -12 },
+      { x: 0.81, forma: 'pentagono', cor: '#EF4444', tam: 38, alfa: 0.16, velocidade: 9, fase: 240, giro: 10 },
+      { x: 0.71, forma: 'quadrado', cor: '#22C55E', tam: 32, alfa: 0.15, velocidade: 11, fase: 460, giro: -6 },
+      { x: 0.91, forma: 'circulo', cor: '#FACC15', tam: 44, alfa: 0.18, velocidade: 8, fase: 90, giro: 0 },
+      // Fora da caixa lógica: só aparecem sobre as barras do letterbox.
+      { x: -0.10, forma: 'triangulo', cor: '#3B82F6', tam: 50, alfa: 0.20, velocidade: 10, fase: 410, giro: 9 },
+      { x: -0.22, forma: 'quadrado', cor: '#FACC15', tam: 42, alfa: 0.16, velocidade: 12, fase: 130, giro: -8 },
+      { x: -0.36, forma: 'circulo', cor: '#EF4444', tam: 48, alfa: 0.18, velocidade: 9, fase: 580, giro: 0 },
+      { x: -0.50, forma: 'pentagono', cor: '#F97316', tam: 40, alfa: 0.15, velocidade: 11, fase: 290, giro: 12 },
+      { x: 1.10, forma: 'quadrado', cor: '#3B82F6', tam: 46, alfa: 0.20, velocidade: 11, fase: 370, giro: -10 },
+      { x: 1.22, forma: 'pentagono', cor: '#FACC15', tam: 52, alfa: 0.17, velocidade: 9, fase: 60, giro: 7 },
+      { x: 1.36, forma: 'triangulo', cor: '#22C55E', tam: 44, alfa: 0.18, velocidade: 12, fase: 520, giro: -12 },
+      { x: 1.50, forma: 'circulo', cor: '#F97316', tam: 40, alfa: 0.15, velocidade: 10, fase: 200, giro: 0 },
+    ];
+    const altura = a + 140;
+    for (const p of pecas) {
+      const y = altura - ((this._t * p.velocidade + p.fase) % altura) - 70;
+      const desvio = Math.sin(this._t / 4 + p.fase) * 8;
+      ctx.save();
+      ctx.globalAlpha = p.alfa;
+      ctx.translate(p.x * l + desvio, y);
+      ctx.rotate(((p.giro + Math.sin(this._t / 5 + p.fase) * 6) * Math.PI) / 180);
+      ctx.beginPath();
+      const m = p.tam / 2;
+      if (p.forma === 'circulo') {
+        ctx.arc(0, 0, m * 0.92, 0, Math.PI * 2);
+      } else if (p.forma === 'quadrado') {
+        ctx.roundRect(-m * 0.88, -m * 0.88, m * 1.76, m * 1.76, p.tam * 0.1);
+      } else if (p.forma === 'triangulo') {
+        ctx.moveTo(0, -m * 0.92);
+        ctx.lineTo(m * 0.94, m * 0.84);
+        ctx.lineTo(-m * 0.94, m * 0.84);
+        ctx.closePath();
+      } else {
+        for (let i = 0; i < 5; i++) {
+          const ang = -Math.PI / 2 + i * ((2 * Math.PI) / 5);
+          const px = m * 0.96 * Math.cos(ang);
+          const py = m * 0.08 + m * 0.96 * Math.sin(ang);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+      }
+      ctx.fillStyle = p.cor;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Tema 'quadro' — o quadro-negro do Jogo da Velha.
+   *
+   * Tabuleiros 3x3 e círculos gigantes, em giz branco desbotado (alfa baixo),
+   * espalhados pelo céu-quadro. É o MESMO motivo do jogo (a grade, o O),
+   * repetido em escala grande demais para ler como conteúdo — decoração, não
+   * ensaio do exercício, a mesma regra que o Jogo das Cores já segue para as
+   * próprias peças no fundo do menu.
+   */
+  _desenharDecoracoesQuadro(ctx, l, a) {
+    const doodles = [
+      { x: 0.12, y: 0.22, tam: 210, alfa: 0.08, giro: -8, tipo: 'grade' },
+      { x: 0.87, y: 0.62, tam: 240, alfa: 0.07, giro: 10, tipo: 'grade' },
+      { x: 0.90, y: 0.16, tam: 110, alfa: 0.12, tipo: 'o' },
+      { x: 0.07, y: 0.68, tam: 130, alfa: 0.10, tipo: 'o' },
+    ];
+    for (const d of doodles) {
+      ctx.save();
+      ctx.globalAlpha = d.alfa;
+      ctx.translate(d.x * l, d.y * a);
+      if (d.giro) ctx.rotate((d.giro * Math.PI) / 180);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = d.tam * 0.06;
+      ctx.lineCap = 'round';
+
+      if (d.tipo === 'o') {
+        ctx.beginPath();
+        ctx.arc(0, 0, d.tam / 2, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const passo = d.tam / 3;
+        for (let i = 1; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-d.tam / 2 + i * passo, -d.tam / 2);
+          ctx.lineTo(-d.tam / 2 + i * passo, d.tam / 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-d.tam / 2, -d.tam / 2 + i * passo);
+          ctx.lineTo(d.tam / 2, -d.tam / 2 + i * passo);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Tema 'formas' — o céu geométrico do Jogo das Formas.
+   *
+   * Existe para as duas aulas refeitas pararem de ser a mesma tela. O Jogo dos
+   * Blocos **é** um canteiro de obras: o original dele tinha guindaste, caixotes
+   * e `cenario.jpg`. O Jogo das Formas herdou o canteiro por acidente, só porque
+   * nasceu do template do piloto — o original DELE se passava numa clareira.
+   *
+   * De trás para frente: degradê diagonal indigo → ciano, um halo de luz no
+   * lugar do sol vetorial, formas brancas gigantes quase invisíveis, as quatro
+   * peças do jogo nas cores delas, e uma faixa de base escura com friso miúdo.
+   *
+   * **Nada de nuvem.** Nuvem fofa é o vocabulário do céu claro dos outros temas;
+   * aqui ela empurraria a tela de volta para a aparência que este tema existe
+   * para abandonar.
+   */
+  _desenharCeuGeometrico(ctx, l, a) {
+    this._ceu(ctx);
+
+    for (const peca of this.pecasDistantes) this._peca(ctx, l, a, peca, '#FFFFFF');
+
+    if (this.mostrarPecas) {
+      for (const peca of this.pecas) {
+        this._peca(ctx, l, a, peca, peca.cor ? cores.ludica[peca.cor] : '#FFFFFF');
+      }
+    }
+
+    if (this.mostrarChao) this._chao(ctx);
+
+    if (this.mostrarPecas) {
+      const friso = ['circulo', 'quadrado', 'triangulo', 'retangulo'];
+      for (let i = 0; i < 14; i++) {
+        this._peca(ctx, l, a, {
+          tipo: friso[i % 4],
+          x: (60 + i * 92) / l,
+          y: 0.935,
+          lado: 34,
+          alfa: 0.16,
+          giro: i * 13,
+        }, '#FFFFFF');
+      }
+    }
+  }
+
+  /**
+   * Uma forma solta no céu. `x`/`y` são fração da caixa e `giro` é em graus.
+   *
+   * Quando a peça traz `periodo`, ela sobe e desce `balanco` pixels em torno do
+   * próprio lugar, com um giro de meio grau acompanhando — o bastante para a tela
+   * parecer viva e pouco o bastante para não puxar o olho da criança para longe
+   * do botão JOGAR.
+   */
+  _peca(ctx, l, a, peca, cor) {
+    const s = peca.lado;
+    const bal = peca.periodo
+      ? Math.sin((this._t / peca.periodo) * Math.PI * 2 + (peca.fase ?? 0)) * (peca.balanco ?? 10)
+      : 0;
+    ctx.save();
+    ctx.globalAlpha = peca.alfa;
+    ctx.fillStyle = cor;
+    ctx.translate(peca.x * l, peca.y * a + bal);
+    const giro = (peca.giro ?? 0) + (peca.periodo ? bal * 0.05 : 0);
+    if (giro) ctx.rotate((giro * Math.PI) / 180);
+    ctx.beginPath();
+    if (peca.tipo === 'circulo') {
+      ctx.arc(0, 0, s / 2, 0, Math.PI * 2);
+    } else if (peca.tipo === 'quadrado') {
+      ctx.roundRect(-s / 2, -s / 2, s, s, s * 0.18);
+    } else if (peca.tipo === 'triangulo') {
+      ctx.moveTo(0, -s * 0.45);
+      ctx.lineTo(s / 2, s * 0.45);
+      ctx.lineTo(-s / 2, s * 0.45);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-s / 2, -s / 4, s, s / 2, s * 0.1);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _desenharCanteiroConstrucao(ctx, l, a) {
+    // 1. Silhueta de Prédios ao Fundo (City Skyline)
+    ctx.save();
+    const predios = [
+      { x: l * 0.04, w: l * 0.08, h: a * 0.35, cor: '#94A3B8' },
+      { x: l * 0.11, w: l * 0.10, h: a * 0.45, cor: '#CBD5E1' },
+      { x: l * 0.20, w: l * 0.07, h: a * 0.30, cor: '#94A3B8' },
+      { x: l * 0.65, w: l * 0.09, h: a * 0.40, cor: '#CBD5E1' },
+      { x: l * 0.73, w: l * 0.12, h: a * 0.50, cor: '#94A3B8' },
+      { x: l * 0.84, w: l * 0.08, h: a * 0.32, cor: '#CBD5E1' },
+    ];
+
+    const topoChao = a * 0.82;
+
+    for (const p of predios) {
+      ctx.fillStyle = p.cor;
+      const y = topoChao - p.h;
+      ctx.beginPath();
+      ctx.roundRect(p.x, y, p.w, p.h + 20, [8, 8, 0, 0]);
+      ctx.fill();
+
+      // Janelinhas dos prédios
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      const colunasJ = Math.floor(p.w / 20);
+      const linhasJ = Math.floor(p.h / 28);
+      for (let c = 0; c < colunasJ; c++) {
+        for (let r = 0; r < linhasJ; r++) {
+          ctx.fillRect(p.x + 6 + c * 16, y + 10 + r * 22, 9, 12);
+        }
+      }
+    }
+    ctx.restore();
+
+    // 2. Colinas suaves no plano intermediário
+    this._colina(ctx, a * 0.76, '#86EFAC', 0.6);
+
+    // 3. Andaimes de Madeira de Construção (Lado Direito)
+    ctx.save();
+    const ax = l * 0.78;
+    const ay = a * 0.42;
+    const aw = l * 0.16;
+    const ah = a * 0.40;
+
+    // Estrutura de vigas de madeira
+    ctx.strokeStyle = '#B45309';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    // Colunas verticais
+    ctx.moveTo(ax, ay); ctx.lineTo(ax, ay + ah);
+    ctx.moveTo(ax + aw / 2, ay - 20); ctx.lineTo(ax + aw / 2, ay + ah);
+    ctx.moveTo(ax + aw, ay); ctx.lineTo(ax + aw, ay + ah);
+    // Travessas horizontais
+    for (let i = 0; i <= 3; i++) {
+      const hy = ay + (ah / 3) * i;
+      ctx.moveTo(ax - 10, hy); ctx.lineTo(ax + aw + 10, hy);
+    }
+    // X de sustentação
+    ctx.moveTo(ax, ay); ctx.lineTo(ax + aw / 2, ay + ah / 3);
+    ctx.moveTo(ax + aw / 2, ay); ctx.lineTo(ax, ay + ah / 3);
+    ctx.moveTo(ax + aw / 2, ay + ah / 3); ctx.lineTo(ax + aw, ay + (ah / 3) * 2);
+    ctx.moveTo(ax + aw, ay + ah / 3); ctx.lineTo(ax + aw / 2, ay + (ah / 3) * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 4. O chão do canteiro NÃO é desenhado aqui.
+    //
+    // Mora em `_chao`, junto das colinas e da faixa de base dos outros temas,
+    // porque é camada CONTÍNUA: precisa poder ser esticada para dentro das
+    // barras do letterbox. `desenhar` o chama logo depois desta função, então a
+    // ordem é a mesma de antes — o piso cobre a base dos prédios.
+    //
+    // A areia é clara e dessaturada, não laranja: o tom anterior (#F59E0B) era
+    // o mesmo valor de `cores.atencao`, saturação de cor de alerta ocupando o
+    // maior bloco de cor da tela e competindo com os botões e com os blocos
+    // coloridos que o aluno precisa olhar.
+  }
+
+  _nuvem(ctx, x, y, r) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.38, y - r * 0.14, r * 0.32, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.72, y + r * 0.04, r * 0.26, 0, Math.PI * 2);
+    ctx.arc(x + r * 0.32, y + r * 0.2, r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _colina(ctx, baseY, cor, amplitude, sx = 0, sy = 0) {
+    const l = this.largura;
+    const a = this.altura;
+    ctx.fillStyle = cor;
+    ctx.beginPath();
+    ctx.moveTo(-sx, a + sy);
+    ctx.lineTo(-sx, baseY);
+    // As curvas continuam ancoradas na caixa LÓGICA; a sangria só estica as
+    // pontas na horizontal, para a colina não terminar antes da barra.
+    ctx.quadraticCurveTo(l * 0.25, baseY - 60 * amplitude, l * 0.5, baseY - 10 * amplitude);
+    ctx.quadraticCurveTo(l * 0.75, baseY + 40 * amplitude, l, baseY - 30 * amplitude);
+    ctx.lineTo(l + sx, baseY - 30 * amplitude);
+    ctx.lineTo(l + sx, a + sy);
+    ctx.closePath();
+    ctx.fill();
+  }
+}

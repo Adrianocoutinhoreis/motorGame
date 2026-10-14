@@ -69,6 +69,7 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 | [`docs/PLANO-VISUAL-JOGO-DAS-FORMAS.md`](docs/PLANO-VISUAL-JOGO-DAS-FORMAS.md) | Jogo das Formas — layout, tamanhos, movimento |
 | [`docs/REGRAS-JOGO-DAS-CORES.md`](docs/REGRAS-JOGO-DAS-CORES.md) | Jogo das Cores — o caminho, níveis, contrato |
 | [`docs/PLANO-VISUAL-JOGO-DAS-CORES.md`](docs/PLANO-VISUAL-JOGO-DAS-CORES.md) | Jogo das Cores — layout medido, as oito texturas |
+| [`docs/REGRAS-CORRIDA-ESPACIAL.md`](docs/REGRAS-CORRIDA-ESPACIAL.md) | Corrida Espacial (Numerandus) — a jogada, níveis, pontuação, contrato |
 
 ---
 
@@ -89,6 +90,7 @@ Coleção **Numerandus** (`Games/numerandus/`) — ver [`docs/METODO-JOGOS-NUMER
 | [Jogo da Ordenação](Games/numerandus/jogo-da-ordenacao/) | — | ✅ jogável |
 | [Encaixe Certo](Games/numerandus/encaixe-certo/) | — | ✅ jogável, [pendências declaradas](Games/numerandus/encaixe-certo/README.md#pendências-conhecidas) |
 | [Jogo da Memória](Games/numerandus/jogo-da-memoria/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/jogo-da-memoria/README.md#pendências-conhecidas) |
+| [Corrida Espacial](Games/numerandus/corrida-espacial/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/corrida-espacial/README.md#pendências-conhecidas) |
 
 ---
 

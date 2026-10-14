@@ -32,6 +32,7 @@ Os materiais de referência da série Numerandus estão organizados na máquina 
 | **Jogo da Ordenação** | `jogo_ordenacao` | `jogo-da-ordenacao` | Ordenação de números em sequência crescente/decrescente ou reta numérica. |
 | **Material Dourado** | `material_dourado` | `material-dourado` | Contagem e composição de unidades, dezenas e centenas com cubinhos e barras. |
 | **Chave Mágica** | `video_chave_magica` | `chave-magica` | Resolução de enigmas matemáticos para destravar baús/portas mágicas. |
+| **Corrida Espacial** | `corrida_espacial` (só o vídeo narrado) | `corrida-espacial` | Corrida de foguetes na reta numérica de 1 a 20: 1 dado, soma ou diferença de 2 dados; a criança leva o foguete até a casa certa. Ver `docs/REGRAS-CORRIDA-ESPACIAL.md`. |
 
 ---
 
