@@ -13,28 +13,28 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto', 'trilhas', 'espaco'.
+ * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa'.
  */
 
 /** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
-const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco'];
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa'];
 
 export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
     this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
@@ -161,6 +161,10 @@ export class Background extends Node {
     // planeta que encosta na borda segue inteiro em vez de parar seco nela.
     if (this.mostrarDecoracoes && this.tema === 'espaco') {
       this._desenharDecoracoesEspaco(ctx, this.largura, this.altura, sx, sy);
+    }
+    // Tema 'mesa': os pratinhos e grãos apagados também continuam pelas barras.
+    if (this.mostrarDecoracoes && this.tema === 'mesa') {
+      this._desenharDecoracoesMesa(ctx, this.largura, this.altura, sx, sy);
     }
     // O pedaço do cenário que é da CENA e encosta na borda (ex.: o planeta de
     // destino da Corrida Espacial) continua pelas barras pelo mesmo princípio.
@@ -408,8 +412,72 @@ export class Background extends Node {
       if (this.tema === 'quarto') this._desenharDecoracoesQuarto(ctx, l, a);
       if (this.tema === 'trilhas') this._desenharDecoracoesTrilhas(ctx, l, a);
       if (this.tema === 'espaco') this._desenharDecoracoesEspaco(ctx, l, a);
+      if (this.tema === 'mesa') this._desenharDecoracoesMesa(ctx, l, a);
     }
     if (this.mostrarChao) this._chao(ctx);
+  }
+
+  /**
+   * Tema 'mesa' — o Pratinho CDU.
+   *
+   * Fundo NEUTRO de propósito (pedido do humano, 19/10/2026: "não brigar com o
+   * conteúdo"): ardósia escura lisa, sem toalha estampada. Nas telas de vitrine
+   * entram dois pratinhos C/D/U e alguns grãos, todos apagados (opacidade
+   * 0,08–0,14) e parados — nada pisca nem balança. A partida desliga as
+   * decorações: ali o prato e os grãos são o exercício.
+   *
+   * Grãos determinísticos numa grade de 150 px da caixa LÓGICA, como as
+   * estrelas do 'espaco': a sangria desenha os mesmos grãos, sem costura.
+   */
+  _desenharDecoracoesMesa(ctx, l, a, sx = 0, sy = 0) {
+    const pratos = [
+      { x: 0.05, y: 0.9, r: 130, alfa: 0.1, giro: 0.4 },
+      { x: 0.96, y: 0.58, r: 96, alfa: 0.08, giro: -0.6 },
+    ];
+    const fatias = ['#2E9E4F', '#D93A35', '#EE8420'];
+    for (const p of pratos) {
+      ctx.save();
+      ctx.globalAlpha = p.alfa;
+      ctx.translate(p.x * l, p.y * a);
+      ctx.rotate(p.giro);
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = fatias[i];
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, p.r, (i * 2 * Math.PI) / 3, ((i + 1) * 2 * Math.PI) / 3);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.lineWidth = p.r * 0.08;
+      ctx.strokeStyle = '#F5EFE4';
+      ctx.beginPath();
+      ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const PASSO = 150;
+    const hash = (i, j, k) => {
+      const v = Math.sin(i * 91.3 + j * 237.1 + k * 53.9) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    ctx.save();
+    ctx.fillStyle = '#E8DCC8';
+    for (let i = Math.floor(-sx / PASSO); i <= Math.ceil((l + sx) / PASSO); i++) {
+      for (let j = Math.floor(-sy / PASSO); j <= Math.ceil((a + sy) / PASSO); j++) {
+        // Só um grão a cada duas células, em média: espalhado, nunca padronagem.
+        if (hash(i, j, 0) < 0.5) continue;
+        ctx.globalAlpha = 0.08 + hash(i, j, 1) * 0.06;
+        ctx.beginPath();
+        ctx.ellipse(
+          i * PASSO + hash(i, j, 2) * PASSO,
+          j * PASSO + hash(i, j, 3) * PASSO,
+          9, 6.3, hash(i, j, 4) * Math.PI, 0, Math.PI * 2,
+        );
+        ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   /**

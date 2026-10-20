@@ -381,6 +381,7 @@ O cenário das telas, todo vetorial. Três temas, escolhidos por `config.tema`:
 | `'campo'` | céu claro, sol, nuvens, colinas | o padrão |
 | `'construcao'` | o mesmo céu + silhueta de prédios e andaimes | Jogo dos Blocos |
 | `'formas'` | degradê indigo → ciano, halo, formas geométricas em camadas | Jogo das Formas |
+| `'mesa'` | ardósia escura neutra; nas telas de vitrine, dois pratinhos C/D/U e grãos apagados (0,08–0,14), parados | Pratinho CDU |
 
 O tema `'formas'` aceita **`mostrarPecas`**. Com `true` (padrão) as quatro peças do
 jogo flutuam no céu nas cores delas; a cena de partida passa **`false`**, porque
