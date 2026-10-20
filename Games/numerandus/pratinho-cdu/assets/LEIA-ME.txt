@@ -1,0 +1,31 @@
+Assets deste jogo.
+
+Organize assim:
+
+  assets/
+    img/                imagens e SVG
+    audio/              narração, efeitos e música
+    audio-transcricao/  uma pasta por áudio, com a transcrição do que é falado
+                        (ex.: audio-transcricao/abertura/transcricao.md)
+
+Regras (valem para a entrega unitária no AVA):
+
+  1. Todo arquivo referenciado precisa estar AQUI DENTRO. Nada de CDN, nada de
+     link para outro servidor, nada de fonte do Google.
+  2. Os caminhos em src/config.js são relativos ao index.html, começando com
+     "./assets/…".
+  3. Registre origem e licença de cada arquivo na tabela do README.md.
+  4. Áudio de narração é conteúdo pedagógico, não enfeite. TODO som sai de
+     arquivo: o motor não sintetiza voz. Faltando a gravação, a tela fica em
+     SILÊNCIO e o console diz qual arquivo falta e o que ele deveria dizer.
+     O silêncio é de propósito — uma voz robótica esconderia a lacuna e
+     entregaria à criança uma pronúncia que ninguém revisou. Anote a pendência
+     no README.md e no CHECKLIST.md.
+  5. TODO áudio precisa de ficha de transcrição em audio-transcricao/<nome>/.
+     Sem ela, ninguém revisa o que a atividade ensina sem abrir os arquivos
+     num player — e um áudio trocado (o bloco "3" dizendo "quatro") passa
+     batido. A ficha registra o que é falado, o formato, a duração e o uso.
+
+Para conferir que nada aponta para fora:
+
+  node tools/verificar-independencia.mjs <slug-do-jogo>

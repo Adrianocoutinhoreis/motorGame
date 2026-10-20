@@ -33,6 +33,7 @@ Os materiais de referência da série Numerandus estão organizados na máquina 
 | **Material Dourado** | `material_dourado` | `material-dourado` | Contagem e composição de unidades, dezenas e centenas com cubinhos e barras. |
 | **Chave Mágica** | `video_chave_magica` | `chave-magica` | Resolução de enigmas matemáticos para destravar baús/portas mágicas. |
 | **Corrida Espacial** | `corrida_espacial` (só o vídeo narrado) | `corrida-espacial` | Corrida de foguetes na reta numérica de 1 a 20: 1 dado, soma ou diferença de 2 dados; a criança leva o foguete até a casa certa. Ver `docs/REGRAS-CORRIDA-ESPACIAL.md`. |
+| **Pratinho CDU** | `finalizados\2ano\Pratinho_CDU` (vídeo) e `jogos\2ano\CDU_video` (Remotion) | `pratinho-cdu` | Grãos jogados num prato de três fatias C/D/U: a criança conta cada fatia, forma o número nos rolinhos e compara com o do computador. Refaz o `Aulas para Refazer/Jogo_CDU_1ano`. Ver `docs/REGRAS-PRATINHO-CDU.md`. |
 
 ---
 
