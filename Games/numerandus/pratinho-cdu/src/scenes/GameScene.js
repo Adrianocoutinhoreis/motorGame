@@ -3,13 +3,13 @@ import {
   Background, Tween, Easing, ESTADOS, Watchdog,
 } from '../../engine/index.js';
 import {
-  CASAS, VALOR, sortearJogada, opcoesFacil, casasErradas, quemResponde, sortearPerguntas, sinalEntre,
+  CASAS, VALOR, sortearJogada, opcoesFacil, casasErradas, quemFormouMaior, sinalEntre,
 } from '../regras.js';
 import {
   CORES, escrever, desenharPrato, desenharGrao, desenharZero, fatiaNoPonto, GRAO_RX,
   desenharEstrelaRodada, desenharIconeQuem, desenharVisto, desenharIconeCerto, desenharIconeJogar,
   desenharIconeDesfazer, desenharIconeSeguir, desenharTrofeu, alturaRolinho, tracarEstrela,
-  desenharDedo, desenharOndaToque,
+  desenharDedo, desenharOndaToque, desenharSinalComparacao,
 } from '../desenho.js';
 
 // ---------------------------------------------------------------------------
@@ -48,6 +48,13 @@ const COMPARAR = { y: 372, lado: 136, altura: 132, meio: 50, ate_pronto: 30 };
 const PRONTO_Y = 232;
 
 const TOTAL_RODADAS = 5;
+
+/**
+ * A nota de uma VITÓRIA nunca fica abaixo disto. Uma derrota ou um empate valem, no
+ * máximo, 2 (com 5 rodadas, quem tem 3 estrelas já venceu), então com o piso em 3 a tela
+ * nunca mostra uma vitória com menos estrelas que uma derrota.
+ */
+const NOTA_MINIMA_VITORIA = 3;
 
 /** Fala pelo id definitivo; sem a gravação, o motor fica mudo e avisa o texto no console. */
 const NUMEROS = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
@@ -419,7 +426,7 @@ class BotaoNumero extends Button {
     } else {
       escrever(ctx, String(this.numero), l / 2, a / 2 + dy, 50, corTexto);
     }
-    // O número pedido (o maior ou o menor): contorno dourado e a estrela da rodada no canto.
+    // Quem fez o maior: contorno dourado e a estrela da rodada pousada no canto.
     if (this.vencedor > 0) {
       ctx.lineWidth = 7;
       ctx.strokeStyle = CORES.estrela;
@@ -449,6 +456,8 @@ class Sinal extends Node {
     this.pulo = 1;
     this.premio = false;
     this.t = 0;
+    /** 'simbolo' (>, <, =) ou 'jacare' (boca aberta para o maior): `config.sinalComparacao`. */
+    this.estilo = opcoes.estilo ?? 'simbolo';
   }
 
   atualizar(dt) {
@@ -475,7 +484,8 @@ class Sinal extends Node {
       ctx.strokeStyle = CORES.tintaSuave;
       ctx.stroke();
     }
-    escrever(ctx, this.texto, 0, 2, 46, this.certo ? '#FFFFFF' : CORES.tintaSuave);
+    if (this.certo) desenharSinalComparacao(ctx, this.texto, 0, 0, 40, this.estilo);
+    else escrever(ctx, this.texto, 0, 2, 46, CORES.tintaSuave);
     ctx.restore();
   }
 }
@@ -485,8 +495,7 @@ class Sinal extends Node {
  * comparação tem pergunta escrita (pedido do humano, 20/10/2026): é a única
  * tarefa que não se explica pelo gesto. Já em caixa alta (RE-01).
  *
- * `destaque` é a palavra que muda de rodada para rodada (MAIOR / MENOR): vem
- * em âmbar, para a criança notar que a pergunta não é sempre a mesma.
+ * `destaque` é a palavra-chave da pergunta (MAIOR): vem em âmbar.
  */
 class Pergunta extends Node {
   constructor(opcoes = {}) {
@@ -713,11 +722,12 @@ class Fim extends Node {
  * ajuda são cor, símbolo, movimento e som. As frases existem só como fala
  * (ids definitivos, mudos até a gravação chegar).
  *
- * **O placar** (`ScoreSystem`, meta 5) soma uma rodada concluída — leitura e
- * comparação certas — e conta como erro todo PRONTO errado, dos dois momentos.
- * Terminar as 5 rodadas é a vitória do contrato: a pontuação é 5 menos os
- * erros (RE-02). Quem ganhou mais estrelas do computador depende da sorte do
- * punhado, por isso vai em `extras` e não mexe na nota (docs/REGRAS-PRATINHO-CDU.md §6).
+ * **Como termina** (`_desfecho`): quem tem mais estrelas de "maior" vence; o mesmo
+ * número é empate; menos é derrota — a tela "QUASE LÁ!" da série. A nota
+ * (`_notaDaPartida`) é 3 a 5 estrelas na vitória (5 menos as rodadas com falha) e, no
+ * empate e na derrota, as estrelas ganhas no duelo, sem desconto (RE-02). O
+ * `ScoreSystem` só monta o payload no fim (`_terminar`): `erros` cru e `acertos` = a
+ * nota (docs/REGRAS-PRATINHO-CDU.md §6).
  *
  * Todo o tempo passa por Tween (nenhum setTimeout): pausa e ajuda congelam a
  * vez do computador junto.
@@ -736,9 +746,6 @@ export class GameScene extends Scene {
     };
 
     this.placar = new ScoreSystem({ total: TOTAL_RODADAS, nivel: this.nivel.id ?? 1, vidas: 0 });
-    /** A pergunta de cada rodada ('maior' / 'menor'); `nivel.perguntas` diz quais valem. */
-    this.perguntas = sortearPerguntas(this.nivel.perguntas ?? ['maior'], TOTAL_RODADAS);
-
     this.fase = 'jogar';
     this.rodada = 0;
     this.linhas = [];
@@ -753,6 +760,10 @@ export class GameScene extends Scene {
     this.leiturasDePrimeira = 0;
     this.errosLeitura = 0;
     this.errosComparacao = 0;
+    /** A rodada de agora já teve uma falha descontada da nota? (no máximo uma por rodada) */
+    this.falhaNaRodada = false;
+    /** Quantas rodadas tiveram pelo menos uma falha (0 a 5). */
+    this.rodadasComFalha = 0;
     this.rodadasComAjuda = 0;
     this._fimResolvido = false;
 
@@ -793,7 +804,7 @@ export class GameScene extends Scene {
     /** Opções do Fácil e os dois números da comparação: recriados a cada uso. */
     this.grupoEscolha = new Node();
     this.cartao.adicionar(this.grupoEscolha);
-    this.sinal = new Sinal({ x: AREA_X + AREA_L / 2, y: 354 });
+    this.sinal = new Sinal({ x: AREA_X + AREA_L / 2, y: 354, estilo: config.sinalComparacao });
     this.sinal.visible = false;
     this.cartao.adicionar(this.sinal);
     // Centrada no cartão, um pouco à direita para não encostar no ícone de quem joga.
@@ -890,6 +901,7 @@ export class GameScene extends Scene {
 
   _novaRodada() {
     this.rodada += 1;
+    this.falhaNaRodada = false;
     this.fase = 'jogar';
     this.jogada = null;
     this.prato.esvaziar();
@@ -1073,6 +1085,19 @@ export class GameScene extends Scene {
   }
 
   /** Marca o grão (halo + onda + som) e soma na contagem da casa. */
+  /**
+   * Um PRONTO errado (leitura ou comparação). Para a NOTA, a falha é por RODADA: só a
+   * primeira de cada rodada conta em `rodadasComFalha` — a criança que precisou de várias
+   * tentativas na mesma conta não perde mais por isso. A nota é montada em `_terminar`
+   * (ver `_notaDaPartida`); o campo `erros` do AVA segue a contagem crua (RE-02), a partir
+   * de `errosLeitura` + `errosComparacao`.
+   */
+  _registrarFalha() {
+    if (this.falhaNaRodada) return;
+    this.falhaNaRodada = true;
+    this.rodadasComFalha += 1;
+  }
+
   _acenderGrao(casa, k) {
     const g = this.prato.grao(casa, k);
     if (!g || g.marcado) return;
@@ -1185,7 +1210,7 @@ export class GameScene extends Scene {
    * não há rolinho para acender: o 2º erro já conta junto.
    */
   _errouLeitura(erradas) {
-    this.placar.errar();
+    this._registrarFalha();
     this.errosLeitura += 1;
     this.errosRodada += 1;
     this._sinalizarErro();
@@ -1351,12 +1376,9 @@ export class GameScene extends Scene {
     this._limparCartao();
     this.fundoCartao.vez = 'v';
     this.escolha = null;
-    const tipo = this.perguntas[this.rodada - 1];
-    this.linhas[this.rodada - 1].pergunta = tipo;
-    // Quem tem o número que a pergunta pede — e é para esse lado que vai a estrela.
-    const quem = quemResponde(tipo, this.numeroCrianca, this.numeroComputador);
+    const quem = quemFormouMaior(this.numeroCrianca, this.numeroComputador);
     this.pergunta.texto = 'QUAL NÚMERO É O ';
-    this.pergunta.destaque = tipo === 'menor' ? 'MENOR' : 'MAIOR';
+    this.pergunta.destaque = 'MAIOR';
     const { y, lado, altura, meio, ate_pronto: folga } = COMPARAR;
     const larguraLinha = lado * 2 + meio * 2 + folga + COLUNA_L;
     const xCrianca = CARTAO.x + (CARTAO.l - larguraLinha) / 2;
@@ -1393,8 +1415,7 @@ export class GameScene extends Scene {
     this.sinal.premio = true;
     this._atualizarBotoes();
     this._guiarComparacao();
-    const menor = this.perguntas[this.rodada - 1] === 'menor';
-    this._falar(menor ? 'qualEMenor' : 'qualEMaior', menor ? 'Qual número é o menor?' : 'Qual número é o maior?', true);
+    this._falar('qualEMaior', 'Qual número é maior?', true);
   }
 
   _marcarNumero(dono) {
@@ -1430,7 +1451,7 @@ export class GameScene extends Scene {
   _conferirComparacao() {
     if (!this.escolha) return;
     if (this.escolha !== this.resposta) {
-      this.placar.errar();
+      this._registrarFalha();
       this.errosComparacao += 1;
       const b = this.grupoEscolha.filhos.find((o) => o.quem === this.escolha);
       if (b) { b.errado = true; b.marcado = false; b.definirHabilitado(false); b.alpha = 1; }
@@ -1455,15 +1476,13 @@ export class GameScene extends Scene {
     this._mostrarSinal(sinalEntre(this.numeroCrianca, this.numeroComputador));
     this._mostrarVencedor(this.resposta);
     this._efeito('acerto');
-    const menor = this.perguntas[this.rodada - 1] === 'menor';
-    const quem = this.resposta === 'v' ? 'voce' : 'computador';
-    this._falar(`${quem}FezO${menor ? 'Menor' : 'Maior'}`,
-      `${this.resposta === 'v' ? 'Você' : 'O computador'} fez o ${menor ? 'menor' : 'maior'} número!`, true);
+    this._falar(this.resposta === 'v' ? 'voceFezOMaior' : 'computadorFezOMaior',
+      this.resposta === 'v' ? 'Você fez o maior número!' : 'O computador fez o maior número.', true);
     Tween.de(this.cartao).esperar(1400).chamar(() => this._fecharRodada(this.resposta));
   }
 
   /**
-   * Diz, sem frase, quem tem o número pedido: ele ganha o contorno
+   * Diz, sem frase, quem fez o maior: o número vencedor ganha o contorno
    * dourado e a estrela (na cor da trilha de cima), e o outro apaga.
    */
   _mostrarVencedor(quem) {
@@ -1494,7 +1513,6 @@ export class GameScene extends Scene {
     this.trilha.escalas[i] = 0.3;
     Tween.para(this.trilha.escalas, { [i]: 1 }, 550, Easing.costasSaida);
     if (ganhador === 'v') this._efeito('acerto');
-    this.placar.acertar();
 
     Tween.de(this.cartao).esperar(this.regras.pausaRodadaMs).chamar(() => {
       if (this.rodada >= TOTAL_RODADAS) this._mostrarFim();
@@ -1514,7 +1532,7 @@ export class GameScene extends Scene {
     const fim = this.fim;
     fim.visible = true;
     fim.estrelas = { ...this.estrelas };
-    fim.trofeu = this.estrelas.v > this.estrelas.c;
+    fim.trofeu = this._desfecho() === 'vitoria';
     fim.pulo = 0.2;
     Tween.para(fim, { pulo: 1 }, 600, Easing.costasSaida);
     if (fim.trofeu) this._efeito('acerto');
@@ -1522,27 +1540,57 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Vai ao resultado. Terminar as 5 rodadas é a vitória do contrato; a
-   * pontuação é 5 menos os PRONTOs errados (RE-02). O duelo com o computador
-   * viaja em `extras`. Não passa `estrelas`: a tela de resultado deriva a
-   * fileira (RE-04).
+   * Como a partida termina: quem tem mais estrelas de "maior" vence; o mesmo número de
+   * estrelas é empate (a série já tem a tela "EMPATOU!"); menos estrelas é derrota.
+   */
+  _desfecho() {
+    const { v, c } = this.estrelas;
+    if (v > c) return 'vitoria';
+    return v === c ? 'empate' : 'derrota';
+  }
+
+  /**
+   * A nota (`acertos`) e as estrelas da tela (RE-02, RE-04):
+   *  - vitória: 5 menos as rodadas com falha, nunca abaixo de `NOTA_MINIMA_VITORIA` (3);
+   *  - empate ou derrota: as estrelas que a criança ganhou no duelo (0 a 2), SEM desconto
+   *    (RE-02: na derrota o desconto seria castigo duplo).
+   * A tela mostra `acertos` como estrelas, então uma vitória (3 a 5) nunca fica abaixo
+   * de um empate ou de uma derrota (no máximo 2).
+   */
+  _notaDaPartida() {
+    if (this._desfecho() !== 'vitoria') return this.estrelas.v;
+    return Math.max(NOTA_MINIMA_VITORIA, TOTAL_RODADAS - this.rodadasComFalha);
+  }
+
+  /**
+   * Vai ao resultado. `vitoria` do contrato é binária: só a vitória no duelo; empate e
+   * derrota mandam `vitoria: false` (o empate também leva `extras.empate`, que a tela lê).
+   * Quem vence o duelo depende de quantos grãos caíram — é em parte sorte —, então o que
+   * diz como a criança LEU (`leiturasDePrimeira`, `rodadasComFalha`, `errosLeitura`)
+   * viaja separado nos extras. Não passa `estrelas`: a tela deriva a fileira (RE-04).
    */
   _terminar() {
     if (this._fimResolvido) return;
     this._fimResolvido = true;
-    this.irPara('resultado', {
-      nivel: this.nivel,
-      resultado: this.placar.paraAva(true, {
-        leiturasDePrimeira: this.leiturasDePrimeira,
-        errosLeitura: this.errosLeitura,
-        errosComparacao: this.errosComparacao,
-        rodadasComAjuda: this.rodadasComAjuda,
-        estrelasCrianca: this.estrelas.v,
-        estrelasComputador: this.estrelas.c,
-        ganhouDoComputador: this.estrelas.v > this.estrelas.c,
-        numeros: this.linhas.map((l) => ({ crianca: l.v, computador: l.c, pergunta: l.pergunta })),
-      }),
+    const desfecho = this._desfecho();
+    // O placar é a fonte dos números do AVA: `erros` cru e `acertos` = a nota.
+    this.placar.zerar();
+    this.placar.errar(this.errosLeitura + this.errosComparacao);
+    this.placar.acertar(this._notaDaPartida());
+    const resultado = this.placar.paraAva(desfecho === 'vitoria', {
+      desfecho,
+      ...(desfecho === 'empate' ? { empate: true } : {}),
+      leiturasDePrimeira: this.leiturasDePrimeira,
+      errosLeitura: this.errosLeitura,
+      errosComparacao: this.errosComparacao,
+      rodadasComFalha: this.rodadasComFalha,
+      rodadasComAjuda: this.rodadasComAjuda,
+      estrelasCrianca: this.estrelas.v,
+      estrelasComputador: this.estrelas.c,
+      ganhouDoComputador: desfecho === 'vitoria',
+      numeros: this.linhas.map((l) => ({ crianca: l.v, computador: l.c })),
     });
+    this.irPara('resultado', { nivel: this.nivel, resultado });
   }
 
   /** O cão de guarda achou uma cadeia cortada: leva a partida a um ponto seguro. */

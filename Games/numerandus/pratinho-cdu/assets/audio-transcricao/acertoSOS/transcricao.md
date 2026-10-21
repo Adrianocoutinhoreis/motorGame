@@ -32,8 +32,8 @@ não há palavra que possa estar errada.
 
 Canal `music` (não `sfx`), via `config.audio.vitoria`, disparado pela
 `ResultScreen` do motor ao entrar na tela de resultado numa VITÓRIA. No Pratinho
-CDU toda partida levada ao fim é vitória (ver `docs/REGRAS-PRATINHO-CDU.md` §6),
-então ele toca sempre que a criança chega ao resultado.
+CDU ele toca quando a criança vence o duelo (mais estrelas que o computador, ver
+`docs/REGRAS-PRATINHO-CDU.md` §6); na derrota toca o `erroSOS`.
 
 ---
 

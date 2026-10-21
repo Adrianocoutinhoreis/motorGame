@@ -21,14 +21,16 @@
       1º ano, Médio e Difícil (até 999) o 2º; alvos ≥ 64 px, nenhuma frase de retorno na tela
 - [x] Mecânica descrita em até 3 frases (README, "O que é")
 - [x] Níveis definidos: quantos, o que muda entre eles, o que cada um treina (`docs/REGRAS-PRATINHO-CDU.md` §5)
-- [x] Condição de **vitória** definida e mensurável — terminar as 5 rodadas
-- [x] Condição de **derrota** definida — não existe; quem ganha mais estrelas do computador
-      depende da sorte do punhado e vai em `extras` (REGRAS §6)
+- [x] Condição de **vitória** definida e mensurável — mais estrelas de "maior" que o computador
+      ao fim das 5 rodadas
+- [x] Condição de **derrota** definida — menos estrelas que o computador (tela "QUASE LÁ!");
+      o mesmo número de estrelas é empate ("EMPATOU!"). REGRAS §6
 - [x] `src/config.js` preenchido por inteiro (sem texto de exemplo sobrando)
 - [x] **Regras educacionais conferidas** (`docs/REGRAS-EDUCACIONAIS.md`), uma a uma:
   - [x] RE-01 — `textoEmCaixaAlta: true`; as letras C, D e U são desenhadas em caixa alta
-  - [x] RE-02 — a cena usa `placar.paraAva()`: a nota é 5 menos os PRONTOs errados (conferido:
-        partida com 1 comparação errada terminou com 4 estrelas)
+  - [x] RE-02 — a cena usa `placar.paraAva()`: na vitória a nota desconta 1 por rodada com falha
+        (piso 3); na derrota e no empate é o progresso puro, sem desconto (conferido em 21/10/2026:
+        ver a tabela de testes em `docs/REGRAS-PRATINHO-CDU.md` §6)
   - [x] RE-03 — `mostrarPlacarTexto: false`: só as estrelas, sem fração nem "N RODADAS" que
         mentiria para quem jogou as 5
   - [x] RE-04 — a cena **não** passa `estrelas` em `irPara('resultado', …)`
@@ -36,28 +38,28 @@
 ## 2. Assets
 
 - [x] Arte produzida (SVG/vetorial ou desenhada no canvas) — tudo desenhado em `src/desenho.js`
-- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **pendente**: nenhuma
-      fala gravada (lista de ids no README)
+- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **pendente**: só o
+      tutorial tem fala gravada (21/10/2026); a da partida falta (lista de ids no README)
 - [x] Efeitos de acerto, erro e contagem presentes (reaproveitados da coleção)
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
 - [x] Origem/licença de cada asset registrada no `README.md`
 - [x] Ficha de transcrição criada para **cada** áudio, em `assets/audio-transcricao/<nome>/transcricao.md`
-- [ ] Transcrições **confirmadas ouvindo** — `somErro` segue "não verificada" (mesma pendência
+- [ ] Transcrições **confirmadas ouvindo** — a narração do tutorial e o `somErro` estão "não verificados" (mesma pendência
       da cópia em toda a coleção); `somConta` tem a origem/licença a confirmar
 - [x] Pendências de áudio ainda não gravado listadas explicitamente no `README.md`
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR (captura)
-- [x] **Tutorial** com passos ilustrados e puláveis (4 passos, capturados) — narração pendente
+- [x] **Tutorial** com passos ilustrados e puláveis (4 passos, capturados) — narração gravada (21/10/2026), ainda não ouvida
 - [x] **Seleção de nível** (3 níveis)
 - [x] **Partida** com HUD legível: 5 estrelas de rodada, pausa, ajuda e som
 - [x] **Pausa** com continuar / recomeçar / sair (`PauseScreen` do motor, mesma ligação da Corrida Espacial)
 - [x] **Ajuda** na partida (regra RE-05): o botão do HUD abre o tutorial por cima do jogo
   - [x] Não há tempo correndo: `Tween.pausarTodos()` congela também a vez do computador
   - [x] Os passos servem a quem já está jogando: cada um mostra uma ação da partida
-- [x] **Resultado** — sempre de vitória (não existe derrota, ver seção 1); capturado
+- [x] **Resultado** para vitória, empate **e** derrota (capturados em 21/10/2026)
 - [x] Nenhum beco sem saída: de toda tela dá para voltar ao menu
 
 ## 4. Mecânica
@@ -81,8 +83,8 @@
 | Campo | Significado aqui | Valor típico |
 |---|---|---|
 | `totalPerguntas` | as 5 rodadas da partida | `5` |
-| `acertos` | 5 menos os PRONTOs errados (leitura e comparação), mínimo 0 — RE-02 | `3` a `5` |
-| `erros` | PRONTOs errados na partida inteira (leitura + comparação) | `0` a `4` |
+| `acertos` | vitória: 5 menos as rodadas com falha (máx. 1 por rodada), mínimo 3 · empate e derrota: as estrelas ganhas no duelo (0 a 2), sem desconto — RE-02 | `0` a `5` |
+| `erros` | PRONTOs errados na partida inteira (leitura + comparação), contagem crua | `0` ou mais |
 | `nivel` | 1 Fácil, 2 Médio, 3 Difícil | `2` |
 | `jogo` | slug estável | `pratinho-cdu` |
 | `extras` | `leiturasDePrimeira`, `errosLeitura`, `errosComparacao`, `rodadasComAjuda`, `estrelasCrianca`, `estrelasComputador`, `ganhouDoComputador`, `numeros` | — |
@@ -97,7 +99,7 @@
 - [x] `postMessage` vai para `window.parent` com `"*"` (do motor; `teste-entrega-avulsa` confirmou
       que fora de iframe nada é enviado)
 - [x] Nenhum dado de aluno é enviado
-- [x] Derrota: ~~também registra~~ não existe derrota (documentado em REGRAS §6)
+- [ ] Derrota também registra, com as estrelas do duelo como `acertos` — conferido no payload pelo robô; falta o `ava-teste.html`
 
 ## 6. Acessibilidade
 
@@ -119,7 +121,7 @@
 - [x] Jogo abre por `node tools/serve.mjs` sem requisição externa (confirmado pelo teste acima)
 - [x] Fluxo completo de telas percorrido, sem travar (robô, nos três níveis)
 - [ ] **Vitória:** console mostra `[AVA] JOGO_CONCLUIDO` com os números batendo com o jogado
-- [x] ~~**Derrota**~~ — não existe derrota
+- [ ] **Derrota e empate:** console mostra `[AVA] JOGO_CONCLUIDO` com `vitoria: false` (e `extras.empate` no empate) e `acertos` = estrelas do duelo — conferido pelo robô, falta no console de verdade
 - [ ] **Replay:** 2 partidas sem recarregar geram exatamente 2 mensagens
 - [ ] **Sem duplicata:** ficar parado na tela de resultado não gera mensagem extra
 - [ ] `tools/ava-teste.html`: a mensagem **chega ao pai** e passa em todas as regras

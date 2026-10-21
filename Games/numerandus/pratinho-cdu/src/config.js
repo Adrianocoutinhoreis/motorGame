@@ -23,8 +23,18 @@ import { posicionarGraos } from './regras.js';
 import {
   CORES, desenharPrato, desenharGrao, GRAO_RX, desenharRolinho, alturaRolinho, desenharDedo,
   desenharOndaToque, desenharIconeJogar, desenharIconeCerto, desenharVisto, desenharIconeQuem,
-  desenharEstrelaRodada, escrever,
+  desenharEstrelaRodada, escrever, desenharSinalComparacao,
 } from './desenho.js';
+
+/**
+ * Como o sinal entre os dois números aparece quando a criança acerta a comparação:
+ *   'simbolo' o ">" ou "<" escrito (o padrão)
+ *   'jacare'  uma boca de jacaré aberta para o número maior (`desenharSinalComparacao`)
+ * O jacaré foi feito em 21/10/2026 contra a confusão do "<" ao lado do número vencedor e
+ * retirado "por enquanto" a pedido do humano; religa-se trocando esta linha. Vale para a
+ * partida e para o tutorial (que lê esta mesma constante).
+ */
+const SINAL_COMPARACAO = 'simbolo';
 
 export default {
   // ------------------------------------------------------------- identidade
@@ -53,9 +63,12 @@ export default {
   /** Regra RE-01: todo texto exibido em CAIXA ALTA. */
   textoEmCaixaAlta: true,
 
+  /** O estilo do sinal de comparação ('simbolo' | 'jacare'); ver `SINAL_COMPARACAO`, acima. */
+  sinalComparacao: SINAL_COMPARACAO,
+
   /**
    * O resultado mostra só as cinco estrelas, sem a linha "N RODADAS": a nota
-   * desconta os erros (RE-02), então "3 RODADAS" mentiria para quem jogou as 5.
+   * desconta os erros na vitória (RE-02), então "3 RODADAS" mentiria para quem jogou as 5.
    */
   mostrarPlacarTexto: false,
 
@@ -67,8 +80,6 @@ export default {
    * `fora`      quantos grãos caem fora do prato ("caiu fora não conta")
    * `resposta`  'opcoes' (escolher entre 3 números) ou 'rolinhos' (formar C/D/U)
    * `nomes`     escreve VOCÊ / COMPUTADOR ao lado do ícone de quem joga (pedido do humano para o Fácil)
-   * `perguntas` o que a comparação pergunta: ['maior'] (padrão) ou ['maior', 'menor'] (sorteado
-   *             por rodada, cada um pelo menos 2 vezes). A estrela vai para o número PEDIDO.
    * `meta`      as 5 rodadas da partida
    */
   niveis: [
@@ -76,7 +87,7 @@ export default {
       id: 1, nome: 'Fácil', descricao: 'Dezena e unidade', amostra: 'Até 99', cor: '#16A34A',
       meta: 5, vidas: 0,
       casas: ['d', 'u'], faixa: { d: [1, 9], u: [0, 9] }, chanceZero: 0, fora: [0, 0], resposta: 'opcoes',
-      nomes: true, perguntas: ['maior', 'menor'],
+      nomes: true,
     },
     {
       id: 2, nome: 'Médio', descricao: 'Com centena', amostra: 'Até 555', cor: '#F59E0B',
@@ -110,8 +121,9 @@ export default {
   // --------------------------------------------------------------- tutorial
   /**
    * 4 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida
-   * (regra RE-05). A narração (`tutorialTela1..4`) ainda não foi gravada: o
-   * motor fica em silêncio e avisa no console.
+   * (regra RE-05). Narração gravada em 21/10/2026 (`assets/audio/tutorial/`):
+   * o motor fala `titulo + '. ' + texto` de cada passo pelo id `tutorialTela1..4`.
+   * Se o texto de um passo mudar, a gravação precisa mudar junto.
    */
   tutorial: [
     {
@@ -143,15 +155,22 @@ export default {
   // ------------------------------------------------------------------ áudio
   /**
    * Efeitos reaproveitados da coleção (mesmo SHA-256 dos outros jogos
-   * Numerandus — ver as fichas em assets/audio-transcricao/). A narração ainda
-   * não foi gravada: a cena já pede cada fala pelo id definitivo (lista no
-   * README.md); quando os arquivos chegarem, basta declará-los aqui.
+   * Numerandus — ver as fichas em assets/audio-transcricao/). A narração do
+   * tutorial chegou em 21/10/2026; o restante da narração continua pendente: a
+   * cena já pede cada fala pelo id definitivo (lista no README.md), e quando os
+   * arquivos chegarem basta declará-los aqui.
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
+    { id: 'erroSOS', src: './assets/audio/erroSOS.wav' },
     { id: 'somErro', src: './assets/audio/error.MP3' },
     { id: 'somProgresso', src: './assets/audio/progresso.mp3' },
     { id: 'somConta', src: './assets/audio/soltar_peca.mp3' },
+    // Narração do tutorial (21/10/2026): o motor fala `titulo + '. ' + texto` de cada passo.
+    { id: 'tutorialTela1', src: './assets/audio/tutorial/tut001.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial/tut002.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial/tut003.wav' },
+    { id: 'tutorialTela4', src: './assets/audio/tutorial/tut04.wav' },
   ],
 
   /** Sem mascote: o prato já é o personagem (mesma decisão da Corrida Espacial). */
@@ -163,7 +182,8 @@ export default {
     acerto: 'somProgresso',
     erro: 'somErro',
     vitoria: 'acertoSOS',
-    derrota: null,
+    /** O mesmo efeito de derrota do Jogo dos Blocos, da Velha e da Corrida (não ouvido). */
+    derrota: 'erroSOS',
     /** Os grãos caindo no prato e cada grão acendendo na contagem. */
     pouso: 'somConta',
     conta: 'somConta',
@@ -172,8 +192,10 @@ export default {
 
   // -------------------------------------------------------------------- AVA
   /**
-   * Terminar as 5 rodadas é a vitória do contrato: a nota é a leitura, não a
-   * sorte do punhado. Nunca há derrota (ver docs/REGRAS-PRATINHO-CDU.md §6).
+   * Quem tem mais estrelas de "maior" ao fim das 5 rodadas vence; o mesmo número é empate
+   * (`extras.empate`, tela "EMPATOU!"); menos é derrota (tela "QUASE LÁ!", registrada).
+   * Quem ganha o duelo é em parte sorte (os grãos), então a leitura da criança viaja
+   * separada nos extras. Ver docs/REGRAS-PRATINHO-CDU.md §6.
    */
   registrarDerrota: true,
 };
@@ -414,7 +436,8 @@ function desenharPasso4(ctx, l, a, t) {
     ctx.stroke();
   }
   ctx.restore();
-  escrever(ctx, certo ? '>' : '?', sinalX, cy + 2, Math.round(r * 1.15), certo ? '#FFFFFF' : '#64748B');
+  if (certo) desenharSinalComparacao(ctx, '>', sinalX, cy, r, SINAL_COMPARACAO);
+  else escrever(ctx, '?', sinalX, cy + 2, Math.round(r * 1.15), '#64748B');
 
   const pA = Math.min(a * 0.5, 130);
   const pL = pA * 0.95;

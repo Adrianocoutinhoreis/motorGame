@@ -326,6 +326,88 @@ export function desenharIconeQuem(ctx, quem, cx, cy, tam, cor) {
   else desenharIconePessoa(ctx, cx, cy, tam, cor ?? CORES.crianca);
 }
 
+/**
+ * O sinal de comparação como a boca do jacaré: ">" ou "<" desenhado como duas
+ * mandíbulas com um olhinho, abertas para o lado do número MAIOR ("o jacaré
+ * sempre quer comer o maior"). Em ">" o maior é o da esquerda (boca para a
+ * esquerda); em "<", o da direita. Só o "=" continua escrito.
+ *
+ * Existe porque o ">" / "<" puro confunde quem está aprendendo: a ponta fica do
+ * lado do MENOR, e o sinal "<" ao lado do número vencedor parece dizer o
+ * contrário (pedido do humano, 21/10/2026). (cx, cy) é o centro; `r` o raio do disco.
+ */
+export function desenharSinalComparacao(ctx, sinal, cx, cy, r, estilo = 'simbolo', cor = '#FFFFFF') {
+  // `estilo` 'simbolo' escreve o sinal (o padrão, por enquanto); 'jacare' desenha a boca.
+  if (estilo !== 'jacare' || (sinal !== '<' && sinal !== '>')) {
+    escrever(ctx, sinal, cx, cy + 2, Math.round(r * 1.15 * (sinal === '=' ? 1 : 1.05)), cor);
+    return;
+  }
+  // Desenhado como ">" (boca para a esquerda) e espelhado para "<".
+  const lado = sinal === '>' ? 1 : -1;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(lado, 1);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const V = { x: r * 0.42, y: 0 };            // canto da boca (fechado)
+  const U = { x: -r * 0.5, y: -r * 0.56 };    // ponta da mandíbula de cima
+  const L = { x: -r * 0.5, y: r * 0.56 };     // ponta da mandíbula de baixo
+  // O interior da boca, escuro, para ler como "boca aberta" e não como um sinal solto.
+  ctx.fillStyle = '#14532D';
+  ctx.beginPath();
+  ctx.moveTo(V.x, V.y);
+  ctx.lineTo(U.x, U.y);
+  ctx.lineTo(L.x, L.y);
+  ctx.closePath();
+  ctx.fill();
+  // Dentes: três em cada mandíbula, só na parte larga da boca (perto do canto ela é
+  // estreita e os de cima encontrariam os de baixo), apontando para dentro. Calculados na
+  // mandíbula de cima e refletidos (scale y = -1) para a de baixo.
+  ctx.fillStyle = cor;
+  const dx = U.x - V.x;
+  const dy = U.y - V.y;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  const nx = uy;   // normal da mandíbula de cima, apontando para dentro da boca (para baixo)
+  const ny = -ux;
+  for (const espelho of [1, -1]) {
+    ctx.save();
+    ctx.scale(1, espelho);
+    for (const f of [0.52, 0.74, 0.95]) {
+      const px = V.x + dx * f;
+      const py = V.y + dy * f;
+      const w = r * 0.085;
+      const h = r * 0.15;
+      ctx.beginPath();
+      ctx.moveTo(px - ux * w, py - uy * w);
+      ctx.lineTo(px + ux * w, py + uy * w);
+      ctx.lineTo(px + nx * h, py + ny * h);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  // O contorno das duas mandíbulas, por cima dos dentes.
+  ctx.strokeStyle = cor;
+  ctx.lineWidth = r * 0.17;
+  ctx.beginPath();
+  ctx.moveTo(U.x, U.y);
+  ctx.lineTo(V.x, V.y);
+  ctx.lineTo(L.x, L.y);
+  ctx.stroke();
+  // O olhinho, no alto do canto da boca (onde o jacaré "enxerga").
+  ctx.fillStyle = cor;
+  ctx.beginPath();
+  ctx.arc(r * 0.16, -r * 0.7, r * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#14532D';
+  ctx.beginPath();
+  ctx.arc(r * 0.19, -r * 0.7, r * 0.065, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 /** O visto verde de acerto: círculo cheio e o "certo" branco. `escala` anima a entrada. */
 export function desenharVisto(ctx, cx, cy, r, escala = 1) {
   if (escala <= 0) return;

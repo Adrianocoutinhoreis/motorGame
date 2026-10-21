@@ -174,34 +174,6 @@ export function quemFormouMaior(numeroCrianca, numeroComputador) {
   return numeroCrianca > numeroComputador ? 'v' : 'c';
 }
 
-/**
- * Quem tem o número que a pergunta pede: 'maior' ou 'menor'.
- * Devolve 'v' (criança), 'c' (computador) ou 'empate'.
- */
-export function quemResponde(pergunta, numeroCrianca, numeroComputador) {
-  const maior = quemFormouMaior(numeroCrianca, numeroComputador);
-  if (maior === 'empate' || pergunta !== 'menor') return maior;
-  return maior === 'v' ? 'c' : 'v';
-}
-
-/**
- * As perguntas das rodadas. Com só 'maior', todas são "maior". Com as duas, cada
- * uma aparece pelo menos duas vezes em `total` rodadas, em ordem sorteada — sem
- * um padrão que a criança decore no lugar de ler a pergunta.
- */
-export function sortearPerguntas(tipos, total, aleatorio = Math.random) {
-  if (tipos.length < 2) return new Array(total).fill(tipos[0] ?? 'maior');
-  const lista = [];
-  for (let i = 0; i < total; i++) {
-    lista.push(i < tipos.length * 2 ? tipos[i % tipos.length] : tipos[Math.floor(aleatorio() * tipos.length)]);
-  }
-  for (let i = lista.length - 1; i > 0; i--) {
-    const j = Math.floor(aleatorio() * (i + 1));
-    [lista[i], lista[j]] = [lista[j], lista[i]];
-  }
-  return lista;
-}
-
 /** O sinal entre os dois números, na ordem criança ? computador. */
 export function sinalEntre(numeroCrianca, numeroComputador) {
   if (numeroCrianca === numeroComputador) return '=';
