@@ -252,8 +252,10 @@ export function tracarEstrela(ctx, cx, cy, rExterno, rInterno = rExterno * 0.42)
  * @param {'vazia'|'v'|'c'|'e'} estado  vazia, ganha pela criança (dourada),
  *   pelo computador (âmbar escuro) ou empate (cinza)
  * @param {boolean} atual contorno azul de "rodada de agora"
+ * @param {boolean} claro desenha sobre fundo CLARO (o painel branco do tutorial): a estrela vazia
+ *   usa cinza escuro translúcido em vez do branco translúcido, que ali some
  */
-export function desenharEstrelaRodada(ctx, cx, cy, r, estado, atual = false) {
+export function desenharEstrelaRodada(ctx, cx, cy, r, estado, atual = false, claro = false) {
   ctx.save();
   tracarEstrela(ctx, cx, cy, r);
   ctx.lineJoin = 'round';
@@ -266,6 +268,9 @@ export function desenharEstrelaRodada(ctx, cx, cy, r, estado, atual = false) {
   } else if (estado === 'e') {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  } else if (claro) {
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.10)';
+    ctx.strokeStyle = 'rgba(30, 41, 59, 0.38)';
   } else {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
@@ -470,52 +475,6 @@ export function desenharIconeDesfazer(ctx, cx, cy, lado, cor = '#FFFFFF') {
   ctx.lineTo(cx - lado * 0.12, cy - lado * 0.2);
   ctx.lineTo(cx - lado * 0.36, cy + lado * 0.2);
   ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-/** O ícone de "seguir": uma seta para a direita. */
-export function desenharIconeSeguir(ctx, cx, cy, lado, cor = '#FFFFFF') {
-  ctx.save();
-  ctx.fillStyle = cor;
-  ctx.beginPath();
-  ctx.moveTo(cx - lado * 0.4, cy - lado * 0.14);
-  ctx.lineTo(cx + lado * 0.05, cy - lado * 0.14);
-  ctx.lineTo(cx + lado * 0.05, cy - lado * 0.38);
-  ctx.lineTo(cx + lado * 0.48, cy);
-  ctx.lineTo(cx + lado * 0.05, cy + lado * 0.38);
-  ctx.lineTo(cx + lado * 0.05, cy + lado * 0.14);
-  ctx.lineTo(cx - lado * 0.4, cy + lado * 0.14);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-/** Troféu dourado do fim, quando a criança ganhou mais estrelas. */
-export function desenharTrofeu(ctx, cx, cy, tam) {
-  ctx.save();
-  ctx.translate(cx - tam / 2, cy - tam / 2);
-  ctx.scale(tam / 64, tam / 64);
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = CORES.estrelaBorda;
-  ctx.lineWidth = 3.5;
-  ctx.beginPath();
-  ctx.moveTo(17, 12); ctx.lineTo(8, 12); ctx.bezierCurveTo(8, 21, 12.5, 26, 19, 27);
-  ctx.moveTo(47, 12); ctx.lineTo(56, 12); ctx.bezierCurveTo(56, 21, 51.5, 26, 45, 27);
-  ctx.stroke();
-  ctx.fillStyle = CORES.estrela;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(17, 7); ctx.lineTo(47, 7); ctx.lineTo(47, 20);
-  ctx.bezierCurveTo(47, 29.5, 40.5, 37, 32, 37);
-  ctx.bezierCurveTo(23.5, 37, 17, 29.5, 17, 20);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = CORES.estrelaBorda;
-  ctx.fillRect(28, 37, 8, 9);
-  ctx.beginPath();
-  ctx.roundRect(19, 46, 26, 9, 2.5);
   ctx.fill();
   ctx.restore();
 }

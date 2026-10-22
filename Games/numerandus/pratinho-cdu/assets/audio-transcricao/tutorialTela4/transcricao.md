@@ -8,15 +8,21 @@
 | `id` no motor | `tutorialTela4` |
 | Tipo | Narração — instrução de tutorial (passo 4 de 4) |
 | Formato | WAV PCM 16 bits, 24 000 Hz, mono |
-| Duração | **8,12 s** |
-| SHA-256 (16 primeiros) | `d2dc8e5b0c15b57c` |
-| Origem | Arquivo fornecido pelo humano em 21/10/2026 (renomeado no mesmo dia para a ordem certa dos passos), colocado em `assets/audio/tutorial/` — quem gravou/gerou e a licença **a confirmar**. |
+| Duração | **9,72 s** |
+| SHA-256 (16 primeiros) | `e34d577b0fa4026a` |
+| Origem | Arquivo fornecido pelo humano em 22/10/2026 como `tutnovo4.wav`, 3ª versão do dia (antes `MAIORNUMERO.wav` e `tutorial4.wav`, idênticos entre si e de 8,64 s, descartados) (regravação do passo 4, com o texto novo), renomeado para `tut04.wav` como os demais, em `assets/audio/tutorial/` — quem gravou/gerou e a licença **a confirmar**. |
 
 ## Texto esperado (o que a tela exibe)
 
-> «Maior ou menor? O computador também joga. Toque no número que a pergunta pede e em PRONTO: a estrela vai para ele.»
+> «Escolha o maior. Toque no número maior e em PRONTO. Sem errar, a estrela é sua. Quem juntar mais estrelas ganha!»
 
-Assim `TutorialScreen.mostrarPasso()` monta a fala: `titulo + '. ' + texto`. São 22 palavras em 8,12 s.
+Assim `TutorialScreen.mostrarPasso()` monta a fala: `titulo + '. ' + texto`. São 21 palavras em 9,72 s.
+
+## Regravação (22/10/2026)
+
+O texto do passo 4 mudou quando a estrela passou a ser de quem faz a rodada limpa (antes: "Maior ou
+menor? O computador também joga…"). O `tut04.wav` antigo (8,12 s, SHA `d2dc8e5b0c15b57c`) foi substituído
+pela gravação `tutnovo4.wav` (9,72 s) do texto acima. Conferir ouvindo que o arquivo diz mesmo o texto novo.
 
 ## Transcrição
 

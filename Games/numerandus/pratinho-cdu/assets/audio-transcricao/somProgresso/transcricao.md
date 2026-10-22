@@ -27,4 +27,4 @@ não há palavra que possa estar errada.
 
 Canal `sfx`, via `config.audio.acerto` — toca em `GameScene._comemorar` (o número
 formado certo), em `GameScene._conferirComparacao` (o maior número marcado certo),
-quando a estrela da rodada acende para a criança e no troféu do fim.
+e quando a estrela da rodada acende para a criança.

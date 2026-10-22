@@ -27,8 +27,8 @@ Preencha ouvindo o arquivo e troque o status para `✅ CONFIRMADA`.
 ## Onde é usado no jogo
 
 Tela de resultado, quando a criança perde o duelo, ou seja, termina as 5 rodadas com menos
-estrelas de "maior" que o computador (`config.audio.derrota`) — o mesmo papel que tem no Jogo
-dos Blocos, na Velha e na Corrida Espacial. No empate não toca (`audio.empate: null`, como na Velha).
+estrelas (rodadas limpas) que o computador (`config.audio.derrota`) — o mesmo papel que tem no Jogo
+dos Blocos, na Velha e na Corrida Espacial.
 
 ## Observações
 

@@ -26,13 +26,16 @@ referências, e cada diferença em relação a eles está declarada na seção 2
 ## 1. O jogo em uma frase
 
 A criança joga um punhado de grãos num prato dividido em **C, D e U**, **conta cada fatia**,
-**forma o número** e depois diz **qual é maior**, o dela ou o do computador; quem formou o
-maior ganha a estrela da rodada. No fim das 5 rodadas, **quem tiver mais estrelas vence**.
+**forma o número** e depois diz **qual é maior**, o dela ou o do computador. A estrela da rodada
+é dela se fez tudo **sem nenhum PRONTO errado** (uma **rodada limpa**) e do computador se
+precisou de outra tentativa. No fim das 5 rodadas, **quem tiver mais estrelas vence**: 3 rodadas
+limpas bastam.
 
-**O que a criança faz é a leitura e a comparação; quem vence o duelo é em parte sorte.**
-Quantos grãos caem é acaso, então cerca de metade das partidas termina em derrota mesmo com a
-leitura toda certa. Por isso a leitura viaja separada nos extras do AVA (`leiturasDePrimeira`,
-`rodadasComFalha`, `errosLeitura`), e a derrota usa a tela digna da série ("QUASE LÁ!").
+**A vitória depende só da criança.** Quantos grãos caem para cada lado é acaso, então o jogo não
+usa "quem tirou o maior número" para dar a estrela nem para decidir quem ganha (era assim até
+22/10/2026: cerca de metade das partidas terminava em derrota mesmo com a leitura toda certa).
+O maior número é só o conteúdo da comparação; o que o jogo confere é ler as quantidades, formar
+o número e comparar, certo e sem tentativas extras. O computador nunca erra: é o modelo.
 
 ---
 
@@ -43,7 +46,7 @@ leitura toda certa. Por isso a leitura viaja separada nos extras do AVA (`leitur
 | **Sem cronômetro** (o jogo antigo dava 20 s e uma tela "Tempo Esgotado") | `METODO-JOGOS-NUMERANDUS.md` §3.B: nunca cronômetro regressivo |
 | **Rolinhos C/D/U** no lugar de digitar num campo de texto | Aos 6 anos a criança não digita, e o motor não tem teclado. O rolinho por casa também reforça o valor posicional: cada algarismo mora na sua casa |
 | **Contar tocando no GRÃO**, que fica marcado com um halo | Pedido do humano (20/10): a criança aponta o grão que está contando, como faria com o dedo no brinquedo. O grão desenhado (~30 px) fica abaixo dos 64 px mínimos, então o alvo é um círculo de pelo menos 64 px em volta dele. O halo não tem número: quem conta é a criança |
-| **Ganha a rodada quem forma o MAIOR número**, e é a criança que diz qual é | O jogo antigo somava as rodadas; somar números de 3 algarismos foge do 1º ano. Comparar é conteúdo do 1º e do 2º ano e dá um segundo momento de raciocínio por rodada |
+| **A estrela da rodada é de quem a faz limpa** (a criança, sem PRONTO errado; senão o computador, que nunca erra), e não de quem tira o maior número | O jogo antigo somava as rodadas, e a primeira versão deste dava a estrela a quem formasse o maior número. Em ambos a vitória dependia da sorte dos grãos. Comparar continua sendo conteúdo (o 1º e o 2º ano), mas quem vence é a leitura |
 | **5 rodadas** (o antigo tinha 4) | A trilha de 5 estrelas da série (Caminho das Cores) e a fileira de 5 estrelas do resultado (RE-04) |
 | **Grãos fora do prato só no Difícil**; **nunca** grão na linha entre fatias | "Caiu fora não conta" é do brinquedo e é boa atenção. Grão em cima da linha cria dúvida sem conteúdo nenhum |
 | **Fácil só com D e U** (a fatia C apagada) | Números até 99 para o 1º ano; centenas até 999 são do 2º |
@@ -112,8 +115,8 @@ Os dois números lado a lado (pessoa azul e monitor âmbar) com um **?** traceja
 criança marca um (dá para trocar) e toca **PRONTO**.
 
 **O que fazer aparece sem frase** (pedido do humano, 20/10: "o usuário deve estar ciente do
-que irá fazer"): a estrela da rodada flutua sobre o **?** — a estrela está em jogo e vai para
-um dos lados —, os números que ainda valem pulsam de leve e o dedinho branco da coleção toca
+que irá fazer"): a estrela da rodada flutua sobre o **?** — está em jogo e é da criança se
+ela acertar sem tentativa extra —, os números que ainda valem pulsam de leve e o dedinho branco da coleção toca
 em cada um, em laço. Ele aponta os DOIS: mostra o gesto, não a resposta. Com um número
 marcado, o dedinho passa para o PRONTO. A fala `qualEMaior` completa quando for gravada.
 
@@ -135,19 +138,23 @@ todos os níveis, com a palavra MAIOR em âmbar. Uma versão anterior sorteava "
 no Fácil (a estrela ia para o número pedido); foi retirada por inteiro, sem deixar a opção
 desligada no código.
 
-- **Certo**: o **?** vira **>**, **<** ou **=** num círculo verde (ver acima sobre o jacaré), e o jogo mostra **quem fez o
-  maior** sem frase: o número vencedor ganha contorno dourado e a estrela da rodada no canto
-  (dourada para a criança, âmbar escura para o computador), e o outro apaga. Depois a estrela
-  acende na trilha de cima.
+- **Certo**: o **?** vira **>**, **<** ou **=** num círculo verde (ver acima sobre o jacaré), e o
+  número **maior** ganha um contorno dourado enquanto o outro apaga. Sem estrela aqui: ela não é
+  do maior, é de quem fez a rodada limpa. Depois a estrela acende na trilha de cima, dourada se a
+  criança acertou sem tentativa extra, âmbar escura (do computador) se precisou de outra.
 - **Errado**: o cartão balança, o número marcado fica apagado e conta um erro.
-- **Empate**: aparece **=** direto e a rodada fecha sozinha, com a estrela cinza.
+- **Números iguais**: aparece **=** direto e não há o que comparar; a estrela é da criança se a
+  leitura foi limpa. (Não existe empate de partida: toda rodada dá a estrela a um dos dois.)
 
 ### 4.5 Estrelas e fim
 
-- No alto, **5 estrelas**, uma por rodada: **dourada** (a criança formou o maior), **âmbar
-  escura** (o computador), **cinza** (empate). A da rodada de agora tem contorno azul.
-- Depois da 5ª rodada, o cartão mostra o **troféu** (se a criança tiver mais estrelas) e o
-  placar de estrelas com os dois ícones. A seta leva ao resultado.
+- No alto, **5 estrelas**, uma por rodada: **dourada** (a criança fez a rodada limpa) ou **âmbar
+  escura** (precisou de outra tentativa: a estrela é do computador). A da rodada de agora tem
+  contorno azul. O quadro das rodadas mostra só os números, sem estrelas ao lado.
+- Depois da 5ª rodada, o jogo vai **direto para a tela de resultado** da série ("MUITO BEM!" ou
+  "QUASE LÁ!"), depois de a última estrela acender na trilha e de uma pausa curta. Havia uma tela
+  intermediária com o troféu e o placar "2 × 3", mais um toque na seta; saiu a pedido do humano
+  (22/10/2026), porque repetia as estrelas da tela de resultado.
 
 ---
 
@@ -163,42 +170,46 @@ desligada no código.
 
 ## 6. Pontuação, erros e o contrato com o AVA
 
-- **Meta**: 5 rodadas. Cada rodada termina com a comparação feita (certa) e uma estrela para quem
-  fez o maior (ou nenhuma, no empate da rodada).
+- **Meta**: 5 rodadas. Toda rodada termina com a comparação feita (certa) e dá **uma estrela** a
+  um dos dois.
 - **Erro**: cada PRONTO errado, na leitura ou na comparação. Contar, girar rolinho, marcar e
   desfazer **nunca** contam. O campo `erros` do AVA é essa contagem **crua** (RE-02).
-- **Falha, para a nota: no máximo uma por rodada** (`_registrarFalha`): o primeiro PRONTO errado de
-  cada rodada conta em `rodadasComFalha`; os outros da mesma rodada não (a criança que precisou de
-  várias tentativas na mesma conta não perde mais por isso).
-- **Desfecho** (`_desfecho`, 21/10/2026): quem tem **mais estrelas** de "maior" vence; o mesmo número
-  é **empate** (a série já tem a tela "EMPATOU!", via `extras.empate`); menos é **derrota** (tela
-  "QUASE LÁ!"). Com 5 rodadas, 3 estrelas já vencem.
+- **Rodada limpa** (`falhaNaRodada` falso, `_fecharRodada`): nenhum PRONTO errado na rodada, nem
+  na leitura nem na comparação. A estrela é da criança; se houve ao menos um, é do computador. Não
+  importa quantos erros: o primeiro já decide a rodada.
+- **Desfecho** (`_desfecho`, 22/10/2026): a criança **vence** com mais estrelas que o computador
+  (3 rodadas limpas ou mais); com menos, é **derrota** (tela "QUASE LÁ!"). Não há empate de
+  partida (5 rodadas, cada uma dá a estrela a alguém).
 - **Nota** (`acertos`, `_notaDaPartida`), que a tela mostra como estrelas (RE-04):
-  - **vitória**: 5 − rodadas com falha, **nunca abaixo de 3** (3 a 5 estrelas);
-  - **empate e derrota**: as estrelas que a criança ganhou no duelo (0 a 2), **sem desconto**
-    (RE-02: na derrota o desconto seria castigo duplo).
-  O piso de 3 na vitória existe para a tela nunca mostrar uma vitória com menos estrelas do que
-  uma derrota ou um empate (no máximo 2). Antes desta regra, 5 PRONTOs errados zeravam a nota e a
-  tela mostrava "MUITO BEM!" com a fileira vazia (observado em 21/10/2026).
-- **Som**: vitória `acertoSOS`; derrota `erroSOS` (o mesmo da Velha e da Corrida, ainda não ouvido);
-  empate sem som (como na Velha).
+  - **vitória**: **sempre 5 estrelas** (decisão do humano, 22/10/2026). Não desconta os erros;
+  - **derrota**: as rodadas limpas da criança (0 a 2), sem desconto (RE-02: na derrota o
+    desconto seria castigo duplo).
+  Exceção declarada à RE-02, que manda descontar as falhas numa vitória: aqui a vitória é nota
+  cheia, e quanto a criança errou fica só no relatório (`erros` cru, `rodadasComFalha`,
+  `errosLeitura`, `errosComparacao`, `leiturasDePrimeira`). Com 5 rodadas, 3 estrelas já vencem,
+  então uma vitória nunca mostra menos estrelas do que uma derrota (no máximo 2). Alternativa
+  simples, se um dia for preferível: estrelas = rodadas limpas também na vitória (3 a 5).
+  Histórico da regra: `5 − erros` (zerava com 5 PRONTOs errados e a tela mostrava "MUITO BEM!"
+  sem estrelas) → `5 − rodadas com falha` com piso 3 → vitória pelo maior número (dependia da
+  sorte) → a rodada limpa de hoje.
+- **Som**: vitória `acertoSOS`; derrota `erroSOS` (o mesmo da Velha e da Corrida, ainda não ouvido).
 - **Tela final**: só as 5 estrelas (`mostrarPlacarTexto: false`): "3 RODADAS" mentiria para
   quem jogou as 5. Estrelas derivadas pela própria tela (RE-04).
-- **AVA**: `acertos` = a nota, `erros` = PRONTOs errados crus, `totalPerguntas` = 5, `vitoria` =
-  venceu o duelo (empate e derrota mandam `false`; o empate leva também `extras.empate: true`).
-  Extras: `desfecho` (`'vitoria'` | `'empate'` | `'derrota'`), `leiturasDePrimeira`, `errosLeitura`,
+- **AVA**: `acertos` = a nota (vitória 5, derrota 0 a 2), `erros` = PRONTOs errados crus,
+  `totalPerguntas` = 5, `vitoria` = venceu (mais rodadas limpas que o computador).
+  Extras: `desfecho` (`'vitoria'` | `'derrota'`), `leiturasDePrimeira`, `errosLeitura`,
   `errosComparacao`, `rodadasComFalha`, `rodadasComAjuda`, `estrelasCrianca`, `estrelasComputador`,
   `ganhouDoComputador`, `numeros`. O `ScoreSystem` só monta o payload no fim (`_terminar`).
 
-Conferido em navegador (21/10/2026, robô impondo quem ganha cada rodada e errando de propósito):
+Conferido em navegador (22/10/2026, robô errando de propósito em rodadas escolhidas, no Médio):
 
-| Partida | `acertos` | `erros` | `vitoria` | Tela |
-|---|---|---|---|---|
-| 3 a 2, sem erros | 5 | 0 | true | "MUITO BEM!", 5 estrelas |
-| 3 a 2, 2 erros em cada rodada | 3 (piso) | 10 | true | "MUITO BEM!", 3 estrelas |
-| 2 a 3 | 2 | 0 | false | "QUASE LÁ!", 2 estrelas |
-| 0 a 5 | 0 | 0 | false | "QUASE LÁ!", sem estrelas |
-| 1 a 1, três rodadas empatadas | 1 | 0 | false (`empate: true`) | "EMPATOU!", 1 estrela |
+| Partida | Estrelas (criança × computador) | `acertos` | `erros` | `vitoria` | Tela |
+|---|---|---|---|---|---|
+| sem nenhum erro | 5 × 0 | 5 | 0 | true | "MUITO BEM!", 5 estrelas |
+| 1 erro de leitura em 2 rodadas | 3 × 2 | 5 | 2 | true | "MUITO BEM!", 5 estrelas |
+| 1 erro de leitura em 3 rodadas | 2 × 3 | 2 | 3 | false | "QUASE LÁ!", 2 estrelas |
+| 1 erro de leitura em todas | 0 × 5 | 0 | 5 | false | "QUASE LÁ!", sem estrelas |
+| 1 erro na comparação em todas | 0 × 5 | 0 | 5 (`errosComparacao`) | false | "QUASE LÁ!", sem estrelas |
 
 A mensagem dentro de iframe ainda não foi conferida.
 
@@ -208,9 +219,10 @@ A mensagem dentro de iframe ainda não foi conferida.
 
 | Som | `id` | Uso | Existe? |
 |---|---|---|---|
-| Narração do tutorial (4 telas) | `tutorialTela1`–`4` | `fala` de cada passo | **Sim** (21/10/2026, `assets/audio/tutorial/tut001, tut002, tut003, tut04`) — ainda não ouvida por quem revisa |
-| Números "um" a "nove" | `numero1`–`numero9` | a contagem a cada grão (toque da criança e ajuda) | **Não** — gravar |
-| Frases curtas | `suaVez`, `vezDoComputador`, `nenhumGraoZero`, `muitoBem`, `tenteDeNovo`, `confiraACasaAcesa`, `vamosContarJuntos`, `qualEMaior`, `voceFezOMaior`, `computadorFezOMaior`, `olheACentena`, `olheADezena`, `empate` | retorno e troca de vez | **Não** — gravar |
+| Narração do tutorial (4 telas) | `tutorialTela1`–`4` | `fala` de cada passo | **Sim** (21/10/2026, `assets/audio/tutorial/tut001, tut002, tut003, tut04`; **o passo 4 precisa ser regravado**: o texto mudou em 22/10/2026) — ainda não ouvida por quem revisa |
+| Números "um" a "nove" | `numero1`–`numero9` | a contagem a cada grão (toque da criança e ajuda) | **Sim** (22/10/2026), copiados do Jogo dos Blocos (locução de 2013, não ouvidos) |
+| Frases curtas **já gravadas** (22/10/2026) | `suaVez`, `vezDoComputador`, `muitoBem`, `qualEMaior`, `tenteDeNovo`, `voceFezOMaior`, `computadorFezOMaior` | começo da rodada, vez do computador, leitura/comparação certa, abre a comparação, PRONTO errado, quem fez o maior | **Sim** — da pasta de áudio do Jogo dos Blocos (gravação de 2026), não ouvidas |
+| Frases curtas **a gravar** | `confiraACasaAcesa`, `vamosContarJuntos`, `nenhumGraoZero`, `olheACentena`, `olheADezena`, `empate` | ajuda em degraus, fatia vazia, erro na comparação, números iguais | **Não** — gravar |
 | Número formado em voz alta | — | ler "duzentos e trinta e cinco" no acerto | **Não pedido** — ver seção 9 |
 | Acerto, erro, contagem, resultado | `somProgresso`, `somErro`, `somConta`, `acertoSOS` | efeitos | **Sim** — reaproveitados da coleção |
 
@@ -233,6 +245,10 @@ Sem as gravações o jogo funciona mudo nesses pontos: nenhuma mecânica depende
 
 - **Ler o número em voz alta** no acerto ("duzentos e trinta e cinco"): ~40 gravações
   combináveis. Vale para o 1º ano, que ainda está aprendendo o nome dos números?
+- **Perder por precisar de tentativas extras** pode soar duro aos 6 anos (a derrota agora diz
+  "você errou mais que o computador", não "teve azar"). Conferir com um aluno se a tela "QUASE
+  LÁ!" amortece; se não, tornar a regra menos rígida (por exemplo, só o 2º erro da rodada passa a
+  estrela ao computador).
 - **Estrela do computador**: âmbar escura ao lado da dourada da criança. Conferir com um aluno
   se a diferença fica clara; se não, desenhar o ícone do monitor sob a estrela.
 - **Sem número no grão** (decisão de 20/10): a criança que se perde na contagem não tem ponto

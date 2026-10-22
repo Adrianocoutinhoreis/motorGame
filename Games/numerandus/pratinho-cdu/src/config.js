@@ -68,7 +68,7 @@ export default {
 
   /**
    * O resultado mostra só as cinco estrelas, sem a linha "N RODADAS": a nota
-   * desconta os erros na vitória (RE-02), então "3 RODADAS" mentiria para quem jogou as 5.
+   * na derrota vale só o que foi ganho (as rodadas limpas), então "2 RODADAS" mentiria para quem jogou as 5.
    */
   mostrarPlacarTexto: false,
 
@@ -145,9 +145,9 @@ export default {
       desenho: (ctx, l, a, t) => desenharPasso3(ctx, l, a, t),
     },
     {
-      titulo: 'Maior ou menor?',
+      titulo: 'Escolha o maior',
       fala: 'tutorialTela4',
-      texto: 'O computador também joga. Toque no número que a pergunta pede e em PRONTO: a estrela vai para ele.',
+      texto: 'Toque no número maior e em PRONTO. Sem errar, a estrela é sua. Quem juntar mais estrelas ganha!',
       desenho: (ctx, l, a, t) => desenharPasso4(ctx, l, a, t),
     },
   ],
@@ -171,6 +171,27 @@ export default {
     { id: 'tutorialTela2', src: './assets/audio/tutorial/tut002.wav' },
     { id: 'tutorialTela3', src: './assets/audio/tutorial/tut003.wav' },
     { id: 'tutorialTela4', src: './assets/audio/tutorial/tut04.wav' },
+    // A CONTAGEM em voz alta (21/10/2026): "um" a "nove", a cada grão marcado. Copiados do Jogo dos
+    // Blocos (locução de 2013, mesmo SHA-256); ver as fichas em assets/audio-transcricao/numero1..9.
+    { id: 'numero1', src: './assets/audio/numeros/um.mp3' },
+    { id: 'numero2', src: './assets/audio/numeros/dois.mp3' },
+    { id: 'numero3', src: './assets/audio/numeros/tres.mp3' },
+    { id: 'numero4', src: './assets/audio/numeros/quatro.mp3' },
+    { id: 'numero5', src: './assets/audio/numeros/cinco.mp3' },
+    { id: 'numero6', src: './assets/audio/numeros/seis.mp3' },
+    { id: 'numero7', src: './assets/audio/numeros/sete.mp3' },
+    { id: 'numero8', src: './assets/audio/numeros/oito.mp3' },
+    { id: 'numero9', src: './assets/audio/numeros/nove.mp3' },
+    // As FALAS da partida (22/10/2026), gravação de 2026 (24 kHz, mono), vindas da pasta de áudio do
+    // Jogo dos Blocos. Ainda faltam: confiraACasaAcesa, vamosContarJuntos, nenhumGraoZero, olheACentena,
+    // olheADezena e empate (lista no README).
+    { id: 'suaVez', src: './assets/audio/falas/suaVez.wav' },
+    { id: 'vezDoComputador', src: './assets/audio/falas/vezDoComputador.wav' },
+    { id: 'muitoBem', src: './assets/audio/falas/muitoBem.wav' },
+    { id: 'qualEMaior', src: './assets/audio/falas/qualEMaior.wav' },
+    { id: 'tenteDeNovo', src: './assets/audio/falas/tenteDeNovo.wav' },
+    { id: 'voceFezOMaior', src: './assets/audio/falas/voceFezOMaior.wav' },
+    { id: 'computadorFezOMaior', src: './assets/audio/falas/computadorFezOMaior.wav' },
   ],
 
   /** Sem mascote: o prato já é o personagem (mesma decisão da Corrida Espacial). */
@@ -192,10 +213,10 @@ export default {
 
   // -------------------------------------------------------------------- AVA
   /**
-   * Quem tem mais estrelas de "maior" ao fim das 5 rodadas vence; o mesmo número é empate
-   * (`extras.empate`, tela "EMPATOU!"); menos é derrota (tela "QUASE LÁ!", registrada).
-   * Quem ganha o duelo é em parte sorte (os grãos), então a leitura da criança viaja
-   * separada nos extras. Ver docs/REGRAS-PRATINHO-CDU.md §6.
+   * A estrela de cada rodada é de quem fez a rodada limpa: a criança, se leu e comparou sem
+   * nenhum PRONTO errado; senão o computador, que nunca erra. Mais estrelas que o computador
+   * vence (3 rodadas limpas); menos é derrota (tela "QUASE LÁ!", registrada). A vitória
+   * depende só da criança, não da sorte dos grãos. Ver docs/REGRAS-PRATINHO-CDU.md §6.
    */
   registrarDerrota: true,
 };
@@ -385,7 +406,11 @@ function desenharPasso3(ctx, l, a, t) {
   if (alvo && alfa > 0) desenharDedo(ctx, alvo.x, alvo.y + (alvo.apertado ? 5 : 0), alvo.h, alfa);
 }
 
-/** Passo 4 — 231 ? 145: o dedo marca o 231, PRONTO, o ">" e a estrela pousa no 231 (ciclo de 5,6 s). */
+/**
+ * Passo 4 — 231 ? 145: o dedo marca o 231, toca PRONTO, o sinal aparece e o 231 (o maior) ganha o
+ * contorno dourado; a ESTRELA da rodada acende na trilha de cima, porque a criança acertou sem
+ * errar (ciclo de 5,6 s). A estrela não pousa mais no número: ela é de quem faz a rodada limpa.
+ */
 function desenharPasso4(ctx, l, a, t) {
   const ciclo = 5.6;
   const tc = ((t % ciclo) + ciclo) % ciclo;
@@ -400,7 +425,7 @@ function desenharPasso4(ctx, l, a, t) {
     const x = xs[i];
     const y = cy - bA / 2;
     const cor = quem === 'c' ? CORES.computador : CORES.crianca;
-    // Marcado (azul cheio) até o PRONTO; depois, o vencedor ganha contorno e estrela e o outro apaga.
+    // Marcado (azul cheio) até o PRONTO; depois, o número maior ganha o contorno dourado e o outro apaga.
     const cheio = quem === 'v' && marcado && !certo;
     ctx.save();
     if (certo && quem === 'c') ctx.globalAlpha = 0.35;
@@ -413,12 +438,6 @@ function desenharPasso4(ctx, l, a, t) {
     ctx.stroke();
     escrever(ctx, numero, x + bL / 2, y + bA * 0.42, Math.round(bA * 0.32), cheio ? '#1B212B' : '#E7EBF2');
     desenharIconeQuem(ctx, quem, x + bL / 2, y + bA * 0.8, bA * 0.22, cheio ? '#1B212B' : cor);
-    if (certo && quem === 'v') {
-      const e = Math.min(1, (tc - 2.4) / 0.3);
-      ctx.translate(x + bL - 6, y + 4);
-      ctx.scale(0.3 + 0.7 * e, 0.3 + 0.7 * e);
-      desenharEstrelaRodada(ctx, 0, 0, bA * 0.22, 'v');
-    }
     ctx.restore();
   });
   // O sinal: "?" tracejado, depois ">" num círculo verde.
@@ -445,6 +464,19 @@ function desenharPasso4(ctx, l, a, t) {
   const py = cy - pA / 2;
   const apertado = tc > 2.0 && tc < 2.25;
   botao(ctx, px, py, pL, pA, '#22C55E', '#15803D', 'PRONTO', 'pronto', apertado);
+
+  // A trilha de estrelas da partida, em miniatura, em cima do PRONTO: a da rodada acende dourada.
+  const rs = Math.min(a * 0.07, 17);
+  const gap = rs * 2.6;
+  for (let i = 0; i < 5; i++) {
+    const acende = i === 0 && tc > 2.7;
+    const e = acende ? Math.min(1, (tc - 2.7) / 0.35) : 1;
+    ctx.save();
+    ctx.translate(px + pL / 2 + (i - 2) * gap, py - rs * 1.9);
+    if (acende) ctx.scale(0.4 + 0.6 * e, 0.4 + 0.6 * e);
+    desenharEstrelaRodada(ctx, 0, 0, rs, acende ? 'v' : 'vazia', false, true);
+    ctx.restore();
+  }
 
   let alvo = null;
   if (tc < 1.5) alvo = { x: xs[0] + bL * 0.65, y: cy + bA * 0.1, h: bA * 0.75, apertado: tc > 0.85 && tc < 1.05 };
