@@ -373,6 +373,7 @@ export class MenuScreen extends Scene {
       : config.tema === 'trilhas' ? PlacaTituloLimpa
       : config.tema === 'espaco' ? PlacaTituloLimpa
       : config.tema === 'mesa' ? PlacaTituloLimpa
+      : config.tema === 'feltro' ? PlacaTituloLimpa
       : PlacaTituloMadeira;
     this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',

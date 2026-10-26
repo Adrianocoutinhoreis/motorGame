@@ -13,28 +13,28 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa'.
+ * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro'.
  */
 
 /** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
-const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa'];
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro'];
 
 export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa' | 'feltro'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
     this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
@@ -165,6 +165,10 @@ export class Background extends Node {
     // Tema 'mesa': os pratinhos e grãos apagados também continuam pelas barras.
     if (this.mostrarDecoracoes && this.tema === 'mesa') {
       this._desenharDecoracoesMesa(ctx, this.largura, this.altura, sx, sy);
+    }
+    // Tema 'feltro': as pedras de dominó apagadas também continuam pelas barras.
+    if (this.mostrarDecoracoes && this.tema === 'feltro') {
+      this._desenharDecoracoesFeltro(ctx, this.largura, this.altura, sx, sy);
     }
     // O pedaço do cenário que é da CENA e encosta na borda (ex.: o planeta de
     // destino da Corrida Espacial) continua pelas barras pelo mesmo princípio.
@@ -413,6 +417,7 @@ export class Background extends Node {
       if (this.tema === 'trilhas') this._desenharDecoracoesTrilhas(ctx, l, a);
       if (this.tema === 'espaco') this._desenharDecoracoesEspaco(ctx, l, a);
       if (this.tema === 'mesa') this._desenharDecoracoesMesa(ctx, l, a);
+      if (this.tema === 'feltro') this._desenharDecoracoesFeltro(ctx, l, a);
     }
     if (this.mostrarChao) this._chao(ctx);
   }
@@ -475,6 +480,61 @@ export class Background extends Node {
           9, 6.3, hash(i, j, 4) * Math.PI, 0, Math.PI * 2,
         );
         ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Tema 'feltro' — o Subtraindo o Dominó.
+   *
+   * Feltro verde-azulado ESCURO e dessaturado, como a mesa de jogo, para as
+   * pedras claras de dominó destacarem e o fundo não brigar com elas (o mesmo
+   * princípio da 'mesa': fundo neutro). Nas telas de vitrine entram algumas
+   * pedras de dominó apagadas (opacidade 0,05–0,10), paradas, deitadas em
+   * ângulos variados — nada pisca nem balança. A partida desliga as decorações:
+   * ali as pedras são o exercício.
+   *
+   * Determinístico numa grade de 210 px da caixa LÓGICA, como as estrelas do
+   * 'espaco' e os grãos da 'mesa': a sangria desenha as mesmas pedras, sem costura.
+   */
+  _desenharDecoracoesFeltro(ctx, l, a, sx = 0, sy = 0) {
+    const PASSO = 210;
+    const hash = (i, j, k) => {
+      const v = Math.sin(i * 71.7 + j * 193.3 + k * 47.1) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    const pontos = {
+      1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]],
+      4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]],
+      6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
+    };
+    const W = 84;
+    const H = 42;
+    ctx.save();
+    for (let i = Math.floor(-sx / PASSO); i <= Math.ceil((l + sx) / PASSO); i++) {
+      for (let j = Math.floor(-sy / PASSO); j <= Math.ceil((a + sy) / PASSO); j++) {
+        // Uma pedra a cada duas células, em média: espalhado, nunca padronagem.
+        if (hash(i, j, 0) < 0.5) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.05 + hash(i, j, 1) * 0.05;
+        ctx.translate(i * PASSO + hash(i, j, 2) * PASSO, j * PASSO + hash(i, j, 3) * PASSO);
+        ctx.rotate((hash(i, j, 4) - 0.5) * Math.PI);
+        ctx.fillStyle = '#F4F1E8';
+        ctx.beginPath();
+        ctx.roundRect(-W / 2, -H / 2, W, H, 8);
+        ctx.fill();
+        ctx.fillStyle = '#12322B';
+        ctx.fillRect(-1.5, -H / 2 + 5, 3, H - 10);
+        for (const lado of [-1, 1]) {
+          const n = 1 + Math.floor(hash(i, j, lado > 0 ? 5 : 6) * 6);
+          for (const [px, py] of pontos[n]) {
+            ctx.beginPath();
+            ctx.arc(lado * W / 4 + px * 8, py * 8, 3.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
       }
     }
     ctx.restore();
