@@ -472,7 +472,7 @@ export class GameScene extends Scene {
 
     this.nivel = this.game.dados.nivel ?? config.niveis[0];
     this.totalRodadas = this.nivel.meta ?? 3;
-    this.regras = { rolarMs: 900, acertoMs: 650, pausaRodadaMs: 900, cpuEsperaMs: 700, cpuPensaMs: 800, revelaMs: 1900, ...config.regras };
+    this.regras = { rolarMs: 900, acertoMs: 650, pausaRodadaMs: 900, cpuEsperaMs: 700, cpuPensaMs: 800, revelaMs: 1900, maxExtras: 5, ...config.regras };
 
     this.placar = new ScoreSystem({ total: this.totalRodadas, nivel: this.nivel.id ?? 1, vidas: 0 });
     this.fase = 'dados';
@@ -493,7 +493,7 @@ export class GameScene extends Scene {
     this.decisiva = false;
     this.rodadasExtras = 0;
     /** Gancho de teste: os dados que o computador usa na próxima vez dele (`null` = sorteio normal). */
-    this.cpuForcado = null;
+    this.cpuDadosDeTeste = null;
     this.totais = [];
     this.totaisComputador = [];
     /** Quantas vezes a vez da criança passou (limite de erros da rodada) e de onde o `Watchdog` retoma. */
@@ -966,16 +966,16 @@ export class GameScene extends Scene {
     this.cpuEtapa = 'dados';
     // Normal: dados protegidos, entre as pedras que restam (ele sempre leva uma). Extra: `sortearDadosExtra`, que o
     // protege na 1ª e depois o deixa cair num total esgotado.
-    this.cpuSorteio = this.cpuForcado
+    this.cpuSorteio = this.cpuDadosDeTeste
       ?? (this.decisiva ? sortearDadosExtra(this.pecas, this.rodadasExtras) : sortearDados(this.pecas));
-    this.cpuForcado = null;
+    this.cpuDadosDeTeste = null;
     for (const d of [this.dado1, this.dado2]) d.rolando = true;
     Tween.de(this.relogio).esperar(this.regras.rolarMs).chamar(() => this._cpuDadosParam());
   }
 
   _cpuDadosParam() {
     if (this.fase !== 'cpu' || this.cpuEtapa !== 'dados') return;
-    // Sem sorteio: a mesa esvaziou (a criança levou a última pedra numa extra). Ele fica sem pedra, com o ✕ na vaga.
+    // Sem sorteio (defensivo: `sortearDadosExtra` sempre devolve dados, mesmo com a mesa vazia): fica sem pedra, com o ✕.
     if (!this.cpuSorteio) {
       this.dado1.rolando = false;
       this.dado2.rolando = false;
@@ -1061,15 +1061,17 @@ export class GameScene extends Scene {
 
   /**
    * Depois da última rodada combinada, empatou (e ainda há pedra na mesa): joga uma rodada extra, como
-   * no vídeo, e outra, e outra, até um levar a pedra e o outro não. Cada extra tira pedras da mesa e,
-   * a partir da 3ª, os dados do computador caem num total esgotado, então a partida acaba; se a mesa
-   * esvaziar empatada, a criança leva (`_desfecho`).
+   * no vídeo, e outra, e outra, até um levar a pedra e o outro não. A partir da 3ª extra os dados do
+   * computador caem num total esgotado, o que normalmente encerra em 2 ou 3. Se a criança continua
+   * errando (e o computador também fica sem pedra) a mesa não esvazia e a extra se repetiria, por isso há
+   * um TETO (`regras.maxExtras`, 5): empatado nele, ou com a mesa vazia, a criança leva (`_desfecho`).
    */
   _proximaRodada() {
     if (this._fimResolvido) return;
     if (this.rodada < this.totalRodadas) { this._novaRodada(); return; }
     const { v, c } = this._pedras();
-    if (v === c && this.pecas.some((p) => p.livre)) this._novaRodada(true);
+    const empatou = v === c && this.pecas.some((p) => p.livre);
+    if (empatou && this.rodadasExtras < this.regras.maxExtras) this._novaRodada(true);
     else this._terminar();
   }
 

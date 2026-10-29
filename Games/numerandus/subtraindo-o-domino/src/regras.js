@@ -102,10 +102,11 @@ export function sortearDadosSemPedra(pecas, aleatorio = Math.random) {
  *    desempate não virar maratona.
  *
  * @param {number} extras quantas rodadas extras já houve, contando a de agora (1, 2, 3…)
- * @returns {{d1:number, d2:number, total:number}|null} `null` só se a mesa esvaziou
+ * @returns {{d1:number, d2:number, total:number}} sempre devolve dados: com a mesa vazia (a criança levou a
+ * última pedra) cai nos honestos, ele rola de verdade e fica sem pedra, e o total dele entra no relatório
  */
 export function sortearDadosExtra(pecas, extras, aleatorio = Math.random, aPartirDe = 3, protegidoAte = 1) {
-  if (extras <= protegidoAte) return sortearDados(pecas, aleatorio);
+  if (extras <= protegidoAte) return sortearDados(pecas, aleatorio) ?? dadosHonestos(pecas, aleatorio);
   if (extras >= aPartirDe) {
     const azar = sortearDadosSemPedra(pecas, aleatorio);
     if (azar) return azar;

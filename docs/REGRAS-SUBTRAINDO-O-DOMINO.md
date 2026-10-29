@@ -182,10 +182,14 @@ não"). Ela é **igual a uma rodada normal**: a criança joga, depois o computad
    outra extra**;
 5. para o desempate não virar maratona, **a partir da 3ª extra os dados do computador caem num total
    esgotado que existe no nível**, se houver algum (`sortearDadosSemPedra`). Se a criança levar a última
-   pedra da mesa, ele fica sem (vaga ✕); se a mesa esvaziar empatada, a criança leva.
+   pedra da mesa, ele rola dados de verdade e fica sem (vaga ✕); se a mesa esvaziar empatada, ou se o teto de 5
+   extras chegar empatado, a criança leva.
 
 Em simulação (20 000 partidas por nível) as extras duram, em média, **2,0 no Fácil, 2,8 no Médio e 2,6 no
-Difícil**, no máximo 3, e **o computador nunca fica sem pedra na 1ª extra**.
+Difícil** para uma criança típica (no máximo 3), e **o computador nunca fica sem pedra na 1ª extra**. Para quem
+continua errando elas podem se alongar (em simulação, de 9 a 12 extras em cerca de 3% das partidas que chegam a elas, e
+a bandeja ganharia uma vaga por extra), por isso há um **teto de 5 extras** (`regras.maxExtras`): empatado no teto, a
+criança leva, a mesma regra da mesa vazia empatada.
 
 **Defeito corrigido (28/10/2026).** A 1ª versão dava ao computador dados honestos já na 1ª extra, e o
 humano viu que "sempre que chega nas extras o computador erra". A medida confirmou: ele ficava sem pedra

@@ -190,12 +190,13 @@ console.log('\n0. As regras puras (src/regras.js), em Node');
     const h = R.sortearDadosExtra(pecas, 2);
     if (h.total < 2 || h.total > 8 || h.d1 + h.d2 !== h.total) facilOk = false;
     const p1 = R.sortearDadosExtra(pecas, 1);
-    if (livres === 0) { if (p1 !== null) protegidaOk = false; } else if (!p1 || !R.pecasQueSomam(pecas, p1.total).length) protegidaOk = false;
+    if (!p1 || p1.d1 + p1.d2 !== p1.total) protegidaOk = false;
+    else if (livres > 0 && !R.pecasQueSomam(pecas, p1.total).length) protegidaOk = false;
     const azar = R.sortearDadosExtra(pecas, 3);
     if (azar.total < 2 || azar.total > 8 || R.pecasQueSomam(pecas, azar.total).length) { if (R.sortearDadosSemPedra(pecas)) azarOk = false; }
   }
   checar('Fácil, extra 2: os dados honestos do computador só caem em totais que existem no nível (2 a 8)', facilOk);
-  checar('extra 1: os dados do computador são PROTEGIDOS (sempre com pedra; com a mesa vazia, null)', protegidaOk);
+  checar('extra 1: os dados do computador são PROTEGIDOS (com pedra) e, com a mesa vazia, rolam de verdade em vez de null', protegidaOk);
   checar('extra 3 no Fácil: o "azar" cai num total que existe no nível e já acabou (nunca num 9 a 12)', azarOk);
   checar('o "sem pedra" nunca devolve um total inexistente: no Fácil só com a mesa vazia de um total de 2 a 8', (() => {
     const r = R.sortearDadosSemPedra(facil.map((p) => ({ ...p, livre: p.soma === 5 || p.soma === 6 })));
@@ -544,7 +545,7 @@ try {
   // Prepara o azar do computador: esgota todas as pedras de OUTRO total e manda os dados dele caírem nele.
   const forcaExtra = await jg(`const T = c.total; const X = [...new Set(c.pecas.filter((p) => p.livre).map((p) => p.soma))].find((s) => s !== T);
     c.pecas.filter((p) => p.livre && p.soma === X).forEach((p) => { p.livre = false; p.no.visible = false; c.mesa.vagas[p.vaga].vazia = true; });
-    const d1 = Math.max(1, Math.min(6, X - 1)); c.cpuForcado = { d1, d2: X - d1, total: X };
+    const d1 = Math.max(1, Math.min(6, X - 1)); c.cpuDadosDeTeste = { d1, d2: X - d1, total: X };
     return { T, X, livresDeX: c.pecas.filter((p) => p.livre && p.soma === X).length };`);
   checar('(preparo) o total que o computador vai rolar é diferente do da criança e já está esgotado', forcaExtra.X !== forcaExtra.T && forcaExtra.livresDeX === 0, JSON.stringify(forcaExtra));
   await jg(`c.regras.cpuEsperaMs = 1800; c.regras.cpuPensaMs = 500;`);
@@ -623,12 +624,25 @@ try {
   checar('Médio: no 3º erro a vez da criança PASSA', await esperarAte(`c.fase === 'passando'`, 4000));
   await esperarAte(`c.rodada === 2 && c.fase === 'dados'`, 20000);
 
+  console.log('\n5e. O teto de rodadas extras');
+  await abrirNivel(1);
+  checar('o teto de extras vem do config (regras.maxExtras = 5)', (await jg(`return c.regras.maxExtras;`)) === 5);
+  await jg(`c.rodadasExtras = c.regras.maxExtras;`); // finge que as extras já chegaram ao teto
+  for (let r = 1; r <= 3; r++) {
+    await esperarAte(`c.rodada === ${r} && c.fase === 'dados'`, 10000);
+    await jogarDados();
+    await tocarNo(CERTA);
+    await tocarNo(PRONTO);
+    await esperarAte(`c.constructor.name === 'ResultScreen' || (c.rodada === ${r + 1} && c.fase === 'dados')`, 15000);
+  }
+  checar('empatado no teto (3 × 3) NÃO joga outra extra: a partida termina na hora, com a criança levando', await jg(`return c.constructor.name === 'ResultScreen';`));
+
   console.log('\n5d. Sem prévia: no Médio e no Difícil o total do computador só aparece na vez dele');
   await abrirNivel(2);
   await jogarDados();
   await esperar(500);
   const previa = await jg(`return { selo: c.selo, totais: c.totaisComputador.length, quem: c.pergunta.quem, perg: c.pergunta.total, total: c.total,
-    forcado: c.cpuForcado };`);
+    forcado: c.cpuDadosDeTeste };`);
   checar('Médio: com os dados da criança na mesa não há selo nem total do computador (a pergunta é só da criança)',
     previa.selo === undefined && previa.totais === 0 && previa.quem === 'v' && previa.perg === previa.total && previa.forcado === null, JSON.stringify(previa));
   await captura('15d-sem-previa-medio');

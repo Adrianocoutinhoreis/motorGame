@@ -95,8 +95,9 @@ export default {
    *   cpuPensaMs     quanto o computador "pensa" antes de marcar a pedra dele
    *   revelaMs       quanto a conta (6 + 3 = 9) fica na tela quando a vez da criança passa
    *   pausaRodadaMs  a pausa depois da pedra do computador pousar (ou de ele ficar sem), antes da rodada seguinte
+   *   maxExtras      o TETO de rodadas extras: empatado nele, a criança leva (a mesma regra da mesa vazia empatada)
    */
-  regras: { rolarMs: 900, acertoMs: 650, cpuEsperaMs: 700, cpuPensaMs: 800, revelaMs: 1900, pausaRodadaMs: 1100 },
+  regras: { rolarMs: 900, acertoMs: 650, cpuEsperaMs: 700, cpuPensaMs: 800, revelaMs: 1900, pausaRodadaMs: 1100, maxExtras: 5 },
 
   // --------------------------------------------------------------- tutorial
   /**

@@ -50,7 +50,7 @@ deixa um contorno apagado na mesa: a mesa se esvazia, daí o nome. Se as pedras 
   sem pedra), mas na **1ª extra** os dados dele são protegidos como os da criança (ele leva a pedra); só da
   2ª em diante ele pode ficar sem. Termina quando
   um leva a pedra e o outro não; senão joga-se outra extra. A partir da 3ª extra os dados dele caem num
-  total esgotado que existe no nível, se houver, para não virar maratona (as extras duram de 2 a 3). Como cada lado leva uma pedra por rodada, **quase
+  total esgotado que existe no nível, se houver, para não virar maratona (as extras duram de 2 a 3; o teto é 5, e empatado nele a criança leva). Como cada lado leva uma pedra por rodada, **quase
   toda partida chega empatada às extras**: elas são o clímax do jogo.
 - **Fim**: sem tela intermediária, vai direto ao resultado da série ("MUITO BEM!" / "QUASE LÁ!").
   Não há cronômetro.
@@ -72,7 +72,7 @@ node tools/build.mjs numerandus/subtraindo-o-domino                  # copia o m
 node tools/testes.mjs                                                # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/subtraindo-o-domino
 node tools/teste-entrega-avulsa.mjs numerandus/subtraindo-o-domino
-node tools/teste-jogabilidade-subtraindo-o-domino.mjs               # gesto real (147 verificações)
+node tools/teste-jogabilidade-subtraindo-o-domino.mjs               # gesto real (149 verificações)
 ```
 
 `teste-jogabilidade-subtraindo-o-domino.mjs` só usa ponteiro e toque (nada é chamado por dentro):

@@ -7,7 +7,7 @@
 >
 > **Como foi verificado até aqui (28/10/2026, depois da regra do vídeo):** `node tools/testes.mjs` (154), os
 > dois portões de entrega (11 verificações da entrega avulsa, 66 requisições, todas locais) e,
-> principalmente, `node tools/teste-jogabilidade-subtraindo-o-domino.mjs`: **147 verificações** (rodado
+> principalmente, `node tools/teste-jogabilidade-subtraindo-o-domino.mjs`: **149 verificações** (rodado
 > duas vezes seguidas, porque as rodadas extras têm aleatoriedade) — regras puras em Node (30 000
 > jogadas de dados, 10 000 mesas para os dados "sem pedra", 20 000 jogadas do computador, 3 000 mesas) e **GESTO REAL**
 > de ponteiro e de toque (menu, dados, marcar, erro, a vez que passa, as rodadas extras, a ausência
@@ -83,7 +83,7 @@
       existem no nível**, podendo cair num total esgotado e ficar sem (✕); a partir da 3ª extra os dados dele caem
       num total esgotado (conferido em 10 000 mesas); termina quando um leva e o outro não. Defeito corrigido em
       28/10/2026: ele ficava sem pedra na 1ª extra em 78% das partidas do Fácil (28% das jogadas eram totais
-      que nem existem no nível); agora 0% na 1ª, e as extras duram de 2 a 3
+      que nem existem no nível); agora 0% na 1ª, e as extras duram de 2 a 3 (teto de 5: empatado nele, a criança leva)
 - [x] **Sem prévia do dado do computador** (removida em 28/10/2026, a pedido do humano): no Fácil, no Médio e no
       Difícil nada do computador aparece na vez da criança (sem selo, sem total, sem lançamento compartilhado); o
       total dele só aparece na vez dele. O selo aberto e o "bloqueio" foram retirados
@@ -148,7 +148,7 @@
 - [x] `node tools/testes.mjs` passa (154)
 - [x] `node tools/verificar-independencia.mjs numerandus/subtraindo-o-domino` **aprovado**
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/subtraindo-o-domino` **aprovado** (17 áudios, 66 requisições, todas locais)
-- [x] `node tools/teste-jogabilidade-subtraindo-o-domino.mjs` **aprovado**: 147 verificações
+- [x] `node tools/teste-jogabilidade-subtraindo-o-domino.mjs` **aprovado**: 149 verificações
 - [x] Jogo abre por `node tools/serve.mjs` sem requisição externa (confirmado pelo teste de entrega)
 - [x] Fluxo completo de telas percorrido, sem travar: menu → níveis → partida → resultado → jogar de novo, só com toques
 - [x] **Vitória:** a mensagem `JOGO_CONCLUIDO` chega ao pai com os números batendo com o jogado

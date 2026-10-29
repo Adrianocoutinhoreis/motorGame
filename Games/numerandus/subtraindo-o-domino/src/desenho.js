@@ -171,7 +171,7 @@ export function desenharSinalPeca(ctx, tipo, cx, cy, r, escala = 1) {
 }
 
 /** O contorno de uma estrela de cinco pontas, centrada em (cx, cy). */
-export function tracarEstrela(ctx, cx, cy, rExterno, rInterno = rExterno * 0.42) {
+function tracarEstrela(ctx, cx, cy, rExterno, rInterno = rExterno * 0.42) {
   ctx.beginPath();
   for (let k = 0; k < 10; k++) {
     const r = k % 2 === 0 ? rExterno : rInterno;
@@ -215,7 +215,7 @@ export function desenharMarcadorRodada(ctx, cx, cy, r, estado, atual = false) {
 }
 
 /** Ícone da criança: uma pessoa (cabeça e ombros). */
-export function desenharIconePessoa(ctx, cx, cy, tam, cor) {
+function desenharIconePessoa(ctx, cx, cy, tam, cor) {
   ctx.save();
   ctx.fillStyle = cor;
   ctx.beginPath();
@@ -231,7 +231,7 @@ export function desenharIconePessoa(ctx, cx, cy, tam, cor) {
 }
 
 /** Ícone do computador: um monitor no pé. */
-export function desenharIconeComputador(ctx, cx, cy, tam, cor) {
+function desenharIconeComputador(ctx, cx, cy, tam, cor) {
   ctx.save();
   ctx.fillStyle = cor;
   ctx.beginPath();
