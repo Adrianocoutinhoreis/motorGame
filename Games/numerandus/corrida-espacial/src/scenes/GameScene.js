@@ -260,7 +260,7 @@ class PlacaVez extends Node {
   }
 
   desenhar(ctx) {
-    desenharFoguete(ctx, 62, 0, 0.8, this.vez, 0, false);
+    desenharFoguete(ctx, 62, 0, 0.8, this.vez, 0, false, this.imagem);
     // O título tem o mesmo limite da dica: os dados começam em x ≈ 496 (absoluto)
     // e a placa está em x:48, então sobram 300 px a partir do x 132. "VEZ DO
     // COMPUTADOR" a 28px passa disso e ficava atrás do dado — encolhe até caber.
@@ -622,8 +622,13 @@ export class GameScene extends Scene {
       else this._falar('zeroFicaNoLugar', 'Zero, fica no lugar!', true);
     } else {
       this.aviso.mostrar(chegou(alvo) ? 'CHEGOU!' : 'MUITO BEM!', '#4ADE80');
-      if (chegou(alvo)) this._falar('chegou', 'Chegou!', true);
-      else this._falarNumero(alvo, true);
+      if (chegou(alvo)) {
+        this._falar('chegou', 'Chegou!', true);
+        // A chegada é a faixa depois do 20 (CHEGADA). Cair no 20 exato já vence
+        // (regra do brinquedo), mas o foguete desliza até a faixa antes de
+        // comemorar: a chegada acontece sempre no mesmo lugar.
+        if (alvo < CHEGADA) Tween.para(azul, { x: this.geo.casaX(CHEGADA) }, 420, Easing.suave);
+      } else this._falarNumero(alvo, true);
       if (this.config.audio?.acerto) this.audio?.efeito(this.config.audio.acerto);
       azul.scaleX = 1.18;
       azul.scaleY = 1.18;
@@ -712,6 +717,10 @@ export class GameScene extends Scene {
       cadeia.chamar(() => this._falarNumero(Math.min(k - de, 20), true))
         .entao({ x: this.geo.casaX(k) }, passo * 0.7, Easing.suave)
         .esperar(passo * 0.3);
+    }
+    // Mesma chegada da criança: no 20 exato, desliza em silêncio até a faixa.
+    if (chegou(alvo) && alvo < CHEGADA) {
+      cadeia.entao({ x: this.geo.casaX(CHEGADA) }, passo, Easing.suave);
     }
     cadeia.chamar(() => {
       this.pos[1] = alvo;

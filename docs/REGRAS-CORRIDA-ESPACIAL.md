@@ -50,7 +50,9 @@ exatamente no 20** — "tirou 9 e já ultrapassou" vence.
 
 - **Duas pistas paralelas**, azul em cima (criança) e laranja embaixo (computador), casas 1 a 20.
 - **Largada:** a casa 0, fora da pista, à esquerda. **Chegada:** faixa quadriculada depois da
-  casa 20, com o planeta de destino. Qualquer andança que passe de 20 termina na chegada.
+  casa 20, com o planeta de destino. Qualquer andança que passe de 20 termina na chegada — e
+  cair no 20 exato também vence, com o foguete deslizando da casa 20 até a faixa antes de
+  comemorar: a chegada acontece sempre no mesmo lugar, como no brinquedo.
 - **Foguete:** é o **alvo de toque** — as casas não são (com ~52 px ficariam abaixo dos 64 px
   mínimos de `METODO-JOGOS-NUMERANDUS.md` §3.C). O foguete tem pelo menos 90×64 px.
 - **Janelinha:** mostra o número da casa em que o foguete está agora, inclusive durante o

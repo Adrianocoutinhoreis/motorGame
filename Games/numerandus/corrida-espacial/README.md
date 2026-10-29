@@ -31,7 +31,8 @@ três jeitos de brincar — os três níveis:
 ## A jogada, em detalhe
 
 - **Acertou** (PRONTO na casa certa): o foguete dá um impulso, a casa é narrada, e a vez
-  passa ao computador.
+  passa ao computador. Na chegada, o foguete desliza até a faixa quadriculada — mesmo
+  quando a conta cai exatamente no 20, que já vence.
 - **Errou**: o foguete volta para onde a jogada começou, aparece "TENTE DE NOVO" e conta
   um erro. Os dados continuam na tela.
 - **Ajuda no 2º erro da mesma jogada**: as casas acendem uma a uma, contadas, até a certa
