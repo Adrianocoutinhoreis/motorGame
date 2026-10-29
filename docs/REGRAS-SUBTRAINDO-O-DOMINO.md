@@ -228,7 +228,7 @@ A mesma regra do Pratinho CDU (decisão 4):
 | Campo | Significado aqui | Valores |
 |---|---|---|
 | `totalPerguntas` | as rodadas combinadas do nível (as extras não contam) | 3, 3 ou 5 |
-| `acertos` | **vitória: nota cheia** (todas as rodadas combinadas), sem desconto dos erros (exceção à RE-02, declarada) · **derrota: as pedras da criança**, sem desconto | 0 a `totalPerguntas` |
+| `acertos` | **vitória: nota cheia** (todas as rodadas combinadas), sem desconto dos erros (exceção à RE-02, declarada) · **derrota: as pedras da criança**, sem desconto e **no máximo `totalPerguntas − 1`** | 0 a `totalPerguntas` |
 | `erros` | PRONTOs errados na partida inteira, contagem crua | 0 ou mais |
 | `vitoria` | mais pedras que o computador | `true`/`false` |
 | `nivel` | 1 Fácil, 2 Médio, 3 Difícil | |
@@ -239,8 +239,10 @@ Os campos `estrelasCrianca` e `estrelasComputador`, da versão anterior, **deixa
 
 - **RE-01** caixa alta: `textoEmCaixaAlta: true`.
 - **RE-02** — exceção: na vitória a nota não desconta os erros (eles vão para o relatório); na
-  derrota é o progresso puro (as pedras da criança, no máximo `totalPerguntas`). Como a vitória vale a
-  nota cheia, uma derrota nunca tem nota maior que uma vitória.
+  derrota é o progresso puro (as pedras da criança, no máximo `totalPerguntas − 1`). Como a vitória vale a
+  nota cheia, uma derrota tem sempre nota **menor** que uma vitória. O teto de `totalPerguntas − 1` nasceu de um
+  defeito achado nos testes de robustez (28/10/2026): perder só na rodada extra, depois de levar a pedra de todas as
+  rodadas combinadas, dava 3 de 3 e a tela mostrava "QUASE LÁ!" com 5 estrelas cheias.
 - **RE-03** `mostrarPlacarTexto: false`: só a fileira de estrelas da tela de resultado, sem "N RODADAS".
 - **RE-04** a cena **não** passa `estrelas` ao resultado; a tela deriva a fileira.
 - **RE-05** tutorial de 3 passos com desenho em canvas, também servido como ajuda na partida.

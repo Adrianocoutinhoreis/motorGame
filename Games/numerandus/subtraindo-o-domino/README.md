@@ -54,7 +54,7 @@ deixa um contorno apagado na mesa: a mesa se esvazia, daí o nome. Se as pedras 
   toda partida chega empatada às extras**: elas são o clímax do jogo.
 - **Fim**: sem tela intermediária, vai direto ao resultado da série ("MUITO BEM!" / "QUASE LÁ!").
   Não há cronômetro.
-- **Nota**: vitória = nota cheia (todas as rodadas combinadas); derrota = as pedras da criança. Os erros
+- **Nota**: vitória = nota cheia (todas as rodadas combinadas); derrota = as pedras da criança, no máximo uma rodada a menos que a vitória. Os erros
   ficam no relatório (`erros`, `rodadasComFalha`, `errosPronto`, `vezesPerdidas`, `pedrasCrianca`,
   `pedrasComputador`, `rodadasExtras`).
 
@@ -72,7 +72,7 @@ node tools/build.mjs numerandus/subtraindo-o-domino                  # copia o m
 node tools/testes.mjs                                                # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/subtraindo-o-domino
 node tools/teste-entrega-avulsa.mjs numerandus/subtraindo-o-domino
-node tools/teste-jogabilidade-subtraindo-o-domino.mjs               # gesto real (149 verificações)
+node tools/teste-jogabilidade-subtraindo-o-domino.mjs               # gesto real (188 verificações)
 ```
 
 `teste-jogabilidade-subtraindo-o-domino.mjs` só usa ponteiro e toque (nada é chamado por dentro):

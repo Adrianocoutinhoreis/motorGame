@@ -7,12 +7,12 @@
 >
 > **Como foi verificado até aqui (28/10/2026, depois da regra do vídeo):** `node tools/testes.mjs` (154), os
 > dois portões de entrega (11 verificações da entrega avulsa, 66 requisições, todas locais) e,
-> principalmente, `node tools/teste-jogabilidade-subtraindo-o-domino.mjs`: **149 verificações** (rodado
+> principalmente, `node tools/teste-jogabilidade-subtraindo-o-domino.mjs`: **188 verificações** (rodado
 > duas vezes seguidas, porque as rodadas extras têm aleatoriedade) — regras puras em Node (30 000
 > jogadas de dados, 10 000 mesas para os dados "sem pedra", 20 000 jogadas do computador, 3 000 mesas) e **GESTO REAL**
 > de ponteiro e de toque (menu, dados, marcar, erro, a vez que passa, as rodadas extras, a ausência
 > de prévia do computador, pausa, ajuda, os três níveis, celular em pé, o AVA dentro de um iframe em 4
-> tamanhos, o `Watchdog`). Nada é chamado por dentro da cena.
+> tamanhos, o `Watchdog`) e a **robustez nas rodadas extras** (cinco extras seguidas até o teto, pausa e ajuda abertas no meio da vez da criança, da revelação da conta e da vez do computador, duplo toque, toque fora de hora, derrota na extra pelo AVA e replay depois de extras). Nada é chamado por dentro da cena.
 > **Ninguém ainda jogou de verdade** (criança, tablet): itens que pedem ouvido, criança ou aparelho
 > real estão abertos, e são o que falta para marcar o jogo como pronto.
 
@@ -34,7 +34,7 @@
 - [x] **Regras educacionais conferidas** (`docs/REGRAS-EDUCACIONAIS.md`), uma a uma:
   - [x] RE-01 — `textoEmCaixaAlta: true`; a pergunta é desenhada em caixa alta
   - [x] RE-02 — **exceção declarada**: a vitória vale a nota cheia sem desconto de erros (mesma regra do
-        Pratinho CDU; os erros ficam no relatório); a derrota é o progresso puro (as pedras da criança)
+        Pratinho CDU; os erros ficam no relatório); a derrota é o progresso puro (as pedras da criança, no máximo rodadas − 1)
   - [x] RE-03 — `mostrarPlacarTexto: false`: só a fileira de estrelas do resultado, sem "N RODADAS"
   - [x] RE-04 — a cena **não** passa `estrelas` em `irPara('resultado', …)`
   - [x] RE-05 — o `tutorial` tem 3 passos com `desenho` animado e serve também à ajuda da partida
@@ -107,7 +107,7 @@
 | Campo | Significado aqui | Valor típico |
 |---|---|---|
 | `totalPerguntas` | as rodadas combinadas do nível (as extras não contam) | `3`, `3` ou `5` |
-| `acertos` | vitória: nota cheia (sem desconto, exceção à RE-02) · derrota: as pedras da criança | `0` a `5` |
+| `acertos` | vitória: nota cheia (sem desconto, exceção à RE-02) · derrota: as pedras da criança, no máximo rodadas − 1 | `0` a `4` |
 | `erros` | PRONTOs errados na partida inteira, contagem crua | `0` ou mais |
 | `nivel` | 1 Fácil, 2 Médio, 3 Difícil | `2` |
 | `jogo` | slug estável | `subtraindo-o-domino` |
@@ -148,7 +148,7 @@
 - [x] `node tools/testes.mjs` passa (154)
 - [x] `node tools/verificar-independencia.mjs numerandus/subtraindo-o-domino` **aprovado**
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/subtraindo-o-domino` **aprovado** (17 áudios, 66 requisições, todas locais)
-- [x] `node tools/teste-jogabilidade-subtraindo-o-domino.mjs` **aprovado**: 149 verificações
+- [x] `node tools/teste-jogabilidade-subtraindo-o-domino.mjs` **aprovado**: 188 verificações
 - [x] Jogo abre por `node tools/serve.mjs` sem requisição externa (confirmado pelo teste de entrega)
 - [x] Fluxo completo de telas percorrido, sem travar: menu → níveis → partida → resultado → jogar de novo, só com toques
 - [x] **Vitória:** a mensagem `JOGO_CONCLUIDO` chega ao pai com os números batendo com o jogado

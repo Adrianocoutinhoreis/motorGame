@@ -1086,10 +1086,12 @@ export class GameScene extends Scene {
   /**
    * A nota (`acertos`) e as estrelas da tela (RE-04), a mesma regra do Pratinho CDU:
    *  - vitória: nota cheia (todas as rodadas), sem descontar os erros — eles vão para o relatório;
-   *  - derrota: as pedras que a criança levou, sem desconto.
+   *  - derrota: as pedras que a criança levou, sem desconto e no máximo uma rodada a menos que a vitória.
    */
   _notaDaPartida() {
-    return this._desfecho() === 'vitoria' ? this.totalRodadas : Math.min(this.levadas.v.length, this.totalRodadas);
+    // Derrota: as pedras dela, mas NUNCA a nota cheia. Perder só na rodada extra, depois de levar uma pedra em todas as
+    // rodadas combinadas, daria 3 de 3 (5 estrelas num "QUASE LÁ!"): a derrota vale, no máximo, uma rodada a menos.
+    return this._desfecho() === 'vitoria' ? this.totalRodadas : Math.min(this.levadas.v.length, this.totalRodadas - 1);
   }
 
   /**

@@ -324,8 +324,8 @@ try {
 
   // Os nós da cena que o teste toca. Pedras: a certa (soma o total) ou uma errada, ainda na mesa.
   const PRONTO = 'c.botaoPronto';
-  const CERTA = 'c.pecas.find((p) => p.livre && p.soma === c.total).no';
-  const ERRADA = 'c.pecas.find((p) => p.livre && p.soma !== c.total).no';
+  const CERTA = 'c.pecas.find((p) => p.livre && p.soma === c.total)?.no';
+  const ERRADA = 'c.pecas.find((p) => p.livre && p.soma !== c.total)?.no';
   const estado = () => jg(`return {
     cena: c.constructor.name, fase: c.fase, rodada: c.rodada, total: c.total,
     errosRodada: c.errosRodada, errosPronto: c.errosPronto, falha: c.falhaNaRodada,
@@ -629,8 +629,9 @@ try {
   checar('o teto de extras vem do config (regras.maxExtras = 5)', (await jg(`return c.regras.maxExtras;`)) === 5);
   await jg(`c.rodadasExtras = c.regras.maxExtras;`); // finge que as extras já chegaram ao teto
   for (let r = 1; r <= 3; r++) {
-    await esperarAte(`c.rodada === ${r} && c.fase === 'dados'`, 10000);
-    await jogarDados();
+    const comecou = await esperarAte(`c.rodada === ${r} && c.fase === 'dados'`, 10000);
+    const rolou = await jogarDados();
+    checar(`5e: a rodada ${r} começou e os dados rolaram até a pergunta`, comecou && rolou, JSON.stringify(await estado()));
     await tocarNo(CERTA);
     await tocarNo(PRONTO);
     await esperarAte(`c.constructor.name === 'ResultScreen' || (c.rodada === ${r + 1} && c.fase === 'dados')`, 15000);
@@ -818,6 +819,29 @@ try {
   m = await recebidas();
   checar('parado no resultado também NÃO duplica', m.length === 3, `n=${m.length}`);
 
+  // Derrota NA RODADA EXTRA: 3 rodadas perfeitas no Fácil e, na extra, 4 erros (a vez passa): o computador leva a pedra e vence.
+  await jg(`c.irPara('jogando', { nivel: j.config.niveis[0] }); return true;`);
+  await esperarAte(`c.constructor.name === 'GameScene'`, 6000);
+  await instalar();
+  await jg(RAPIDO);
+  const p4 = await partida([0, 0, 0, 4]);
+  checar('4ª partida (Fácil, perfeita nas 3 rodadas e a vez passa na extra) chegou ao resultado', p4.ok, JSON.stringify(p4));
+  await esperar(900);
+  await captura('23b-iframe-derrota-na-extra');
+  m = await recebidas();
+  const m4 = m[3] ?? {};
+  checar('4ª mensagem é DERROTA na extra: vitoria false, acertos 2 (uma rodada a menos que a vitória, não 3 de 3), erros 4, total 3, e exatamente 4 mensagens no total',
+    m.length === 4 && m4.vitoria === false && m4.acertos === 2 && m4.erros === 4 && m4.totalPerguntas === 3, JSON.stringify(m4));
+  checar('a nota da derrota na extra é MENOR que a da vitória (3): nunca 5 estrelas num "QUASE LÁ!"', m4.acertos < m1.acertos, JSON.stringify({ derrota: m4.acertos, vitoria: m1.acertos }));
+  checar('os extras dizem: derrota, 3 × 4 pedras, 1 extra, 1 vez perdida, 3 rodadas limpas',
+    m4.desfecho === 'derrota' && m4.pedrasCrianca === 3 && m4.pedrasComputador === 4 && m4.rodadasExtras === 1 && m4.vezesPerdidas === 1 && m4.rodadasLimpas === 3, JSON.stringify(m4));
+  checar('o computador jogou as 4 rodadas (4 totais dele, 4 da criança, com a extra)', m4.totaisComputador?.length === 4 && m4.totais?.length === 4, JSON.stringify({ c: m4.totaisComputador, v: m4.totais }));
+  checar('o host do AVA valida também a mensagem da derrota na extra (4 válidas, 0 inválidas)',
+    (await aval(`document.querySelectorAll('#registro .msg.valida').length`)) === 4 && (await aval(`document.querySelectorAll('#registro .msg.invalida').length`)) === 0);
+  await esperar(3000);
+  m = await recebidas();
+  checar('parado no resultado da derrota na extra NÃO duplica', m.length === 4, `n=${m.length}`);
+
   // iframe PEQUENO: o jogo não pode cortar nem deformar.
   await aval(`(() => { const f = document.getElementById('moldura'); f.style.width = '420px'; f.style.height = '260px'; })()`);
   await esperar(900);
@@ -914,6 +938,151 @@ try {
   checar('o jogo NÃO fica preso: o Watchdog leva a vez do computador até o fim da rodada', await esperarAte(`c.rodada === 3 && c.fase === 'dados'`, 40000));
   const novos2 = erros.slice(errosAntes2);
   checar('o resgate da vez do computador ficou registrado (Watchdog) e o computador levou a pedra dele', novos2.some((x) => /Watchdog/.test(x)) && (await estado()).c === 2, JSON.stringify(novos2));
+
+  // ------------------------------------------- 13. robustez nas rodadas extras
+  console.log('\n13. Robustez: extras seguidas até o teto, pausa e ajuda no meio, toques fora de hora, replay');
+  const errosAntes13 = erros.length;
+  const avisosAntes13 = avisos.length;
+  /** Esgota todas as pedras de um total que não é o da criança e manda os dados do computador caírem nele. */
+  const FORCAR_SEM_PEDRA = `const T = c.total;
+    let X = [...new Set(c.pecas.map((p) => p.soma))].filter((s) => s !== T).find((s) => !c.pecas.some((p) => p.livre && p.soma === s));
+    if (X === undefined) {
+      X = [...new Set(c.pecas.filter((p) => p.livre).map((p) => p.soma))].find((s) => s !== T);
+      c.pecas.filter((p) => p.livre && p.soma === X).forEach((p) => { p.livre = false; p.no.visible = false; c.mesa.vagas[p.vaga].vazia = true; });
+    }
+    const d1 = Math.max(1, Math.min(6, X - 1)); c.cpuDadosDeTeste = { d1, d2: X - d1, total: X }; return X;`;
+  /** A criança erra até a vez passar (Médio: 3 erros). */
+  const errarAtePassar = async (limite) => {
+    for (let k = 1; k <= limite; k++) {
+      await tocarNo(ERRADA);
+      await tocarNo(PRONTO);
+      await esperarAte(`c.errosRodada === ${k} && (c.fase === 'escolher' || c.fase === 'passando')`, 4000);
+    }
+    return esperarAte(`c.fase === 'passando'`, 4000);
+  };
+  /** Fecha a ajuda como a criança: avança os 3 passos (o VOLTAR AO JOGO só aparece no último) e toca nele. */
+  const fecharAjuda = async () => {
+    for (let i = 0; i < 2; i++) {
+      const prox = `${W}.__achar(c.ajuda, (n) => n.icone === 'setaDireita' && n.visivelMundo && n.habilitado !== false)`;
+      if (await tocarNo(prox)) await esperar(500);
+    }
+    const voltou = await tocarNo(`${W}.__achar(c.ajuda, (n) => typeof n.rotulo === 'string' && /voltar ao jogo/i.test(n.rotulo) && n.visivelMundo)`);
+    return voltou && esperarAte(`!c.pausada`, 4000);
+  };
+
+  await abrirNivel(2);
+  for (let r = 1; r <= 3; r++) {
+    await esperarAte(`c.rodada === ${r} && c.fase === 'dados'`, 10000);
+    await jogarDados();
+    await tocarNo(CERTA);
+    await tocarNo(PRONTO);
+  }
+  checar('3 rodadas perfeitas no Médio levam à 1ª extra', await esperarAte(`c.rodada === 4 && c.fase === 'dados' && c.decisiva`, 20000));
+  await jogarDados();
+  await tocarNo(CERTA);
+  await tocarNo(PRONTO);
+  e = await estado();
+  checar('extra 1: a criança acerta, o computador (protegido) também leva, 4 × 4, e começa a 2ª extra',
+    await esperarAte(`c.rodada === 5 && c.fase === 'dados' && c.decisiva`, 20000) && (await estado()).v === 4 && (await estado()).c === 4);
+
+  // ---- extra 2: duplo toque, pausa e ajuda no meio da vez da criança
+  await jogarDados();
+  await tocarNo(ERRADA);
+  await tocarNo(PRONTO);
+  await tocarNo(PRONTO); // duplo toque rápido: o 2º cai com o PRONTO já desligado
+  e = await estado();
+  checar('extra 2: duplo toque no PRONTO conta UM erro só', e.errosRodada === 1 && e.fase === 'escolher', JSON.stringify(e));
+  await tocarNo(ERRADA);
+  const a13 = await estado();
+  checar('extra 2: a pausa abre no meio da extra', await tocarNo(ICONE('pausa')) && (await estado()).pausada === true);
+  await esperar(900);
+  checar('extra 2: CONTINUAR devolve a partida', await tocarNo(BTN('/^continuar$/i')) && (await estado()).pausada === false);
+  e = await estado();
+  checar('extra 2: depois da pausa tudo está intacto (rodada, total, pedra marcada, erro, ainda é a extra)',
+    e.rodada === a13.rodada && e.total === a13.total && e.escolhida === a13.escolhida && e.fase === 'escolher' && e.errosRodada === 1 && e.decisiva === true, JSON.stringify({ a13, e }));
+  checar('extra 2: a ajuda abre por cima da extra', await tocarNo(ICONE('tutorial')) && (await estado()).pausada === true);
+  await esperar(500);
+  checar('extra 2: VOLTAR AO JOGO fecha a ajuda', await fecharAjuda());
+  e = await estado();
+  checar('extra 2: depois da ajuda tudo continua intacto', e.rodada === a13.rodada && e.total === a13.total && e.escolhida === a13.escolhida && e.fase === 'escolher' && e.errosRodada === 1, JSON.stringify({ a13, e }));
+  await jg(FORCAR_SEM_PEDRA);
+  await tocarNo(`c.escolhida.no`); // a pedra marcada segue marcada depois da ajuda: tocar de novo a desmarca e deixa o laço contar certo
+  for (let k = 2; k <= 3; k++) {
+    await tocarNo(ERRADA);
+    await tocarNo(PRONTO);
+    await esperarAte(`c.errosRodada === ${k} && (c.fase === 'escolher' || c.fase === 'passando')`, 4000);
+  }
+  checar('extra 2: no 3º erro a vez da criança PASSA (Médio)', await esperarAte(`c.fase === 'passando'`, 4000));
+  checar('extra 2: o computador rola OUTRO total, cai num total esgotado e fica sem; segue 4 × 4 e começa a 3ª extra',
+    await esperarAte(`c.rodada === 6 && c.fase === 'dados' && c.decisiva`, 25000) && (await estado()).v === 4 && (await estado()).c === 4);
+  const t2 = await jg(`return { vagas: [c.bandejas.v.vagas, c.bandejas.c.vagas], perdV: c.bandejas.v.perdidas[4], perdC: c.bandejas.c.perdidas[4] };`);
+  checar('extra 2: as DUAS vagas dela ficaram vazias (✕ nos dois lados) e cada bandeja tem 6 vagas', t2.perdV === true && t2.perdC === true && t2.vagas.join() === '6,6', JSON.stringify(t2));
+
+  // ---- extra 3: a ajuda abre no meio da REVELAÇÃO da conta (a vez que passa): a revelação não pode andar com o jogo parado
+  await jogarDados();
+  await jg(FORCAR_SEM_PEDRA);
+  await jg(`c.regras.revelaMs = 3000;`);
+  await errarAtePassar(3);
+  checar('extra 3: a conta é revelada', await esperarAte(`c.passouEtapa === 'revela'`, 6000));
+  checar('extra 3: a ajuda abre durante a revelação', await tocarNo(ICONE('tutorial')) && (await estado()).pausada === true);
+  await esperar(400);
+  const conta0 = await jg(`return c.certaRevelada ? c.certaRevelada.no.efeitos.conta : -1;`);
+  await esperar(3600); // mais que o revelaMs: com o jogo parado a revelação NÃO pode terminar nem a animação andar
+  const rev13 = await jg(`return { etapa: c.passouEtapa, fase: c.fase, conta: c.certaRevelada ? c.certaRevelada.no.efeitos.conta : -1 };`);
+  checar('extra 3: com a ajuda aberta a revelação NÃO avança (segue na etapa da conta, com a animação parada)',
+    rev13.etapa === 'revela' && rev13.fase === 'passando' && conta0 >= 0 && Math.abs(rev13.conta - conta0) < 0.001, JSON.stringify({ conta0, rev13 }));
+  checar('extra 3: VOLTAR AO JOGO fecha a ajuda', await fecharAjuda());
+  checar('extra 3: depois de fechar, a revelação termina, o computador joga e começa a 4ª extra',
+    await esperarAte(`c.rodada === 7 && c.fase === 'dados' && c.decisiva`, 25000));
+  await jg(`c.regras.revelaMs = 200;`);
+
+  // ---- extra 4: toque numa pedra fora de hora e pausa no meio da VEZ DO COMPUTADOR
+  await jogarDados();
+  await jg(FORCAR_SEM_PEDRA);
+  await errarAtePassar(3);
+  await jg(`c.regras.cpuEsperaMs = 1500; c.regras.rolarMs = 1800; c.regras.cpuPensaMs = 700;`);
+  checar('extra 4: começa a vez do computador (dados rolando)', await esperarAte(`c.fase === 'cpu' && c.cpuEtapa === 'dados'`, 15000));
+  await tocarNo('c.pecas.find((p) => p.livre).no');
+  e = await estado();
+  checar('extra 4: tocar numa pedra durante a vez do computador não marca nada', e.escolhida === null && e.fase === 'cpu', JSON.stringify(e));
+  checar('extra 4: a pausa abre no meio da vez do computador', await tocarNo(ICONE('pausa')) && (await estado()).pausada === true);
+  await esperar(2600); // mais que os dados levariam: parado, a etapa não pode mudar
+  const cpu13 = await jg(`return { etapa: c.cpuEtapa, fase: c.fase, rolando: c.dado1.rolando };`);
+  checar('extra 4: com o jogo pausado a vez do computador NÃO avança (os dados seguem rolando)', cpu13.etapa === 'dados' && cpu13.fase === 'cpu' && cpu13.rolando === true, JSON.stringify(cpu13));
+  checar('extra 4: CONTINUAR devolve a partida', await tocarNo(BTN('/^continuar$/i')) && (await estado()).pausada === false);
+  checar('extra 4: ele termina a vez (fica sem pedra) e começa a 5ª extra, a última',
+    await esperarAte(`c.rodada === 8 && c.fase === 'dados' && c.decisiva`, 25000));
+  await jg(RAPIDO);
+
+  // ---- extra 5, a do teto: a bandeja com 8 vagas ainda cabe, e empatada no teto a partida termina
+  const geo = await jg(`const dentro = (band, lista) => lista.every((p) => p.no.x - band.x >= 0 && p.no.x - band.x <= 580);
+    return { extras: c.rodadasExtras, vagas: [c.bandejas.v.vagas, c.bandejas.c.vagas], passo: c.bandejas.v.passo, marcadores: c.trilha.estados.join(),
+      dentro: dentro(c.bandejas.v, c.levadas.v) && dentro(c.bandejas.c, c.levadas.c), pedras: [c.levadas.v.length, c.levadas.c.length] };`);
+  checar('na 5ª extra: 8 vagas por bandeja, passo apertado (62 px), 8 marcadores (3 feitos e 5 estrelas) e as pedras ainda dentro da bandeja',
+    geo.extras === 5 && geo.vagas.join() === '8,8' && geo.passo === 62 && geo.marcadores === 'feita,feita,feita,decisiva,decisiva,decisiva,decisiva,decisiva'
+      && geo.dentro === true && geo.pedras.join() === '4,4', JSON.stringify(geo));
+  await captura('26-teto-5-extras');
+  await jogarDados();
+  await jg(FORCAR_SEM_PEDRA);
+  await errarAtePassar(3);
+  checar('5ª extra: empatada no teto, a partida TERMINA (a criança leva) em vez de pedir outra extra', await esperarAte(`c.constructor.name === 'ResultScreen'`, 25000));
+  await esperar(900);
+  await captura('27-resultado-teto');
+
+  // ---- replay depois de uma partida cheia de extras: nada do estado antigo pode sobrar
+  checar('toque em JOGAR DE NOVO volta à partida', await tocarNo(BTN('/jogar de novo/i')) && await esperarAte(`c.constructor.name === 'GameScene'`, 6000));
+  await instalar();
+  await jg(RAPIDO);
+  const novo13 = await jg(`return { rodada: c.rodada, extras: c.rodadasExtras, decisiva: c.decisiva, vagas: [c.bandejas.v.vagas, c.bandejas.c.vagas], passo: c.bandejas.v.passo,
+    marcadores: c.trilha.estados.join(), pedras: [c.levadas.v.length, c.levadas.c.length], livres: c.pecas.filter((p) => p.livre).length, perdidas: [c.bandejas.v.perdidas.length, c.bandejas.c.perdidas.length] };`);
+  checar('o replay começa do zero: rodada 1, sem extras, 3 vagas (passo 108), marcadores vazios, 21 pedras, nenhuma vaga perdida',
+    novo13.rodada === 1 && novo13.extras === 0 && novo13.decisiva === false && novo13.vagas.join() === '3,3' && novo13.passo === 108
+      && novo13.marcadores === 'vazia,vazia,vazia' && novo13.pedras.join() === '0,0' && novo13.livres === 21 && novo13.perdidas.join() === '0,0', JSON.stringify(novo13));
+
+  const novos13 = erros.slice(errosAntes13);
+  checar('nenhum erro de JavaScript durante a robustez', novos13.length === 0, novos13.slice(0, 4).join(' | '));
+  const guarda13 = avisos.slice(avisosAntes13).filter((x) => /watchdog|cão de guarda|travad|resgat/i.test(x));
+  checar('o Watchdog não disparou em nenhum desses cenários', guarda13.length === 0, guarda13.slice(0, 3).join(' | '));
 } catch (err) {
   falharam++;
   problemas.push(`o teste quebrou: ${err.stack ?? err}`);
