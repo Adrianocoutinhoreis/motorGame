@@ -54,6 +54,65 @@ export function sortearDados(pecas, aleatorio = Math.random) {
   return { d1, d2: total - d1, total };
 }
 
+/** Os totais que existem no nível: os das pedras do conjunto inteiro, tiradas ou não (no Fácil, de 2 a 8). */
+function totaisDoNivel(pecas) {
+  return new Set(pecas.map((p) => p.soma));
+}
+
+/**
+ * Dois dados honestos, sem olhar quais pedras ainda restam, mas só em totais que EXISTEM no nível: no
+ * Fácil as pedras vão até 8, e um 12 não seria "azar" do computador, seria um total que nem poderia sair.
+ */
+function dadosHonestos(pecas, aleatorio) {
+  const existentes = totaisDoNivel(pecas);
+  for (let i = 0; i < 500; i++) {
+    const d1 = 1 + Math.floor(aleatorio() * FACES_DADO);
+    const d2 = 1 + Math.floor(aleatorio() * FACES_DADO);
+    if (existentes.has(d1 + d2)) return { d1, d2, total: d1 + d2 };
+  }
+  return sortearDados(pecas, aleatorio);
+}
+
+/**
+ * Dados que caem num total que EXISTE no nível mas já SEM pedra livre na mesa (ou `null` se todo total
+ * ainda tem). É o "azar" do computador, usado só para encurtar o desempate (`sortearDadosExtra`).
+ */
+export function sortearDadosSemPedra(pecas, aleatorio = Math.random) {
+  const sem = [...totaisDoNivel(pecas)].filter((t) => !pecasQueSomam(pecas, t).length);
+  if (!sem.length) return null;
+  const total = sem[Math.floor(aleatorio() * sem.length)];
+  const dados = [];
+  for (let d1 = 1; d1 <= FACES_DADO; d1++) {
+    const d2 = total - d1;
+    if (d2 >= 1 && d2 <= FACES_DADO) dados.push([d1, d2]);
+  }
+  const [d1, d2] = dados[Math.floor(aleatorio() * dados.length)];
+  return { d1, d2, total };
+}
+
+/**
+ * Os dados do COMPUTADOR numa rodada EXTRA (o desempate, como no vídeo: "mais uma rodada até que um
+ * consiga pegar uma pedrinha e o outro não"). Cada um joga os PRÓPRIOS dados, como numa rodada normal:
+ * os da criança são `sortearDados` (sempre com pedra) e os do computador têm três fases:
+ *  - até a `protegidoAte`-ésima extra (padrão 1) são PROTEGIDOS como os da criança: ele leva a pedra e o
+ *    desempate tem um vai-e-vem. Sem isso ele ficava sem pedra na 1ª extra em 78% das partidas do Fácil,
+ *    onde sobram 3 pedras na mesa;
+ *  - depois são HONESTOS, só entre totais que existem no nível: ele pode cair num total que já acabou;
+ *  - a partir da `aPartirDe`-ésima (padrão 3) caem num total esgotado, se houver algum, para o
+ *    desempate não virar maratona.
+ *
+ * @param {number} extras quantas rodadas extras já houve, contando a de agora (1, 2, 3…)
+ * @returns {{d1:number, d2:number, total:number}|null} `null` só se a mesa esvaziou
+ */
+export function sortearDadosExtra(pecas, extras, aleatorio = Math.random, aPartirDe = 3, protegidoAte = 1) {
+  if (extras <= protegidoAte) return sortearDados(pecas, aleatorio);
+  if (extras >= aPartirDe) {
+    const azar = sortearDadosSemPedra(pecas, aleatorio);
+    if (azar) return azar;
+  }
+  return dadosHonestos(pecas, aleatorio);
+}
+
 /** Embaralha uma cópia (Fisher–Yates). */
 export function embaralhar(lista, aleatorio = Math.random) {
   const r = [...lista];
@@ -91,9 +150,8 @@ export function pecaDeAjuda(pecas, total) {
 }
 
 /**
- * Quem vence: mais pedras que o computador. Com número ÍMPAR de rodadas e uma
- * pedra para um dos dois a cada rodada, não existe empate (`'empate'` só para
- * proteger o contrato se alguém mudar as rodadas para um número par).
+ * Quem vence: quem leva MAIS PEDRAS (a regra do vídeo). Empatou: a cena joga rodadas extras
+ * (`sortearDadosExtra`) até alguém ficar na frente; `'empate'` só chega ao fim se a mesa esvaziar.
  */
 export function quemVence(pedrasCrianca, pedrasComputador) {
   if (pedrasCrianca > pedrasComputador) return 'v';

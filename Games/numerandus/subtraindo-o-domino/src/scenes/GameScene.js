@@ -3,10 +3,10 @@ import {
   Background, Tween, Easing, ESTADOS, Watchdog,
 } from '../../engine/index.js';
 import {
-  criarPecas, sortearDados, embaralhar, posicionarMesa, pecaDeAjuda, pecasQueSomam, quemVence, MESA_COLUNAS,
+  criarPecas, sortearDados, sortearDadosExtra, embaralhar, posicionarMesa, pecaDeAjuda, pecasQueSomam, quemVence, MESA_COLUNAS,
 } from '../regras.js';
 import {
-  CORES, escrever, desenharPeca, desenharDado, desenharSinalPeca, desenharEstrelaRodada,
+  CORES, escrever, desenharPeca, desenharDado, desenharSinalPeca, desenharMarcadorRodada,
   desenharIconeQuem, desenharIconeCerto, desenharDedo, desenharOndaToque,
 } from '../desenho.js';
 
@@ -50,7 +50,7 @@ class Peca extends Node {
     super({ ...opcoes, largura: PECA_L, altura: PECA_A, regX: PECA_L / 2, regY: PECA_A / 2, interativo: true });
     this.dados = dados;
     this.alg = alg;
-    this.efeitos = { elev: 0, desvio: 0, marcada: 0, erro: 0, dica: 0, sinal: 0, cpu: 0, apagada: 0 };
+    this.efeitos = { elev: 0, desvio: 0, marcada: 0, erro: 0, dica: 0, sinal: 0, cpu: 0, apagada: 0, conta: 0 };
     this.t = Math.random() * 6;
     /** 'ok' | 'erro' | null: o ✓ ou o ✕ sobre a pedra. */
     this.sinal = null;
@@ -108,6 +108,22 @@ class Peca extends Node {
     }
     desenharPeca(ctx, this.dados.a, this.dados.b, { alg: this.alg });
     if (this.sinal && e.sinal > 0) desenharSinalPeca(ctx, this.sinal, PECA_L / 2, PECA_A / 2, 27, e.sinal);
+    if (e.conta > 0) {
+      // A conta da pedra revelada (6 + 3 = 9), num selo âmbar acima dela — ou abaixo, na fileira de cima,
+      // para não cobrir a pergunta.
+      const texto = `${this.dados.a} + ${this.dados.b} = ${this.dados.soma}`;
+      ctx.save();
+      ctx.globalAlpha *= e.conta;
+      ctx.translate(PECA_L / 2, this.y < 260 ? PECA_A + 36 : -36);
+      ctx.font = '800 38px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+      const w = ctx.measureText(texto).width + 40;
+      ctx.fillStyle = CORES.ouro;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -27, w, 54, 14);
+      ctx.fill();
+      escrever(ctx, texto, 0, 2, 38, '#1B212B');
+      ctx.restore();
+    }
     ctx.restore();
   }
 }
@@ -226,11 +242,15 @@ class Mesa extends Node {
   }
 }
 
+/** O passo entre as vagas de uma bandeja de `n` vagas: 108 px, e menos quando as rodadas extras acrescentam vagas. */
+const passoDasVagas = (n) => (n <= 1 ? VAGA.passo : Math.min(VAGA.passo, Math.floor((BANDEJA.l - VAGA.x * 2 - VAGA.l) / (n - 1))));
+
 /**
- * A bandeja de um lado: as pedras que ele levou ficam nela, uma por rodada (as duas enchem
- * juntas; quem vence a rodada é a ESTRELA do alto). Um anel suave marca de quem é a vez e um
- * anel forte, quem ganhou a estrela. Mostra o ícone de quem é e, no Fácil, o nome por extenso
- * (pedido do humano, como no Pratinho CDU).
+ * A bandeja de um lado: as pedras que ele levou ficam nela, uma vaga por rodada — e o PLACAR é
+ * esse: vence quem tem mais pedras. Uma vaga vazia com ✕ é a rodada em que ele ficou sem pedra
+ * (a vez da criança passou, ou o total do computador já não tinha pedra). Um anel suave marca de
+ * quem é a vez e um anel forte, quem decidiu a partida na rodada extra. Mostra o ícone de quem é e, no
+ * Fácil, o nome por extenso (pedido do humano, como no Pratinho CDU).
  */
 class Bandeja extends Node {
   constructor(quem, opcoes = {}) {
@@ -238,9 +258,13 @@ class Bandeja extends Node {
     this.quem = quem;
     this.vagas = 3;
     this.nomes = false;
-    /** Anel de quem acabou de levar uma pedra, 0..1. */
+    /** Anel de quem acabou de decidir a partida, 0..1. */
     this.brilho = 0;
+    /** `perdidas[i]` verdadeiro: ele ficou sem pedra nessa rodada e a vaga fica vazia, com um ✕. */
+    this.perdidas = [];
   }
+
+  get passo() { return passoDasVagas(this.vagas); }
 
   desenhar(ctx) {
     const { l, a } = BANDEJA;
@@ -269,18 +293,37 @@ class Bandeja extends Node {
     ctx.strokeStyle = CORES.vaga;
     for (let i = 0; i < this.vagas; i++) {
       ctx.beginPath();
-      ctx.roundRect(VAGA.x + i * VAGA.passo, VAGA.y, VAGA.l, VAGA.a, 10);
+      ctx.roundRect(VAGA.x + i * this.passo, VAGA.y, VAGA.l, VAGA.a, 10);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.strokeStyle = CORES.erro;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < this.vagas; i++) {
+      if (!this.perdidas[i]) continue;
+      const cx = VAGA.x + i * this.passo + VAGA.l / 2;
+      const cy = VAGA.y + VAGA.a / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 10, cy - 10);
+      ctx.lineTo(cx + 10, cy + 10);
+      ctx.moveTo(cx + 10, cy - 10);
+      ctx.lineTo(cx - 10, cy + 10);
       ctx.stroke();
     }
     ctx.restore();
   }
 }
 
-/** As estrelas das rodadas, no canto: uma por rodada; dourada é da criança, azul-acinzentada é do computador. */
+/**
+ * Os marcadores das rodadas, no canto: um por rodada, SEM dono (quem vence é quem tem mais pedras,
+ * e isso está nas bandejas). Vazio com contorno dourado é a rodada de agora; cheio é a que passou; a
+ * estrela dourada, que só aparece no empate, é cada rodada extra.
+ */
 class TrilhaRodadas extends Node {
   constructor(total, opcoes = {}) {
     super(opcoes);
-    /** 'vazia' | 'v' | 'c' por rodada. */
+    /** 'vazia' | 'feita' | 'decisiva' por rodada. */
     this.estados = new Array(total).fill('vazia');
     this.escalas = new Array(total).fill(1);
     this.atual = 0;
@@ -292,7 +335,7 @@ class TrilhaRodadas extends Node {
       ctx.save();
       ctx.translate(i * TRILHA.passo, 0);
       ctx.scale(e, e);
-      desenharEstrelaRodada(ctx, 0, 0, TRILHA.r, estado, i === this.atual);
+      desenharMarcadorRodada(ctx, 0, 0, TRILHA.r, estado, i === this.atual);
       ctx.restore();
     });
   }
@@ -394,16 +437,20 @@ class DicaDedo extends Node {
  *   'dados'      os dados com "?", esperando o toque da criança (o dedinho aponta)
  *   'rolando'    os dados rolando
  *   'escolher'   a criança marca uma pedra que soma o total; PRONTO confere
- *   'levando'    o ✓ na pedra certa, a pedra indo para a bandeja da criança e, no fim, a estrela
+ *   'levando'    o ✓ na pedra certa e a pedra indo para a bandeja da criança
+ *   'passando'   o limite de erros: a conta é revelada e a vez da criança passa
  *   'cpu'        o computador joga (etapas em `cpuEtapa`): rola os dados dele, marca uma pedra
- *                (anel azul) e a leva para a bandeja dele
+ *                (anel azul) e a leva para a bandeja dele — ou fica sem pedra, se o total dele
+ *                já não tem nenhuma na mesa
  *
- * **Os dois jogam em TODA rodada**, como no vídeo (decisão do humano, 26/10/2026): a criança acha
- * a pedra do total dela e leva; depois o computador joga os dados dele e leva a pedra dele. O
- * computador nunca erra. **A estrela da rodada é de quem faz a rodada limpa**: da criança se ela
- * achou a pedra SEM nenhum PRONTO errado; senão do computador. As bandejas registram as pedras
- * de cada um e enchem juntas; quem decide é a estrela. A vitória depende só do que a criança sabe,
- * não da sorte dos dados (o total sorteado sempre tem uma pedra na mesa).
+ * **A regra do vídeo** (decisão do humano, 28/10/2026): os dois jogam em TODA rodada e **vence quem
+ * leva MAIS PEDRAS**. A criança leva a pedra que achou (mesmo depois de errar), menos quando a vez
+ * dela passa no limite de erros do nível; o computador nunca erra e leva a dele, menos quando o total
+ * dele não tem mais pedra. Empatou nas rodadas combinadas: **rodadas extras** (o desempate do vídeo),
+ * iguais às normais — a vez da criança e depois a do computador, cada um com os PRÓPRIOS dados —
+ * até um levar a pedra e o outro não: ele fica sem (a criança vence) ou a vez dela passa (ele vence).
+ * Os dados da criança sempre caem num total com pedra: ela nunca perde por azar. Os dele são honestos,
+ * e a partir da 3ª extra caem num total esgotado, se houver (`sortearDadosExtra`), para não virar maratona.
  *
  * **Nada vale antes do PRONTO.** Marcar e desmarcar uma pedra é livre (toque de
  * novo desmarca); só o PRONTO errado conta como erro (RE-02).
@@ -411,9 +458,9 @@ class DicaDedo extends Node {
  * **Retorno sem frase na tela**: acerto, erro e ajuda são cor, símbolo,
  * movimento e som. A única frase escrita é a pergunta com o total.
  *
- * **Como termina** (`_desfecho`): mais estrelas que o computador vence; com número
- * ímpar de rodadas não há empate. A nota (`_notaDaPartida`) é nota cheia na
- * vitória e, na derrota, as rodadas limpas. O payload é montado em `_terminar`:
+ * **Como termina** (`_desfecho`): mais pedras que o computador vence. A nota
+ * (`_notaDaPartida`) é nota cheia na vitória e, na derrota, as pedras da criança.
+ * O payload é montado em `_terminar`:
  * `erros` cru e `acertos` = a nota (docs/REGRAS-SUBTRAINDO-O-DOMINO.md §6).
  *
  * Todo o tempo passa por Tween (nenhum setTimeout): pausa e ajuda congelam tudo.
@@ -425,7 +472,7 @@ export class GameScene extends Scene {
 
     this.nivel = this.game.dados.nivel ?? config.niveis[0];
     this.totalRodadas = this.nivel.meta ?? 3;
-    this.regras = { rolarMs: 900, acertoMs: 650, pausaRodadaMs: 900, cpuEsperaMs: 700, cpuPensaMs: 800, ...config.regras };
+    this.regras = { rolarMs: 900, acertoMs: 650, pausaRodadaMs: 900, cpuEsperaMs: 700, cpuPensaMs: 800, revelaMs: 1900, ...config.regras };
 
     this.placar = new ScoreSystem({ total: this.totalRodadas, nivel: this.nivel.id ?? 1, vidas: 0 });
     this.fase = 'dados';
@@ -440,10 +487,19 @@ export class GameScene extends Scene {
     this.rodadasComFalha = 0;
     this.rodadasComAjuda = 0;
     this.usouAjudaNaRodada = false;
-    this.ganhadores = [];
-    this.estrelas = { v: 0, c: 0 };
+    /** Rodadas em que a criança achou a pedra sem nenhum PRONTO errado (só vai para o relatório). */
+    this.rodadasLimpas = 0;
+    /** Rodada extra (o desempate): se a de agora é uma e quantas já houve. */
+    this.decisiva = false;
+    this.rodadasExtras = 0;
+    /** Gancho de teste: os dados que o computador usa na próxima vez dele (`null` = sorteio normal). */
+    this.cpuForcado = null;
     this.totais = [];
     this.totaisComputador = [];
+    /** Quantas vezes a vez da criança passou (limite de erros da rodada) e de onde o `Watchdog` retoma. */
+    this.vezesPerdidas = 0;
+    this.passouEtapa = null;
+    this.certaRevelada = null;
     /** A etapa da vez do computador (para o `Watchdog` saber de onde retomar). */
     this.cpuEtapa = null;
     this.cpuSorteio = null;
@@ -549,7 +605,7 @@ export class GameScene extends Scene {
     this.adicionar(this.relogio);
     this.guarda = new Watchdog({
       nome: 'rodada do dominó',
-      ocupado: () => ['rolando', 'levando', 'cpu'].includes(this.fase) && !this.pausada && !this._fimResolvido,
+      ocupado: () => ['rolando', 'levando', 'cpu', 'passando'].includes(this.fase) && !this.pausada && !this._fimResolvido,
       vivo: () => Tween.temAtivo(this.relogio),
       graca: 0.6,
       limite: 14,
@@ -573,14 +629,18 @@ export class GameScene extends Scene {
 
   // ------------------------------------------------------------------ rodadas
 
-  _novaRodada() {
+  _novaRodada(decisiva = false) {
     this.rodada += 1;
+    this.decisiva = decisiva;
+    if (decisiva) this._abrirDecisiva();
     this.fase = 'dados';
     this.total = null;
     this.sorteio = null;
     this.escolhida = null;
     this.pendente = null;
     this.pecaAjuda = null;
+    this.certaRevelada = null;
+    this.passouEtapa = null;
     this.errosRodada = 0;
     this.falhaNaRodada = false;
     this.usouAjudaNaRodada = false;
@@ -596,10 +656,30 @@ export class GameScene extends Scene {
     this._falar('suaVez', 'Sua vez!', true);
   }
 
+  /**
+   * Uma rodada extra (o empate): ganha um marcador de estrela no alto e uma vaga extra em cada
+   * bandeja (as pedras que já estão lá se apertam para abrir lugar). Fora isso é uma rodada
+   * normal: a criança joga, depois o computador, cada um com os próprios dados.
+   */
+  _abrirDecisiva() {
+    this.rodadasExtras += 1;
+    const idx = this.rodada - 1;
+    this.trilha.estados[idx] = 'decisiva';
+    this.trilha.escalas[idx] = 0.3;
+    Tween.para(this.trilha.escalas, { [idx]: 1 }, 550, Easing.costasSaida);
+    for (const dono of ['v', 'c']) {
+      const bandeja = this.bandejas[dono];
+      bandeja.vagas += 1;
+      for (const p of this.levadas[dono]) {
+        Tween.para(p.no, { x: bandeja.x + VAGA.x + p.slot * bandeja.passo + VAGA.l / 2 }, 400, Easing.suave);
+      }
+    }
+  }
+
   /** Tira de uma pedra da mesa todo retorno visual da rodada anterior. */
   _limparPeca(p) {
     Tween.removerDe(p.no.efeitos);
-    Object.assign(p.no.efeitos, { elev: 0, desvio: 0, marcada: 0, erro: 0, dica: 0, sinal: 0, cpu: 0, apagada: 0 });
+    Object.assign(p.no.efeitos, { elev: 0, desvio: 0, marcada: 0, erro: 0, dica: 0, sinal: 0, cpu: 0, apagada: 0, conta: 0 });
     p.no.sinal = null;
   }
 
@@ -692,8 +772,11 @@ export class GameScene extends Scene {
   }
 
   _errou(p) {
-    // A rodada deixa de ser limpa: a pedra desta rodada será do computador.
-    if (!this.falhaNaRodada) { this.falhaNaRodada = true; this.rodadasComFalha += 1; }
+    // A rodada deixa de ser limpa (só vai para o relatório): a pedra continua dela, até o limite de erros.
+    if (!this.falhaNaRodada) {
+      this.falhaNaRodada = true;
+      this.rodadasComFalha += 1;
+    }
     this.errosRodada += 1;
     this.errosPronto += 1;
     this.escolhida = null;
@@ -704,8 +787,10 @@ export class GameScene extends Scene {
     this.botaoPronto.scaleY = 1;
 
     // Ajuda em degraus: no N-ésimo erro da rodada uma pedra certa acende (`pecaAjuda`).
-    const { ajuda } = this.nivel;
-    const certa = ajuda > 0 && this.errosRodada >= ajuda ? pecaDeAjuda(this.pecas, this.total) : null;
+    const { ajuda, passaNoErro } = this.nivel;
+    // No limite de erros a vez passa e a conta é revelada (`_passarAVez`): a ajuda não acende de novo.
+    const passa = passaNoErro > 0 && this.errosRodada >= passaNoErro;
+    const certa = !passa && ajuda > 0 && this.errosRodada >= ajuda ? pecaDeAjuda(this.pecas, this.total) : null;
 
     const e = p.no.efeitos;
     Tween.removerDe(e);
@@ -733,6 +818,56 @@ export class GameScene extends Scene {
         Tween.de(q.no.efeitos).esperar(700).entao({ apagada: 1 }, 400, Easing.suave);
       }
     }
+    if (passa) this._passarAVez();
+  }
+
+  /**
+   * O limite de erros da rodada (`nivel.passaNoErro`): **a vez da criança passa**. Depois do ✕ do
+   * erro, a pedra certa acende com a conta (6 + 3 = 9), as outras escurecem e, ao fim, a vaga dela na
+   * bandeja fica vazia (✕) e a pedra continua na mesa. Depois joga o computador, como sempre — e numa
+   * rodada extra isso decide a partida a favor dele (ela ficou sem pedra e ele não).
+   */
+  _passarAVez() {
+    this.fase = 'passando';
+    this.passouEtapa = 'espera';
+    Tween.de(this.relogio).esperar(1200).chamar(() => this._revelar());
+  }
+
+  _revelar() {
+    if (this.fase !== 'passando' || this.passouEtapa !== 'espera') return;
+    this.passouEtapa = 'revela';
+    const certa = pecaDeAjuda(this.pecas, this.total);
+    this.certaRevelada = certa;
+    for (const q of this.pecas) {
+      if (!q.livre) continue;
+      Tween.removerDe(q.no.efeitos);
+      Object.assign(q.no.efeitos, { erro: 0, sinal: 0, desvio: 0, marcada: 0, elev: 0 });
+      q.no.sinal = null;
+      if (q === certa) {
+        q.no.paraFrente();
+        Tween.para(q.no.efeitos, { dica: 1, conta: 1, apagada: 0 }, 450, Easing.costasSaida);
+      } else {
+        Tween.para(q.no.efeitos, { apagada: 1, dica: 0 }, 350, Easing.suave);
+      }
+    }
+    Tween.de(this.relogio).esperar(this.regras.revelaMs).chamar(() => this._passouFim());
+  }
+
+  _passouFim() {
+    if (this.fase !== 'passando' || this.passouEtapa !== 'revela') return;
+    this.passouEtapa = null;
+    for (const q of this.pecas) {
+      if (!q.livre) continue;
+      Tween.removerDe(q.no.efeitos);
+      Tween.para(q.no.efeitos, { apagada: 0, dica: 0, conta: 0 }, 300, Easing.suave);
+    }
+    this.pecaAjuda = null;
+    this.certaRevelada = null;
+    this.bandejas.v.perdidas[this.rodada - 1] = true;
+    this.vezesPerdidas += 1;
+    this.fase = 'levando';
+    this.cpuEtapa = 'vai';
+    Tween.de(this.relogio).esperar(400 + this.regras.cpuEsperaMs).chamar(() => this._vezDoComputador());
   }
 
   _acertou(p) {
@@ -756,8 +891,9 @@ export class GameScene extends Scene {
       Tween.para(q.no.efeitos, { apagada: 0, dica: 0 }, 300, Easing.suave);
     }
     Tween.para(e, { sinal: 1, elev: 6 }, 260, Easing.costasSaida);
-    // Só a rodada limpa comemora com som e fala: a pedra é a mesma, mas a estrela é de quem acertou de primeira.
+    // Só o acerto de primeira comemora com som e fala (a pedra é dela de qualquer modo).
     if (!this.falhaNaRodada) {
+      if (!this.decisiva) this.rodadasLimpas += 1;
       this._efeito('acerto');
       this._falar('muitoBem', 'Muito bem!', true);
     }
@@ -777,20 +913,22 @@ export class GameScene extends Scene {
   _voar(p, dono) {
     const lista = this.levadas[dono];
     const bandeja = this.bandejas[dono];
-    const i = lista.length;
+    // A vaga é a da RODADA, não a do número de pedras: quando a vez da criança passa, a vaga dela fica vazia.
+    const i = this.rodada - 1;
+    p.slot = i;
     lista.push(p);
     p.livre = false;
     this.mesa.vagas[p.vaga].vazia = true;
     p.no.interativo = false;
     p.no.paraFrente();
     this._efeito('pouso');
-    const alvoX = bandeja.x + VAGA.x + i * VAGA.passo + VAGA.l / 2;
+    const alvoX = bandeja.x + VAGA.x + i * bandeja.passo + VAGA.l / 2;
     const alvoY = bandeja.y + VAGA.y + VAGA.a / 2;
     Tween.para(p.no, { x: alvoX, y: alvoY, scaleX: 0.75, scaleY: 0.75, rotation: 0 }, 600, Easing.suave);
     Tween.para(p.no.efeitos, { elev: 0, sinal: 0, cpu: 0 }, 400, Easing.suave);
   }
 
-  /** A pedra que a criança achou vai para a bandeja DELA (a rodada ser limpa ou não só decide a estrela); depois joga o computador. */
+  /** A pedra que a criança achou vai para a bandeja DELA (mesmo depois de errar); depois joga o computador. */
   _levar() {
     const pend = this.pendente;
     if (!pend) return;
@@ -805,8 +943,8 @@ export class GameScene extends Scene {
 
   /**
    * O computador joga em TODA rodada, como no vídeo: rola os PRÓPRIOS dados, marca uma pedra que
-   * soma o total dele (anel azul) e a leva para a bandeja dele. Nunca erra, então é um modelo; a
-   * estrela da rodada não depende dele (`_fecharRodada`).
+   * soma o total dele (anel azul) e a leva para a bandeja dele. Nunca erra. Se o total dele já
+   * acabou na mesa, ele fica sem pedra (`_cpuSemPedra`).
    */
   _vezDoComputador() {
     if (this._fimResolvido) return;
@@ -826,15 +964,24 @@ export class GameScene extends Scene {
   _cpuRola() {
     if (this.fase !== 'cpu' || this.cpuEtapa !== 'espera') return;
     this.cpuEtapa = 'dados';
-    this.cpuSorteio = sortearDados(this.pecas);
+    // Normal: dados protegidos, entre as pedras que restam (ele sempre leva uma). Extra: `sortearDadosExtra`, que o
+    // protege na 1ª e depois o deixa cair num total esgotado.
+    this.cpuSorteio = this.cpuForcado
+      ?? (this.decisiva ? sortearDadosExtra(this.pecas, this.rodadasExtras) : sortearDados(this.pecas));
+    this.cpuForcado = null;
     for (const d of [this.dado1, this.dado2]) d.rolando = true;
     Tween.de(this.relogio).esperar(this.regras.rolarMs).chamar(() => this._cpuDadosParam());
   }
 
   _cpuDadosParam() {
     if (this.fase !== 'cpu' || this.cpuEtapa !== 'dados') return;
-    // Sem sorteio (mesa vazia, impossível numa partida normal): fecha a rodada sem a pedra dele.
-    if (!this.cpuSorteio) { this._fecharRodada(); return; }
+    // Sem sorteio: a mesa esvaziou (a criança levou a última pedra numa extra). Ele fica sem pedra, com o ✕ na vaga.
+    if (!this.cpuSorteio) {
+      this.dado1.rolando = false;
+      this.dado2.rolando = false;
+      this._cpuSemPedra();
+      return;
+    }
     const { d1, d2, total } = this.cpuSorteio;
     this.dado1.rolando = false;
     this.dado2.rolando = false;
@@ -846,9 +993,21 @@ export class GameScene extends Scene {
     this.pergunta.pulo = 0.6;
     Tween.para(this.pergunta, { pulo: 1 }, 450, Easing.costasSaida);
     const certas = pecasQueSomam(this.pecas, total);
+    if (!certas.length) { this._cpuSemPedra(); return; }
     this.cpuPeca = certas[Math.floor(Math.random() * certas.length)];
     this.cpuEtapa = 'escolheu';
     Tween.de(this.relogio).esperar(this.regras.cpuPensaMs).chamar(() => this._cpuMarca());
+  }
+
+  /**
+   * O total do computador já não tem pedra na mesa (o total dele já acabou na mesa, numa rodada extra): ele fica SEM pedra. A vaga dele fica vazia, com o ✕, e o som de erro toca.
+   */
+  _cpuSemPedra() {
+    this.cpuEtapa = 'sem';
+    this.cpuPeca = null;
+    this.bandejas.c.perdidas[this.rodada - 1] = true;
+    this._efeito('erro');
+    Tween.de(this.relogio).esperar(this.regras.cpuPensaMs + 700).chamar(() => this._fecharRodada());
   }
 
   /** O computador marca a pedra: anel azul e ela sobe um pouco, como a criança vê a dela. */
@@ -871,24 +1030,22 @@ export class GameScene extends Scene {
   }
 
   /**
-   * Fecha a rodada e dá a ESTRELA. **Rodada limpa**: a estrela é da criança se achou a pedra SEM
-   * nenhum PRONTO errado (`falhaNaRodada` falso); se precisou de nova tentativa, é do computador,
-   * que nunca erra. Quem tem mais estrelas vence; as pedras de cada bandeja são o registro do que
-   * cada um levou (as duas bandejas enchem juntas) e não decidem nada. A vitória depende só da
-   * criança, não da sorte dos dados (decisão do humano, 26/10/2026: o computador joga em toda
-   * rodada e as estrelas decidem, como no Pratinho CDU).
+   * Fecha a rodada. As pedras de cada bandeja SÃO o placar (vence quem tem mais), então aqui só
+   * se marca a rodada como feita no alto. Na rodada decisiva, o anel forte acende na bandeja de
+   * quem ficou com a pedra e decidiu a partida.
    */
   _fecharRodada() {
     if (this._fimResolvido) return;
     this.cpuEtapa = 'fim';
     this.fase = 'levando';
-    const dono = this.falhaNaRodada ? 'c' : 'v';
     const idx = this.rodada - 1;
-    this.ganhadores[idx] = dono;
-    this.estrelas[dono] += 1;
-    this.trilha.estados[idx] = dono;
-    this.trilha.escalas[idx] = 0.3;
-    Tween.para(this.trilha.escalas, { [idx]: 1 }, 550, Easing.costasSaida);
+    if (!this.decisiva) {
+      this.trilha.estados[idx] = 'feita';
+      this.trilha.escalas[idx] = 0.3;
+      Tween.para(this.trilha.escalas, { [idx]: 1 }, 550, Easing.costasSaida);
+    }
+    const { v, c } = this._pedras();
+    const dono = this.decisiva && v !== c ? (v > c ? 'v' : 'c') : null;
     for (const q of ['v', 'c']) {
       Tween.removerDe(this.bandejas[q]);
       this.bandejas[q].brilho = q === dono ? 1 : 0;
@@ -897,30 +1054,44 @@ export class GameScene extends Scene {
     Tween.de(this.relogio).esperar(this.regras.pausaRodadaMs).chamar(() => this._proximaRodada());
   }
 
+  /** As pedras de cada lado: o placar. */
+  _pedras() {
+    return { v: this.levadas.v.length, c: this.levadas.c.length };
+  }
+
+  /**
+   * Depois da última rodada combinada, empatou (e ainda há pedra na mesa): joga uma rodada extra, como
+   * no vídeo, e outra, e outra, até um levar a pedra e o outro não. Cada extra tira pedras da mesa e,
+   * a partir da 3ª, os dados do computador caem num total esgotado, então a partida acaba; se a mesa
+   * esvaziar empatada, a criança leva (`_desfecho`).
+   */
   _proximaRodada() {
     if (this._fimResolvido) return;
-    if (this.rodada >= this.totalRodadas) this._terminar();
-    else this._novaRodada();
+    if (this.rodada < this.totalRodadas) { this._novaRodada(); return; }
+    const { v, c } = this._pedras();
+    if (v === c && this.pecas.some((p) => p.livre)) this._novaRodada(true);
+    else this._terminar();
   }
 
   // ---------------------------------------------------------------------- fim
 
-  /** Quem vence: mais ESTRELAS que o computador. Com rodadas ímpares e uma estrela por rodada, não há empate. */
+  /** Quem vence: mais PEDRAS que o computador. O empate só sobra com a mesa vazia, e então a criança leva. */
   _desfecho() {
-    return quemVence(this.estrelas.v, this.estrelas.c) === 'v' ? 'vitoria' : 'derrota';
+    const { v, c } = this._pedras();
+    return quemVence(v, c) === 'c' ? 'derrota' : 'vitoria';
   }
 
   /**
    * A nota (`acertos`) e as estrelas da tela (RE-04), a mesma regra do Pratinho CDU:
    *  - vitória: nota cheia (todas as rodadas), sem descontar os erros — eles vão para o relatório;
-   *  - derrota: as rodadas limpas da criança (as estrelas dela), sem desconto.
+   *  - derrota: as pedras que a criança levou, sem desconto.
    */
   _notaDaPartida() {
-    return this._desfecho() === 'vitoria' ? this.totalRodadas : this.estrelas.v;
+    return this._desfecho() === 'vitoria' ? this.totalRodadas : Math.min(this.levadas.v.length, this.totalRodadas);
   }
 
   /**
-   * Vai ao resultado. `vitoria` do contrato é binária: `true` com mais estrelas que o computador.
+   * Vai ao resultado. `vitoria` do contrato é binária: `true` com mais pedras que o computador.
    * O detalhe viaja nos extras. Não passa `estrelas`: a tela deriva a fileira (RE-04).
    */
   _terminar() {
@@ -929,12 +1100,14 @@ export class GameScene extends Scene {
     const desfecho = this._desfecho();
     const resultado = this.placar.paraAva(desfecho === 'vitoria', {
       desfecho,
-      rodadasLimpas: this.estrelas.v,
+      rodadasLimpas: this.rodadasLimpas,
       rodadasComFalha: this.rodadasComFalha,
       errosPronto: this.errosPronto,
       rodadasComAjuda: this.rodadasComAjuda,
-      estrelasCrianca: this.estrelas.v,
-      estrelasComputador: this.estrelas.c,
+      vezesPerdidas: this.vezesPerdidas,
+      pedrasCrianca: this.levadas.v.length,
+      pedrasComputador: this.levadas.c.length,
+      rodadasExtras: this.rodadasExtras,
       ganhouDoComputador: desfecho === 'vitoria',
       totais: [...this.totais],
       totaisComputador: [...this.totaisComputador],
@@ -955,6 +1128,9 @@ export class GameScene extends Scene {
       if (this.pendente) this._levar();
       else if (this.cpuEtapa === 'vai') this._vezDoComputador();
       else this._proximaRodada();
+    } else if (this.fase === 'passando') {
+      if (this.passouEtapa === 'espera') this._revelar();
+      else this._passouFim();
     } else if (this.fase === 'cpu') {
       const etapas = {
         espera: () => this._cpuRola(),

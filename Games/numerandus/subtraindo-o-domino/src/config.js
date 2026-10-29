@@ -10,10 +10,10 @@
  * levada é uma a menos (um contorno apagado marca o lugar dela).
  *
  * A criança toca nos dados, toca na pedra e em PRONTO; depois o computador joga os
- * dados dele e leva a pedra dele, em TODA rodada. A estrela da rodada é de quem
- * faz a rodada limpa: da criança se achou a pedra SEM nenhum PRONTO errado; senão
- * do computador. Vence quem tiver mais estrelas: com número ímpar de rodadas
- * não há empate.
+ * dados dele e leva a pedra dele, em TODA rodada. As bandejas SÃO o placar: vence quem
+ * juntar mais pedras. A vez da criança passa no limite de erros do nível (e ela fica sem
+ * pedra); o computador leva a dele em toda rodada normal e só pode ficar sem pedra nas rodadas
+ * extras (o desempate), que são iguais às normais e vão até um levar a pedra e o outro não, como no vídeo.
  *
  * Especificação: docs/REGRAS-SUBTRAINDO-O-DOMINO.md. Layout e regras conferidos
  * antes num protótipo jogável (artifact "Subtraindo o Dominó", 26/10/2026), com
@@ -23,7 +23,7 @@
  * docs/REGRAS-EDUCACIONAIS.md
  */
 import {
-  CORES, escrever, desenharPeca, desenharDado, desenharSinalPeca, desenharEstrelaRodada,
+  CORES, escrever, desenharPeca, desenharDado, desenharSinalPeca, desenharMarcadorRodada,
   desenharIconeQuem, desenharIconeCerto, desenharDedo, desenharOndaToque,
 } from './desenho.js';
 
@@ -57,7 +57,7 @@ export default {
 
   /**
    * O resultado mostra só as estrelas, sem a linha "N RODADAS": na derrota a nota
-   * vale só o que foi ganho (as rodadas limpas), então "3 RODADAS" mentiria
+   * vale só o que foi ganho (as pedras da criança), então "3 RODADAS" mentiria
    * para quem jogou as 5 (mesma decisão do Pratinho CDU).
    */
   mostrarPlacarTexto: false,
@@ -67,21 +67,23 @@ export default {
    * `faces`  as pedras são as de faces 1 a N (sem as de 0): 4 → 10 pedras, 6 → 21
    * `alg`    algarismos nas pedras no lugar dos pontos (os dados continuam com pontos)
    * `ajuda`  no N-ésimo PRONTO errado da rodada, uma pedra certa acende (0 = sem ajuda)
+   * `passaNoErro`  no N-ésimo PRONTO errado da rodada a VEZ DA CRIANÇA PASSA: o jogo revela a conta, a
+   *               vaga dela na bandeja fica vazia e o computador joga (a gravidade cresce com o nível)
    * `nomes`  escreve VOCÊ / COMPUTADOR nas bandejas (pedido do humano para o Fácil, como no Pratinho)
-   * `meta`   as rodadas da partida: sempre ímpar, para a partida nunca empatar
+   * `meta`   as rodadas combinadas; empatando, as rodadas extras desempatam (como no vídeo)
    */
   niveis: [
     {
       id: 1, nome: 'Fácil', descricao: 'Pedras de 1 a 4', amostra: 'Totais até 8', cor: '#16A34A',
-      meta: 3, vidas: 0, faces: 4, alg: false, ajuda: 2, nomes: true,
+      meta: 3, vidas: 0, faces: 4, alg: false, ajuda: 2, passaNoErro: 4, nomes: true,
     },
     {
       id: 2, nome: 'Médio', descricao: 'Pedras de 1 a 6', amostra: 'Totais até 12', cor: '#F59E0B',
-      meta: 3, vidas: 0, faces: 6, alg: false, ajuda: 3,
+      meta: 3, vidas: 0, faces: 6, alg: false, ajuda: 0, passaNoErro: 3,
     },
     {
       id: 3, nome: 'Difícil', descricao: 'Só algarismos', amostra: 'Sem pontinhos', cor: '#DC2626',
-      meta: 5, vidas: 0, faces: 6, alg: true, ajuda: 0,
+      meta: 5, vidas: 0, faces: 6, alg: true, ajuda: 0, passaNoErro: 2,
     },
   ],
 
@@ -91,9 +93,10 @@ export default {
    *   acertoMs       quanto o ✓ fica na pedra antes de ela ir para a bandeja
    *   cpuEsperaMs    a pausa antes de o computador jogar
    *   cpuPensaMs     quanto o computador "pensa" antes de marcar a pedra dele
-   *   pausaRodadaMs  a pausa depois da pedra do computador pousar e da estrela acender, antes da rodada seguinte
+   *   revelaMs       quanto a conta (6 + 3 = 9) fica na tela quando a vez da criança passa
+   *   pausaRodadaMs  a pausa depois da pedra do computador pousar (ou de ele ficar sem), antes da rodada seguinte
    */
-  regras: { rolarMs: 900, acertoMs: 650, cpuEsperaMs: 700, cpuPensaMs: 800, pausaRodadaMs: 1100 },
+  regras: { rolarMs: 900, acertoMs: 650, cpuEsperaMs: 700, cpuPensaMs: 800, revelaMs: 1900, pausaRodadaMs: 1100 },
 
   // --------------------------------------------------------------- tutorial
   /**
@@ -118,7 +121,7 @@ export default {
     {
       titulo: 'Junte pedras',
       fala: 'tutorialTela3',
-      texto: 'Depois o computador joga. Sem errar, a estrela é sua. Quem juntar mais estrelas ganha!',
+      texto: 'Depois o computador joga. Quem juntar mais pedras ganha!',
       desenho: (ctx, l, a, t) => desenharPasso3(ctx, l, a, t),
     },
   ],
@@ -171,10 +174,9 @@ export default {
 
   // -------------------------------------------------------------------- AVA
   /**
-   * A pedra de cada rodada é de quem faz a rodada limpa: a criança, se achou a pedra
-   * SEM nenhum PRONTO errado; senão o computador, que nunca erra. Mais pedras que o
-   * computador vence; menos é derrota (tela "QUASE LÁ!", registrada). A vitória depende
-   * só da criança, não da sorte dos dados. Ver docs/REGRAS-SUBTRAINDO-O-DOMINO.md §6.
+   * Mais pedras que o computador vence; menos é derrota (tela "QUASE LÁ!", registrada). Os
+   * dados da criança sempre caem num total com pedra, então a vitória depende do que ela
+   * sabe, não da sorte. Ver docs/REGRAS-SUBTRAINDO-O-DOMINO.md §6.
    */
   registrarDerrota: true,
 };
@@ -316,18 +318,18 @@ function desenharPasso2(ctx, l, a, t) {
 
 /**
  * Passo 3 — a cada rodada a pedra da criança vai para a bandeja dela e, logo depois, a do computador
- * para a dele; a estrela da rodada acende (dourada se a rodada foi limpa, azul se não) e, no fim,
- * quem tem mais estrelas ganha o contorno dourado (ciclo de 8 s).
+ * para a dele; o marcador da rodada enche. Na última o computador fica sem pedra (✕ na vaga dele) e,
+ * no fim, quem juntou MAIS PEDRAS ganha o contorno dourado (ciclo de 8 s).
  */
 function desenharPasso3(ctx, l, a, t) {
   const ciclo = 8;
   const tc = ((t % ciclo) + ciclo) % ciclo;
   mesa(ctx, l, a, tc, ciclo);
-  // Três rodadas: a criança sai na frente, o computador leva a 2ª, a criança fecha em 2 × 1.
+  // Três rodadas: levam uma pedra cada, até o computador ficar sem na 3ª: a criança fecha em 3 × 2.
   const rodadas = [
-    { estrela: 'v', t: 0.5, c: [3, 6], pc: [2, 5] },
-    { estrela: 'c', t: 2.4, c: [5, 5], pc: [1, 4] },
-    { estrela: 'v', t: 4.3, c: [4, 5], pc: [6, 3] },
+    { t: 0.5, c: [3, 6], pc: [2, 5] },
+    { t: 2.4, c: [5, 5], pc: [1, 4] },
+    { t: 4.3, c: [4, 5], pc: null },
   ];
   const r = Math.min(a * 0.075, 19);
   rodadas.forEach((e, i) => {
@@ -336,7 +338,7 @@ function desenharPasso3(ctx, l, a, t) {
     ctx.save();
     ctx.translate(l * 0.07 + i * r * 2.7, a * 0.15);
     ctx.scale(0.4 + 0.6 * k, 0.4 + 0.6 * k);
-    desenharEstrelaRodada(ctx, 0, 0, r, feito ? e.estrela : 'vazia', !feito && (i === 0 || tc >= rodadas[i - 1].t + 1.9));
+    desenharMarcadorRodada(ctx, 0, 0, r * 1.3, feito ? 'feita' : 'vazia', !feito && (i === 0 || tc >= rodadas[i - 1].t + 1.9));
     ctx.restore();
   });
 
@@ -366,6 +368,27 @@ function desenharPasso3(ctx, l, a, t) {
     for (const [quem, par, atraso] of [['v', e.c, 0], ['c', e.pc, 0.9]]) {
       const inicio = e.t + atraso;
       const alvo = { x: bandejas[quem] + 18 + i * (pw + 14), y: by + bh - ph - 18 };
+      if (!par) {
+        // Sem pedra: o ✕ vermelho na vaga dele.
+        const k = suave(trecho(tc, inicio, inicio + 0.4));
+        if (k > 0) {
+          ctx.save();
+          ctx.globalAlpha *= k;
+          ctx.strokeStyle = CORES.erro;
+          ctx.lineWidth = 5;
+          ctx.lineCap = 'round';
+          const cx = alvo.x + pw / 2;
+          const cy = alvo.y + ph / 2;
+          ctx.beginPath();
+          ctx.moveTo(cx - 11, cy - 11);
+          ctx.lineTo(cx + 11, cy + 11);
+          ctx.moveTo(cx + 11, cy - 11);
+          ctx.lineTo(cx - 11, cy + 11);
+          ctx.stroke();
+          ctx.restore();
+        }
+        continue;
+      }
       const aparece = trecho(tc, inicio - 0.5, inicio - 0.2);
       if (aparece <= 0) continue;
       const k = suave(trecho(tc, inicio, inicio + 0.6));

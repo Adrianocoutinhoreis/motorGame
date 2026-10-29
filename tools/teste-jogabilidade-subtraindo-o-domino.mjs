@@ -156,8 +156,52 @@ console.log('\n0. As regras puras (src/regras.js), em Node');
   }
   checar('3 000 mesas: células distintas na grade de 6 × 4', mesaOk);
   checar(`nenhuma pedra encosta noutra (menor folga entre as caixas ${menorFolga.toFixed(1)} px)`, menorFolga >= 8, `folga=${menorFolga}`);
-  checar('quem vence: mais pedras vence, e o empate é só guarda de contrato',
+  checar('quem vence: mais pedras vence, e o empate leva à rodada decisiva',
     R.quemVence(2, 1) === 'v' && R.quemVence(1, 2) === 'c' && R.quemVence(1, 1) === 'empate');
+
+  // Rodadas extras: os dados do computador são honestos e, a partir da 3ª extra, caem num total ESGOTADO se houver.
+  let semOk = true; let comEsgotado = 0;
+  for (let i = 0; i < 10000; i++) {
+    const pecas = todas.map((p) => ({ ...p, livre: Math.random() < 0.5 }));
+    const r = R.sortearDadosSemPedra(pecas);
+    const esgotados = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((t) => !R.pecasQueSomam(pecas, t).length);
+    if (!esgotados.length) { if (r !== null) semOk = false; continue; }
+    comEsgotado++;
+    if (!r || R.pecasQueSomam(pecas, r.total).length || r.d1 + r.d2 !== r.total || r.d1 < 1 || r.d1 > 6 || r.d2 < 1 || r.d2 > 6) semOk = false;
+  }
+  checar(`10 000 mesas: os dados "sem pedra" caem sempre num total esgotado e somam (${comEsgotado} mesas tinham algum)`, semOk && comEsgotado > 1000, `ok=${semOk} n=${comEsgotado}`);
+  const quase = todas.map((p) => ({ ...p, livre: p.soma !== 12 })); // só o 12 está esgotado
+  const terceira = Array.from({ length: 500 }, () => R.sortearDadosExtra(quase, 3));
+  const segunda = Array.from({ length: 3000 }, () => R.sortearDadosExtra(quase, 2));
+  checar('a partir da 3ª extra o computador cai SEMPRE no total esgotado (o 12)', terceira.every((r) => r.total === 12 && r.d1 === 6 && r.d2 === 6));
+  checar('na 1ª e na 2ª extra os dados dele são honestos (nem sempre o esgotado; o 7 é o mais comum)', (() => {
+    const f = new Array(13).fill(0); segunda.forEach((r) => f[r.total]++);
+    return f[12] < segunda.length * 0.1 && f[7] === Math.max(...f);
+  })());
+  checar('sem nenhum total esgotado, até a 5ª extra os dados dele são válidos e honestos', Array.from({ length: 500 }, () => R.sortearDadosExtra(todas, 5))
+    .every((r) => r.d1 >= 1 && r.d1 <= 6 && r.d2 >= 1 && r.d2 <= 6 && r.d1 + r.d2 === r.total));
+
+  // O defeito achado em 28/10/2026: no Fácil (pedras de 1 a 4, totais de 2 a 8) o computador rolava 2d6 puros e
+  // 28% caíam em totais que NEM EXISTEM (9 a 12), então ficava sem pedra já na 1ª extra.
+  let facilOk = true; let protegidaOk = true; let azarOk = true;
+  for (let i = 0; i < 4000; i++) {
+    const pecas = facil.map((p) => ({ ...p, livre: Math.random() < 0.3 }));
+    const livres = pecas.filter((p) => p.livre).length;
+    const h = R.sortearDadosExtra(pecas, 2);
+    if (h.total < 2 || h.total > 8 || h.d1 + h.d2 !== h.total) facilOk = false;
+    const p1 = R.sortearDadosExtra(pecas, 1);
+    if (livres === 0) { if (p1 !== null) protegidaOk = false; } else if (!p1 || !R.pecasQueSomam(pecas, p1.total).length) protegidaOk = false;
+    const azar = R.sortearDadosExtra(pecas, 3);
+    if (azar.total < 2 || azar.total > 8 || R.pecasQueSomam(pecas, azar.total).length) { if (R.sortearDadosSemPedra(pecas)) azarOk = false; }
+  }
+  checar('Fácil, extra 2: os dados honestos do computador só caem em totais que existem no nível (2 a 8)', facilOk);
+  checar('extra 1: os dados do computador são PROTEGIDOS (sempre com pedra; com a mesa vazia, null)', protegidaOk);
+  checar('extra 3 no Fácil: o "azar" cai num total que existe no nível e já acabou (nunca num 9 a 12)', azarOk);
+  checar('o "sem pedra" nunca devolve um total inexistente: no Fácil só com a mesa vazia de um total de 2 a 8', (() => {
+    const r = R.sortearDadosSemPedra(facil.map((p) => ({ ...p, livre: p.soma === 5 || p.soma === 6 })));
+    return r !== null && r.total >= 2 && r.total <= 8 && r.total !== 5 && r.total !== 6;
+  })());
+
 }
 
 const navegador = NAVEGADORES.find((c) => existsSync(c));
@@ -286,10 +330,10 @@ try {
     errosRodada: c.errosRodada, errosPronto: c.errosPronto, falha: c.falhaNaRodada,
     escolhida: c.escolhida ? c.escolhida.a + '-' + c.escolhida.b : null,
     v: c.levadas ? c.levadas.v.length : -1, c: c.levadas ? c.levadas.c.length : -1,
-    ganhadores: c.ganhadores ? [...c.ganhadores] : [], estrelas: c.estrelas ? { ...c.estrelas } : null, pausada: !!c.pausada,
+    decisiva: !!c.decisiva, pausada: !!c.pausada,
     prontoHabilitado: c.botaoPronto ? c.botaoPronto.habilitado : null, prontoVisivel: c.botaoPronto ? c.botaoPronto.visible : null,
   };`);
-  const RAPIDO = `c.regras.rolarMs = 120; c.regras.acertoMs = 120; c.regras.pausaRodadaMs = 150; c.regras.cpuEsperaMs = 100; c.regras.cpuPensaMs = 100;`;
+  const RAPIDO = `c.regras.rolarMs = 120; c.regras.acertoMs = 120; c.regras.pausaRodadaMs = 150; c.regras.cpuEsperaMs = 100; c.regras.cpuPensaMs = 100; c.regras.revelaMs = 200;`;
   const abrirNivel = async (id) => {
     await aval(`${W}.jogo.irPara('jogando', { nivel: ${W}.jogo.config.niveis[${id - 1}] })`);
     await esperarAte(`c.constructor.name === 'GameScene'`, 6000);
@@ -302,22 +346,29 @@ try {
     await tocarNo('c.dado1');
     return esperarAte(`c.fase === 'escolher'`, 6000);
   };
-  /** Uma partida inteira só com gestos. `errosPorRodada[i]` = quantos PRONTOs errados na rodada i+1. */
+  /**
+   * Uma partida inteira só com gestos. `errosPorRodada[i]` = quantos PRONTOs errados na rodada i+1 (se o
+   * número chega ao limite do nível, a vez da criança passa e a rodada segue sem a pedra dela). Se as
+   * pedras empatam depois das rodadas combinadas, joga a RODADA DECISIVA (sem erros) até o resultado.
+   */
   const partida = async (errosPorRodada) => {
     const total = await jg(`return c.totalRodadas;`);
     let feitos = 0;
-    for (let r = 1; r <= total; r++) {
+    for (let r = 1; r <= total + 12; r++) {
+      if (await jg(`return c.constructor.name === 'ResultScreen';`)) break;
       if (!(await esperarAte(`c.rodada === ${r} && c.fase === 'dados'`, 10000))) return { feitos, ok: false, em: `rodada ${r} não começou` };
       if (!(await jogarDados())) return { feitos, ok: false, em: `dados da rodada ${r}` };
       for (let k = 0; k < (errosPorRodada[r - 1] ?? 0); k++) {
         await tocarNo(ERRADA);
         await tocarNo(PRONTO);
         feitos++;
-        if (!(await esperarAte(`c.errosRodada === ${k + 1} && c.fase === 'escolher'`, 4000))) return { feitos, ok: false, em: `erro ${k + 1} da rodada ${r}` };
+        if (!(await esperarAte(`c.errosRodada === ${k + 1} && (c.fase === 'escolher' || c.fase === 'passando')`, 4000))) return { feitos, ok: false, em: `erro ${k + 1} da rodada ${r}` };
       }
-      await tocarNo(CERTA);
-      await tocarNo(PRONTO);
-      await esperarAte(`c.constructor.name === 'ResultScreen' || (c.rodada === ${r + 1} && c.fase === 'dados')`, 8000);
+      if (!(await jg(`return c.fase === 'passando';`))) {
+        await tocarNo(CERTA);
+        await tocarNo(PRONTO);
+      }
+      await esperarAte(`c.constructor.name === 'ResultScreen' || (c.rodada === ${r + 1} && c.fase === 'dados')`, 20000);
     }
     return { feitos, ok: await esperarAte(`c.constructor.name === 'ResultScreen'`, 8000) };
   };
@@ -429,26 +480,28 @@ try {
   checar('a rodada fecha e a próxima começa', await esperarAte(`c.rodada === 2 && c.fase === 'dados'`, 15000));
   e = await estado();
   checar('as DUAS bandejas levaram uma pedra (a da criança e a do computador)', e.v === 1 && e.c === 1, JSON.stringify(e));
-  checar('a estrela da rodada com erro é do COMPUTADOR', e.ganhadores[0] === 'c' && e.estrelas.c === 1 && e.estrelas.v === 0, JSON.stringify(e));
+  checar('errar e depois acertar NÃO tira a pedra da criança: 1 × 1, empatadas', e.v === 1 && e.c === 1, JSON.stringify(e));
   const voo = await jg(`const pv = c.levadas.v[0]; const pc = c.levadas.c[0]; const bv = c.bandejas.v; const bc = c.bandejas.c;
     return { vx: pv.no.x - (bv.x + 24 + 48), vy: pv.no.y - (bv.y + 78 + 24), cx: pc.no.x - (bc.x + 24 + 48), cy: pc.no.y - (bc.y + 78 + 24),
       escalaV: pv.no.scaleX, escalaC: pc.no.scaleX, vagaV: c.mesa.vagas[pv.vaga].vazia, vagaC: c.mesa.vagas[pc.vaga].vazia, mar: c.trilha.estados.join() };`);
   checar('cada pedra pousou na 1ª vaga da própria bandeja, a 75% de escala',
     Math.abs(voo.vx) < 2 && Math.abs(voo.vy) < 2 && Math.abs(voo.cx) < 2 && Math.abs(voo.cy) < 2 && Math.abs(voo.escalaV - 0.75) < 0.01 && Math.abs(voo.escalaC - 0.75) < 0.01, JSON.stringify(voo));
-  checar('os dois lugares ficaram vazios na mesa (contorno apagado) e a estrela do alto é do computador', voo.vagaV === true && voo.vagaC === true && voo.mar.startsWith('c,'), JSON.stringify(voo));
+  checar('os dois lugares ficaram vazios na mesa (contorno apagado) e o marcador do alto é neutro (sem dono)', voo.vagaV === true && voo.vagaC === true && voo.mar.startsWith('feita,'), JSON.stringify(voo));
   await captura('08-bandejas');
 
   // ----------------------------------------------------- 5b. a rodada limpa
-  console.log('\n5b. A rodada limpa: a estrela é da CRIANÇA, e o computador joga do mesmo jeito');
+  console.log('\n5b. A rodada limpa: o computador joga do mesmo jeito, e as pedras seguem empatadas');
   checar('a 2ª rodada: toque nos dados', await jogarDados());
+  await jg(`c.regras.cpuEsperaMs = 2000;`);
   await tocarNo(CERTA);
   await tocarNo(PRONTO);
   await captura('09-acertou-limpo');
-  checar('o computador joga mesmo depois de uma rodada perfeita', await esperarAte(`c.fase === 'cpu'`, 6000));
+  checar('o computador joga mesmo depois de uma rodada perfeita', await esperarAte(`c.fase === 'cpu'`, 8000));
+  await jg(`c.regras.cpuEsperaMs = 100;`);
   checar('a rodada 3 começa', await esperarAte(`c.rodada === 3 && c.fase === 'dados'`, 15000));
   e = await estado();
   checar('as duas bandejas têm 2 pedras (os dois jogaram as 2 rodadas)', e.v === 2 && e.c === 2, JSON.stringify(e));
-  checar('a estrela da rodada limpa é da CRIANÇA: 1 × 1', e.ganhadores[1] === 'v' && e.estrelas.v === 1 && e.estrelas.c === 1, JSON.stringify(e));
+  checar('os marcadores do alto: 2 rodadas feitas e a 3ª vazia', (await jg(`return c.trilha.estados.join();`)) === 'feita,feita,vazia');
   checar('o PRONTO volta a sumir até os dados rolarem', e.prontoVisivel === false, JSON.stringify(e));
   const tc = await jg(`return { cpu: c.totaisComputador.length, crianca: c.totais.length };`);
   checar('o computador rolou os dados dele nas 2 rodadas (2 totais dele e 2 da criança)', tc.cpu === 2 && tc.crianca === 2, JSON.stringify(tc));
@@ -477,7 +530,33 @@ try {
   e = await estado();
   checar('depois da ajuda a partida está intacta (mesma rodada, total e pedra marcada)', e.rodada === antes.rodada && e.total === antes.total && e.escolhida === antes.escolhida && e.fase === 'escolher', JSON.stringify({ antes, e }));
   await tocarNo(PRONTO);
-  checar('a partida termina com a 3ª rodada limpa: vitória por 2 estrelas × 1 e vai ao resultado', await esperarAte(`c.constructor.name === 'ResultScreen'`, 15000));
+  checar('3 × 3 em pedras: empatou, então vem uma RODADA EXTRA (a 4ª, com a estrela dourada no alto)', await esperarAte(`c.rodada === 4 && c.fase === 'dados' && c.decisiva`, 15000)
+    && (await jg(`return c.trilha.estados.join();`)) === 'feita,feita,feita,decisiva');
+  await captura('13a-rodada-extra');
+  await esperar(600);
+  const ex = await jg(`return { vagas: [c.bandejas.v.vagas, c.bandejas.c.vagas], passo: c.bandejas.v.passo, quem: c.pergunta.quem, fase: c.fase };`);
+  checar('a extra abre uma vaga em cada bandeja, é a vez da criança', ex.vagas.join() === '4,4' && ex.passo === 108 && ex.quem === 'v', JSON.stringify(ex));
+  await tocarNo('c.dado1');
+  await esperarAte(`c.fase === 'escolher'`, 6000);
+  checar('com os dados da criança na mesa NADA do computador aparece antes da vez dele: sem prévia, sem lançamento compartilhado', (await jg(`return c.selo === undefined && c.totaisComputador.length === 3 && c.pergunta.quem === 'v' && c.pergunta.total === c.total;`)));
+  await esperar(500);
+  await captura('13a2-extra-vez-da-crianca');
+  // Prepara o azar do computador: esgota todas as pedras de OUTRO total e manda os dados dele caírem nele.
+  const forcaExtra = await jg(`const T = c.total; const X = [...new Set(c.pecas.filter((p) => p.livre).map((p) => p.soma))].find((s) => s !== T);
+    c.pecas.filter((p) => p.livre && p.soma === X).forEach((p) => { p.livre = false; p.no.visible = false; c.mesa.vagas[p.vaga].vazia = true; });
+    const d1 = Math.max(1, Math.min(6, X - 1)); c.cpuForcado = { d1, d2: X - d1, total: X };
+    return { T, X, livresDeX: c.pecas.filter((p) => p.livre && p.soma === X).length };`);
+  checar('(preparo) o total que o computador vai rolar é diferente do da criança e já está esgotado', forcaExtra.X !== forcaExtra.T && forcaExtra.livresDeX === 0, JSON.stringify(forcaExtra));
+  await jg(`c.regras.cpuEsperaMs = 1800; c.regras.cpuPensaMs = 500;`);
+  await tocarNo(CERTA);
+  await tocarNo(PRONTO);
+  checar('na extra a criança joga primeiro e leva a pedra (4 × 3)', await esperarAte(`c.levadas.v.length === 4`, 6000));
+  checar('depois joga o computador, com os PRÓPRIOS dados (outro total), cai num total esgotado e fica SEM pedra: a vaga dele vira ✕',
+    await esperarAte(`c.cpuEtapa === 'sem'`, 8000)
+    && (await jg(`return c.bandejas.c.perdidas[3] === true && c.pergunta.total === ${forcaExtra.X} && c.pergunta.total !== ${forcaExtra.T} && c.levadas.c.length === 3;`)));
+  await captura('13b-computador-sem-pedra');
+  await jg(`c.regras.cpuEsperaMs = 100; c.regras.cpuPensaMs = 100;`);
+  checar('a partida termina na extra: vitória por 4 pedras × 3 e vai ao resultado', await esperarAte(`c.constructor.name === 'ResultScreen'`, 15000));
   await esperar(800);
   await captura('13-resultado-vitoria');
 
@@ -489,11 +568,13 @@ try {
   await esperar(300);
   await captura('14-facil-dados');
   await jogarDados();
+  checar('Fácil: nada do computador aparece antes da vez dele', (await jg(`return c.selo === undefined && c.totaisComputador.length === 0 && c.pergunta.quem === 'v';`)));
   await tocarNo(ERRADA); await tocarNo(PRONTO);
   await esperarAte(`c.errosRodada === 1 && c.fase === 'escolher'`, 4000);
   await esperar(1500);
   let ajudaAcesa = await jg(`return c.pecas.filter((p) => p.no.efeitos.dica > 0.5).length;`);
   checar('Fácil: no 1º erro NENHUMA pedra acende', ajudaAcesa === 0, `acesas=${ajudaAcesa}`);
+  checar('errar NÃO muda o marcador do alto (ele não tem dono; quem decide são as pedras)', (await jg(`return c.trilha.estados[0];`)) === 'vazia');
   await tocarNo(ERRADA); await tocarNo(PRONTO);
   await esperarAte(`c.errosRodada === 2 && c.fase === 'escolher'`, 4000);
   await esperar(800);
@@ -501,20 +582,63 @@ try {
   const acesaErrada = await jg(`return c.pecas.filter((p) => p.no.efeitos.dica > 0.05 && p.soma !== c.total).length;`);
   checar('Fácil: no 2º erro uma pedra CERTA acende (e nenhuma errada)', ajudaAcesa === 1 && acesaErrada === 0, `certa=${ajudaAcesa} errada=${acesaErrada}`);
   await captura('15-facil-ajuda');
-  await tocarNo(CERTA); await tocarNo(PRONTO);
-  await esperarAte(`c.rodada === 2 && c.fase === 'dados'`, 8000);
-  ajudaAcesa = await jg(`return c.pecas.filter((p) => p.no.efeitos.dica > 0.01).length;`);
-  checar('Fácil: na rodada seguinte a ajuda apaga', ajudaAcesa === 0, `acesas=${ajudaAcesa}`);
+
+  console.log('\n5c. A vez que passa: conta revelada, vaga vazia, pedra na mesa');
+  await tocarNo(ERRADA); await tocarNo(PRONTO);
+  await esperarAte(`c.errosRodada === 3 && c.fase === 'escolher'`, 4000);
+  checar('Fácil: no 3º erro a vez AINDA não passa (o limite é o 4º)', (await estado()).fase === 'escolher');
+  await jg(`c.regras.revelaMs = 2500;`);
+  await tocarNo(ERRADA); await tocarNo(PRONTO);
+  checar('Fácil: no 4º erro a vez da criança PASSA', await esperarAte(`c.fase === 'passando'`, 4000));
+  checar('a conta é revelada', await esperarAte(`c.passouEtapa === 'revela'`, 6000));
+  await esperar(600);
+  const rev = await jg(`const certa = c.certaRevelada; window.__certaRevelada = certa;
+    return { soma: certa.soma, total: c.total, conta: certa.no.efeitos.conta, dica: certa.no.efeitos.dica,
+      outras: c.pecas.filter((q) => q.livre && q !== certa).every((q) => q.no.efeitos.apagada > 0.9) };`);
+  checar('a pedra revelada soma o total, mostra a conta e acende; as outras escurecem', rev.soma === rev.total && rev.conta > 0.95 && rev.dica > 0.95 && rev.outras === true, JSON.stringify(rev));
+  await captura('15b-vez-passou');
+  checar('a rodada segue para o computador e fecha', await esperarAte(`c.rodada === 2 && c.fase === 'dados'`, 20000));
+  await jg(`c.regras.revelaMs = 200;`);
+  e = await estado();
+  const perdeu = await jg(`return { vagaVazia: c.bandejas.v.perdidas[0] === true, vezes: c.vezesPerdidas, criancaLevou: c.levadas.v.includes(window.__certaRevelada),
+    pedras: { v: c.levadas.v.length, c: c.levadas.c.length }, marcador: c.trilha.estados[0], conta: window.__certaRevelada.no.efeitos.conta };`);
+  checar('a vaga da criança na bandeja ficou VAZIA (✕) e a vez perdida foi contada', perdeu.vagaVazia === true && perdeu.vezes === 1, JSON.stringify(perdeu));
+  checar('a criança NÃO levou a pedra e a conta sumiu', perdeu.criancaLevou === false && perdeu.conta < 0.05, JSON.stringify(perdeu));
+  checar('o computador jogou normalmente depois (1 pedra dele, 0 da criança) e a rodada está feita', perdeu.pedras.v === 0 && perdeu.pedras.c === 1 && perdeu.marcador === 'feita', JSON.stringify({ perdeu, e }));
+  await captura('15c-depois-da-vez-passada');
+  await esperar(800);
+  ajudaAcesa = await jg(`return c.pecas.filter((p) => p.no.efeitos.dica > 0.01 || p.no.efeitos.apagada > 0.01).length;`);
+  checar('Fácil: na rodada seguinte a ajuda e o escurecimento saem', ajudaAcesa === 0, `acesas=${ajudaAcesa}`);
 
   await abrirNivel(2);
   await jogarDados();
-  for (let k = 1; k <= 3; k++) {
+  for (let k = 1; k <= 2; k++) {
     await tocarNo(ERRADA); await tocarNo(PRONTO);
     await esperarAte(`c.errosRodada === ${k} && c.fase === 'escolher'`, 4000);
     await esperar(700);
-    const acesas = await jg(`return c.pecas.filter((p) => p.livre && p.soma === c.total && p.no.efeitos.dica > 0.95).length;`);
-    checar(`Médio: no ${k}º erro ${k < 3 ? 'NENHUMA pedra acende' : 'uma pedra certa acende'}`, k < 3 ? acesas === 0 : acesas === 1, `acesas=${acesas}`);
+    const acesas = await jg(`return c.pecas.filter((p) => p.no.efeitos.dica > 0.01 || p.no.efeitos.apagada > 0.01).length;`);
+    checar(`Médio: no ${k}º erro NENHUMA pedra acende nem escurece (a dica é só do Fácil)`, acesas === 0, `acesas=${acesas}`);
   }
+  await tocarNo(ERRADA); await tocarNo(PRONTO);
+  checar('Médio: no 3º erro a vez da criança PASSA', await esperarAte(`c.fase === 'passando'`, 4000));
+  await esperarAte(`c.rodada === 2 && c.fase === 'dados'`, 20000);
+
+  console.log('\n5d. Sem prévia: no Médio e no Difícil o total do computador só aparece na vez dele');
+  await abrirNivel(2);
+  await jogarDados();
+  await esperar(500);
+  const previa = await jg(`return { selo: c.selo, totais: c.totaisComputador.length, quem: c.pergunta.quem, perg: c.pergunta.total, total: c.total,
+    forcado: c.cpuForcado };`);
+  checar('Médio: com os dados da criança na mesa não há selo nem total do computador (a pergunta é só da criança)',
+    previa.selo === undefined && previa.totais === 0 && previa.quem === 'v' && previa.perg === previa.total && previa.forcado === null, JSON.stringify(previa));
+  await captura('15d-sem-previa-medio');
+  await jg(`c.regras.cpuEsperaMs = 1500; c.regras.cpuPensaMs = 500;`);
+  await tocarNo(CERTA);
+  await tocarNo(PRONTO);
+  checar('só na vez dele aparece o total do computador, na pergunta, com o selo azul', await esperarAte(`c.cpuEtapa === 'marcou'`, 8000)
+    && (await jg(`return c.pergunta.quem === 'c' && c.pergunta.total === c.totaisComputador[0] && c.totaisComputador.length === 1;`)));
+  await captura('15e-vez-do-computador-medio');
+  await jg(`c.regras.cpuEsperaMs = 100; c.regras.cpuPensaMs = 100;`);
 
   await abrirNivel(3);
   n = await jg(`return { pecas: c.pecas.length, rodadas: c.totalRodadas, alg: c.pecas[0].no.alg, ajuda: c.nivel.ajuda, marcadores: c.trilha.estados.length };`);
@@ -528,18 +652,28 @@ try {
     const jogou = await esperarAte(`c.fase === 'cpu'`, 6000);
     await esperarAte(`c.rodada === ${r + 1} && c.fase === 'dados'`, 15000);
     e = await estado();
-    checar(`Difícil, rodada ${r} perfeita: o computador JOGOU e levou a pedra dele (${e.c} na bandeja dele)`, jogou && e.v === r && e.c === r && e.ganhadores[r - 1] === 'v', JSON.stringify(e));
+    checar(`Difícil, rodada ${r} perfeita: o computador JOGOU e levou a pedra dele (${e.c} na bandeja dele)`, jogou && e.v === r && e.c === r, JSON.stringify(e));
   }
   await captura('16b-dificil-computador');
   await jogarDados();
   await captura('17-dificil-pergunta');
-  for (let k = 1; k <= 4; k++) {
-    await tocarNo(ERRADA); await tocarNo(PRONTO);
-    await esperarAte(`c.errosRodada === ${k} && c.fase === 'escolher'`, 4000);
-  }
+  await tocarNo(ERRADA); await tocarNo(PRONTO);
+  await esperarAte(`c.errosRodada === 1 && c.fase === 'escolher'`, 4000);
   await esperar(900);
   const acesasDificil = await jg(`return c.pecas.filter((p) => p.no.efeitos.dica > 0.01).length;`);
-  checar('Difícil: depois de 4 erros nenhuma pedra acende (sem ajuda)', acesasDificil === 0, `acesas=${acesasDificil}`);
+  checar('Difícil: no 1º erro nenhuma pedra acende (sem ajuda)', acesasDificil === 0, `acesas=${acesasDificil}`);
+  await jg(`c.regras.revelaMs = 2500;`);
+  await tocarNo(ERRADA); await tocarNo(PRONTO);
+  checar('Difícil: no 2º erro a vez PASSA (sem ajuda antes)', await esperarAte(`c.fase === 'passando'`, 4000));
+  checar('Difícil: a conta é revelada na pedra', await esperarAte(`c.passouEtapa === 'revela'`, 6000));
+  await esperar(600);
+  const revD = await jg(`const certa = c.certaRevelada; return { conta: certa.no.efeitos.conta, soma: certa.soma, total: c.total, alg: certa.no.alg };`);
+  checar('Difícil: a pedra revelada (com algarismos) soma o total e mostra a conta', revD.conta > 0.95 && revD.soma === revD.total && revD.alg === true, JSON.stringify(revD));
+  await captura('17b-dificil-passou');
+  checar('Difícil: depois da vez perdida o computador joga e a rodada seguinte começa', await esperarAte(`c.rodada === 4 && c.fase === 'dados'`, 20000));
+  await jg(`c.regras.revelaMs = 200;`);
+  e = await estado();
+  checar('Difícil: a criança tem 2 pedras e 1 vaga vazia (✕); o computador, 3', e.v === 2 && e.c === 3 && (await jg(`return c.bandejas.v.perdidas[2] === true && c.vezesPerdidas === 1;`)), JSON.stringify(e));
 
   // -------------------------------------- 8. toque num celular em pé
   console.log('\n8. Toque (touch) num celular EM PÉ, com o conteúdo girado');
@@ -618,27 +752,32 @@ try {
   const m1 = m[0] ?? {};
   checar('1ª mensagem: jogo, nivel 1, total 3, vitoria, acertos 3, erros 0',
     m1.jogo === 'subtraindo-o-domino' && m1.nivel === 1 && m1.totalPerguntas === 3 && m1.vitoria === true && m1.acertos === 3 && m1.erros === 0, JSON.stringify(m1));
-  checar('os extras dizem como foi (vitória, 3 rodadas limpas, 3 × 0 estrelas)', m1.desfecho === 'vitoria' && m1.rodadasLimpas === 3 && m1.estrelasCrianca === 3 && m1.estrelasComputador === 0, JSON.stringify(m1));
-  checar('mesmo sem nenhum erro, o computador jogou as 3 rodadas (3 totais dele, 3 da criança)', m1.totaisComputador?.length === 3 && m1.totais?.length === 3, JSON.stringify({ c: m1.totaisComputador, v: m1.totais }));
+  checar('os extras dizem como foi (vitória em rodada extra: 3 limpas, 1 ou mais extras, a criança com 3 + extras pedras)',
+    m1.desfecho === 'vitoria' && m1.rodadasLimpas === 3 && m1.rodadasExtras >= 1 && m1.pedrasCrianca === 3 + m1.rodadasExtras
+      && m1.pedrasComputador >= 2 + m1.rodadasExtras && m1.pedrasComputador <= 3 + m1.rodadasExtras, JSON.stringify(m1));
+  checar('cada um jogou os PRÓPRIOS dados em toda rodada, extras incluídas (3 + extras totais de cada um)',
+    m1.totais?.length === 3 + m1.rodadasExtras && m1.totaisComputador?.length === 3 + m1.rodadasExtras, JSON.stringify({ c: m1.totaisComputador, v: m1.totais }));
   await esperar(4000);
   m = await recebidas();
   checar('ficar parado no resultado NÃO duplica o registro', m.length === 1, `n=${m.length}`);
 
-  // Replay pelo botão JOGAR DE NOVO — e dessa vez perde de propósito (erro nas rodadas 1 e 2).
+  // Replay pelo botão JOGAR DE NOVO — e dessa vez perde de propósito: 4 erros na 1ª rodada (o limite do Fácil)
+  // fazem a vez da criança passar, e ela fica com 2 pedras contra 3 do computador.
   checar('toque em JOGAR DE NOVO volta à partida', await tocarNo(BTN('/jogar de novo/i')) && await esperarAte(`c.constructor.name === 'GameScene'`, 6000));
   await instalar();
   await jg(RAPIDO);
-  const p2 = await partida([1, 1, 0]);
-  checar('2ª partida (2 rodadas com erro) chegou ao resultado', p2.ok, JSON.stringify(p2));
+  const p2 = await partida([4, 0, 0]);
+  checar('2ª partida (a vez passou na 1ª rodada) chegou ao resultado', p2.ok, JSON.stringify(p2));
   await esperar(900);
   await captura('22-iframe-derrota');
   m = await recebidas();
   checar('o replay gera um novo registro: exatamente 2 mensagens', m.length === 2, `n=${m.length}`);
   const m2 = m[1] ?? {};
-  checar('2ª mensagem é DERROTA: vitoria false, acertos 1, erros 2, total 3',
-    m2.vitoria === false && m2.acertos === 1 && m2.erros === 2 && m2.totalPerguntas === 3, JSON.stringify(m2));
-  checar('os erros batem com o que foi jogado (2 PRONTOs errados)', p2.feitos === 2 && m2.erros === p2.feitos && m2.errosPronto === 2, JSON.stringify({ feitos: p2.feitos, m2 }));
-  checar('a derrota diz: derrota, 1 × 2 estrelas, 2 rodadas com falha', m2.desfecho === 'derrota' && m2.estrelasCrianca === 1 && m2.estrelasComputador === 2 && m2.rodadasComFalha === 2, JSON.stringify(m2));
+  checar('2ª mensagem é DERROTA: vitoria false, acertos 2 (as pedras dela), erros 4, total 3',
+    m2.vitoria === false && m2.acertos === 2 && m2.erros === 4 && m2.totalPerguntas === 3, JSON.stringify(m2));
+  checar('os erros batem com o que foi jogado (4 PRONTOs errados)', p2.feitos === 4 && m2.erros === p2.feitos && m2.errosPronto === 4, JSON.stringify({ feitos: p2.feitos, m2 }));
+  checar('a derrota diz: derrota, 2 × 3 pedras, 1 rodada com falha, 1 vez perdida, sem decisiva',
+    m2.desfecho === 'derrota' && m2.pedrasCrianca === 2 && m2.pedrasComputador === 3 && m2.rodadasComFalha === 1 && m2.vezesPerdidas === 1 && m2.rodadasExtras === 0, JSON.stringify(m2));
   checar('a tela de derrota é a da série', await jg(`return c.constructor.name === 'ResultScreen';`));
 
   // O Difícil (5 rodadas), partida limpa: nota 5.
@@ -654,7 +793,9 @@ try {
   const m3 = m[2] ?? {};
   checar('3ª mensagem: nivel 3, total 5, vitoria, acertos 5, erros 0',
     m.length === 3 && m3.nivel === 3 && m3.totalPerguntas === 5 && m3.vitoria === true && m3.acertos === 5 && m3.erros === 0, JSON.stringify(m3));
-  checar('Difícil: o computador jogou as 5 rodadas, mesmo com a criança perfeita (5 totais dele)', m3.totaisComputador?.length === 5 && m3.estrelasComputador === 0, JSON.stringify({ c: m3.totaisComputador, est: m3.estrelasComputador }));
+  // O Difícil tem as extras aleatórias: o computador jogou todas as rodadas (5, mais as extras) e a criança venceu.
+  checar('Difícil: o computador jogou todas as rodadas (5, mais a decisiva se houve) e a criança venceu com mais pedras',
+    m3.totaisComputador?.length === 5 + m3.rodadasExtras && m3.pedrasCrianca === 5 + m3.rodadasExtras && m3.pedrasComputador < m3.pedrasCrianca, JSON.stringify(m3));
 
   const validas = await aval(`document.querySelectorAll('#registro .msg.valida').length`);
   const invalidas = await aval(`document.querySelectorAll('#registro .msg.invalida').length`);

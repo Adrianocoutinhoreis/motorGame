@@ -14,16 +14,16 @@ Esta pasta é **autossuficiente**: pode ser enviada sozinha para o AVA.
 
 Uma mesa com as pedras de um dominó **sem as de 0**, dois dados e um computador. **Os dois jogam em
 toda rodada.** A criança toca nos **dados**, acha uma **pedra cujos pontos somam o total** (para 9
-serve 6+3 ou 5+4) e toca **PRONTO**; depois o computador joga os dados dele e leva a pedra dele. A
-**estrela da rodada** é da criança se ela achou a pedra sem errar, senão do computador, e quem junta
-**mais estrelas** vence. Cada pedra levada deixa um contorno apagado na mesa: a mesa se esvazia,
-daí o nome.
+serve 6+3 ou 5+4) e toca **PRONTO**; depois o computador joga os dados dele e leva a pedra dele.
+**Vence quem junta mais pedras** (a regra do vídeo): as bandejas são o placar. Cada pedra levada
+deixa um contorno apagado na mesa: a mesa se esvazia, daí o nome. Se as pedras empatarem, uma
+**rodadas extras** desempatam.
 
 | Nível | Pedras | Rodadas | Nas pedras | Ajuda |
 |---|---|---|---|---|
-| Fácil | 10 (faces 1 a 4, totais até 8) | 3 | pontos; nomes VOCÊ / COMPUTADOR | no 2º erro, uma pedra certa acende |
-| Médio | 21 (faces 1 a 6, totais até 12) | 3 | pontos | no 3º erro |
-| Difícil | 21 | 5 | **algarismos** no lugar dos pontos | nenhuma |
+| Fácil | 10 (faces 1 a 4, totais até 8) | 3 | pontos; nomes VOCÊ / COMPUTADOR | no 2º erro, uma pedra certa acende; **a vez passa no 4º** |
+| Médio | 21 (faces 1 a 6, totais até 12) | 3 | pontos | nenhuma; **a vez passa no 3º** |
+| Difícil | 21 | 5 | **algarismos** no lugar dos pontos | nenhuma; **a vez passa no 2º erro** |
 
 ## A jogada, em detalhe
 
@@ -33,19 +33,30 @@ daí o nome.
 - **Marcar**: tocar numa pedra a marca (contorno dourado), tocar de novo desmarca, uma por vez.
   **Nada vale antes do PRONTO**: ele só liga com uma pedra marcada.
 - **PRONTO errado**: a pedra balança com um ✕ vermelho e o som de erro; nada é tirado e a criança
-  marca outra. A rodada deixa de ser limpa.
-- **PRONTO certo**: ✓ verde e a pedra voa para a bandeja da criança.
+  marca outra. Errar abaixo do limite não custa pedra (só a dica da pedra, que existe apenas no Fácil, e o relatório).
+- **A vez que passa**: no limite de erros do nível (Fácil 4º, Médio 3º, Difícil 2º) a pedra certa acende
+  com a **conta revelada** (6 + 3 = 9) e as outras escurecem; a pedra continua na mesa e a **vaga da
+  criança na bandeja fica vazia (✕)**: ela fica sem pedra nessa rodada. O computador joga a vez dele.
+- **PRONTO certo**: ✓ verde e a pedra voa para a vaga da rodada, na bandeja da criança.
 - **Vez do computador (em TODA rodada)**: o anel passa para a bandeja dele, os dados rolam e param
   no total dele (selo **azul**), ele marca uma pedra que soma esse total (anel azul) e a leva. Ele
-  nunca erra, e joga mesmo quando a criança não errou nada.
-- **Rodada limpa**: a **estrela** é da criança se não houve nenhum PRONTO errado na rodada, senão
-  do computador. As pedras das duas bandejas só registram o que cada um levou. Uma **estrela por rodada** no alto: dourada (criança) ou azul-acinzentada
-  (computador). A vitória depende só do que a criança sabe, não da sorte dos dados: o total
-  sorteado sempre tem pedra na mesa.
+  nunca erra, e joga mesmo quando a criança não errou nada. **O total dele só aparece na vez dele**: não
+  há prévia do dado do computador em nenhum nível.
+- **Quem vence**: **mais pedras**. As bandejas são o placar, sem número; no alto há só marcadores de
+  rodada, sem dono. Os dados da criança sempre caem num total com pedra: ela nunca perde por azar.
+- **Rodadas extras (empate)**: aparece uma **estrela dourada** no alto e cada bandeja ganha uma vaga
+  extra. A extra é **igual a uma rodada normal**: a criança joga com os dados dela (sempre com pedra) e
+  depois o computador joga com os dele, que são honestos e podem cair num total que já acabou (ele fica
+  sem pedra), mas na **1ª extra** os dados dele são protegidos como os da criança (ele leva a pedra); só da
+  2ª em diante ele pode ficar sem. Termina quando
+  um leva a pedra e o outro não; senão joga-se outra extra. A partir da 3ª extra os dados dele caem num
+  total esgotado que existe no nível, se houver, para não virar maratona (as extras duram de 2 a 3). Como cada lado leva uma pedra por rodada, **quase
+  toda partida chega empatada às extras**: elas são o clímax do jogo.
 - **Fim**: sem tela intermediária, vai direto ao resultado da série ("MUITO BEM!" / "QUASE LÁ!").
-  Rodadas ímpares: não há empate. Não há cronômetro.
-- **Nota**: vitória = nota cheia (todas as rodadas); derrota = as estrelas da criança (rodadas limpas). Os erros
-  ficam no relatório (`erros`, `rodadasComFalha`, `errosPronto`).
+  Não há cronômetro.
+- **Nota**: vitória = nota cheia (todas as rodadas combinadas); derrota = as pedras da criança. Os erros
+  ficam no relatório (`erros`, `rodadasComFalha`, `errosPronto`, `vezesPerdidas`, `pedrasCrianca`,
+  `pedrasComputador`, `rodadasExtras`).
 
 ## Como rodar
 
@@ -61,20 +72,22 @@ node tools/build.mjs numerandus/subtraindo-o-domino                  # copia o m
 node tools/testes.mjs                                                # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/subtraindo-o-domino
 node tools/teste-entrega-avulsa.mjs numerandus/subtraindo-o-domino
-node tools/teste-jogabilidade-subtraindo-o-domino.mjs               # gesto real (116 verificações)
+node tools/teste-jogabilidade-subtraindo-o-domino.mjs               # gesto real (147 verificações)
 ```
 
 `teste-jogabilidade-subtraindo-o-domino.mjs` só usa ponteiro e toque (nada é chamado por dentro):
-regras puras, menu → níveis → partida, dados, marcar, erro, rodada limpa, pausa, ajuda, os três
-níveis, celular em pé, o AVA num `<iframe>` e o `Watchdog`.
+regras puras, menu → níveis → partida, dados, marcar, erro, a vez que passa, as rodadas extras, a
+ausência de prévia do computador, pausa, ajuda, os três níveis, celular em pé, o AVA num
+`<iframe>` e o `Watchdog`. As extras têm aleatoriedade (o computador pode ou não ficar sem pedra),
+então o teste confere o que vale sempre e prepara o caso do computador sem pedra com a mesa forçada.
 
 ## Estrutura
 
 ```
 src/config.js            níveis, tutorial (3 passos desenhados em canvas), áudio, AVA
 src/regras.js            regras puras: pedras, sorteio dos dados, mesa (conferidas em Node)
-src/desenho.js           pedras, dados, ✓/✕, marcadores, ícones, dedinho
-src/scenes/GameScene.js  a partida
+src/desenho.js           pedras, dados, ✓/✕, marcadores de rodada, ícones, dedinho
+src/scenes/GameScene.js  a partida (rodadas, vez que passa, computador, rodadas extras)
 assets/audio/            efeitos e falas (ver abaixo)
 assets/audio-transcricao/  uma ficha por áudio
 engine/                  cópia do motor (gerada; não editar)
@@ -112,14 +125,19 @@ em vez de apontados para a pasta de outro jogo.
    - `tutorialTela1`, `tutorialTela2`, `tutorialTela3` — o motor fala `titulo + '. ' + texto` de
      cada passo: "Toque nos dados. Eles mostram um total. Some os pontos: 6 e 3 dão 9." / "Ache a
      pedra. Toque numa pedra que soma o mesmo total, como 5 e 4, e em PRONTO." / "Junte pedras.
-     Depois o computador joga. Sem errar, a estrela é sua. Quem juntar mais estrelas ganha!".
+     Depois o computador joga. Quem juntar mais pedras ganha!".
 2. **Sem teste com criança nem em tablet.** O teste de gestos passa (inclusive toque emulado em
    celular em pé), mas ninguém tocou de verdade num aparelho. Dificuldade dos níveis, se o Médio
-   com 21 pedras pesa para o 2º ano e se perder estrelas para o computador soa duro são perguntas
+   com 21 pedras pesa para o 2º ano e se perder a pedra para o computador soa duro são perguntas
    para a criança.
 3. **O conjunto de pedras do vídeo.** A transcrição fala em "tirar o 0 e o 1"; o jogo usa 21
    pedras (sem as de 0). A confirmar com o autor do vídeo (REGRAS §3 e §9).
 4. **Áudios não ouvidos.** Os números e as quatro falas estão com a ficha "não verificada"; a origem e a
    licença das falas e do `somConta` estão a confirmar.
-5. **Contraste do PRONTO.** Aqui o rótulo é escuro sobre o verde (6,5:1); a série inteira usa
+5. **A regra do vídeo ainda não foi jogada por criança** (revisada em 28/10/2026). Duas perguntas para
+   ela: as extras, que decidem quase toda partida, são emocionantes ou as 3 primeiras rodadas parecem
+   aquecimento? Perder a pedra quando a vez passa
+   (e, nas 3 rodadas, quase sempre a partida) soa duro? Nenhuma fala anuncia as extras: só a estrela
+   dourada no alto.
+6. **Contraste do PRONTO.** Aqui o rótulo é escuro sobre o verde (6,5:1); a série inteira usa
    branco (2,3:1). Decisão da série.

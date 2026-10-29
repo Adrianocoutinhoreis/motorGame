@@ -13,8 +13,8 @@
 
 /**
  * As cores: pedras de marfim com pontos de tinta escura sobre o feltro; a
- * criança é dourada e o computador é azul-acinzentado (estrelas de rodada de
- * cores e brilhos diferentes; a bandeja de cada um tem o ícone de quem é).
+ * criança é dourada e o computador é azul-acinzentado (o anel e o selo de cada
+ * um; a bandeja de cada um tem o ícone de quem é).
  */
 export const CORES = {
   peca: '#F4F1E8',
@@ -29,6 +29,15 @@ export const CORES = {
   erro: '#EF4444',
   crianca: '#F5B83D',
   computador: '#7C93B8',
+  /**
+   * Os dados são AZUIS com bolinhas brancas (5,5:1), para se destacarem das pedras de marfim. O azul é vivo e
+   * saturado, bem longe do azul-acinzentado do computador (1,8:1 entre os dois); contra o feltro escuro ele dá
+   * só 2,3:1, por isso o dado leva um contorno claro.
+   */
+  dado: '#2F5BEA',
+  dadoBase: '#1E3FB0',
+  dadoContorno: '#BFD0FF',
+  dadoPip: '#FFFFFF',
   tinta: '#E7EBF2',
   tintaSuave: '#9AA8BA',
   bandeja: 'rgba(255, 255, 255, 0.06)',
@@ -57,10 +66,10 @@ const PONTOS = {
 };
 
 /** Os pontos de uma face num quadrado de lado `lado` com canto em (x, y). */
-function pontosDaFace(ctx, n, x, y, lado, raio) {
+function pontosDaFace(ctx, n, x, y, lado, raio, cor = CORES.pip) {
   const pad = lado * 0.17;
   const passo = (lado - pad * 2) / 2;
-  ctx.fillStyle = CORES.pip;
+  ctx.fillStyle = cor;
   for (const [c, l] of PONTOS[n] ?? []) {
     ctx.beginPath();
     ctx.arc(x + lado / 2 + c * passo, y + lado / 2 + l * passo, raio, 0, Math.PI * 2);
@@ -106,23 +115,29 @@ export function desenharPeca(ctx, a, b, op = {}) {
   ctx.restore();
 }
 
-/** Um dado, com o canto de cima-esquerdo em (0, 0). `face` 0 desenha o "?" de antes de jogar. */
+/**
+ * Um dado, com o canto de cima-esquerdo em (0, 0): azul com bolinhas brancas e um contorno claro, para
+ * não se confundir com as pedras de marfim. `face` 0 desenha o "?" de antes de jogar.
+ */
 export function desenharDado(ctx, lado, face) {
   ctx.save();
   ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
   ctx.shadowBlur = lado * 0.14;
   ctx.shadowOffsetY = lado * 0.06;
-  ctx.fillStyle = CORES.pecaBorda;
+  ctx.fillStyle = CORES.dadoBase;
   ctx.beginPath();
   ctx.roundRect(0, lado * 0.05, lado, lado, lado * 0.2);
   ctx.fill();
   ctx.shadowColor = 'transparent';
-  ctx.fillStyle = CORES.peca;
+  ctx.fillStyle = CORES.dado;
   ctx.beginPath();
   ctx.roundRect(0, 0, lado, lado, lado * 0.2);
   ctx.fill();
-  if (face > 0) pontosDaFace(ctx, face, 0, 0, lado, lado * 0.075);
-  else escrever(ctx, '?', lado / 2, lado * 0.54, lado * 0.52, '#9A9482');
+  ctx.strokeStyle = CORES.dadoContorno;
+  ctx.lineWidth = Math.max(2, lado * 0.035);
+  ctx.stroke();
+  if (face > 0) pontosDaFace(ctx, face, 0, 0, lado, lado * 0.078, CORES.dadoPip);
+  else escrever(ctx, '?', lado / 2, lado * 0.54, lado * 0.52, 'rgba(255, 255, 255, 0.82)');
   ctx.restore();
 }
 
@@ -169,36 +184,32 @@ export function tracarEstrela(ctx, cx, cy, rExterno, rInterno = rExterno * 0.42)
 }
 
 /**
- * A estrela de uma rodada, no alto: vazia, de agora (contorno dourado), da criança (dourada) ou do
- * computador (azul-acinzentada). Cada rodada tem uma estrela, como no Pratinho CDU e no Caminho
- * das Cores; o computador leva a dele numa cor mais fria e mais escura que a da criança.
- * @param {'vazia'|'v'|'c'} estado
- * @param {boolean} claro desenha sobre fundo CLARO (o painel do tutorial é claro): a vazia usa cinza escuro
+ * O marcador de uma rodada, no alto: sem dono (quem vence é quem tem mais pedras). Vazio, de
+ * agora (contorno dourado), feito (cheio, claro) ou decisivo (a estrela dourada do desempate).
+ * @param {'vazia'|'feita'|'decisiva'} estado
  */
-export function desenharEstrelaRodada(ctx, cx, cy, r, estado, atual = false, claro = false) {
+export function desenharMarcadorRodada(ctx, cx, cy, r, estado, atual = false) {
   ctx.save();
-  tracarEstrela(ctx, cx, cy, r);
   ctx.lineJoin = 'round';
   ctx.lineWidth = 2.5;
-  if (estado === 'v') {
-    ctx.fillStyle = CORES.crianca;
+  if (estado === 'decisiva') {
+    tracarEstrela(ctx, cx, cy, r * 1.1);
+    ctx.fillStyle = CORES.ouro;
     ctx.strokeStyle = CORES.ouroEscuro;
-  } else if (estado === 'c') {
-    ctx.fillStyle = CORES.computador;
-    ctx.strokeStyle = '#4B5E80';
-  } else if (claro) {
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.10)';
-    ctx.strokeStyle = 'rgba(30, 41, 59, 0.38)';
-  } else {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  }
-  ctx.fill();
-  ctx.stroke();
-  if (atual && estado === 'vazia') {
-    ctx.lineWidth = 4.5;
-    ctx.strokeStyle = CORES.ouro;
+    ctx.fill();
     ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.78, 0, Math.PI * 2);
+    ctx.fillStyle = estado === 'feita' ? 'rgba(231, 235, 242, 0.85)' : 'rgba(255, 255, 255, 0.1)';
+    ctx.strokeStyle = estado === 'feita' ? 'rgba(231, 235, 242, 0.95)' : 'rgba(255, 255, 255, 0.4)';
+    ctx.fill();
+    ctx.stroke();
+    if (atual && estado === 'vazia') {
+      ctx.lineWidth = 4.5;
+      ctx.strokeStyle = CORES.ouro;
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
