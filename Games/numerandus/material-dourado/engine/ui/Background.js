@@ -13,28 +13,28 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro'.
+ * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro'.
  */
 
 /** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
-const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro'];
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro'];
 
 export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa' | 'feltro'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa' | 'feltro' | 'tabuleiro'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : this.tema === 'tabuleiro' ? '#1E2740' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : this.tema === 'tabuleiro' ? '#28334F' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
     this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro' && this.tema !== 'tabuleiro');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
@@ -418,6 +418,7 @@ export class Background extends Node {
       if (this.tema === 'espaco') this._desenharDecoracoesEspaco(ctx, l, a);
       if (this.tema === 'mesa') this._desenharDecoracoesMesa(ctx, l, a);
       if (this.tema === 'feltro') this._desenharDecoracoesFeltro(ctx, l, a);
+      if (this.tema === 'tabuleiro') this._desenharDecoracoesTabuleiro(ctx, l, a);
     }
     if (this.mostrarChao) this._chao(ctx);
   }
@@ -536,6 +537,96 @@ export class Background extends Node {
         }
         ctx.restore();
       }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Tema 'tabuleiro' — a Corrida Maluca.
+   *
+   * Azul-ardósia ESCURO e neutro, sem o pano estampado do vídeo: o tabuleiro
+   * branco de borda azul é o que precisa aparecer (o mesmo princípio da 'mesa'
+   * e do 'feltro'). Nas telas de vitrine, uma TRILHA do tabuleiro contorna a
+   * tela pelas bordas, por fora do conteúdo: desce pela esquerda desde a
+   * ENTRADA (tracejada), corre por baixo e sobe pela direita até a SAÍDA (preta),
+   * com casas cinzas e verdes e as duas fichas do vídeo paradas nela.
+   *
+   * Uma trilha contínua, e não peças soltas: a primeira versão espalhava fichas
+   * e dados pequenos pela tela e, dentro do limite de opacidade da série
+   * (0,08–0,15, `METODO-JOGOS-NUMERANDUS.md` §3.A), quase não se via nada
+   * (pedido do humano, 03/11/2026: "vamos melhorar o tema"). A forma inteira se
+   * lê mesmo apagada. Parada — nada pisca nem balança — e toda dentro da caixa
+   * lógica, então não precisa continuar pela sangria. A partida desliga as
+   * decorações: ali o tabuleiro de verdade é o jogo.
+   */
+  _desenharDecoracoesTabuleiro(ctx, l, a) {
+    // A rota, em frações da tela: só pelas bordas, onde não há placa nem botão.
+    // Termina no alto da coluna da direita, e não virando para dentro: virando, a SAÍDA ficava atrás do
+    // cartão Difícil na tela de níveis.
+    const rota = [[0.05, 0.36], [0.05, 0.9], [0.955, 0.9], [0.955, 0.3]].map(([x, y]) => [x * l, y * a]);
+    const acum = [0];
+    for (let i = 1; i < rota.length; i++) acum.push(acum[i - 1] + Math.hypot(rota[i][0] - rota[i - 1][0], rota[i][1] - rota[i - 1][1]));
+    const total = acum[acum.length - 1];
+    const n = Math.round(total / 80);
+    const ponto = (d) => {
+      let s = 1;
+      while (s < rota.length - 1 && acum[s] < d) s++;
+      const t = (d - acum[s - 1]) / (acum[s] - acum[s - 1]);
+      return [rota[s - 1][0] + t * (rota[s][0] - rota[s - 1][0]), rota[s - 1][1] + t * (rota[s][1] - rota[s - 1][1])];
+    };
+    const r = 22;
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 16;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    rota.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+    for (let k = 0; k <= n; k++) {
+      const [x, y] = ponto((total * k) / n);
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      if (k === 0) {
+        ctx.globalAlpha = 0.15;
+        ctx.setLineDash([6, 5]);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (k === n) {
+        // A SAÍDA: o quadriculado de chegada ocupando a casa inteira (num disco liso ela some no fundo escuro).
+        ctx.globalAlpha = 0.15;
+        ctx.save();
+        ctx.clip();
+        const q = (r * 2) / 4;
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) {
+            ctx.fillStyle = (i + j) % 2 ? '#FFFFFF' : '#0B1020';
+            ctx.fillRect(x - r + i * q, y - r + j * q, q, q);
+          }
+        }
+        ctx.restore();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.stroke();
+      } else {
+        // As verdes num verde CLARO: o verde do tabuleiro (#1F9A55) some no azul-escuro nesta opacidade.
+        const verde = k % 5 === 0;
+        ctx.globalAlpha = verde ? 0.15 : 0.12;
+        ctx.fillStyle = verde ? '#4ADE80' : '#E2E8F0';
+        ctx.fill();
+      }
+    }
+    // As duas fichas do vídeo, paradas na trilha: a vermelha perto da entrada, a de madeira já subindo.
+    for (const [k, cor] of [[3, '#F04A47'], [Math.round(n * 0.78), '#E2BD82']]) {
+      const [x, y] = ponto((total * k) / n);
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = cor;
+      ctx.beginPath();
+      ctx.arc(x + 6, y - 6, r * 0.9, 0, Math.PI * 2);
+      ctx.fill();
     }
     ctx.restore();
   }

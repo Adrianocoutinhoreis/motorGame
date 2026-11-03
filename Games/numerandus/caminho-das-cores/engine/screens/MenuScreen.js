@@ -270,6 +270,116 @@ class PlacaTituloMadeira extends Node {
 class PlacaTituloQuarto extends PlacaTituloLimpa {}
 
 /**
+ * Placa do tema 'tabuleiro' (Corrida Maluca): o próprio tabuleiro do vídeo em miniatura — branco, borda
+ * azul grossa, e embaixo do título uma trilha curta da ENTRADA (tracejada) à SAÍDA (preta, quadriculada),
+ * com duas casas verdes e as duas fichas (a vermelha e a de madeira) paradas nela. Nada se mexe.
+ */
+class PlacaTituloTabuleiro extends Node {
+  constructor(titulo, subtitulo, opcoes = {}) {
+    super({ largura: 760, altura: 180, ...opcoes });
+    this.titulo = titulo;
+    this.subtitulo = subtitulo;
+    this.regX = this.largura / 2;
+    this.regY = this.altura / 2;
+  }
+
+  desenhar(ctx) {
+    const l = this.largura;
+    const a = 168;
+    const AZUL = '#1F3FAE';
+    ctx.save();
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.32)';
+    ctx.shadowBlur = 22;
+    ctx.shadowOffsetY = 8;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, l, a, 22);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = AZUL;
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.roundRect(4.5, 4.5, l - 9, a - 9, 18);
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = cores.tinta;
+    ctx.font = `${tipografia.pesoForte} 50px ${tipografia.familia}`;
+    ctx.fillText(aplicarCaixa(this.titulo), l / 2, 52);
+    if (this.subtitulo) {
+      ctx.fillStyle = cores.tintaSuave;
+      ctx.font = `${tipografia.pesoForte} 19px ${tipografia.familia}`;
+      ctx.fillText(aplicarCaixa(this.subtitulo), l / 2, 92);
+    }
+
+    // A trilha em miniatura: ENTRADA, 7 casas (2 verdes) e a SAÍDA.
+    const y = 132;
+    const x0 = 196;
+    const x1 = l - 196;
+    const n = 9;
+    const passo = (x1 - x0) / (n - 1);
+    const r = 13;
+    ctx.strokeStyle = '#E6EAF2';
+    ctx.lineWidth = 10;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
+    ctx.stroke();
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * passo;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      if (i === 0) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = AZUL;
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (i === n - 1) {
+        ctx.fillStyle = '#161B2B';
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(x - 5, y - 5, 5, 5);
+        ctx.fillRect(x, y, 5, 5);
+      } else {
+        ctx.fillStyle = i === 3 || i === 6 ? '#1F9A55' : '#B9BEC8';
+        ctx.fill();
+      }
+    }
+    // As duas fichas do vídeo, paradas na trilha.
+    for (const [i, cor, borda] of [[2, '#D8322F', '#8F1D1B'], [5, '#D2AD72', '#8A6A36']]) {
+      const x = x0 + i * passo;
+      ctx.fillStyle = borda;
+      ctx.beginPath();
+      ctx.arc(x, y + 2, r - 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = cor;
+      ctx.beginPath();
+      ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(x - 3.5, y - 4.5, 4.5, 2.5, -0.44, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = cores.tinta;
+    ctx.font = `${tipografia.pesoForte} 18px ${tipografia.familia}`;
+    ctx.textAlign = 'right';
+    ctx.fillText(aplicarCaixa('Entrada'), x0 - r - 12, y + 1);
+    ctx.textAlign = 'left';
+    ctx.fillText(aplicarCaixa('Saída'), x1 + r + 12, y + 1);
+
+    ctx.restore();
+  }
+}
+
+/**
  * PlacaTituloBingo — placa temática no estilo de cartão de bingo moderno,
  * com friso superior brilhante em 4 cores, painel branco limpo, sombra suave
  * e subtítulo em pílula destacada.
@@ -374,6 +484,7 @@ export class MenuScreen extends Scene {
       : config.tema === 'espaco' ? PlacaTituloLimpa
       : config.tema === 'mesa' ? PlacaTituloLimpa
       : config.tema === 'feltro' ? PlacaTituloLimpa
+      : config.tema === 'tabuleiro' ? PlacaTituloTabuleiro
       : PlacaTituloMadeira;
     this.placaTitulo = new Placa(
       config.titulo ?? 'JOGO DOS BLOCOS',

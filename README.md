@@ -70,6 +70,7 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 | [`docs/REGRAS-JOGO-DAS-CORES.md`](docs/REGRAS-JOGO-DAS-CORES.md) | Jogo das Cores — o caminho, níveis, contrato |
 | [`docs/PLANO-VISUAL-JOGO-DAS-CORES.md`](docs/PLANO-VISUAL-JOGO-DAS-CORES.md) | Jogo das Cores — layout medido, as oito texturas |
 | [`docs/REGRAS-CORRIDA-ESPACIAL.md`](docs/REGRAS-CORRIDA-ESPACIAL.md) | Corrida Espacial (Numerandus) — a jogada, níveis, pontuação, contrato |
+| [`docs/REGRAS-CORRIDA-MALUCA.md`](docs/REGRAS-CORRIDA-MALUCA.md) | Corrida Maluca (Numerandus) — a trilha, as cartas, a casa verde, a conferência, contrato |
 
 ---
 
@@ -91,6 +92,7 @@ Coleção **Numerandus** (`Games/numerandus/`) — ver [`docs/METODO-JOGOS-NUMER
 | [Encaixe Certo](Games/numerandus/encaixe-certo/) | — | ✅ jogável, [pendências declaradas](Games/numerandus/encaixe-certo/README.md#pendências-conhecidas) |
 | [Jogo da Memória](Games/numerandus/jogo-da-memoria/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/jogo-da-memoria/README.md#pendências-conhecidas) |
 | [Corrida Espacial](Games/numerandus/corrida-espacial/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/corrida-espacial/README.md#pendências-conhecidas) |
+| [Corrida Maluca](Games/numerandus/corrida-maluca/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/corrida-maluca/README.md#pendências-conhecidas) |
 
 ---
 

@@ -383,6 +383,7 @@ O cenário das telas, todo vetorial. Três temas, escolhidos por `config.tema`:
 | `'formas'` | degradê indigo → ciano, halo, formas geométricas em camadas | Jogo das Formas |
 | `'mesa'` | ardósia escura neutra; nas telas de vitrine, dois pratinhos C/D/U e grãos apagados (0,08–0,14), parados | Pratinho CDU |
 | `'feltro'` | feltro verde-azulado escuro e dessaturado; nas telas de vitrine, pedras de dominó apagadas (0,05–0,10), paradas, deitadas em ângulos variados | Subtraindo o Dominó |
+| `'tabuleiro'` | azul-ardósia escuro e neutro (sem o pano estampado do vídeo); nas telas de vitrine, uma trilha do tabuleiro contornando a tela pelas bordas, da ENTRADA (tracejada) à SAÍDA (quadriculada), com casas verdes e as duas fichas, apagada (0,10–0,15) e parada; a placa do título é o tabuleiro em miniatura (`PlacaTituloTabuleiro`) | Corrida Maluca |
 
 O tema `'formas'` aceita **`mostrarPecas`**. Com `true` (padrão) as quatro peças do
 jogo flutuam no céu nas cores delas; a cena de partida passa **`false`**, porque
