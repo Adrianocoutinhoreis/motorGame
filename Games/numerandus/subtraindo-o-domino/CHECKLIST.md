@@ -42,8 +42,8 @@
 ## 2. Assets
 
 - [x] Arte produzida (SVG/vetorial ou desenhada no canvas) — tudo desenhado em `src/desenho.js`
-- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **pendente**: faltam `numero10`–`numero12`
-      e a narração do tutorial (`tutorialTela1`–`3`); lista de ids no README
+- [ ] Áudio de narração presente para **todo** conteúdo falado do jogo — **pendente**: faltam `numero11` e `numero12`;
+      o tutorial (`tutorialTela1`–`3`) está gravado, mas não foi ouvido
 - [x] Efeitos de acerto, erro e pouso presentes (reaproveitados da coleção)
 - [x] Todo asset está dentro de `assets/`, com caminho **relativo**
 - [x] Nenhuma fonte, imagem ou som vindo da internet
@@ -56,7 +56,7 @@
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR (captura)
-- [x] **Tutorial** com passos ilustrados e puláveis (3 passos, capturados) — **sem narração gravada**
+- [x] **Tutorial** com passos ilustrados e puláveis (3 passos, capturados) — narração gravada em 03/11/2026, transcrita pelo Whisper (bate com o texto), ainda não ouvida
 - [x] **Seleção de nível** (3 níveis)
 - [x] **Partida** com HUD legível: marcadores de rodada, pausa, ajuda e som
 - [x] **Pausa** com continuar / recomeçar / sair (`PauseScreen` do motor)
@@ -179,8 +179,8 @@
 
 O que dá para verificar sem pessoas está verificado. O que bloqueia, em ordem:
 
-1. **Narração: 6 arquivos a gravar.** `numero10`, `numero11`, `numero12` e a narração do tutorial
-   (`tutorialTela1`–`3`, textos no README). O jogo funciona mudo nesses pontos.
+1. **Narração: 2 arquivos a gravar.** `numero11` e `numero12`. A narração do tutorial chegou, mas falta ouvir
+   e confirmar as fichas (`tutorialTela1`–`3`). O jogo funciona mudo no 11 e no 12.
 2. **O conjunto de pedras do vídeo.** O jogo usa 21 pedras (sem as de 0); a transcrição fala em "tirar o 0 e
    o 1". Confirmar com o autor do vídeo (REGRAS §3).
 3. **Áudios não ouvidos**: os 8 números e as 3 falas estão "não verificados"; origem/licença das falas e do

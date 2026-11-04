@@ -8,7 +8,7 @@
 | `id` no motor | `numero10` |
 | Tipo | Narração — nome de número |
 | Formato | MP3 MPEG2 Layer III, 40 kbps, 22 050 Hz, mono |
-| Duração | **0,47 s** (18 frames) |
+| Duração | **0,78 s** (30 frames; medido com `ffprobe -count_frames` em 04/11/2026 — a ficha dizia 0,47 s) |
 | SHA-256 (16 primeiros) | `c9de84c52023d2f2` |
 | Origem | Mesmo arquivo (mesmo SHA-256) do Jogo dos Blocos — `assets/audio/dez.mp3`, id `dez` —, copiado de lá porque cada jogo é publicado sozinho. Aula original 870294 — Educandus (locução de 2013). |
 

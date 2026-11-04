@@ -107,7 +107,8 @@ Toda a arte é desenhada em canvas. Nenhum recurso externo.
 | `audio/error.MP3` | `somErro` | PRONTO errado | idem |
 | `audio/progresso.mp3` | `somProgresso` | rodada limpa | idem |
 | `audio/soltar_peca.mp3` | `somConta` | dados parando, pedra pousando, pedra marcada | idem — origem/licença a confirmar |
-| `audio/numeros/dois.mp3` … `nove.mp3` | `numero2` … `numero9` | o total dos dados, em voz alta | Jogo dos Blocos (mesmo SHA-256), aula original 870294, locução de 2013 — **não ouvidos** (fichas 🟡 "inferida") |
+| `audio/numeros/dois.mp3` … `dez.mp3` | `numero2` … `numero10` | o total dos dados, em voz alta | Jogo dos Blocos (mesmo SHA-256), aula original 870294, locução de 2013 — **não ouvidos** (fichas 🟡 "inferida") |
+| `audio/tutorial_domino/tut01.wav` … `tut03.wav` | `tutorialTela1` … `tutorialTela3` | a narração de cada passo do tutorial (título + texto) | **própria** do Subtraindo o Dominó, fornecida pelo humano em 03/11/2026 — licença **a confirmar**; transcrita pelo Whisper, bate com o texto, **não ouvida** |
 | `audio/falas/suaVez.wav` | `suaVez` | "Sua vez!", começo da rodada | Jogo dos Blocos (arquivo fornecido em 22/10/2026), gravação de 2026 (24 kHz, mono) — **não ouvido**, origem/licença **a confirmar** |
 | `audio/falas/vezDoComputador.wav` | `vezDoComputador` | "Vez do computador!", começo da vez dele | idem |
 | `audio/falas/muitoBem.wav` | `muitoBem` | "Muito bem!", rodada limpa | idem |
@@ -118,14 +119,12 @@ em vez de apontados para a pasta de outro jogo.
 
 ## Pendências conhecidas
 
-1. **Narração a gravar (6 arquivos).** A cena já pede cada fala pelo id definitivo; sem o arquivo
-   o motor fica em silêncio e avisa no console. Faltam:
-   - `numero10`, `numero11`, `numero12` — o total dos dados do "dez" ao "doze" (hoje só há o
-     "dois" ao "nove");
-   - `tutorialTela1`, `tutorialTela2`, `tutorialTela3` — o motor fala `titulo + '. ' + texto` de
-     cada passo: "Toque nos dados. Eles mostram um total. Some os pontos: 6 e 3 dão 9." / "Ache a
-     pedra. Toque numa pedra que soma o mesmo total, como 5 e 4, e em PRONTO." / "Junte pedras.
-     Depois o computador joga. Quem juntar mais pedras ganha!".
+1. **Narração a gravar (2 arquivos).** A cena já pede cada fala pelo id definitivo; sem o arquivo
+   o motor fica em silêncio e avisa no console. Faltam `numero11` e `numero12` — o total dos dados
+   "onze" e "doze" (o `numero10` vem do "dez" do Jogo dos Blocos, locução de 2013; hoje há do "dois"
+   ao "dez"). A narração do tutorial (`tutorialTela1`–`3`, em `assets/audio/tutorial_domino/`) chegou
+   em 03/11/2026; transcrita pelo Whisper em 04/11/2026, bate com o texto dos passos (fichas 🟡), mas
+   **ainda não foi ouvida** por um humano.
 2. **Sem teste com criança nem em tablet.** O teste de gestos passa (inclusive toque emulado em
    celular em pé), mas ninguém tocou de verdade num aparelho. Dificuldade dos níveis, se o Médio
    com 21 pedras pesa para o 2º ano e se perder a pedra para o computador soa duro são perguntas

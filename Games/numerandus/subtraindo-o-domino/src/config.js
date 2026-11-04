@@ -103,8 +103,8 @@ export default {
   /**
    * 3 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida
    * (regra RE-05). O motor fala `titulo + '. ' + texto` de cada passo pelo id
-   * `tutorialTela1..3` (narração ainda não gravada: o jogo fica mudo e avisa no
-   * console; ver o README). Se o texto de um passo mudar, a gravação muda junto.
+   * `tutorialTela1..3` (narração em `assets/audio/tutorial_domino/`; sem o arquivo o jogo
+   * fica mudo e avisa no console). Se o texto de um passo mudar, a gravação muda junto.
    */
   tutorial: [
     {
@@ -131,10 +131,11 @@ export default {
   /**
    * Efeitos reaproveitados da coleção (mesmo SHA-256 dos outros jogos Numerandus,
    * ver as fichas em assets/audio-transcricao/). Os números "dois" a "nove" falam
-   * o TOTAL dos dados quando eles param (do "dez" ao "doze" ainda não há
-   * gravação), e quatro falas curtas vêm da pasta de áudio do Jogo dos Blocos
-   * (gravação de 2026). A narração do tutorial e a das demais falas ainda não
-   * foram gravadas: a cena já pede cada id definitivo (lista no README).
+   * o TOTAL dos dados quando eles param ("dez" também, do Jogo dos Blocos), e
+   * quatro falas curtas vêm da pasta de áudio do Jogo dos Blocos (gravação de
+   * 2026). A narração do tutorial está em `assets/audio/tutorial_domino/`;
+   * `numero11` e `numero12` ainda não foram gravados: a cena já pede cada id
+   * definitivo (lista no README).
    */
   assets: [
     { id: 'acertoSOS', src: './assets/audio/acertoSOS.wav' },
@@ -150,6 +151,11 @@ export default {
     { id: 'numero7', src: './assets/audio/numeros/sete.mp3' },
     { id: 'numero8', src: './assets/audio/numeros/oito.mp3' },
     { id: 'numero9', src: './assets/audio/numeros/nove.mp3' },
+    { id: 'numero10', src: './assets/audio/numeros/dez.mp3' },
+    // Narração do tutorial: o motor fala `titulo + '. ' + texto` de cada passo.
+    { id: 'tutorialTela1', src: './assets/audio/tutorial_domino/tut01.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial_domino/tut02.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial_domino/tut03.wav' },
     { id: 'suaVez', src: './assets/audio/falas/suaVez.wav' },
     { id: 'vezDoComputador', src: './assets/audio/falas/vezDoComputador.wav' },
     { id: 'muitoBem', src: './assets/audio/falas/muitoBem.wav' },

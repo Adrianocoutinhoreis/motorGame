@@ -257,9 +257,10 @@ Os campos `estrelasCrianca` e `estrelasComputador`, da versão anterior, **deixa
 |---|---|---|---|
 | Efeitos | `acertoSOS`, `erroSOS`, `somErro`, `somProgresso`, `somConta` | vitória, derrota, PRONTO errado, rodada limpa, dados parando e pedra pousando / pedra marcada | **Sim** — os mesmos arquivos da coleção (mesmo SHA-256) |
 | O total dos dados | `numero2`–`numero9` | quando os dados param | **Sim** — do Jogo dos Blocos (locução de 2013), não ouvidos |
-| O total, do 10 ao 12 | `numero10`, `numero11`, `numero12` | idem | **Não** — gravar |
+| O total, 10 | `numero10` | idem (o "dez" do Jogo dos Blocos, locução de 2013) | Sim |
+| O total, 11 e 12 | `numero11`, `numero12` | idem | **Não** — gravar |
 | Falas curtas | `suaVez`, `vezDoComputador`, `muitoBem`, `tenteDeNovo` | começo da rodada, vez do computador, rodada limpa, PRONTO errado | **Sim** — do Jogo dos Blocos (gravação de 2026), não ouvidas |
-| Tutorial | `tutorialTela1`–`3` | `titulo + '. ' + texto` de cada passo | **Não** — gravar |
+| Tutorial | `tutorialTela1`–`3` | `titulo + '. ' + texto` de cada passo | Sim (03/11/2026; transcrita pelo Whisper, bate com o texto; ainda não ouvida) |
 
 Sem o arquivo o motor fica **em silêncio e avisa o texto no console**: o jogo funciona mudo
 nesses pontos. Toda locução tem ficha em `assets/audio-transcricao/<id>/transcricao.md`.
