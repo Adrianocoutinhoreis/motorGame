@@ -270,13 +270,14 @@ class PlacaTituloMadeira extends Node {
 class PlacaTituloQuarto extends PlacaTituloLimpa {}
 
 /**
- * Placa do tema 'tabuleiro' (Corrida Maluca): o próprio tabuleiro do vídeo em miniatura — branco, borda
- * azul grossa, e embaixo do título uma trilha curta da ENTRADA (tracejada) à SAÍDA (preta, quadriculada),
- * com duas casas verdes e as duas fichas (a vermelha e a de madeira) paradas nela. Nada se mexe.
+ * Placa do tema 'tabuleiro' (Corrida Maluca): o tabuleiro do vídeo — branco, borda azul grossa — com
+ * SÓ o texto em destaque: o título grande e o subtítulo, sem nenhum elemento junto (pedido do humano,
+ * 04/11/2026; a versão anterior tinha uma trilha em miniatura embaixo do título). Os elementos lúdicos
+ * moram no fundo, flutuando nas margens.
  */
 class PlacaTituloTabuleiro extends Node {
   constructor(titulo, subtitulo, opcoes = {}) {
-    super({ largura: 760, altura: 180, ...opcoes });
+    super({ largura: 760, altura: 170, ...opcoes });
     this.titulo = titulo;
     this.subtitulo = subtitulo;
     this.regX = this.largura / 2;
@@ -285,105 +286,40 @@ class PlacaTituloTabuleiro extends Node {
 
   desenhar(ctx) {
     const l = this.largura;
-    const a = 168;
-    const AZUL = '#1F3FAE';
+    const a = 150;
     ctx.save();
 
     ctx.save();
-    ctx.shadowColor = 'rgba(15, 23, 42, 0.32)';
-    ctx.shadowBlur = 22;
-    ctx.shadowOffsetY = 8;
+    ctx.shadowColor = 'rgba(8, 12, 30, 0.45)';
+    ctx.shadowBlur = 30;
+    ctx.shadowOffsetY = 10;
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
-    ctx.roundRect(0, 0, l, a, 22);
+    ctx.roundRect(0, 0, l, a, 24);
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = AZUL;
+    ctx.strokeStyle = '#1F3FAE';
     ctx.lineWidth = 9;
     ctx.beginPath();
-    ctx.roundRect(4.5, 4.5, l - 9, a - 9, 18);
+    ctx.roundRect(4.5, 4.5, l - 9, a - 9, 20);
     ctx.stroke();
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = cores.tinta;
-    ctx.font = `${tipografia.pesoForte} 50px ${tipografia.familia}`;
-    ctx.fillText(aplicarCaixa(this.titulo), l / 2, 52);
+    ctx.font = `${tipografia.pesoForte} 64px ${tipografia.familia}`;
+    ctx.fillText(aplicarCaixa(this.titulo), l / 2, this.subtitulo ? 62 : a / 2);
     if (this.subtitulo) {
-      ctx.fillStyle = cores.tintaSuave;
-      ctx.font = `${tipografia.pesoForte} 19px ${tipografia.familia}`;
-      ctx.fillText(aplicarCaixa(this.subtitulo), l / 2, 92);
+      ctx.fillStyle = '#1F3FAE';
+      ctx.font = `${tipografia.pesoForte} 22px ${tipografia.familia}`;
+      ctx.fillText(aplicarCaixa(this.subtitulo), l / 2, 112);
     }
-
-    // A trilha em miniatura: ENTRADA, 7 casas (2 verdes) e a SAÍDA.
-    const y = 132;
-    const x0 = 196;
-    const x1 = l - 196;
-    const n = 9;
-    const passo = (x1 - x0) / (n - 1);
-    const r = 13;
-    ctx.strokeStyle = '#E6EAF2';
-    ctx.lineWidth = 10;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x0, y);
-    ctx.lineTo(x1, y);
-    ctx.stroke();
-    for (let i = 0; i < n; i++) {
-      const x = x0 + i * passo;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      if (i === 0) {
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fill();
-        ctx.setLineDash([4, 3]);
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = AZUL;
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if (i === n - 1) {
-        ctx.fillStyle = '#161B2B';
-        ctx.fill();
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(x - 5, y - 5, 5, 5);
-        ctx.fillRect(x, y, 5, 5);
-      } else {
-        ctx.fillStyle = i === 3 || i === 6 ? '#1F9A55' : '#B9BEC8';
-        ctx.fill();
-      }
-    }
-    // As duas fichas do vídeo, paradas na trilha.
-    for (const [i, cor, borda] of [[2, '#D8322F', '#8F1D1B'], [5, '#D2AD72', '#8A6A36']]) {
-      const x = x0 + i * passo;
-      ctx.fillStyle = borda;
-      ctx.beginPath();
-      ctx.arc(x, y + 2, r - 1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = cor;
-      ctx.beginPath();
-      ctx.arc(x, y, r - 1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.beginPath();
-      ctx.ellipse(x - 3.5, y - 4.5, 4.5, 2.5, -0.44, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = cores.tinta;
-    ctx.font = `${tipografia.pesoForte} 18px ${tipografia.familia}`;
-    ctx.textAlign = 'right';
-    ctx.fillText(aplicarCaixa('Entrada'), x0 - r - 12, y + 1);
-    ctx.textAlign = 'left';
-    ctx.fillText(aplicarCaixa('Saída'), x1 + r + 12, y + 1);
 
     ctx.restore();
   }
 }
 
-/**
- * PlacaTituloBingo — placa temática no estilo de cartão de bingo moderno,
- * com friso superior brilhante em 4 cores, painel branco limpo, sombra suave
- * e subtítulo em pílula destacada.
- */
+
 class PlacaTituloBingo extends Node {
   constructor(titulo, subtitulo, opcoes = {}) {
     super({ largura: 780, altura: 170, ...opcoes });

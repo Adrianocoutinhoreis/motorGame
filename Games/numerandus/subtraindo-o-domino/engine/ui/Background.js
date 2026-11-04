@@ -217,6 +217,30 @@ export class Background extends Node {
       return;
     }
 
+    if (this.tema === 'tabuleiro') {
+      // Degradê suave de azul-ardósia para índigo, e de volta: escuro o bastante para o tabuleiro
+      // branco e os botões saltarem, sem ser a parede chapada da 1ª versão.
+      const ceu = ctx.createLinearGradient(0, 0, l * 0.3, a);
+      ceu.addColorStop(0, '#18213F');
+      ceu.addColorStop(0.55, '#2A3772');
+      ceu.addColorStop(1, '#1B2448');
+      ctx.fillStyle = ceu;
+      ctx.fillRect(px, py, pl, pa);
+      // A iluminação central, só nas telas de vitrine: um foco de luz atrás da placa e dos botões.
+      // Na partida não, para o tabuleiro de verdade ficar sob luz uniforme.
+      if (this.mostrarDecoracoes) {
+        const hx = l * 0.5;
+        const hy = a * 0.46;
+        const halo = ctx.createRadialGradient(hx, hy, 30, hx, hy, a * 0.62);
+        halo.addColorStop(0, 'rgba(165, 190, 255, 0.30)');
+        halo.addColorStop(0.45, 'rgba(120, 150, 255, 0.12)');
+        halo.addColorStop(1, 'rgba(60, 80, 160, 0)');
+        ctx.fillStyle = halo;
+        ctx.fillRect(px, py, pl, pa);
+      }
+      return;
+    }
+
     if (this.tema === 'bingo') {
       const ceu = ctx.createLinearGradient(0, 0, l * 0.2, a);
       ceu.addColorStop(0, '#0F172A');
@@ -544,91 +568,88 @@ export class Background extends Node {
   /**
    * Tema 'tabuleiro' — a Corrida Maluca.
    *
-   * Azul-ardósia ESCURO e neutro, sem o pano estampado do vídeo: o tabuleiro
-   * branco de borda azul é o que precisa aparecer (o mesmo princípio da 'mesa'
-   * e do 'feltro'). Nas telas de vitrine, uma TRILHA do tabuleiro contorna a
-   * tela pelas bordas, por fora do conteúdo: desce pela esquerda desde a
-   * ENTRADA (tracejada), corre por baixo e sobe pela direita até a SAÍDA (preta),
-   * com casas cinzas e verdes e as duas fichas do vídeo paradas nela.
+   * Nas telas de vitrine (menu, níveis, resultado, tutorial), as peças do jogo flutuam nas MARGENS,
+   * longe da placa, dos cartões e dos botões: dados, cartas (o verso em roleta colorida das cartas do
+   * vídeo) e estrelas. O céu, em `_ceu`, traz o degradê e a iluminação central.
    *
-   * Uma trilha contínua, e não peças soltas: a primeira versão espalhava fichas
-   * e dados pequenos pela tela e, dentro do limite de opacidade da série
-   * (0,08–0,15, `METODO-JOGOS-NUMERANDUS.md` §3.A), quase não se via nada
-   * (pedido do humano, 03/11/2026: "vamos melhorar o tema"). A forma inteira se
-   * lê mesmo apagada. Parada — nada pisca nem balança — e toda dentro da caixa
-   * lógica, então não precisa continuar pela sangria. A partida desliga as
-   * decorações: ali o tabuleiro de verdade é o jogo.
+   * Pedido do humano (04/11/2026): "fundo com gradiente suave, elementos lúdicos flutuantes (dados,
+   * cartas, estrelas) e iluminação central". Substitui a trilha pelas bordas da versão anterior.
+   *
+   * O movimento segue a regra da série para o fundo (`METODO-JOGOS-NUMERANDUS.md` §3.A): balanço LENTO
+   * (períodos de 6 a 9 s, deslocamento de até 12 px e giro de até 4°), opacidade de 0,10 a 0,15, nada
+   * pisca. As estrelas não cintilam: só flutuam como o resto. A partida desliga tudo isto.
    */
   _desenharDecoracoesTabuleiro(ctx, l, a) {
-    // A rota, em frações da tela: só pelas bordas, onde não há placa nem botão.
-    // Termina no alto da coluna da direita, e não virando para dentro: virando, a SAÍDA ficava atrás do
-    // cartão Difícil na tela de níveis.
-    const rota = [[0.05, 0.36], [0.05, 0.9], [0.955, 0.9], [0.955, 0.3]].map(([x, y]) => [x * l, y * a]);
-    const acum = [0];
-    for (let i = 1; i < rota.length; i++) acum.push(acum[i - 1] + Math.hypot(rota[i][0] - rota[i - 1][0], rota[i][1] - rota[i - 1][1]));
-    const total = acum[acum.length - 1];
-    const n = Math.round(total / 80);
-    const ponto = (d) => {
-      let s = 1;
-      while (s < rota.length - 1 && acum[s] < d) s++;
-      const t = (d - acum[s - 1]) / (acum[s] - acum[s - 1]);
-      return [rota[s - 1][0] + t * (rota[s][0] - rota[s - 1][0]), rota[s - 1][1] + t * (rota[s][1] - rota[s - 1][1])];
-    };
-    const r = 22;
-    ctx.save();
-    ctx.globalAlpha = 0.1;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 16;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    rota.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.stroke();
-    for (let k = 0; k <= n; k++) {
-      const [x, y] = ponto((total * k) / n);
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      if (k === 0) {
-        ctx.globalAlpha = 0.15;
-        ctx.setLineDash([6, 5]);
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if (k === n) {
-        // A SAÍDA: o quadriculado de chegada ocupando a casa inteira (num disco liso ela some no fundo escuro).
-        ctx.globalAlpha = 0.15;
-        ctx.save();
-        ctx.clip();
-        const q = (r * 2) / 4;
-        for (let i = 0; i < 4; i++) {
-          for (let j = 0; j < 4; j++) {
-            ctx.fillStyle = (i + j) % 2 ? '#FFFFFF' : '#0B1020';
-            ctx.fillRect(x - r + i * q, y - r + j * q, q, q);
-          }
+    const itens = [
+      { tipo: 'dado', x: 0.085, y: 0.33, tam: 74, giro: 12, face: 5, alfa: 0.15, periodo: 7.0, fase: 0 },
+      { tipo: 'carta', x: 0.075, y: 0.64, tam: 70, giro: -10, alfa: 0.14, periodo: 8.2, fase: 1.3 },
+      { tipo: 'estrela', x: 0.05, y: 0.86, tam: 44, giro: 8, alfa: 0.15, periodo: 6.4, fase: 2.4 },
+      { tipo: 'estrela', x: 0.24, y: 0.9, tam: 30, giro: -6, alfa: 0.12, periodo: 7.6, fase: 4.1 },
+      { tipo: 'dado', x: 0.175, y: 0.13, tam: 52, giro: -16, face: 2, alfa: 0.12, periodo: 8.8, fase: 3.3 },
+      { tipo: 'estrela', x: 0.04, y: 0.55, tam: 26, giro: 0, alfa: 0.11, periodo: 6.9, fase: 5.0 },
+      { tipo: 'carta', x: 0.93, y: 0.33, tam: 74, giro: 9, alfa: 0.14, periodo: 7.8, fase: 0.7 },
+      { tipo: 'dado', x: 0.925, y: 0.67, tam: 66, giro: -8, face: 3, alfa: 0.15, periodo: 6.6, fase: 2.0 },
+      { tipo: 'estrela', x: 0.8, y: 0.88, tam: 38, giro: 12, alfa: 0.14, periodo: 7.2, fase: 3.8 },
+      { tipo: 'estrela', x: 0.965, y: 0.47, tam: 24, giro: -10, alfa: 0.11, periodo: 8.4, fase: 1.9 },
+      { tipo: 'carta', x: 0.955, y: 0.9, tam: 56, giro: -14, alfa: 0.12, periodo: 9.0, fase: 5.6 },
+    ];
+    const pontos = { 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]] };
+    const roleta = ['#EF4444', '#F59E0B', '#FACC15', '#22C55E', '#06B6D4', '#3B82F6', '#A855F7'];
+    for (const it of itens) {
+      const fase = (this._t / it.periodo) * Math.PI * 2 + it.fase;
+      ctx.save();
+      ctx.globalAlpha = it.alfa;
+      ctx.translate(it.x * l, it.y * a + Math.sin(fase) * 12);
+      ctx.rotate(((it.giro + Math.sin(fase * 0.7) * 4) * Math.PI) / 180);
+      const t = it.tam;
+      if (it.tipo === 'dado') {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.roundRect(-t / 2, -t / 2, t, t, t * 0.2);
+        ctx.fill();
+        ctx.fillStyle = '#18213F';
+        for (const [px, py] of pontos[it.face]) {
+          ctx.beginPath();
+          ctx.arc(px * t * 0.26, py * t * 0.26, t * 0.085, 0, Math.PI * 2);
+          ctx.fill();
         }
+      } else if (it.tipo === 'carta') {
+        // O verso das cartas do vídeo: a roleta de cores em fatias, com borda clara.
+        const w = t;
+        const h = t * 1.38;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(-w / 2, -h / 2, w, h, w * 0.14);
+        ctx.clip();
+        const raio = Math.hypot(w, h);
+        roleta.forEach((cor, i) => {
+          ctx.fillStyle = cor;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.arc(0, 0, raio, (i / roleta.length) * Math.PI * 2, ((i + 1) / roleta.length) * Math.PI * 2);
+          ctx.closePath();
+          ctx.fill();
+        });
         ctx.restore();
-        ctx.lineWidth = 3;
         ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.roundRect(-w / 2, -h / 2, w, h, w * 0.14);
         ctx.stroke();
       } else {
-        // As verdes num verde CLARO: o verde do tabuleiro (#1F9A55) some no azul-escuro nesta opacidade.
-        const verde = k % 5 === 0;
-        ctx.globalAlpha = verde ? 0.15 : 0.12;
-        ctx.fillStyle = verde ? '#4ADE80' : '#E2E8F0';
+        ctx.fillStyle = '#FCD34D';
+        ctx.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const r = k % 2 === 0 ? t / 2 : t * 0.21;
+          const ang = (k * Math.PI) / 5 - Math.PI / 2;
+          if (k === 0) ctx.moveTo(r * Math.cos(ang), r * Math.sin(ang));
+          else ctx.lineTo(r * Math.cos(ang), r * Math.sin(ang));
+        }
+        ctx.closePath();
         ctx.fill();
       }
+      ctx.restore();
     }
-    // As duas fichas do vídeo, paradas na trilha: a vermelha perto da entrada, a de madeira já subindo.
-    for (const [k, cor] of [[3, '#F04A47'], [Math.round(n * 0.78), '#E2BD82']]) {
-      const [x, y] = ponto((total * k) / n);
-      ctx.globalAlpha = 0.15;
-      ctx.fillStyle = cor;
-      ctx.beginPath();
-      ctx.arc(x + 6, y - 6, r * 0.9, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
   }
 
   /**
