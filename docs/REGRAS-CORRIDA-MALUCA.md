@@ -27,7 +27,7 @@ Um tabuleiro com uma trilha da **ENTRADA** à **SAÍDA**, um dado e um baralho d
 a criança **joga o dado, a ficha anda sozinha contando as casas, e ela responde a carta**: acertou,
 **fica na casa**; errou, **volta para onde partiu**. Quem fica numa **casa verde joga o dado de novo**.
 O computador joga do mesmo jeito, responde em voz alta, e a criança **confere** se ele acertou.
-Vence quem passar primeiro pela SAÍDA.
+Vence quem chegar primeiro na SAÍDA: **chegou, venceu**, sem carta.
 
 **O que a criança faz é a conta, não a sorte.** O dado decide quanto a ficha anda; a carta decide se
 ela fica lá. Errar nunca acaba a partida: só devolve a ficha ao ponto de onde a jogada saiu.
@@ -82,13 +82,13 @@ tocadas); painel da direita a partir de x 1016 com a vez, o dado (141 px), o bot
 1. **JOGAR O DADO** — o botão grande. O dado gira um instante (sem flash) e para.
 2. **A ficha anda** casa a casa, e a voz conta quantas já andou ("um", "dois", "três"…). Passar da
    SAÍDA para nela.
-3. **A carta** aparece sobre o tabuleiro: o tipo (DOBRO, TRIPLO, ORDINAIS ou PROBLEMA), a pergunta
+3. **A carta** aparece sobre o tabuleiro (menos na SAÍDA: quem chega vence na hora, 4.5): o tipo (DOBRO, TRIPLO, ORDINAIS ou PROBLEMA), a pergunta
    narrada e três respostas. A criança toca uma.
 
 ### 4.2 Certo e errado
 
 - **Certo:** a resposta fica verde, "ACERTOU!", e a ficha **fica na casa**. Se a casa é verde, "CASA
-  VERDE: JOGUE DE NOVO!" (4.4). Se é a SAÍDA, a partida acaba em vitória.
+  VERDE: JOGUE DE NOVO!" (4.4).
 - **Errado:** a resposta tocada fica marcada, a certa acende, e o jogo **mostra e narra a conta**
   ("O TRIPLO DE 4 É 4 + 4 + 4 = 12"). A ficha **volta, casa a casa, para onde a jogada começou**.
   Conta um erro.
@@ -120,8 +120,11 @@ carta da jogada extra for errada, a ficha volta para a verde, não para antes de
 ### 4.5 Ordem e fim
 
 - A criança sempre começa.
-- A partida termina quando uma ficha **fica** na SAÍDA: passa por ela e acerta a carta. **Não é
-  preciso cair exato.** Errou a última carta, volta, como em qualquer casa.
+- A partida termina quando uma ficha **chega** na SAÍDA: **vence na hora, sem carta**, a criança ou o
+  computador. **Não é preciso cair exato**: passar da SAÍDA para nela. A ficha brilha na chegada por um
+  instante e o jogo vai ao resultado. (Até 04/11/2026 a última carta precisava ser acertada; o humano
+  pediu que a chegada bastasse: "a partir do momento que o aluno ou a CPU chegar na chegada, ele
+  automaticamente vence".)
 - Se for a vermelha, vitória; se for a de madeira, derrota.
 
 ---
@@ -237,7 +240,8 @@ recomendadas".
 6. **Casa verde (humano):** "se o aluno cair na parte verde ele tem direito de jogar mais uma vez o dado,
    dando assim vantagens para quem ficar nessa posição". "Ficar" é acertar a carta, como o narrador faz
    em 2:09 (4.4).
-7. **Chegada:** passar da SAÍDA vale; a última carta precisa ser acertada.
+7. **Chegada:** passar da SAÍDA vale. ~~A última carta precisa ser acertada~~ → **revisada em
+   04/11/2026 (humano): chegou na SAÍDA, venceu na hora, sem carta** (4.5).
 8. **Trilha por nível (humano):** "fácil talvez com menos passos também e assim por diante" → 15, 21 e 27
    passos, o mesmo tabuleiro com casas maiores, medidos por simulação (seção 5).
 9. **Níveis:** o que cresce é a carta e a trilha, não o dado.

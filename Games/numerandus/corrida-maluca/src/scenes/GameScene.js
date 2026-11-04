@@ -407,10 +407,11 @@ class DicaDedo extends Node {
  *   'conferir'   o computador respondeu; a criança confere com CERTO / ERRADO
  *   'retorno'    a carta mostra a conta e o que acontece; espera o CONTINUAR (no ritmo da criança)
  *   'voltando'   errou a carta: a ficha volta casa a casa para onde a jogada começou
+ *   'chegou'     a ficha chegou na SAÍDA: vence na hora, sem carta, e vai ao resultado
  *
  * **As regras do vídeo** (docs/REGRAS-CORRIDA-MALUCA.md §4): joga o dado, anda, responde a carta;
  * acertou fica, errou volta de onde partiu; quem FICA numa casa verde joga o dado de novo; vence
- * quem fica na SAÍDA (passar dela vale, mas a última carta precisa ser acertada). O computador joga do
+ * quem CHEGA na SAÍDA, na hora e sem carta (passar dela vale; decisão do humano, 04/11/2026). O computador joga do
  * mesmo jeito, erra de propósito 1 vez em 4 (`regras.computadorErra`) e a criança confere.
  *
  * **A nota** (`_terminar`): meta = os passos da trilha; vitória = meta − cartas erradas, derrota = a
@@ -515,7 +516,7 @@ export class GameScene extends Scene {
     this.adicionar(this.relogio);
     this.guarda = new Watchdog({
       nome: 'jogada da corrida',
-      ocupado: () => ['cpuEspera', 'rolando', 'andando', 'voltando'].includes(this.fase) && !this.pausada && !this._fimResolvido,
+      ocupado: () => ['cpuEspera', 'rolando', 'andando', 'voltando', 'chegou'].includes(this.fase) && !this.pausada && !this._fimResolvido,
       vivo: () => Tween.temAtivo(this.relogio) || Tween.temAtivo(this.fichas.crianca) || Tween.temAtivo(this.fichas.computador),
       graca: 0.6,
       limite: 14,
@@ -654,7 +655,8 @@ export class GameScene extends Scene {
 
   /**
    * Um passo da ficha: na ida conta em voz alta ("um", "dois"…) e mostra o número sobre ela; na volta
-   * (errou a carta) anda em silêncio. Chegando, abre a carta (ida) ou passa a vez (volta).
+   * (errou a carta) anda em silêncio. Chegando, abre a carta (ida) ou passa a vez (volta) — e, se a ida
+   * terminou na SAÍDA, quem chegou vence na hora, sem carta (`_chegou`).
    */
   _passo() {
     if (!['andando', 'voltando'].includes(this.fase)) return;
@@ -663,6 +665,7 @@ export class GameScene extends Scene {
     const destino = ida ? this.vez.alvo : this.vez.inicio;
     const ficha = this.fichas[quem];
     if (this.pos[quem] === destino) {
+      if (ida && destino === this.saida) { this._chegou(); return; }
       Tween.de(this.relogio).esperar(ida ? 450 : 350).chamar(() => (ida ? this._abrirCarta() : this._passarAVez()));
       return;
     }
@@ -706,6 +709,21 @@ export class GameScene extends Scene {
     Tween.de(this.relogio).esperar(80).chamar(() => this._depoisDaFala(fn, esperou + 80));
   }
 
+  /**
+   * A ficha chegou na SAÍDA: **vence na hora, sem carta** — a criança ou o computador (pedido do humano,
+   * 04/11/2026: "a partir do momento que o aluno ou a CPU chegar na chegada, ele automaticamente vence").
+   * Passar da SAÍDA continua valendo (o dado para nela). Uma pausa curta, com a ficha brilhando na
+   * chegada, e vai ao resultado.
+   */
+  _chegou() {
+    if (this.fase !== 'andando') return;
+    this.fase = 'chegou';
+    const ficha = this.fichas[this.vez.quem];
+    ficha.contagem = 0;
+    ficha.brilho = 1;
+    Tween.de(this.relogio).esperar(900).chamar(() => this._terminar(this.vez.quem));
+  }
+
   // -------------------------------------------------------------------- carta
 
   _abrirCarta() {
@@ -739,8 +757,7 @@ export class GameScene extends Scene {
       tipo.certas += 1;
       this._efeito('acerto');
       this._falar('muitoBem', 'Muito bem!', true);
-      const detalhe = alvo === this.saida ? 'VOCÊ CHEGOU NA SAÍDA!'
-        : this.trilha.verdes.includes(alvo) ? 'CASA VERDE: JOGUE DE NOVO!' : `FICA NA CASA ${alvo}!`;
+      const detalhe = this.trilha.verdes.includes(alvo) ? 'CASA VERDE: JOGUE DE NOVO!' : `FICA NA CASA ${alvo}!`;
       this.painel.mostrarRetorno(true, 'ACERTOU!', detalhe, () => this._continuar());
     } else {
       botao.marca = 'errada';
@@ -795,7 +812,6 @@ export class GameScene extends Scene {
       Tween.de(this.relogio).esperar(250).chamar(() => this._passo());
       return;
     }
-    if (alvo === this.saida) { this._terminar(quem); return; }
     if (this.trilha.verdes.includes(alvo)) {
       if (quem === 'crianca') this.stats.jogadasExtras += 1;
       this._comecarVez(quem, true);
@@ -839,7 +855,8 @@ export class GameScene extends Scene {
 
   /** O cão de guarda achou uma cadeia cortada: leva a partida a um ponto seguro, de onde ela parou. */
   _destravar() {
-    if (this.fase === 'cpuEspera') this._rolar();
+    if (this.fase === 'chegou') this._terminar(this.vez.quem);
+    else if (this.fase === 'cpuEspera') this._rolar();
     else if (this.fase === 'rolando') this._dadoParou();
     else if (this.fase === 'andando' || this.fase === 'voltando') {
       // A ficha vai direto ao destino, e a partida segue dali.

@@ -18,7 +18,7 @@ contra o computador (ficha de **madeira**). Na sua vez ela toca o dado, a ficha 
 as casas e uma **carta** abre: **acertou, fica; errou, volta para onde partiu**. Quem **fica numa casa
 verde joga o dado de novo**. O computador joga do mesmo jeito, responde em voz alta e **erra de
 propósito 1 vez em 4**: a criança **confere** com CERTO ou ERRADO (a "mesa que confere" do vídeo).
-Vence quem chega primeiro na SAÍDA.
+Vence quem chega primeiro na SAÍDA: chegou, venceu, sem carta.
 
 | Nível | Trilha | Verdes | Cartas |
 |---|---|---|---|
@@ -45,7 +45,8 @@ Vence quem chega primeiro na SAÍDA.
   responde: "O COMPUTADOR DIZ: 12". A criança toca **CERTO** ou **ERRADO**; o jogo diz se ela conferiu
   bem ("ISSO! ELE ERROU.") e mostra a conta. Se ele errou, a ficha dele volta. **Conferir mal não é
   erro na nota.**
-- **Fim**: quem fica na SAÍDA (passou dela e acertou a carta) vence. Vai direto ao resultado da série.
+- **Fim**: quem **chega** na SAÍDA vence na hora, sem carta (a criança ou o computador; passar dela
+  vale). A ficha brilha na chegada por um instante e o jogo vai direto ao resultado da série.
   Não há cronômetro.
 - **Nota** (RE-02): a meta é a trilha do nível (15, 21 ou 27). Vitória = meta − cartas erradas;
   derrota = a casa alcançada. A tela diz "N CASAS" (RE-03).
@@ -64,13 +65,13 @@ node tools/build.mjs numerandus/corrida-maluca                  # copia o motor 
 node tools/testes.mjs                                           # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/corrida-maluca
 node tools/teste-entrega-avulsa.mjs numerandus/corrida-maluca
-node tools/teste-jogabilidade-corrida-maluca.mjs               # gesto real (63 verificações)
+node tools/teste-jogabilidade-corrida-maluca.mjs               # gesto real (76 verificações)
 ```
 
 `teste-jogabilidade-corrida-maluca.mjs` só usa ponteiro (nada é chamado por dentro; os ganchos
 `dadoDeTeste` e `computadorErraDeTeste` só escolhem o próximo sorteio): as regras puras, menu → níveis
 → partida, o dado e a ficha andando, a carta certa e a errada (a volta), a vez do computador e a
-conferência, a casa verde (e a volta para a verde), pausa no meio da ficha andando, ajuda por cima da
+conferência, a casa verde da criança e a do computador (e a volta para a verde), pausa no meio da ficha andando, ajuda por cima da
 carta, e o AVA num iframe (vitória e derrota, os números batendo, sem duplicata). Rodado 6 vezes
 seguidas sem falha em 03/11/2026.
 

@@ -55,7 +55,7 @@
 ## 4. Mecânica
 
 - [x] Regras implementadas conforme a especificação (teste: dado, carta certa e errada, volta,
-      vez do computador, conferência, casa verde e a volta para a verde, chegada)
+      vez do computador, conferência, casa verde (da criança e do computador) e a volta para a verde, chegada)
 - [x] Feedback imediato de acerto (verde + som + "ACERTOU!")
 - [x] Feedback imediato de erro, sem tom punitivo (a conta certa mostrada; a ficha volta devagar)
 - [ ] Dificuldade dos níveis testada **de verdade** — só simulada (20 000 partidas, especificação §5); falta criança
@@ -108,7 +108,7 @@
 - [x] `node tools/verificar-independencia.mjs numerandus/corrida-maluca` **aprovado**
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/corrida-maluca` **aprovado** (11/11)
 - [x] Sem requisição externa (entrega avulsa)
-- [x] Fluxo completo de telas percorrido, sem travar (`teste-jogabilidade-corrida-maluca.mjs`, 63 verificações,
+- [x] Fluxo completo de telas percorrido, sem travar (`teste-jogabilidade-corrida-maluca.mjs`, 76 verificações,
       6 vezes seguidas sem falha)
 - [x] **Vitória:** os números batem com o jogado
 - [x] **Derrota:** registra, com a casa alcançada

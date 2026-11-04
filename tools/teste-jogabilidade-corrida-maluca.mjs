@@ -17,8 +17,10 @@
  *   3. a carta CERTA: a ficha fica e a vez passa ao computador;
  *   4. a VEZ DO COMPUTADOR: ele responde, a criança confere; errou, a ficha dele volta;
  *   5. a carta ERRADA: a ficha volta de onde partiu e conta um erro;
- *   6. a CASA VERDE: quem fica nela joga de novo, com o anel; errar a carta extra volta para a verde;
- *   7. a PAUSA congela a ficha andando, a AJUDA devolve a partida intacta;
+ *   6. a CASA VERDE: quem fica nela joga de novo, com o anel; errar a carta extra volta para a verde
+ *      (6b: o mesmo com o computador: "COMPUTADOR DE NOVO", ele rola sozinho e volta para a verde);
+ *   7. a PAUSA congela a ficha andando, a AJUDA devolve a partida intacta (7b e 7c: a criança e o
+ *      computador chegando na SAÍDA vencem na hora, sem carta);
  *   8. o AVA dentro de um IFRAME: vitória e derrota registram, com os números do que foi jogado;
  *   9. nenhum erro de JavaScript e nenhum disparo do `Watchdog`.
  *
@@ -246,7 +248,9 @@ try {
     if (await jg(`return c.constructor.name === 'ResultScreen';`)) return 'fim';
     if (dado) await jg(`c.dadoDeTeste = ${dado}; return 1;`);
     await tocarNo('c.botaoDado');
-    if (!(await esperarAte(`c.fase === 'carta' && c.painel.alpha >= 1`, 10000))) return 'a carta dela não abriu';
+    // Chegar na SAÍDA vence na hora, sem carta: aí a vez acaba sem resposta.
+    if (!(await esperarAte(`c.constructor.name === 'ResultScreen' || c.fase === 'chegou' || (c.fase === 'carta' && c.painel.alpha >= 1)`, 10000))) return 'a carta dela não abriu';
+    if (await jg(`return c.constructor.name === 'ResultScreen' || c.fase === 'chegou';`)) return 'fim';
     await tocarNo(certo ? OPCAO_CERTA : OPCAO_ERRADA);
     if (!(await esperarAte(`c.fase === 'retorno'`, 4000))) return 'a resposta não deu retorno';
     await tocarNo(CONTINUAR);
@@ -396,10 +400,35 @@ try {
     r6 === 'ok' && await esperarAte(`c.fase === 'dado' && c.vez.quem === 'crianca' && c.vez.deNovo`, 4000)
       && (await jg(`return c.tabuleiro.anelCasa === 5 && c.faixa.deNovo && c.stats.jogadasExtras === 1;`)), JSON.stringify(await estado()));
   await captura('08-casa-verde');
-  // A jogada extra errada volta para a VERDE, não para antes dela.
+  // A jogada extra errada volta para a VERDE, não para antes dela. (O computador espera mais antes de
+  // rolar, para o 6b forçar o dado dele a tempo.)
+  await jg(`c.regras.cpuEsperaMs = 1500; return 1;`);
   await vezDaCrianca(false, 1);
   checar('errou a carta da jogada extra: volta para a verde (casa 5), e a vez passa',
     await esperarAte(`c.vez.quem === 'computador'`, 6000) && (await estado()).pos.crianca === 5, JSON.stringify(await estado()));
+
+  // ---------------------------------------------- 6b. o computador na casa verde
+  console.log('\n6b. O computador na casa verde: ele também joga de novo');
+  // Ele está na ENTRADA (errou de propósito até aqui): um 5 leva à 5, verde no Fácil; ele acerta.
+  await jg(`c.dadoDeTeste = 5; c.computadorErraDeTeste = false; return 1;`);
+  checar('a vez é dele, na ENTRADA, ainda esperando para rolar',
+    (await estado()).fase === 'cpuEspera' && (await estado()).pos.computador === 0, JSON.stringify(await estado()));
+  const r6b = await vezDoComputador(true);
+  const e6b = await esperarAte(`c.vez.quem === 'computador' && c.vez.deNovo && c.fase === 'cpuEspera'`, 6000);
+  const v6b = await jg(`return { pos: c.pos.computador, anel: c.tabuleiro.anelCasa, faixa: c.faixa.quem + (c.faixa.deNovo ? '+' : ''),
+    texto: c.faixa.deNovo, extrasCrianca: c.stats.jogadasExtras, inicio: c.vez.inicio };`);
+  checar('caiu na 5 e acertou: a vez CONTINUA dele, "COMPUTADOR DE NOVO", com o anel na verde',
+    r6b === 'ok' && e6b && v6b.pos === 5 && v6b.anel === 5 && v6b.faixa === 'computador+' && v6b.inicio === 5, JSON.stringify({ r6b, v6b }));
+  checar('a jogada extra dele não conta como jogada extra da criança no relatório', v6b.extrasCrianca === 1, JSON.stringify(v6b));
+  await captura('08b-computador-verde');
+  await jg(RAPIDO);
+  checar('ele rola sozinho na jogada extra (a criança não precisa tocar)',
+    await esperarAte(`c.vez.quem === 'computador' && ['rolando', 'andando', 'conferir'].includes(c.fase)`, 6000));
+  // Na jogada extra ele erra: volta para a VERDE, não para a ENTRADA, e a vez passa.
+  const r6c = await vezDoComputador(true, true);
+  checar('errou a carta da jogada extra: ele volta para a verde (casa 5) e a vez passa à criança',
+    r6c === 'ok' && await esperarAte(`c.vez.quem === 'crianca' && c.fase === 'dado'`, 6000) && (await estado()).pos.computador === 5,
+    JSON.stringify({ r6c, e: await estado() }));
 
   // -------------------------------------------------------- 7. pausa e ajuda
   console.log('\n7. A pausa e a ajuda');
@@ -422,6 +451,62 @@ try {
   await captura('09-ajuda');
   const fechou = await tocarNo(`${W}.__achar(c, (n) => n.icone === 'fechar' && n.visivelMundo)`) || await tocarNo(BTN('/voltar|fechar|continuar/i'));
   checar('fechar a ajuda devolve a carta intacta', fechou && await esperarAte(`!c.pausada && c.fase === 'carta' && c.painel.visible`, 4000));
+
+  // ----------------------------------------------------------------- 7b. a chegada
+  console.log('\n7b. A chegada: quem chega na SAÍDA vence na hora, sem carta');
+  await tocarNo(OPCAO_CERTA);
+  await esperarAte(`c.fase === 'retorno'`, 3000);
+  await tocarNo(CONTINUAR);
+  checar('a vez volta à criança, na casa 11', await ateACrianca() && (await estado()).pos.crianca === 11, JSON.stringify(await estado()));
+  const cartasAntes = await jg(`return c.stats.respondidas;`);
+  await jg(`c.dadoDeTeste = 6; return 1;`);
+  await tocarNo('c.botaoDado');
+  checar('dado 6 da casa 11 PASSA da SAÍDA (15): a ficha para nela e a partida entra em "chegou"',
+    await esperarAte(`c.fase === 'chegou'`, 15000) && (await estado()).pos.crianca === 15, JSON.stringify(await estado()));
+  const chegada = await jg(`return { carta: c.painel.visible, respondidas: c.stats.respondidas };`);
+  checar('na chegada NENHUMA carta abre', chegada.carta === false && chegada.respondidas === cartasAntes, JSON.stringify({ chegada, cartasAntes }));
+  await captura('09b-chegada');
+  checar('e a partida vai direto ao resultado (vitória)', await esperarAte(`c.constructor.name === 'ResultScreen'`, 5000));
+
+  // --------------------------------------------------- 7c. a chegada do computador
+  console.log('\n7c. A chegada do computador: ele também vence na hora, sem carta');
+  // Uma partida nova no Fácil. A criança erra (não sai da ENTRADA); ele acerta: 6 → casa 6, depois
+  // 6 → casa 12 (verde) e, na jogada extra, 3 → a SAÍDA. Chegar na jogada extra também vence.
+  await cdp.enviar('Page.navigate', { url: JOGO_URL }, s);
+  await esperar(1500);
+  await esperarAte(`c && c.constructor.name === 'MenuScreen'`, 15000);
+  await esperar(800);
+  await tocarNo(BTN('/^jogar$/i'));
+  await esperarAte(`c.constructor.name === 'LevelSelectScreen'`, 5000);
+  await tocarNo(`${W}.__achar(c, (n) => n.nivel && n.nivel.id === 1)`);
+  await esperarAte(`c.constructor.name === 'GameScene'`, 6000);
+  await jg(`${RAPIDO} c.regras.cpuEsperaMs = 1500; c.regras.falaMaxMs = 0; return 1;`);
+  /** Espera a vez dele começar (ainda parado) e escolhe o próximo dado e se ele erra. */
+  const forcarComputador = async (dado, deNovo = false) => {
+    const ok7 = await esperarAte(`c.vez.quem === 'computador' && c.fase === 'cpuEspera' && !!c.vez.deNovo === ${deNovo}`, 8000);
+    await jg(`c.dadoDeTeste = ${dado}; c.computadorErraDeTeste = false; return 1;`);
+    return ok7;
+  };
+  const p7c = [];
+  p7c.push(await vezDaCrianca(false, 1));
+  p7c.push(await forcarComputador(6), await vezDoComputador(true));
+  p7c.push(await vezDaCrianca(false, 1));
+  p7c.push(await forcarComputador(6), await vezDoComputador(true));
+  checar('ele está na casa 12 (verde), com a jogada extra, e a criança na ENTRADA',
+    p7c.every((x) => x === 'ok' || x === true) && await forcarComputador(3, true)
+      && (await estado()).pos.computador === 12 && (await estado()).pos.crianca === 0, JSON.stringify({ p7c, e: await estado() }));
+  const antes7c = await jg(`window.__fim7c = null; const ir = c.irPara.bind(c); c.irPara = (n, d) => { window.__fim7c = d?.resultado ?? null; return ir(n, d); };
+    return { conferencias: c.stats.conferencias };`);
+  checar('o 3 leva à SAÍDA (15): ele para nela e a partida entra em "chegou"',
+    await esperarAte(`c.fase === 'chegou'`, 10000) && (await estado()).pos.computador === 15, JSON.stringify(await estado()));
+  const chegada7c = await jg(`return { carta: c.painel.visible, conferencias: c.stats.conferencias, quem: c.vez.quem };`);
+  checar('na chegada dele NENHUMA carta abre e a criança não precisa conferir nada',
+    chegada7c.carta === false && chegada7c.conferencias === antes7c.conferencias && chegada7c.quem === 'computador', JSON.stringify(chegada7c));
+  await captura('09c-chegada-computador');
+  checar('e vai direto ao resultado: derrota, com a casa dela (0) e a dele (15)',
+    await esperarAte(`c.constructor.name === 'ResultScreen'`, 5000)
+      && await jg(`const r = window.__fim7c; return !!r && r.vitoria === false && r.extras?.casaComputador === 15 && r.extras?.casaAlcancada === 0;`),
+    JSON.stringify(await jg(`return window.__fim7c;`)));
 
   const guardaPagina = avisos.filter((x) => /watchdog|cão de guarda|travad|resgat/i.test(x));
   checar('nenhum erro de JavaScript na página', erros.length === 0, erros.slice(0, 4).join(' | '));
