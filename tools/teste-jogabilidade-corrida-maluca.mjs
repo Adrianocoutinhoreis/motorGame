@@ -449,6 +449,10 @@ try {
   checar('a ajuda abre por cima da carta', await tocarNo(ICONE('tutorial')) && (await estado()).pausada === true);
   await esperar(800);
   await captura('09-ajuda');
+  checar('o tutorial tem a narração dos 5 passos (tutorialTela1 a 5 carregados)',
+    await jg(`return [1, 2, 3, 4, 5].every((n) => c.audio.temSom('tutorialTela' + n)) && c.config.tutorial.length === 5;`));
+  checar('a ajuda narra o passo 1 até o fim (tutorialTela1 toca inteiro)',
+    await esperarAte(`c.__fim.some((x) => x.startsWith('tutorialTela1:true'))`, 8000), (await jg(`return c.__fim.slice(-4);`)).join());
   const fechou = await tocarNo(`${W}.__achar(c, (n) => n.icone === 'fechar' && n.visivelMundo)`) || await tocarNo(BTN('/voltar|fechar|continuar/i'));
   checar('fechar a ajuda devolve a carta intacta', fechou && await esperarAte(`!c.pausada && c.fase === 'carta' && c.painel.visible`, 4000));
 

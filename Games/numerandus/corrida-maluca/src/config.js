@@ -87,9 +87,10 @@ export default {
 
   // --------------------------------------------------------------- tutorial
   /**
-   * 4 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida (regra RE-05). O motor
-   * fala `titulo + '. ' + texto` de cada passo pelo id `tutorialTela1..4` — ainda não gravados: sem
-   * o arquivo o jogo fica mudo e avisa no console. Se o texto de um passo mudar, a gravação muda junto.
+   * 5 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida (regra RE-05). O motor
+   * fala `titulo + '. ' + texto` de cada passo pelo id `tutorialTela1..5` (`assets/audio/tutorial/01..05.wav`,
+   * gravados para este jogo). Se o texto de um passo mudar, a gravação muda junto: o texto segue o que
+   * foi gravado (o 4º ainda diz "Chegue primeiro na saída!", como no áudio).
    */
   tutorial: [
     {
@@ -116,6 +117,14 @@ export default {
       texto: 'Ele também responde. Ele acertou? Chegue primeiro na saída!',
       desenho: (ctx, l, a, t) => desenharPasso4(ctx, l, a, t),
     },
+    {
+      // O desfecho do jogo (pedido do humano, 04/11/2026: "precisa informar o desfecho do jogo, que ao
+      // chegar na casa da saída ganha" — "isso é para o tutorial apenas").
+      titulo: 'Chegue na saída',
+      fala: 'tutorialTela5',
+      texto: 'Quem chegar primeiro na saída ganha o jogo!',
+      desenho: (ctx, l, a, t) => desenharPasso5(ctx, l, a, t),
+    },
   ],
 
   // ------------------------------------------------------------------ áudio
@@ -123,7 +132,7 @@ export default {
    * Reaproveitados da coleção (mesmos arquivos, mesmo SHA-256, fichas em assets/audio-transcricao/):
    * os efeitos, os números "um" a "dez" (a contagem dos passos e a resposta do computador) e as falas
    * de troca de vez. Tudo o que é próprio deste jogo (as perguntas, os ordinais, a casa verde, a
-   * conferência e o tutorial) ainda não foi gravado: a cena já pede cada id definitivo (lista no README)
+   * conferência) ainda não foi gravado — só o tutorial já tem narração própria: a cena já pede cada id definitivo (lista no README)
    * e, sem o arquivo, fica muda nesse ponto.
    */
   assets: [
@@ -145,6 +154,12 @@ export default {
     { id: 'suaVez', src: './assets/audio/falas/suaVez.wav' },
     { id: 'vezDoComputador', src: './assets/audio/falas/vezDoComputador.wav' },
     { id: 'muitoBem', src: './assets/audio/falas/muitoBem.wav' },
+    // A narração do tutorial (título + texto de cada passo), gravada para este jogo em 03 e 04/11/2026.
+    { id: 'tutorialTela1', src: './assets/audio/tutorial/01.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial/02.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial/03.wav' },
+    { id: 'tutorialTela4', src: './assets/audio/tutorial/04.wav' },
+    { id: 'tutorialTela5', src: './assets/audio/tutorial/05.wav' },
   ],
 
   /** Sem mascote: as fichas e o dado já são os personagens (mesma decisão do Subtraindo o Dominó). */
@@ -372,4 +387,49 @@ function desenharPasso4(ctx, l, a, t) {
   const batendo = tc > 1.3 && tc < 1.5;
   if (alfa > 0) desenharDedo(ctx, alvoX, alvoY + (batendo ? 5 : 0), bh * 0.9, alfa);
   desenharOndaToque(ctx, alvoX, alvoY, bh * 0.5, trecho(tc, 1.4, 2.0));
+}
+
+/**
+ * Passo 5 — o desfecho: as duas fichas correm até a SAÍDA; a vermelha chega primeiro, brilha e aparece
+ * "VOCÊ VENCEU!" (ciclo de 5 s). Sem carta na chegada, como na partida.
+ */
+function desenharPasso5(ctx, l, a, t) {
+  const ciclo = 5;
+  const tc = ((t % ciclo) + ciclo) % ciclo;
+  mesa(ctx, l, a, tc, ciclo);
+  const r = Math.min(a * 0.13, 32);
+  const passo = r * 3;
+  const n = 6;
+  const x0 = l * 0.1;
+  const y = a * 0.62;
+  const centros = fileira(ctx, x0, y, n, passo, r);
+  // A última casa é a SAÍDA: preta, com o quadriculado de chegada e o nome em cima.
+  const xs = centros[n - 1];
+  ctx.save();
+  ctx.fillStyle = CORES.saida;
+  ctx.beginPath();
+  ctx.arc(xs, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  const q = r * 0.3;
+  for (let k = 0; k < 4; k++) {
+    ctx.fillStyle = k === 0 || k === 3 ? '#FFFFFF' : CORES.saida;
+    ctx.fillRect(xs - q + (k % 2) * q, y - q + Math.floor(k / 2) * q, q, q);
+  }
+  ctx.restore();
+  escrever(ctx, 'SAÍDA', xs, y + r + Math.round(a * 0.1), Math.round(a * 0.09), CORES.tinta);
+  // A vermelha sai da casa 2 e anda 3 até a SAÍDA; a de madeira fica para trás, na casa 1.
+  const andou = Math.min(3, Math.max(0, (tc - 0.4) / 0.5));
+  const casa = Math.floor(andou);
+  const x = casa >= 3 ? centros[5] : centros[2 + casa] + (centros[3 + casa] - centros[2 + casa]) * suave(andou - casa);
+  const chegou = tc > 1.95;
+  ficha(ctx, 'computador', centros[1], y, r * 0.78, 0);
+  ficha(ctx, 'crianca', x, y, r * 0.78, chegou ? 1 : 0);
+  if (chegou) {
+    ctx.save();
+    ctx.globalAlpha *= suave(trecho(tc, 1.95, 2.3));
+    const xt = (centros[n - 1] + l - 8) / 2 + r * 0.6;
+    escrever(ctx, 'CHEGOU!', xt, a * 0.36, Math.round(a * 0.1), CORES.tinta);
+    escrever(ctx, 'VOCÊ VENCEU!', xt, a * 0.56, Math.round(a * 0.13), CORES.okTexto);
+    ctx.restore();
+  }
 }

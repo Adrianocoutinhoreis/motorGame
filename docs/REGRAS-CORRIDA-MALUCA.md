@@ -204,7 +204,7 @@ serve aqui. O resto a cena já pede pelo id definitivo.
 | Problemas | `problema` (uma fala por enquanto) | Difícil | **Não** — decidir o formato ao gravar (inteira ou em pedaços) |
 | Falas curtas | `suaVez`, `vezDoComputador`, `muitoBem` | troca de vez, carta certa | **Sim** — do Jogo dos Blocos via Subtraindo o Dominó (gravação de 2026), não ouvidas |
 | Falas curtas | `casaVerde`, `casaVerdeComputador`, `volteDeOndePartiu`, `oComputadorDiz`, `eleAcertou`, `isso`, `olheDeNovo` | casa verde, carta errada, conferência | **Não** — gravar |
-| Tutorial | `tutorialTela1`–`4` | cada passo | **Não** — gravar |
+| Tutorial | `tutorialTela1`–`5` | cada passo (o 5º, "Chegue na saída": quem chegar primeiro na saída ganha o jogo — pedido do humano, 04/11/2026) | **Sim** — `assets/audio/tutorial/01..05.wav`, gravação própria (03 e 04/11/2026) |
 
 O `tenteDeNovo` da coleção **não** foi usado: depois da carta errada a criança não tenta de novo (a ficha
 volta e a vez passa), e a fala diria o contrário do que acontece.

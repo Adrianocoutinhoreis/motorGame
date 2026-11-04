@@ -65,7 +65,7 @@ node tools/build.mjs numerandus/corrida-maluca                  # copia o motor 
 node tools/testes.mjs                                           # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/corrida-maluca
 node tools/teste-entrega-avulsa.mjs numerandus/corrida-maluca
-node tools/teste-jogabilidade-corrida-maluca.mjs               # gesto real (76 verificações)
+node tools/teste-jogabilidade-corrida-maluca.mjs               # gesto real (78 verificações)
 ```
 
 `teste-jogabilidade-corrida-maluca.mjs` só usa ponteiro (nada é chamado por dentro; os ganchos
@@ -102,7 +102,7 @@ corrida-maluca/
 ├── index.html
 ├── engine/              CÓPIA do motor — gerada por build, não editar
 ├── src/
-│   ├── config.js        identidade, níveis, regras, tutorial (4 passos desenhados), áudio
+│   ├── config.js        identidade, níveis, regras, tutorial (5 passos desenhados), áudio
 │   ├── regras.js        regras puras: a trilha, as verdes, as cartas, o computador, a nota
 │   ├── desenho.js       tabuleiro, fichas, dado, carta, dedinho (partida e tutorial)
 │   ├── main.js
@@ -115,8 +115,8 @@ corrida-maluca/
 
 ## Assets
 
-Todos os áudios são **reaproveitados** de jogos irmãos (mesmo arquivo, mesmo SHA-256); cada um tem
-ficha em `assets/audio-transcricao/<id>/`. Não há imagem: tudo é desenhado em canvas.
+Os áudios são **reaproveitados** de jogos irmãos (mesmo arquivo, mesmo SHA-256), menos a **narração do
+tutorial**, gravada para este jogo. Cada um tem ficha em `assets/audio-transcricao/<id>/`. Não há imagem: tudo é desenhado em canvas.
 
 | Arquivo | `id` | Uso | Origem |
 |---|---|---|---|
@@ -126,25 +126,27 @@ ficha em `assets/audio-transcricao/<id>/`. Não há imagem: tudo é desenhado em
 | `numeros/um.mp3` | `numero1` | contagem | Jogo dos Blocos (locução de 2013, **outro lote**: 40 kbps, 22 kHz) |
 | `numeros/dois.mp3` … `dez.mp3` | `numero2`–`numero10` | contagem (até 6) e a resposta do computador | Jogo dos Blocos via Subtraindo o Dominó (locução de 2013) |
 | `falas/suaVez.wav`, `vezDoComputador.wav`, `muitoBem.wav` | os mesmos | troca de vez, carta certa | Jogo dos Blocos via Subtraindo o Dominó (gravação de 2026) |
+| `tutorial/01.wav` … `05.wav` | `tutorialTela1`–`tutorialTela5` | a narração de cada passo do tutorial (título + texto) | **própria** da Corrida Maluca, fornecida pelo humano em 03 e 04/11/2026 — licença **a confirmar**; transcrita pelo Whisper e batendo com o texto |
 
 ## Pendências conhecidas
 
 - **Narração própria não gravada.** A cena já pede cada id definitivo; sem o arquivo fica muda nesse
   ponto e o console diz o texto. As frases em pedaços (a pergunta da carta, a resposta do computador)
   **tocam inteiras ou não tocam**: enquanto faltar um pedaço, nem o número gravado toca sozinho
-  (pedido do humano, 03/11/2026: a carta falava só "três"). Falta gravar:
-  - tutorial: `tutorialTela1`–`4` (o texto de cada passo está em `config.js`);
+  (pedido do humano, 03/11/2026: a carta falava só "três"). O tutorial **já tem** narração (os 5 passos).
+  Falta gravar:
   - perguntas: `qualODobroDe`, `qualOTriploDe`, `comoSeChamaONumero`, `deFormaOrdinal`, e os
     problemas (`problema`, formato em aberto: frase inteira ou em pedaços);
   - números de **11 a 30** (`numero11`–`numero30`: a resposta do computador no dobro e no triplo);
   - ordinais: `ordinal1`–`ordinal10` (a resposta do computador nas cartas de ordinal);
   - falas: `casaVerde`, `casaVerdeComputador`, `volteDeOndePartiu`, `oComputadorDiz`, `eleAcertou`,
     `isso`, `olheDeNovo`.
-- **Nenhum áudio foi ouvido**: as fichas dos números e das falas são inferidas (status 🟡), herdadas
-  dos jogos de origem. O `um.mp3` é de outro lote que o "dois" a "dez" e pode soar diferente.
+- **Nenhum áudio foi ouvido por um humano**: as fichas dos números e das falas são inferidas (status 🟡),
+  herdadas dos jogos de origem; as 5 do tutorial foram transcritas pelo Whisper e batem com o texto
+  (o passo 2 fala "pra onde tava", a tela escreve "para onde estava"). O `um.mp3` é de outro lote que o "dois" a "dez" e pode soar diferente.
 - **`tools/audio-info.mjs` reprova este jogo, e reprova o Subtraindo o Dominó do mesmo jeito**: a
   ferramenta supõe nome de arquivo igual ao `id` e não lê subpastas (`numeros/`, `falas/`). É defeito
-  da ferramenta, não do jogo: os 18 áudios carregam (`teste-entrega-avulsa.mjs`) e têm ficha.
+  da ferramenta, não do jogo: os 23 áudios carregam (`teste-entrega-avulsa.mjs`) e têm ficha.
 - **Sem teste com criança nem em tablet de verdade.** Em aberto (especificação §9): se o erro do
   computador 1 em 4 faz a criança desconfiar de tudo, se o Difícil (~10 cartas) fica longo, e qual
   ficha é de quem (o vídeo não diz).

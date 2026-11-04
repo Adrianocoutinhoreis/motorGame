@@ -30,25 +30,26 @@
 
 - [x] Arte desenhada no canvas (tabuleiro, fichas, dado, carta), coerente com a série
 - [ ] Áudio de narração presente para **todo** conteúdo falado — **não**: perguntas, ordinais, casa
-      verde, conferência, números de 11 a 30 e o tutorial faltam (lista no README). O jogo funciona mudo nesses pontos.
+      verde, conferência e números de 11 a 30 faltam (lista no README); o tutorial já tem. O jogo funciona mudo nesses pontos.
 - [x] Efeitos de acerto, erro e pouso presentes (reaproveitados da coleção)
 - [x] Todo asset está dentro de `assets/`, com caminho relativo (`verificar-independencia.mjs`)
 - [x] Nenhuma fonte, imagem ou som vindo da internet (`teste-entrega-avulsa.mjs`: 67 requisições, todas locais)
 - [x] Origem/licença de cada asset registrada no `README.md` (com as pendências de licença da coleção)
-- [x] Ficha de transcrição para cada um dos 18 áudios
+- [x] Ficha de transcrição para cada um dos 23 áudios
 - [ ] Transcrições **confirmadas ouvindo** — nenhuma foi ouvida (status 🟡 herdado dos jogos de origem)
 - [x] Pendências de áudio listadas no `README.md`
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR (captura `01-menu`)
-- [x] **Tutorial** com 4 passos ilustrados com as peças da partida e puláveis — narração **não gravada**
+- [x] **Tutorial** com 5 passos ilustrados com as peças da partida e puláveis; o 5º diz o desfecho (quem chega
+      primeiro na SAÍDA ganha) — **narrado** (`assets/audio/tutorial/01..05.wav`)
 - [x] **Seleção de nível** (3 níveis)
 - [x] **Partida** com HUD legível: faixa da vez, dado, botão, placar de casas, pausa, ajuda, som
 - [x] **Pausa** com continuar / recomeçar / sair; congela a ficha andando (teste, item 7)
 - [x] **Ajuda** na partida (RE-05): abre por cima da carta e devolve a carta intacta (teste, item 7)
   - [x] O tempo não corre com a ajuda aberta (`Tween.pausarTodos`)
-  - [x] Os passos servem a quem travou: dado, carta, casa verde, conferir o computador
+  - [x] Os passos servem a quem travou: dado, carta, casa verde, conferir o computador, como se ganha
 - [x] **Resultado** para vitória **e** para derrota (teste, item 8)
 - [x] Nenhum beco sem saída
 
@@ -108,7 +109,7 @@
 - [x] `node tools/verificar-independencia.mjs numerandus/corrida-maluca` **aprovado**
 - [x] `node tools/teste-entrega-avulsa.mjs numerandus/corrida-maluca` **aprovado** (11/11)
 - [x] Sem requisição externa (entrega avulsa)
-- [x] Fluxo completo de telas percorrido, sem travar (`teste-jogabilidade-corrida-maluca.mjs`, 76 verificações,
+- [x] Fluxo completo de telas percorrido, sem travar (`teste-jogabilidade-corrida-maluca.mjs`, 78 verificações,
       6 vezes seguidas sem falha)
 - [x] **Vitória:** os números batem com o jogado
 - [x] **Derrota:** registra, com a casa alcançada
