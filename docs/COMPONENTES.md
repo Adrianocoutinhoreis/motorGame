@@ -384,6 +384,7 @@ O cenário das telas, todo vetorial. Três temas, escolhidos por `config.tema`:
 | `'mesa'` | ardósia escura neutra; nas telas de vitrine, dois pratinhos C/D/U e grãos apagados (0,08–0,14), parados | Pratinho CDU |
 | `'feltro'` | feltro verde-azulado escuro e dessaturado; nas telas de vitrine, pedras de dominó apagadas (0,05–0,10), paradas, deitadas em ângulos variados | Subtraindo o Dominó |
 | `'tabuleiro'` | degradê suave de azul-ardósia a índigo; nas telas de vitrine, iluminação central (um halo atrás da placa e dos botões) e dados, cartas (o verso em roleta colorida) e estrelas flutuando devagar nas margens (0,10–0,15, períodos de 6 a 9 s, sem piscar); a placa do título (`PlacaTituloTabuleiro`) é o tabuleiro branco de borda azul, só com o texto | Corrida Maluca |
+| `'cabo'` | campo de gincana: céu azul-claro com as nuvens do motor, duas colinas e um gramado em degradê com faixas de corte (sem sol). Com `campoMenu: true` (só o menu), a linha tracejada do centro atrás da placa e dos botões e uma bandeira em cada extremo (vermelha à esquerda, de madeira à direita). Com `campoJogo: true` (só a partida), a linha tracejada do centro e 12 flores e tufos fixos no gramado aberto, longe dos textos; a placa do título é a `PlacaTituloLimpa` | Cabo de Guerra |
 
 O tema `'formas'` aceita **`mostrarPecas`**. Com `true` (padrão) as quatro peças do
 jogo flutuam no céu nas cores delas; a cena de partida passa **`false`**, porque

@@ -212,7 +212,7 @@ export class ResultScreen extends Scene {
     // ela, qualquer jogo que NÃO defina `config.corCeuTopo`/`corCeuBase`
     // (a maioria) cairia num `ReferenceError` (`temaInterior is not defined`)
     // bem aqui, na primeira linha da tela de resultado.
-    const temaInterior = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro'].includes(config.tema ?? 'construcao');
+    const temaInterior = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro', 'cabo'].includes(config.tema ?? 'construcao');
 
     // Mesmo canteiro de obras do menu e da partida, em vez de um céu vazio.
     // A tela de resultado é a última coisa que a criança vê da atividade; com
@@ -243,7 +243,7 @@ export class ResultScreen extends Scene {
       corCeuBase: config.corCeuBase ?? (temaInterior ? undefined : ((venceu || empatou) ? cores.ceu : '#CBD5E1')),
       mostrarSol: venceu,
       mostrarDecoracoes: config.mostrarDecoracoes ?? true,
-      mostrarChao: config.mostrarChao ?? true,
+      mostrarChao: config.mostrarChao ?? (config.tema !== 'cabo'),
     }));
 
     // O painel precisa deixar espaço para a fileira de botões ABAIXO dele sem

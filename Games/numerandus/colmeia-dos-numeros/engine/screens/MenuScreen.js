@@ -58,13 +58,20 @@ class PlacaTituloLimpa extends Node {
     ctx.lineTo(l - raio.lg, 2);
     ctx.stroke();
 
-    // Título
+    // Título. Sem subtítulo, ele ganha a placa toda: maior (até 78 px, encolhendo só se não couber)
+    // e no centro do painel.
     const txtTitulo = aplicarCaixa(this.titulo);
-    ctx.font = `${tipografia.pesoForte} 50px ${tipografia.familia}`;
+    const semSub = !this.subtitulo;
+    let tamTitulo = semSub ? 78 : 50;
+    ctx.font = `${tipografia.pesoForte} ${tamTitulo}px ${tipografia.familia}`;
+    if (semSub) {
+      tamTitulo = Math.min(tamTitulo, Math.floor((tamTitulo * (l - 72)) / Math.max(1, ctx.measureText(txtTitulo).width)));
+      ctx.font = `${tipografia.pesoForte} ${tamTitulo}px ${tipografia.familia}`;
+    }
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = cores.tinta;
-    ctx.fillText(txtTitulo, l / 2, alturaPainel * 0.40);
+    ctx.fillText(txtTitulo, l / 2, semSub ? alturaPainel * 0.52 : alturaPainel * 0.40);
 
     // Subtítulo, numa faixa discreta
     if (this.subtitulo) {
@@ -405,7 +412,8 @@ export class MenuScreen extends Scene {
       corCeuTopo: config.corCeuTopo,
       corCeuBase: config.corCeuBase,
       mostrarDecoracoes: config.mostrarDecoracoes ?? true,
-      mostrarChao: config.mostrarChao ?? true,
+      mostrarChao: config.mostrarChao ?? (config.tema !== 'cabo'),
+      campoMenu: config.tema === 'cabo',
     }));
 
     // ---------------------------------------------------------------- título
@@ -420,6 +428,7 @@ export class MenuScreen extends Scene {
       : config.tema === 'espaco' ? PlacaTituloLimpa
       : config.tema === 'mesa' ? PlacaTituloLimpa
       : config.tema === 'feltro' ? PlacaTituloLimpa
+      : config.tema === 'cabo' ? PlacaTituloLimpa
       : config.tema === 'tabuleiro' ? PlacaTituloTabuleiro
       : PlacaTituloMadeira;
     this.placaTitulo = new Placa(

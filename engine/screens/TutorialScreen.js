@@ -90,7 +90,7 @@ export class TutorialScreen extends Scene {
         corCeuTopo: config.corCeuTopo,
         corCeuBase: config.corCeuBase,
         mostrarDecoracoes: config.mostrarDecoracoes ?? true,
-        mostrarChao: config.mostrarChao ?? true,
+        mostrarChao: config.mostrarChao ?? (config.tema !== 'cabo'),
       }));
     }
 
@@ -241,7 +241,7 @@ export class TutorialScreen extends Scene {
     // o tema 'quarto' termina na prateleira de madeira ESCURA (ver
     // `Background._chao`), e essa faixa cai bem onde este texto fica — a
     // mesma tinta escura ficaria ilegível ali também.
-    const sobreFundoEscuro = this.aoFecharAjuda || config.tema === 'quarto' || config.tema === 'trilhas' || config.tema === 'espaco' || config.tema === 'mesa' || config.tema === 'feltro' || config.tema === 'tabuleiro';
+    const sobreFundoEscuro = this.aoFecharAjuda || config.tema === 'quarto' || config.tema === 'trilhas' || config.tema === 'espaco' || config.tema === 'mesa' || config.tema === 'feltro' || config.tema === 'tabuleiro' || config.tema === 'cabo';
     // `+96` deixava o contador quase colado no JOGAR/nas setas: o `Button`
     // desenha ~19px ABAIXO da própria altura declarada (aba 3D de relevo em
     // +8 e sombra com desfoque 12 — ver `Button.desenhar` e o comentário

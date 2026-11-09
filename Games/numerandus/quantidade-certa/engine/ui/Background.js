@@ -13,7 +13,7 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro'.
+ * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro', 'cabo'.
  */
 
 /** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
@@ -25,22 +25,26 @@ export class Background extends Node {
 
     this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa' | 'feltro' | 'tabuleiro'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : this.tema === 'tabuleiro' ? '#1E2740' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : this.tema === 'tabuleiro' ? '#1E2740' : this.tema === 'cabo' ? '#0E3A2D' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : this.tema === 'tabuleiro' ? '#28334F' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : this.tema === 'tabuleiro' ? '#28334F' : this.tema === 'cabo' ? '#1A5A43' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
-    this.mostrarSol = opcoes.mostrarSol ?? !TEMAS_INTERIOR.includes(this.tema);
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro' && this.tema !== 'tabuleiro');
+    this.mostrarSol = opcoes.mostrarSol ?? (!TEMAS_INTERIOR.includes(this.tema) && this.tema !== 'cabo');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro' && this.tema !== 'tabuleiro' && this.tema !== 'cabo');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
      *  nenhuma. Existe porque um jogo pode preferir o cenário mais limpo,
      *  sem o piso disputando espaço com o conteúdo da partida. */
-    this.mostrarChao = opcoes.mostrarChao ?? true;
+    this.mostrarChao = opcoes.mostrarChao ?? (this.tema !== 'cabo');
+    /** Tema 'cabo', só na partida: a linha do centro e as flores no gramado aberto. */
+    this.campoJogo = opcoes.campoJogo ?? false;
+    /** Tema 'cabo', só no MENU: a linha do centro atrás dos botões e uma bandeira em cada ponta. */
+    this.campoMenu = opcoes.campoMenu ?? false;
     /**
      * `(ctx) => void` opcional, chamado no fim de `pintarSangria`, em
      * coordenadas LÓGICAS. Para a cena prolongar pelas barras do letterbox um
@@ -237,6 +241,47 @@ export class Background extends Node {
         halo.addColorStop(1, 'rgba(60, 80, 160, 0)');
         ctx.fillStyle = halo;
         ctx.fillRect(px, py, pl, pa);
+      }
+      return;
+    }
+
+    if (this.tema === 'cabo') {
+      // Um campo de gincana, alegre (jogo infantil): céu azul-claro, duas colinas ao fundo e um gramado
+      // com faixas de corte que escurece para baixo (o texto branco da partida fica sobre a parte verde).
+      // Tudo é degradê e curva definidos sobre a caixa LÓGICA: a sangria do letterbox continua sem costura.
+      const hz = a * (262 / 720);
+      const ceu = ctx.createLinearGradient(0, 0, 0, hz + 10);
+      ceu.addColorStop(0, '#6EC3EE');
+      ceu.addColorStop(1, '#D3F1F4');
+      ctx.fillStyle = ceu;
+      ctx.fillRect(px, py, pl, hz + 10 - py);
+      const colina = (cor, base, amp1, f1, p1, amp2, f2, p2) => {
+        ctx.fillStyle = cor;
+        ctx.beginPath();
+        ctx.moveTo(px, py + pa);
+        for (let x = px; x <= px + pl + 16; x += 16) {
+          ctx.lineTo(x, base + Math.sin(x * f1 + p1) * amp1 + Math.sin(x * f2 + p2) * amp2);
+        }
+        ctx.lineTo(px + pl, py + pa);
+        ctx.closePath();
+        ctx.fill();
+      };
+      colina('#9DDDB6', hz - 26, 20, 0.0055, 1.2, 6, 0.015, 0);
+      colina('#6CC893', hz - 6, 14, 0.007, 3.4, 4, 0.02, 1);
+      const relva = ctx.createLinearGradient(0, hz, 0, a);
+      relva.addColorStop(0, '#4FB880');
+      relva.addColorStop(0.45, '#2F9769');
+      relva.addColorStop(1, '#1E7452');
+      ctx.fillStyle = relva;
+      ctx.fillRect(px, hz + 8, pl, py + pa - hz - 8);
+      // As faixas de corte: bandas que engrossam para baixo (perspectiva), uma sim, uma não.
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+      let fy = hz + 8;
+      let fh = 9;
+      for (let k = 0; fy < py + pa; k++) {
+        if (k % 2) ctx.fillRect(px, fy, pl, fh);
+        fy += fh;
+        fh *= 1.2;
       }
       return;
     }
@@ -444,6 +489,8 @@ export class Background extends Node {
       if (this.tema === 'feltro') this._desenharDecoracoesFeltro(ctx, l, a);
       if (this.tema === 'tabuleiro') this._desenharDecoracoesTabuleiro(ctx, l, a);
     }
+    if (this.tema === 'cabo' && this.campoJogo) this._desenharCampoCabo(ctx, l, a);
+    if (this.tema === 'cabo' && this.campoMenu) this._desenharMenuCabo(ctx, l, a);
     if (this.mostrarChao) this._chao(ctx);
   }
 
@@ -650,6 +697,126 @@ export class Background extends Node {
       }
       ctx.restore();
     }
+  }
+
+  /**
+   * Tema 'cabo' — o Cabo de Guerra, só na PARTIDA (`campoJogo`): a linha branca tracejada do centro,
+   * no gramado entre a tira e a barra de baixo, e algumas flores e tufos de grama.
+   *
+   * **As flores nascem só no gramado aberto** (x 300–980, y 448–566 da tela 1280 × 720): nunca ao lado
+   * nem embaixo dos nomes ("VOCÊ", "COMPUTADOR", "FALTAM"), da barra de ação ou da linha do centro, e
+   * a pelo menos 70 px uma da outra. Pouca coisa, para não poluir. Posições fixas (semente 7): são as
+   * mesmas em toda abertura. Nada pisca, nada se mexe.
+   */
+  _desenharCampoCabo(ctx, l, a) {
+    const k = a / 720;
+    const hz = 262 * k;
+    ctx.save();
+    ctx.setLineDash([22, 18]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(l / 2, hz + 8);
+    ctx.lineTo(l / 2, 590 * k);
+    ctx.stroke();
+    ctx.restore();
+    if (!this._flores) this._flores = Background._sortearFloresCabo();
+    for (const f of this._flores) {
+      ctx.save();
+      ctx.translate(f.x * (l / 1280), f.y * k);
+      if (f.tipo === 'flor') {
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = f.cor;
+        for (let i = 0; i < 5; i++) {
+          const ang = i * 1.2566;
+          ctx.beginPath();
+          ctx.arc(Math.cos(ang) * 6, Math.sin(ang) * 6, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#F2A81D';
+        ctx.beginPath();
+        ctx.arc(0, 0, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = 'rgba(14, 70, 46, 0.45)';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        for (const [fim, topo, ini] of [[-7, -14, -4], [0, -18, 0], [7, -13, 4]]) {
+          ctx.beginPath();
+          ctx.moveTo(ini, 0);
+          ctx.quadraticCurveTo(fim * 0.4, -8, fim, topo);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Tema 'cabo', só no MENU (`campoMenu`): a linha branca tracejada do centro, que desce do horizonte
+   * até o pé da tela e passa ATRÁS da placa e dos botões, e uma bandeira em cada extremo do campo: a
+   * vermelha do lado da criança (esquerda) e a cor de madeira do lado do computador (direita), as
+   * mesmas cores das pontas da tira. As bandeiras só ondulam um pouco (período de 5 s, sem piscar).
+   */
+  _desenharMenuCabo(ctx, l, a) {
+    const k = a / 720;
+    ctx.save();
+    ctx.setLineDash([22, 18]);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(l / 2, 262 * k + 8);
+    ctx.lineTo(l / 2, a);
+    ctx.stroke();
+    ctx.restore();
+    const bandeira = (x, cor, fase) => {
+      const base = 660 * k;
+      const alto = 250 * k;
+      const onda = Math.sin((this._t / 5) * Math.PI * 2 + fase) * 6;
+      ctx.save();
+      ctx.fillStyle = 'rgba(8, 50, 34, 0.28)';
+      ctx.beginPath();
+      ctx.ellipse(x, base + 4, 34, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#EFE7D4';
+      ctx.beginPath();
+      ctx.roundRect(x - 5, base - alto, 10, alto, 5);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, base - alto, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = cor;
+      ctx.beginPath();
+      ctx.moveTo(x + 5, base - alto + 10);
+      ctx.quadraticCurveTo(x + 60, base - alto + 14 + onda, x + 118, base - alto + 52 + onda);
+      ctx.quadraticCurveTo(x + 60, base - alto + 78, x + 5, base - alto + 92);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    };
+    bandeira(l * 0.07, '#D93030', 0);
+    bandeira(l * 0.93 - 118, '#D1AD75', 1.7);
+  }
+
+  /** As posições das flores do campo (coordenadas 1280 × 720), sempre as mesmas. */
+  static _sortearFloresCabo() {
+    let semente = 7;
+    const rnd = () => {
+      semente = (semente * 16807) % 2147483647;
+      return (semente - 1) / 2147483646;
+    };
+    const livre = { x0: 300, x1: 980, y0: 448, y1: 566 };
+    const proibido = { x0: 600, x1: 680 }; // a linha do centro
+    const cores = ['#FFFFFF', '#FFE27A', '#FFB3C7'];
+    const flores = [];
+    for (let n = 0; flores.length < 12 && n < 4000; n++) {
+      const x = livre.x0 + rnd() * (livre.x1 - livre.x0);
+      const y = livre.y0 + rnd() * (livre.y1 - livre.y0);
+      if (x > proibido.x0 && x < proibido.x1) continue;
+      if (flores.some((f) => Math.hypot(f.x - x, f.y - y) < 70)) continue;
+      flores.push({ x, y, tipo: flores.length % 3 === 2 ? 'tufo' : 'flor', cor: cores[flores.length % 3] });
+    }
+    return flores;
   }
 
   /**

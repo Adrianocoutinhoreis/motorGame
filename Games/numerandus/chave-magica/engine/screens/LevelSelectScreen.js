@@ -145,7 +145,7 @@ export class LevelSelectScreen extends Scene {
       corCeuTopo: config.corCeuTopo,
       corCeuBase: config.corCeuBase,
       mostrarDecoracoes: config.mostrarDecoracoes ?? true,
-      mostrarChao: config.mostrarChao ?? true,
+      mostrarChao: config.mostrarChao ?? (config.tema !== 'cabo'),
     }));
 
     this.adicionar(new TextNode('Escolha um nível', {
