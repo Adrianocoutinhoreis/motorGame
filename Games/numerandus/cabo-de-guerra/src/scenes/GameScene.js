@@ -24,7 +24,7 @@ const BARRA = { x: 170, y: 586, l: 940, a: 104 };
 const DADO = { cx: 250, cy: 638, lado: 88 };
 const FAIXA = { x: 330, y: 604, l: 400, a: 68 };
 const BOTAO_DADO = { x: 770, y: 598, l: 310, a: 80 };
-const CARTA = { x: 130, y: 254, l: 1020, a: 464 };
+const CARTA = { x: 130, y: 250, l: 1020, a: 464 };
 /** Dentro da carta (coordenadas da carta): onde fica cada coisa. */
 const C = {
   tipo: 34, pergunta: 78, larguraTexto: 780,
@@ -35,6 +35,40 @@ const C = {
   /** O retorno: na vez da criança sobe para perto das respostas; no computador fica logo abaixo do "diz". */
   retornoPergunta: 312, retornoComputador: 290, continuarPergunta: 380,
 };
+/** Quanto falta para alguém ganhar, no singular e no plural: "FALTA 1", "FALTAM 7", "CHEGOU!". */
+const textoFalta = (n) => (n <= 0 ? 'CHEGOU!' : n === 1 ? 'FALTA 1' : `FALTAM ${n}`);
+
+/** Uma pergunta que é só uma conta ("3 × 6 = ?"): sem nenhuma letra. */
+const soConta = (txt) => !/\p{L}/u.test(txt);
+
+/**
+ * Desenha uma conta em DESTAQUE, centrada em (cx, cy): números grandes e escuros, sinais (× + =) em
+ * marrom mais suave e o "?" em azul. Encolhe só se não couber em `larguraMax`.
+ */
+function desenharConta(ctx, texto, cx, cy, tamMax, larguraMax, corResultado = null) {
+  const partes = texto.split(' ');
+  const fonte = (t) => `800 ${t}px ${FONTE}`;
+  const medir = (t) => {
+    ctx.font = fonte(t);
+    const esp = t * 0.3;
+    return partes.reduce((s, p) => s + ctx.measureText(p).width, 0) + esp * (partes.length - 1);
+  };
+  const tam = Math.min(tamMax, Math.floor((tamMax * larguraMax) / Math.max(1, medir(tamMax))));
+  const esp = tam * 0.3;
+  ctx.save();
+  ctx.font = fonte(tam);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  let x = cx - medir(tam) / 2;
+  for (const p of partes) {
+    ctx.fillStyle = /\d/.test(p) ? (corResultado && p === partes[partes.length - 1] ? corResultado : CORES.tinta)
+      : p === '?' ? '#2563EB' : CORES.cartaTipo;
+    ctx.fillText(p, x, cy);
+    x += ctx.measureText(p).width + esp;
+  }
+  ctx.restore();
+}
+
 const NOMES = { crianca: 'VOCÊ', computador: 'COMPUTADOR' };
 const outro = (quem) => (quem === 'crianca' ? 'computador' : 'crianca');
 
@@ -82,7 +116,7 @@ class Tira extends Node {
         ctx.restore();
         if (this.nomes) {
           ctx.font = `800 28px ${FONTE}`;
-          const w = Math.max(ctx.measureText(`FALTAM ${n}`).width, ctx.measureText(nome).width * 22 / 28) + 40;
+          const w = Math.max(ctx.measureText(textoFalta(n)).width, ctx.measureText(nome).width * 22 / 28) + 40;
           const x0 = alin === 'left' ? x - 14 + 8 : x + 14 - 8 - w;
           const top = yb - 28;
           ctx.save();
@@ -102,11 +136,12 @@ class Tira extends Node {
           ctx.fill();
           ctx.restore();
           escrever(ctx, nome, x0 + w / 2, yb, 22, '#FFFFFF', 'center', 800);
-          escrever(ctx, `FALTAM ${n}`, x0 + w / 2, yb + 30, 28, '#FFFFFF', 'center');
+          escrever(ctx, textoFalta(n), x0 + w / 2, yb + 30, 28, '#FFFFFF', 'center');
         }
       } else if (this.nomes) {
-        escrever(ctx, nome, x, yb, 22, CORES.tintaSuave, alin, 700);
-        escrever(ctx, `FALTAM ${n}`, x, yb + 30, 28, CORES.tintaClara, alin);
+        // Branco (3,5:1 sobre o gramado): o cinza-esverdeado de antes dava 1,7:1.
+        escrever(ctx, nome, x, yb, 24, '#FFFFFF', alin, 700);
+        escrever(ctx, textoFalta(n), x, yb + 30, 28, '#FFFFFF', alin);
       }
     }
   }
@@ -306,7 +341,9 @@ class PainelCarta extends Node {
     this._limpar();
     this.carta = carta;
     this.dado = dado;
-    const { y, l, a, gap } = C.opcoes;
+    const { l, a, gap } = C.opcoes;
+    // A conta grande ocupa mais altura: as respostas descem um pouco para a conta respirar.
+    const y = C.opcoes.y + (soConta(carta.pergunta) ? 16 : 0);
     const x0 = CARTA.x + (CARTA.l - (3 * l + 2 * gap)) / 2;
     carta.opcoes.forEach((op, i) => {
       const b = this._botao(new BotaoOpcao(op, {
@@ -343,7 +380,8 @@ class PainelCarta extends Node {
     if (this.diz) for (const b of this.botoes) b.visible = false;
     this.retorno = { bom, titulo, detalhe, k: 0 };
     Tween.para(this.retorno, { k: 1 }, 250, Easing.suaveSaida);
-    const { y, l, a } = { ...C.continuar, y: C.continuarPergunta };
+    // Com a conta grande no retorno (vez da criança), o CONTINUAR desce um pouco para o texto respirar.
+    const { y, l, a } = { ...C.continuar, y: C.continuarPergunta + (!this.diz && soConta(titulo) ? 10 : 0) };
     this._botao(new Button({
       // Texto escuro no verde (6,5:1), como o PRONTO do Subtraindo o Dominó: o branco dá 2,3:1.
       rotulo: 'CONTINUAR', variante: 'sucesso', corTexto: '#052E16', x: CARTA.x + (CARTA.l - l) / 2, y: CARTA.y + y, largura: l, altura: a,
@@ -382,7 +420,8 @@ class PainelCarta extends Node {
     ctx.translate(C.dado.x, C.dado.y);
     desenharDado(ctx, C.dado.lado, this.dado);
     ctx.restore();
-    escreverParagrafo(ctx, this.carta.pergunta, CARTA.l / 2 - 40, C.pergunta, C.larguraTexto, 36, CORES.tinta, 1.18);
+    if (soConta(this.carta.pergunta)) desenharConta(ctx, this.carta.pergunta, CARTA.l / 2 - 40, 96, 80, C.larguraTexto);
+    else escreverParagrafo(ctx, this.carta.pergunta, CARTA.l / 2 - 40, C.pergunta, C.larguraTexto, 36, CORES.tinta, 1.18);
     if (this.diz) {
       const texto = this.diz.sub ? `${this.diz.texto} ${this.diz.sub}` : this.diz.texto;
       ctx.font = `800 30px ${FONTE}`;
@@ -399,10 +438,16 @@ class PainelCarta extends Node {
     }
     if (this.retorno) {
       const r = this.retorno;
-      const yr = this.diz ? C.retornoComputador : C.retornoPergunta;
+      const yr = this.diz ? C.retornoComputador : C.retornoPergunta + (soConta(r.titulo) ? 14 : 0);
       ctx.globalAlpha *= r.k;
-      escreverParagrafo(ctx, r.titulo, CARTA.l / 2, yr - 4, CARTA.l - 80, 30, r.bom ? CORES.okTexto : CORES.erroTexto, 1.15);
-      escreverParagrafo(ctx, r.detalhe, CARTA.l / 2, yr + 34, CARTA.l - 80, 24, CORES.tinta, 1.15, 700);
+      if (soConta(r.titulo)) {
+        // A conta certa, quando é só uma conta ("3 × 6 = 18"), também em destaque.
+        desenharConta(ctx, r.titulo, CARTA.l / 2, yr - 2, 50, CARTA.l - 80, CORES.okTexto);
+        escreverParagrafo(ctx, r.detalhe, CARTA.l / 2, yr + 40, CARTA.l - 80, 24, CORES.tinta, 1.15, 700);
+      } else {
+        const nl = escreverParagrafo(ctx, r.titulo, CARTA.l / 2, yr - 4, CARTA.l - 80, 30, r.bom ? CORES.okTexto : CORES.erroTexto, 1.15);
+        escreverParagrafo(ctx, r.detalhe, CARTA.l / 2, yr + 34 + (nl - 1) * 35, CARTA.l - 80, 24, CORES.tinta, 1.15, 700);
+      }
     }
     ctx.restore();
   }
@@ -483,6 +528,8 @@ export class GameScene extends Scene {
     this.placar = new ScoreSystem({ total: this.passos, nivel: this.nivel.id ?? 1, vidas: 0 });
     /** A posição do nó: 0 é a ponta da criança, `passos` o centro, `2 × passos` a ponta do computador. */
     this.pos = this.passos;
+    /** O mais perto da ponta dela que a criança chegou (0 a passos − 1): é a nota de uma derrota. */
+    this.melhor = 0;
     this.fase = 'dado';
     this.vez = null;
     this.usadas = [];
@@ -602,6 +649,9 @@ export class GameScene extends Scene {
     const faltamIds = ids.filter((id) => !this.audio?.temSom(id));
     if (faltamIds.length) {
       const frase = pedacos.map((p) => (p.numero != null ? String(p.numero) : p.texto)).join(' ');
+      this._avisadas ??= new Set();
+      if (this._avisadas.has(frase)) return;
+      this._avisadas.add(frase);
       console.warn(`[cabo-de-guerra] frase sem gravação completa (faltam: ${faltamIds.join(', ')}); fica em silêncio: "${frase}"`);
       return;
     }
@@ -717,7 +767,7 @@ export class GameScene extends Scene {
 
   /** O que acontece com o nó, dito em palavras, para o retorno da carta. */
   _frasePuxada(quem) {
-    const d = this.vez.dado;
+    const d = Math.abs(this.pos - this.vez.alvo) || this.vez.dado;
     const casas = `${d} ${d === 1 ? 'CASA' : 'CASAS'}`;
     return quem === 'crianca' ? `A FICHA VEM ${casas} PARA VOCÊ!` : `A FICHA VAI ${casas} PARA O COMPUTADOR.`;
   }
@@ -817,6 +867,7 @@ export class GameScene extends Scene {
       return;
     }
     this.pos += quem === 'crianca' ? -1 : 1;
+    this._registrarProgresso();
     this._atualizarLados();
     Tween.removerDe(this.no);
     Tween.para(this.no, { x: this.trilha.xs[this.pos] }, this.regras.passoMs * 0.8, Easing.suave);
@@ -862,6 +913,11 @@ export class GameScene extends Scene {
     Tween.de(this.relogio).esperar(900).chamar(() => this._terminar(this.vez.quem));
   }
 
+  /** Guarda o mais perto da ponta da criança que o nó já esteve (o computador puxar de volta não apaga). */
+  _registrarProgresso() {
+    this.melhor = Math.max(this.melhor, progressoDaCrianca(this.pos, this.passos));
+  }
+
   _passarAVez() {
     this._comecarVez(outro(this.vez.quem));
   }
@@ -877,7 +933,9 @@ export class GameScene extends Scene {
     if (this._fimResolvido) return;
     this._fimResolvido = true;
     const vitoria = vencedor === 'crianca';
-    const progresso = progressoDaCrianca(this.pos, this.passos);
+    // Vitória: o nó chegou (passos). Derrota: o melhor ponto a que a criança chegou, nunca a posição final
+    // (o computador só vence com o nó na ponta DELE, e dali a conta daria sempre 0).
+    const progresso = vitoria ? this.passos : Math.min(this.melhor, this.passos - 1);
     this.placar.acertos = vitoria ? this.passos : progresso;
     const porTipo = {};
     for (const [g, v] of Object.entries(this.stats.porGrupo)) porTipo[g] = `${v.certas}/${v.respondidas}`;
@@ -905,7 +963,9 @@ export class GameScene extends Scene {
     } else if (this.fase === 'puxando') {
       // O nó vai direto ao alvo, e a partida segue dali.
       this.pos = this.vez.alvo;
+      this._registrarProgresso();
       this._atualizarLados();
+      Tween.removerDe(this.relogio); // a cadeia de passos antiga não pode seguir em paralelo
       Tween.removerDe(this.no);
       this._colocarNo(this.pos);
       this._passo();

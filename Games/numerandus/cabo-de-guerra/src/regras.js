@@ -241,7 +241,7 @@ export function gerarCarta(grupo, cfg, aleatorio = Math.random) {
       certa,
       opcoes: opcoesNumericas(certa, certa + 1, [certa - 1, a * b], aleatorio).map((v) => ({ valor: v, texto: String(v), sub: p.un })),
       conta: `${a} + ${b} = ${certa} ${p.un}`,
-      fala: [{ id: 'problema', texto: pergunta.charAt(0) + pergunta.slice(1).toLowerCase() }],
+      fala: [{ id: 'problemaSoma', texto: pergunta.charAt(0) + pergunta.slice(1).toLowerCase() }],
     };
   }
   if (grupo === 'garrafas') {
@@ -256,7 +256,7 @@ export function gerarCarta(grupo, cfg, aleatorio = Math.random) {
       certa,
       opcoes: opcoesNumericas(certa, g + n, [certa + g, certa - n], aleatorio).map((v) => ({ valor: v, texto: String(v), sub: p.un })),
       conta: `${n} × ${g} = ${certa} ${p.un}`,
-      fala: [{ id: 'problema', texto: pergunta.charAt(0) + pergunta.slice(1).toLowerCase() }],
+      fala: [{ id: 'problemaRecipientes', texto: pergunta.charAt(0) + pergunta.slice(1).toLowerCase() }],
     };
   }
   if (grupo === 'dobro' || grupo === 'triplo') {
@@ -305,7 +305,7 @@ export function gerarCarta(grupo, cfg, aleatorio = Math.random) {
       // A confusão: o número seguinte comum (+1), sem olhar o passo da sequência.
       opcoes: comNumeros(opcoesNumericas(certa, ultimo + dir, [certa + 1, certa - 1, ultimo + dir * 2 * passo], aleatorio)),
       conta: `A SEQUÊNCIA ${desce ? 'DIMINUI' : 'AUMENTA'} DE ${passo} EM ${passo}: ${[...termos, certa].join(', ')}`,
-      fala: [{ id: 'problema', texto: `${termos.join(', ')}. Qual número vem depois?` }],
+      fala: [{ id: 'problemaSequencia', texto: `${termos.join(', ')}. Qual número vem depois?` }],
     };
   }
   if (grupo === 'adicaoRepetida') {
@@ -320,7 +320,7 @@ export function gerarCarta(grupo, cfg, aleatorio = Math.random) {
       // A confusão: somar o número com a quantidade de parcelas (4 + 3 em vez de 4 + 4 + 4).
       opcoes: comNumeros(opcoesNumericas(certa, n + k, [certa - n, certa + n, certa + 1], aleatorio)),
       conta: `${parcelas} = ${certa}, OU SEJA, ${k} × ${n} = ${certa}`,
-      fala: [{ id: 'problema', texto: `${Array(k).fill(n).join(' mais ')}. Quanto é?` }],
+      fala: [{ id: 'problemaAdicao', texto: `${Array(k).fill(n).join(' mais ')}. Quanto é?` }],
     };
   }
   throw new Error(`[cabo-de-guerra] tipo de carta desconhecido: ${grupo}`);

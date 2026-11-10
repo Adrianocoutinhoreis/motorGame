@@ -204,7 +204,7 @@ silêncio e o console diz o texto. Frases em pedaços **tocam inteiras ou não t
 | Números | `numero11`–`numero999` (ao menos os de 11 a 100 e os que as cartas pedem) | a pergunta e a resposta do computador nas cartas de número | **Não** — gravar |
 | Falas curtas | `suaVez`, `vezDoComputador`, `muitoBem` | troca de vez, carta certa | **Sim** — do Jogo dos Blocos via Subtraindo o Dominó, não ouvidas |
 | Começo das perguntas | `quantoE`, `vezes`, `qualOAntecessorDe`, `qualOSucessorDe` | a pergunta em pedaços ("quanto é" + número + "vezes" + número) | **Não** — gravar |
-| Perguntas inteiras | `unidade_<id>` (suco, balde, leite, arroz, melancia, feijao) e `problema` | cartas de unidade, soma e garrafas | **Não** — gravar (formato dos problemas em aberto) |
+| Perguntas inteiras | `unidade_<id>` (suco, balde, leite, arroz, melancia, feijao) e `problemaSoma`, `problemaRecipientes`, `problemaSequencia`, `problemaAdicao` | cartas de unidade, soma e garrafas | **Não** — gravar (formato dos problemas em aberto) |
 | Falas curtas | `quaseLa`, `oComputadorDiz`, `eleAcertou`, `isso`, `olheDeNovo` | carta errada, conferência | **Não** — gravar |
 | Respostas em palavras | `resposta_litros`, `resposta_quilogramas`, `resposta_metros`, `resposta_centímetros` | o computador respondendo uma carta de unidade | **Não** — gravar |
 | Tutorial | `tutorialTela1`–`5` | cada passo | **Não** — gravar (os textos estão no `config.js`) |

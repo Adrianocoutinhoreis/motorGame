@@ -495,7 +495,11 @@ try {
   // A ajuda por cima da carta do computador.
   await forcarComputador(1, false);
   await esperarAte(`c.fase === 'conferir' && c.painel.alpha >= 1`, 10000);
+  // A narração do tutorial: os 5 arquivos carregaram e a ajuda fala o passo 1 ao abrir.
+  await jg(`c.__tut = []; const f = c.audio.falar.bind(c.audio); c.audio.falar = (id, o) => { c.__tut.push(id); return f(id, o); }; return 1;`);
   checar('a ajuda abre por cima da carta', await tocarNo(ICONE('tutorial')) && (await estado()).pausada === true);
+  checar('os 5 áudios do tutorial carregaram (tutorialTela1..5)', await jg(`return [1, 2, 3, 4, 5].every((i) => c.audio.temSom('tutorialTela' + i));`));
+  checar('a ajuda fala o passo 1 do tutorial ao abrir', await esperarAte(`(c.__tut || []).includes('tutorialTela1')`, 3000), JSON.stringify(await jg(`return c.__tut;`)));
   await esperar(800);
   await captura('08-ajuda');
   checar('o tutorial tem 5 passos', await jg(`return c.config.tutorial.length === 5;`));
@@ -526,6 +530,8 @@ try {
   await captura('09-chegada');
   checar('e a partida vai direto ao resultado (vitória)', await esperarAte(`c.constructor.name === 'ResultScreen'`, 5000)
     && await jg(`const r = window.__fim7; return !!r && r.vitoria === true && r.acertos === 7 - r.erros && r.extras?.casasPuxadas === 7;`), JSON.stringify(await jg(`return window.__fim7;`)));
+  await esperar(900);
+  await captura('09d-resultado-vitoria'); // a vitória não tem sol (o sol do tema "campo" não combina com o campo do Cabo de Guerra)
 
   // --------------------------------------------------- 7c. a chegada do computador
   console.log('\n7c. A chegada do computador: ele também vence na hora, sem carta');
@@ -549,6 +555,22 @@ try {
     await esperarAte(`c.constructor.name === 'ResultScreen'`, 5000)
       && await jg(`const r = window.__fim7c; return !!r && r.vitoria === false && r.acertos === 0 && r.extras?.casasPuxadas === 0;`),
     JSON.stringify(await jg(`return window.__fim7c;`)));
+
+  // --------------------------------------------------- 7d. a derrota guarda o MELHOR ponto da criança
+  console.log('\n7d. Derrota depois de avançar: a nota é o melhor ponto a que a criança chegou (não 0)');
+  await novaPartida(1);
+  await jg(`${RAPIDO} c.regras.falaMaxMs = 0; window.__fim7d = null; const ir = c.irPara.bind(c); c.irPara = (n, d) => { window.__fim7d = d?.resultado ?? null; return ir(n, d); }; return 1;`);
+  const p7d = [];
+  p7d.push(await vezDaCrianca(true, 2)); // posição 5: 2 casas à frente
+  p7d.push(await forcarComputador(6), await vezDoComputador(true)); // o computador puxa 6: posição 11
+  p7d.push(await vezDaCrianca(false, 1)); // a criança erra: fica em 11
+  p7d.push(await forcarComputador(6), await vezDoComputador(true)); // 11 + 6 passa de 14: ele chega
+  checar('a criança chegou a 2 casas do centro, o computador puxou de volta e depois venceu',
+    await esperarAte(`c.fase === 'chegou' || c.constructor.name === 'ResultScreen'`, 15000), JSON.stringify({ p7d, e: await estado() }));
+  checar('derrota com 2 casas puxadas: acertos 2 (e não 0), casasPuxadas 2, 1 erro',
+    await esperarAte(`c.constructor.name === 'ResultScreen'`, 6000)
+      && await jg(`const r = window.__fim7d; return !!r && r.vitoria === false && r.acertos === 2 && r.extras?.casasPuxadas === 2 && r.erros === 1;`),
+    JSON.stringify(await jg(`return window.__fim7d;`)));
 
   const guardaPagina = avisos.filter((x) => /watchdog|cão de guarda|travad|resgat/i.test(x));
   checar('nenhum erro de JavaScript na página', erros.length === 0, erros.slice(0, 4).join(' | '));

@@ -324,6 +324,40 @@ try {
     if (oculta === 'visible') nota('o Chrome headless não tornou a aba oculta de verdade: a troca de aba só foi simulada de forma parcial');
   } else checar('troca de aba: abriu a partida', false);
 
+  // =========================================================== E. CONTAS EM DESTAQUE
+  console.log('\nE. Cartas que são só uma conta: capturas da pergunta e do retorno');
+  if (await abrirPartida(3)) {
+    await jg(RAPIDO + ' return 1;');
+    const conta = async (grupo, cfg, nome, errar) => {
+      await jg(`c.nivel = { ...c.nivel, cartas: { ${grupo}: ${JSON.stringify(cfg)} } }; c.dadoDeTeste = 2; return 1;`);
+      if (!(await esperarAte("c.fase === 'dado' && c.vez.quem === 'crianca'", 20000))) return false;
+      await tocarNo('c.botaoDado');
+      if (!(await esperarAte("c.fase === 'carta' && c.painel.alpha >= 1", 8000))) return false;
+      await esperar(300);
+      await captura(`E-${nome}-pergunta`);
+      await tocarNo(errar ? OPCAO_ERRADA : OPCAO_CERTA);
+      if (!(await esperarAte("c.fase === 'retorno'", 4000))) return false;
+      await esperar(500);
+      await captura(`E-${nome}-retorno`);
+      await tocarNo(CONTINUAR);
+      return true;
+    };
+    checar('multiplicação 3 × 6: pergunta e retorno (errando) capturados',
+      await conta('multiplicacao', { a: [3], b: [6, 6] }, 'multiplicacao', true));
+    // o computador joga entre uma e outra: confere
+    for (const fim = Date.now() + 25000; Date.now() < fim;) {
+      if (await jg("return c.fase === 'dado' && c.vez.quem === 'crianca';")) break;
+      if (await jg("return c.fase === 'conferir' && c.painel.alpha >= 1;")) {
+        await tocarNo(CONFERIR(true));
+        await esperarAte("c.fase === 'retorno'", 4000);
+        await tocarNo(CONTINUAR);
+      }
+      await esperar(120);
+    }
+    checar('adição repetida 9 + 9 + 9 + 9 + 9 + 9: pergunta e retorno capturados',
+      await conta('adicaoRepetida', { n: [9, 9], k: [6, 6] }, 'adicao', false));
+  } else checar('contas em destaque: abriu a partida', false);
+
   checar('fim: nenhum erro de JavaScript em todo o teste', erros.length === 0, erros.slice(0, 4).join(' | '));
 } catch (e) {
   falharam++;

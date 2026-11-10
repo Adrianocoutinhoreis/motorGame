@@ -103,8 +103,8 @@ export default {
   // --------------------------------------------------------------- tutorial
   /**
    * 5 passos, servindo ao "COMO JOGAR" do menu e à AJUDA dentro da partida (regra RE-05). O motor
-   * fala `titulo + '. ' + texto` de cada passo pelo id `tutorialTela1..5`; a gravação ainda não existe
-   * (pendência no README): sem o arquivo o tutorial fica em silêncio e o console avisa.
+   * fala `titulo + '. ' + texto` de cada passo pelo id `tutorialTela1..5` (gravados em assets/audio/tutorial/)
+   * Sem o arquivo, um passo fica em silêncio e o console avisa.
    */
   tutorial: [
     {
@@ -143,7 +143,7 @@ export default {
   /**
    * Reaproveitados da coleção (mesmos arquivos, fichas em assets/audio-transcricao/): os efeitos, os
    * números "um" a "dez" (a contagem das casas e a resposta do computador) e as falas de troca de vez.
-   * Tudo o que é próprio deste jogo (as perguntas, as unidades, a conferência, o tutorial) ainda não
+   * O tutorial tem narração própria (tutorialTela1..5). Tudo o que falta (as perguntas, as unidades, a conferência) ainda não
    * foi gravado: a cena já pede cada id definitivo (lista no README) e, sem o arquivo, fica muda
    * nesse ponto.
    */
@@ -166,6 +166,12 @@ export default {
     { id: 'suaVez', src: './assets/audio/falas/suaVez.wav' },
     { id: 'vezDoComputador', src: './assets/audio/falas/vezDoComputador.wav' },
     { id: 'muitoBem', src: './assets/audio/falas/muitoBem.wav' },
+    // A narração do tutorial (gravação própria do Cabo de Guerra): um arquivo por passo.
+    { id: 'tutorialTela1', src: './assets/audio/tutorial/01corrida_tut.wav' },
+    { id: 'tutorialTela2', src: './assets/audio/tutorial/02corrida_tut.wav' },
+    { id: 'tutorialTela3', src: './assets/audio/tutorial/03corrida_tut.wav' },
+    { id: 'tutorialTela4', src: './assets/audio/tutorial/04corrida_tut.wav' },
+    { id: 'tutorialTela5', src: './assets/audio/tutorial/05corrida_tut.wav' },
   ],
 
   /** Sem mascote: o nó, o dado e as pontas já são os personagens (mesma decisão da Corrida Maluca). */

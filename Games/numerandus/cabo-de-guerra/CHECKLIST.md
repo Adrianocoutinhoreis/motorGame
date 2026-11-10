@@ -22,7 +22,7 @@
 - [x] **Regras educacionais conferidas** (`docs/REGRAS-EDUCACIONAIS.md`), uma a uma:
   - [x] RE-01 — todo texto da cena e do tutorial está em CAIXA ALTA (`textoEmCaixaAlta: true`; as
         perguntas são geradas em caixa alta e o teste confere 60 000 cartas)
-  - [x] RE-02 — a cena usa `placar.paraAva()`; vitória = meta − erros, derrota = as casas puxadas (conferido no AVA)
+  - [x] RE-02 — a cena usa `placar.paraAva()`; vitória = meta − erros, derrota = o melhor ponto a que a criança chegou (conferido no AVA, teste 7d)
   - [x] RE-03 — "N CASAS" (`unidadePlacar`; captura `10-resultado-1`)
   - [x] RE-04 — a cena **não** passa `estrelas`
   - [x] RE-05 — a ajuda abre por cima da partida sem perdê-la (teste, item 6)
@@ -31,20 +31,21 @@
 
 - [x] Arte desenhada no canvas (tira, nó, dado, carta), coerente com a série
 - [ ] Áudio de narração presente para **todo** conteúdo falado — **não**: perguntas, números de 11 em
-      diante, conferência e o tutorial faltam (lista no README). O jogo funciona mudo nesses pontos.
+      diante e a conferência faltam (lista no README); o tutorial já está narrado. O jogo funciona mudo
+      nesses pontos.
 - [x] Efeitos de acerto, erro e pouso presentes (reaproveitados da coleção)
 - [x] Todo asset está dentro de `assets/`, com caminho relativo (`verificar-independencia.mjs`)
 - [x] Nenhuma fonte, imagem ou som vindo da internet (`teste-entrega-avulsa.mjs`: 67 requisições, todas locais)
 - [x] Origem/licença de cada asset registrada no `README.md` (com as pendências de licença da coleção)
-- [x] Ficha de transcrição para cada um dos 18 áudios
-- [ ] Transcrições **confirmadas ouvindo** — nenhuma foi ouvida (status 🟡 herdado dos jogos de origem)
+- [x] Ficha de transcrição para cada um dos 23 áudios
+- [ ] Transcrições **confirmadas ouvindo** — nenhuma foi ouvida (status 🟡: herdado dos jogos de origem, ou transcrito pelo Whisper no caso do tutorial)
 - [x] Pendências de áudio listadas no `README.md`
 
 ## 3. Telas
 
 - [x] **Menu** com JOGAR e COMO JOGAR (captura `01-menu`)
 - [x] **Tutorial** com 5 passos ilustrados com as peças da partida e puláveis; o 5º diz o desfecho (quem leva
-      a ficha até a própria ponta ganha) — **sem narração ainda**
+      a ficha até a própria ponta ganha), com narração (10/11/2026)
 - [x] **Seleção de nível** (3 níveis; captura `02-niveis`)
 - [x] **Partida** com HUD legível: tira grande no centro, "FALTAM N" embaixo das pontas, barra de baixo (dado, vez, botão),
       pausa, ajuda, som
@@ -75,7 +76,7 @@
 | Campo | Significado aqui | Valor típico |
 |---|---|---|
 | `totalPerguntas` | a meta: os passos da trilha do nível | 7, 8 ou 9 |
-| `acertos` | vitória: meta − cartas erradas; derrota: as casas puxadas | 7 numa vitória limpa no Fácil |
+| `acertos` | vitória: meta − cartas erradas; derrota: o melhor ponto a que a criança chegou | 7 numa vitória limpa no Fácil |
 | `erros` | cartas respondidas erradas pela criança (conferir mal não conta) | 0 a ~5 |
 | `nivel` | 1 Fácil · 2 Médio · 3 Difícil | 1 |
 | `jogo` | slug estável | `cabo-de-guerra` |
@@ -115,7 +116,7 @@
 - [x] Fluxo completo de telas percorrido, sem travar (`teste-jogabilidade-cabo-de-guerra.mjs`, 75
       verificações, 3 vezes seguidas sem falha)
 - [x] **Vitória:** os números batem com o jogado
-- [x] **Derrota:** registra, com as casas puxadas
+- [x] **Derrota:** registra, com o melhor ponto da criança (antes da revisão de 10/11/2026 a derrota saía sempre 0)
 - [x] **Replay sem recarregar:** 2 partidas geram exatamente 2 mensagens
 - [x] **Sem duplicata** parado no resultado
 - [x] `tools/ava-teste.html`: a mensagem chega ao pai e passa em todas as regras

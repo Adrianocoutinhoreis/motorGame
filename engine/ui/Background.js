@@ -452,7 +452,7 @@ export class Background extends Node {
     this._ceu(ctx);
 
     // Sol radiante — nunca nos temas de interior ('quadro', 'bingo', 'quarto')
-    if (this.mostrarSol && !TEMAS_INTERIOR.includes(this.tema)) {
+    if (this.mostrarSol && !TEMAS_INTERIOR.includes(this.tema) && this.tema !== 'cabo') {
       const sx = l * 0.88;
       const sy = a * 0.14;
       const brilho = ctx.createRadialGradient(sx, sy, 10, sx, sy, a * 0.28);

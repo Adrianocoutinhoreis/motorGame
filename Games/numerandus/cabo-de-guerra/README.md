@@ -45,7 +45,8 @@ Vence quem leva a ficha até a própria ponta: chegou, venceu, sem carta.
 - **Fim**: a ficha **chegou a uma ponta**: vence quem a puxou, na hora, sem carta (passar da ponta vale). A
   ponta brilha por um instante e o jogo vai direto ao resultado da série. Não há cronômetro.
 - **Nota** (RE-02): a meta são os passos do nível (7, 8 ou 9). Vitória = meta − cartas erradas;
-  derrota = as casas que a criança puxou do centro. A tela diz "N CASAS" (RE-03).
+  derrota = **o melhor ponto a que a criança chegou**, em casas a partir do centro (de 0 a passos − 1; o computador
+  puxar de volta não apaga). A tela diz "N CASAS" (RE-03).
 
 ## Como rodar
 
@@ -82,7 +83,7 @@ e derrota, os números batendo, sem duplicata). Rodado 3 vezes seguidas sem falh
 | Campo | Valor |
 |---|---|
 | `totalPerguntas` | a meta: 7, 8 ou 9 |
-| `acertos` | vitória: meta − cartas erradas (mínimo 0); derrota: as casas puxadas |
+| `acertos` | vitória: meta − cartas erradas (mínimo 0); derrota: o melhor ponto a que a criança chegou, em casas do centro |
 | `erros` | cartas respondidas erradas pela criança |
 | `cartasPorTipo` | `{ multiplicacao: "certas/respondidas", … }` |
 | `conferencias` / `conferenciasCertas` | quantas respostas do computador ela conferiu, e quantas bem |
@@ -122,10 +123,11 @@ Maluca. Cada um tem ficha em `assets/audio-transcricao/<id>/`. Não há imagem: 
 | `numeros/um.mp3` | `numero1` | contagem | Jogo dos Blocos (locução de 2013, **outro lote**: 40 kbps, 22 kHz) |
 | `numeros/dois.mp3` … `dez.mp3` | `numero2`–`numero10` | contagem (até 6) e a resposta do computador | Jogo dos Blocos via Subtraindo o Dominó (locução de 2013) |
 | `falas/suaVez.wav`, `vezDoComputador.wav`, `muitoBem.wav` | os mesmos | troca de vez, carta certa | Jogo dos Blocos via Subtraindo o Dominó (gravação de 2026) |
+| `tutorial/01corrida_tut.wav` … `05corrida_tut.wav` | `tutorialTela1`–`tutorialTela5` | a narração dos 5 passos do tutorial ("COMO JOGAR" e a ajuda na partida) | gravação própria do Cabo de Guerra, fornecida em 10/11/2026 (24 kHz, mono, 16 bits); quem gravou e a licença **a confirmar** |
 
 ## Pendências conhecidas
 
-- **Narração própria não gravada, inclusive a do tutorial.** A cena e o tutorial já pedem cada id
+- **Narração própria ainda não gravada (o tutorial já tem, desde 10/11/2026).** A cena já pede cada id
   definitivo; sem o arquivo ficam mudos nesse ponto e o console diz o texto. As frases em pedaços (a
   pergunta da carta, a resposta do computador) **tocam inteiras ou não tocam**: enquanto faltar um
   pedaço, nem o número gravado toca sozinho. Falta gravar:
@@ -133,13 +135,11 @@ Maluca. Cada um tem ficha em `assets/audio-transcricao/<id>/`. Não há imagem: 
     `qualAMetadeDe`; as de unidade, uma por carta (`unidade_<id>`, 24 no total: suco, balde, leite,
     piscina, refrigerante, sopa, aquario, tanque, cafe, oleo, vitamina, chuva, arroz, melancia, feijao,
     acucar, farinha, batata, abobora, carne, laranja, cachorro, queijo, mochila) e os problemas
-    (`problema`: soma de medidas, recipientes, sequência e adição repetida; formato em aberto, frase inteira ou em pedaços);
+    (um id por tipo: `problemaSoma`, `problemaRecipientes`, `problemaSequencia`, `problemaAdicao`; formato em aberto, frase inteira ou em pedaços);
   - números de **11 em diante** (as cartas de número vão até 999: ao menos 11 a 100 e os que as cartas pedem);
   - respostas em palavras do computador: `resposta_litros`, `resposta_quilogramas`, `resposta_metros`,
     `resposta_centímetros`;
   - falas: `quaseLa`, `oComputadorDiz`, `eleAcertou`, `isso`, `olheDeNovo`;
-  - o tutorial: `tutorialTela1` a `tutorialTela5` (os textos estão no `config.js`; o arquivo vai em
-    `assets/audio/tutorial/01..05.wav` e entra em `assets`).
 - **As cartas de litros e quilogramas são proposta.** O vídeo só cita os temas; se o baralho físico tem
   outros formatos, o banco muda (`UNIDADES` e as fábricas em `src/regras.js`).
 - **Nenhum áudio foi ouvido por um humano**: as fichas são inferidas (status 🟡), herdadas dos jogos de
