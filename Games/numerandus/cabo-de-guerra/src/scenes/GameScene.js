@@ -494,6 +494,17 @@ export class GameScene extends Scene {
 
     this.adicionar(new Background({
       largura: L, altura: A, tema: config.tema ?? 'cabo', mostrarDecoracoes: false, mostrarChao: false, campoJogo: true,
+      // Com a carta aberta, o escurecimento atrás dela continua pelas barras do letterbox (janela mais
+      // larga que 16:9); sem isto ele termina em bordas retas e deixa uma faixa clara dos lados.
+      desenharNaSangria: (ctx) => {
+        const p = this.painel;
+        if (!p || !p.visible || !p.carta) return;
+        ctx.save();
+        ctx.globalAlpha *= p.alpha;
+        ctx.fillStyle = 'rgba(14, 70, 48, 0.4)';
+        ctx.fillRect(-4000, CARTA.y - 8, 9300, 4000);
+        ctx.restore();
+      },
     }));
 
     /** Quantas casas faltam para cada um (a tira escreve embaixo das pontas). */
