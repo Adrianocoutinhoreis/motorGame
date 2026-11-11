@@ -704,7 +704,7 @@ export class Background extends Node {
    * no gramado entre a tira e a barra de baixo, e algumas flores e tufos de grama.
    *
    * **As flores nascem só no gramado aberto** (x 300–980, y 448–566 da tela 1280 × 720): nunca ao lado
-   * nem embaixo dos nomes ("VOCÊ", "COMPUTADOR", "FALTAM"), da barra de ação ou da linha do centro, e
+   * nem embaixo dos nomes ("VOCÊ", "COMPUTADOR", "FALTAM"), da barra de ação ou da faixa do centro (a linha e os dados do sorteio), e
    * a pelo menos 70 px uma da outra. Pouca coisa, para não poluir. Posições fixas (semente 7): são as
    * mesmas em toda abertura. Nada pisca, nada se mexe.
    */
@@ -806,10 +806,10 @@ export class Background extends Node {
       return (semente - 1) / 2147483646;
     };
     const livre = { x0: 300, x1: 980, y0: 448, y1: 566 };
-    const proibido = { x0: 600, x1: 680 }; // a linha do centro
+    const proibido = { x0: 370, x1: 910 }; // a faixa do centro: a linha tracejada e os dois dados do sorteio (o do vencedor cresce)
     const cores = ['#FFFFFF', '#FFE27A', '#FFB3C7'];
     const flores = [];
-    for (let n = 0; flores.length < 12 && n < 4000; n++) {
+    for (let n = 0; flores.length < 8 && n < 4000; n++) {
       const x = livre.x0 + rnd() * (livre.x1 - livre.x0);
       const y = livre.y0 + rnd() * (livre.y1 - livre.y0);
       if (x > proibido.x0 && x < proibido.x1) continue;

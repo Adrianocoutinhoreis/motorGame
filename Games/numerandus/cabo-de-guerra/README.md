@@ -37,6 +37,13 @@ Vence quem leva a ficha até a própria ponta: chegou, venceu, sem carta.
   desliza casa a casa, com um selo contando e a voz contando junto. **A ficha anda no ritmo da voz**: cada
   passo espera o número terminar (`regras.falaMaxMs` é o teto da espera).
 - **Errado**: a certa acende, o jogo mostra a conta ("7 × 6 = 42") e a ficha **fica parada**; a vez passa.
+- **Quem começa** (sorteio pelo dado): antes da primeira vez a cena escurece de leve (um véu uniforme, sem vinheta, para não aparecer costura nas barras da janela), a tira sobe e dois dados
+  grandes (com sombra no chão) ficam no centro da tela, o da criança e o do computador, com o título
+  "QUEM COMEÇA?" em cima e o botão JOGAR O DADO embaixo. Ela toca **JOGAR O DADO** (ou o dado dela) e os dois rolam juntos: **quem tira o
+  maior começa** (o dado maior ganha um brilho dourado e cresce, o outro encolhe e esmaece, e o nome de quem ganhou
+  vira uma etiqueta dourada); empate, rola de novo. A faixa diz "QUEM COMEÇA?" e, depois, "VOCÊ COMEÇA!" ou "O COMPUTADOR
+  COMEÇA!" (uns 2 s na tela, sem cronômetro). Isso tira a vantagem de quem joga primeiro: com o mesmo nível de
+  acerto do computador, a criança vence 50% das partidas (começando sempre, vencia 57–60%).
 - **Vez do computador**: a faixa fica cor de madeira, ele joga o dado sozinho e responde: "O COMPUTADOR
   DIZ: 42". A criança toca **CERTO** ou **ERRADO**; o jogo diz se ela conferiu bem e mostra a conta.
   Se ele acertou, a ficha vai para o lado dele. **Conferir mal não é erro na nota.**
@@ -62,7 +69,10 @@ node tools/build.mjs numerandus/cabo-de-guerra                  # copia o motor 
 node tools/testes.mjs                                           # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/cabo-de-guerra
 node tools/teste-entrega-avulsa.mjs numerandus/cabo-de-guerra
-node tools/teste-jogabilidade-cabo-de-guerra.mjs               # gesto real (75 verificações)
+node tools/teste-jogabilidade-cabo-de-guerra.mjs               # gesto real (86 verificações)
+node tools/teste-estresse-cabo-de-guerra.mjs                   # 6 tamanhos de janela, maratona, rajadas, troca de aba
+node tools/teste-profundo-cabo-de-guerra.mjs                   # cartas, simulação, contraste, texto, macaco, vazamento
+node tools/teste-logica-cabo-de-guerra.mjs                     # 180 partidas com monitor de invariantes (erros de lógica)
 ```
 
 `teste-jogabilidade-cabo-de-guerra.mjs` só usa ponteiro (nada é chamado por dentro; os ganchos
@@ -77,7 +87,7 @@ e derrota, os números batendo, sem duplicata). Rodado 3 vezes seguidas sem falh
 ```js
 { type: "JOGO_CONCLUIDO", acertos, erros, totalPerguntas, nivel, vitoria, jogo: "cabo-de-guerra",
   casasPuxadas, cartasRespondidas, cartasCertas, cartasPorTipo, conferencias, conferenciasCertas,
-  maiorPuxada, jogadas, venceuCabo }
+  maiorPuxada, jogadas, venceuCabo, quemComecou, sorteios }
 ```
 
 | Campo | Valor |
@@ -140,6 +150,8 @@ Maluca. Cada um tem ficha em `assets/audio-transcricao/<id>/`. Não há imagem: 
   - respostas em palavras do computador: `resposta_litros`, `resposta_quilogramas`, `resposta_metros`,
     `resposta_centímetros`;
   - falas: `quaseLa`, `oComputadorDiz`, `eleAcertou`, `isso`, `olheDeNovo`;
+  - o sorteio de quem começa: `quemComeca` ("Quem começa? Jogue o dado!"), `voceComeca`, `computadorComeca`,
+    `empateSorteio` ("Empate! Jogue de novo.");
 - **As cartas de litros e quilogramas são proposta.** O vídeo só cita os temas; se o baralho físico tem
   outros formatos, o banco muda (`UNIDADES` e as fábricas em `src/regras.js`).
 - **Nenhum áudio foi ouvido por um humano**: as fichas são inferidas (status 🟡), herdadas dos jogos de

@@ -163,6 +163,12 @@ try {
   const CONTINUAR = "c.painel.botoes.find((b) => b.rotulo === 'CONTINUAR')";
   const RAPIDO = 'c.regras.rolarMs = 100; c.regras.passoMs = 60; c.regras.cpuEsperaMs = 80; c.regras.falaMaxMs = 0;';
 
+  /** O sorteio de quem começa, forçado a favor da criança (os roteiros daqui supõem que ela começa). */
+  const passarSorteio = async () => {
+    await jg('c.sorteioDeTeste = { crianca: 6, computador: 1 }; c.regras.rolarMs = 100; return 1;');
+    await tocarNo('c.botaoDado');
+    return esperarAte("c.fase === 'dado' && c.vez.quem === 'crianca'", 8000);
+  };
   const abrirPartida = async (id) => {
     await cdp.enviar('Page.navigate', { url: JOGO_URL }, s);
     await esperar(1500);
@@ -172,7 +178,8 @@ try {
     if (!(await esperarAte("c.constructor.name === 'LevelSelectScreen'", 5000))) return false;
     await esperar(900); // os cartões de nível entram em fila (80 ms cada + 360 ms): o 3º só aceita toque depois disso
     await tocarNo(`window.__achar(c, (n) => n.nivel && n.nivel.id === ${id})`);
-    return esperarAte("c.constructor.name === 'GameScene'", 6000);
+    if (!(await esperarAte("c.constructor.name === 'GameScene'", 6000))) return false;
+    return passarSorteio();
   };
 
   // =========================================================== A. TELAS

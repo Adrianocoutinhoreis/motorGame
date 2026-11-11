@@ -166,7 +166,11 @@ class No extends Node {
 /** O dado. Rola trocando de face; parado, só respira (suave) enquanto convida ao toque. */
 class Dado extends Node {
   constructor(opcoes = {}) {
-    super({ ...opcoes, largura: DADO.lado, altura: DADO.lado, regX: DADO.lado / 2, regY: DADO.lado / 2, interativo: true });
+    const lado = opcoes.lado ?? DADO.lado;
+    super({ ...opcoes, largura: lado, altura: lado, regX: lado / 2, regY: lado / 2, interativo: opcoes.interativo ?? true });
+    this.lado = lado;
+    /** Multiplica o "respirar" do convite: o dado do vencedor do sorteio cresce, o do perdedor encolhe. */
+    this.escalaBase = 1;
     this.face = 0;
     this.rolando = false;
     this.convida = false;
@@ -186,14 +190,106 @@ class Dado extends Node {
       this.rotation = Math.sin(this.t * 24) * 8;
     } else {
       this.rotation = 0;
-      const k = this.convida ? 1 + Math.sin(this.t * 3.5) * 0.035 : 1;
+      const k = (this.convida ? 1 + Math.sin(this.t * 3.5) * 0.035 : 1) * this.escalaBase;
       this.scaleX = k;
       this.scaleY = k;
     }
   }
 
   desenhar(ctx) {
-    desenharDado(ctx, DADO.lado, this.face);
+    desenharDado(ctx, this.lado, this.face);
+  }
+}
+
+/**
+ * O sorteio de quem começa, em DESTAQUE no centro da tela: a cena escurece de leve (`SorteioFundo`), o
+ * título ("QUEM COMEÇA?") fica grande no alto, e dois dados grandes com sombra no chão ficam no meio, o da
+ * criança à esquerda e o do computador à direita, cada um com o nome em cima. O botão JOGAR O DADO sobe
+ * para baixo dos dados. O dado da criança também aceita toque. Quem tira o MAIOR começa.
+ */
+// A tira sobe e encolhe (como com a carta aberta) para liberar o centro da tela.
+const SORTEIO = { cy: 500, xC: 470, xP: 810, lado: 150, rotuloY: 372, tituloY: 312, botaoY: 648 };
+const OURO = '#FFD60A';
+
+/**
+ * A camada escura de trás: um véu verde-escuro UNIFORME. Sem vinheta de propósito: a vinheta escurecia as
+ * bordas da área lógica e, em janelas mais altas ou mais largas que 16:9, deixava uma faixa mais clara nas
+ * barras do letterbox (o véu que continua por elas é uniforme), com uma costura visível.
+ */
+const VEU = 'rgba(8, 40, 28, 0.55)';
+class SorteioFundo extends Node {
+  constructor(opcoes = {}) {
+    super(opcoes);
+    this.visible = false;
+    this.alpha = 0;
+  }
+
+  desenhar(ctx) {
+    ctx.fillStyle = VEU;
+    ctx.fillRect(0, 0, this.largura, this.altura);
+  }
+}
+
+class Sorteio extends Node {
+  /** `titulo` devolve a frase de agora ("QUEM COMEÇA?", "EMPATE! DE NOVO", "VOCÊ COMEÇA!"…). */
+  constructor(aoTocar, titulo, opcoes = {}) {
+    super(opcoes);
+    this.visible = false;
+    this.titulo = titulo;
+    /** Quem tirou o maior dado (`'crianca'` | `'computador'`), ou `null` (antes do sorteio e no empate). */
+    this.vencedor = null;
+    this.dadoC = new Dado({ x: SORTEIO.xC, y: SORTEIO.cy, lado: SORTEIO.lado });
+    this.dadoP = new Dado({ x: SORTEIO.xP, y: SORTEIO.cy, lado: SORTEIO.lado, interativo: false });
+    this.dadoC.on('toque', () => aoTocar());
+    this.adicionar(this.dadoC, this.dadoP);
+  }
+
+  desenhar(ctx) {
+    const frase = this.titulo();
+    if (frase) {
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
+      escrever(ctx, frase, 640, SORTEIO.tituloY, 64, '#FFFFFF');
+      ctx.restore();
+    }
+    // A sombra de cada dado no chão (os dados são desenhados por cima, depois).
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+    for (const x of [SORTEIO.xC, SORTEIO.xP]) {
+      ctx.beginPath();
+      ctx.ellipse(x, SORTEIO.cy + SORTEIO.lado / 2 + 16, SORTEIO.lado * 0.55, 15, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    // O destaque de quem ganhou: um brilho dourado atrás do dado maior (que cresce) e o nome numa etiqueta
+    // dourada; o outro nome e o outro dado ficam mais apagados.
+    if (this.vencedor) {
+      const x = this.vencedor === 'crianca' ? SORTEIO.xC : SORTEIO.xP;
+      const lado = SORTEIO.lado * 1.15 + 22;
+      ctx.save();
+      ctx.shadowColor = 'rgba(255, 214, 10, 0.9)';
+      ctx.shadowBlur = 38;
+      ctx.fillStyle = OURO;
+      ctx.beginPath();
+      ctx.roundRect(x - lado / 2, SORTEIO.cy - lado / 2, lado, lado, 32);
+      ctx.fill();
+      ctx.restore();
+    }
+    for (const [quem, nome, x] of [['crianca', 'VOCÊ', SORTEIO.xC], ['computador', 'COMPUTADOR', SORTEIO.xP]]) {
+      if (this.vencedor === quem) {
+        ctx.font = `800 34px ${FONTE}`;
+        const w = ctx.measureText(nome).width + 44;
+        ctx.fillStyle = OURO;
+        ctx.beginPath();
+        ctx.roundRect(x - w / 2, SORTEIO.rotuloY - 26, w, 52, 26);
+        ctx.fill();
+        escrever(ctx, nome, x, SORTEIO.rotuloY + 1, 34, '#3A2A00', 'center', 800);
+      } else {
+        escrever(ctx, nome, x, SORTEIO.rotuloY, 32, this.vencedor ? 'rgba(255, 255, 255, 0.55)' : '#FFFFFF', 'center', 800);
+      }
+    }
   }
 }
 
@@ -221,6 +317,8 @@ class FaixaVez extends Node {
   constructor(opcoes = {}) {
     super({ ...opcoes, largura: FAIXA.l, altura: FAIXA.a });
     this.quem = 'crianca';
+    /** A frase do sorteio ("QUEM COMEÇA?"…): quem a desenha é o `Sorteio`, no centro; a faixa fica escondida. */
+    this.texto = null;
   }
 
   desenhar(ctx) {
@@ -536,6 +634,11 @@ export class GameScene extends Scene {
     this.stats = { respondidas: 0, certas: 0, porGrupo: {}, conferencias: 0, conferenciasCertas: 0, maiorPuxada: 0, jogadas: 0 };
     /** Ganchos de teste: o próximo dado (de qualquer um) e se o computador erra a próxima carta (`null` = sorteio). */
     this.dadoDeTeste = null;
+    /** Gancho de teste: o(s) próximo(s) sorteio(s), `{ crianca, computador }` ou uma lista deles. */
+    this.sorteioDeTeste = null;
+    /** Quem começou (`'crianca'` | `'computador'`) e quantos sorteios foram preciso (empate sorteia de novo). */
+    this.quemComecou = null;
+    this.sorteios = 0;
     this.computadorErraDeTeste = null;
     this._fimResolvido = false;
 
@@ -545,12 +648,21 @@ export class GameScene extends Scene {
       // larga que 16:9); sem isto ele termina em bordas retas e deixa uma faixa clara dos lados.
       desenharNaSangria: (ctx) => {
         const p = this.painel;
-        if (!p || !p.visible || !p.carta) return;
-        ctx.save();
-        ctx.globalAlpha *= p.alpha;
-        ctx.fillStyle = 'rgba(14, 70, 48, 0.4)';
-        ctx.fillRect(-4000, CARTA.y - 8, 9300, 4000);
-        ctx.restore();
+        if (p && p.visible && p.carta) {
+          ctx.save();
+          ctx.globalAlpha *= p.alpha;
+          ctx.fillStyle = 'rgba(14, 70, 48, 0.4)';
+          ctx.fillRect(-4000, CARTA.y - 8, 9300, 4000);
+          ctx.restore();
+        }
+        const f = this.sorteioFundo;
+        if (f && f.visible && f.alpha > 0) {
+          ctx.save();
+          ctx.globalAlpha *= f.alpha;
+          ctx.fillStyle = VEU;
+          ctx.fillRect(-4000, -4000, 9300, 9000);
+          ctx.restore();
+        }
       },
     }));
 
@@ -567,18 +679,25 @@ export class GameScene extends Scene {
     this.adicionar(this.palco);
 
     // ------------------------------------------------------- parte de baixo
-    this.adicionar(new BarraAcao({ x: BARRA.x, y: BARRA.y }));
+    this.barra = new BarraAcao({ x: BARRA.x, y: BARRA.y });
+    this.adicionar(this.barra);
     this.faixa = new FaixaVez({ x: FAIXA.x, y: FAIXA.y });
     this.adicionar(this.faixa);
     this.dado = new Dado({ x: DADO.cx, y: DADO.cy });
     this.dado.on('toque', () => this._tocarDado());
     this.adicionar(this.dado);
     const clique = config.audio?.clique;
+    this.sorteioFundo = new SorteioFundo({ largura: L, altura: A });
+    this.adicionar(this.sorteioFundo);
+    this.sorteioNos = new Sorteio(() => this._tocarDado(), () => this.faixa.texto);
+    this.adicionar(this.sorteioNos);
     this.botaoDado = new BotaoDado({
       x: BOTAO_DADO.x, y: BOTAO_DADO.y, largura: BOTAO_DADO.l, altura: BOTAO_DADO.a,
       audio: this.audio, somToque: clique, aoTocar: () => this._tocarDado(),
     });
     this.adicionar(this.botaoDado);
+    /** Onde o botão mora na barra (no sorteio ele sobe ao centro e depois volta). */
+    this._botaoNaBarra = { x: this.botaoDado.x, y: this.botaoDado.y };
     this._atualizarLados();
 
     this.dica = new DicaDedo();
@@ -619,14 +738,21 @@ export class GameScene extends Scene {
     this.adicionar(this.relogio);
     this.guarda = new Watchdog({
       nome: 'jogada do cabo de guerra',
-      ocupado: () => ['cpuEspera', 'rolando', 'puxando', 'chegou'].includes(this.fase) && !this.pausada && !this._fimResolvido,
+      ocupado: () => ['cpuEspera', 'rolando', 'puxando', 'chegou', 'sorteando'].includes(this.fase) && !this.pausada && !this._fimResolvido,
       vivo: () => Tween.temAtivo(this.relogio) || Tween.temAtivo(this.no),
       graca: 0.6,
       limite: 14,
       aoTravar: () => this._destravar(),
     });
 
-    this._comecarVez('crianca');
+    // Quem começa? Os dois jogam um dado e o maior começa (`regras.sorteioDoComeco: false` volta ao
+    // antigo "a criança sempre primeiro", só para teste).
+    if (this.regras.sorteioDoComeco === false) {
+      this.quemComecou = 'crianca';
+      this._comecarVez('crianca');
+    } else {
+      this._comecarSorteio();
+    }
   }
 
   // ----------------------------------------------------------------- narração
@@ -684,6 +810,118 @@ export class GameScene extends Scene {
 
   // ---------------------------------------------------------------------- vez
 
+  // ------------------------------------------------------------------- sorteio
+
+  /**
+   * Antes da primeira vez: quem começa. Dois dados ficam à mostra ("?") e a criança toca JOGAR O DADO
+   * (ou o dado dela): os dois rolam juntos e **quem tira o maior começa**; empate, rola de novo. Sem
+   * cronômetro: a decisão fica na tela com o texto ("VOCÊ COMEÇA!") por uns 2 s.
+   */
+  _comecarSorteio() {
+    if (this._fimResolvido) return;
+    this.fase = 'sorteio';
+    this.vez = { quem: null, dado: null, alvo: null, carta: null, certo: null, passos: 0 };
+    this.faixa.texto = 'QUEM COMEÇA?';
+    this.tira.vez = null;
+    this.dado.visible = false;
+    this.faixa.visible = false;
+    this.barra.visible = false;
+    this.tira.nomes = false;
+    this.moverPalco('carta');
+    // O botão sobe para baixo dos dados e a cena escurece de leve (entra em ~0,3 s).
+    this.botaoDado.x = 640;
+    this.botaoDado.y = SORTEIO.botaoY;
+    for (const no of [this.sorteioFundo, this.sorteioNos]) {
+      no.visible = true;
+      no.alpha = 0;
+      Tween.removerDe(no);
+      Tween.para(no, { alpha: 1 }, 300, Easing.suaveSaida);
+    }
+    this._prepararSorteio();
+    this._falar('quemComeca', 'Quem começa? Jogue o dado!', true);
+  }
+
+  /** Dados em "?" e o botão ligado, com o dedinho: a criança joga. */
+  _prepararSorteio() {
+    this.fase = 'sorteio';
+    const sn = this.sorteioNos;
+    sn.visible = true;
+    sn.vencedor = null;
+    for (const d of [sn.dadoC, sn.dadoP]) { Tween.removerDe(d); d.face = 0; d.rolando = false; d.escalaBase = 1; d.alpha = 1; }
+    sn.dadoC.convida = true;
+    this.botaoDado.definirHabilitado(true);
+    this.botaoDado.pulse = true;
+    const b = this.botaoDado;
+    this.dica.mostrar({ x: b.x + b.largura * 0.3, y: b.y - b.altura / 2 + 22 });
+  }
+
+  _sortear() {
+    if (this.fase !== 'sorteio' || this._fimResolvido) return;
+    this.fase = 'sorteando';
+    this.dica.esconder();
+    this._desligarBotaoDado();
+    const sn = this.sorteioNos;
+    sn.dadoC.convida = false;
+    sn.dadoC.rolando = true;
+    sn.dadoP.rolando = true;
+    const fila = Array.isArray(this.sorteioDeTeste) ? this.sorteioDeTeste : this.sorteioDeTeste ? [this.sorteioDeTeste] : [];
+    const forcado = fila.shift();
+    this.sorteioDeTeste = fila.length ? fila : null;
+    const r = forcado ?? { crianca: rolarDado(), computador: rolarDado() };
+    Tween.de(this.relogio).esperar(this.regras.rolarMs).chamar(() => this._sorteioParou(r));
+  }
+
+  _sorteioParou(r) {
+    if (this.fase !== 'sorteando') return;
+    const sn = this.sorteioNos;
+    sn.dadoC.rolando = false;
+    sn.dadoP.rolando = false;
+    sn.dadoC.face = r.crianca;
+    sn.dadoP.face = r.computador;
+    this._efeito('pouso');
+    this.sorteios += 1;
+    if (r.crianca === r.computador) {
+      this.faixa.texto = 'EMPATE! DE NOVO';
+      this._falar('empateSorteio', 'Empate! Jogue de novo.', true);
+      Tween.de(this.relogio).esperar(1300).chamar(() => this._novoSorteio());
+      return;
+    }
+    const quem = r.crianca > r.computador ? 'crianca' : 'computador';
+    this.quemComecou = quem;
+    // O dado maior cresce e ganha brilho dourado; o outro encolhe e esmaece.
+    sn.vencedor = quem;
+    const [dadoGanhou, dadoPerdeu] = quem === 'crianca' ? [sn.dadoC, sn.dadoP] : [sn.dadoP, sn.dadoC];
+    Tween.para(dadoGanhou, { escalaBase: 1.15 }, 350, Easing.costasSaida);
+    Tween.para(dadoPerdeu, { escalaBase: 0.9, alpha: 0.5 }, 350, Easing.suaveSaida);
+    this.faixa.texto = quem === 'crianca' ? 'VOCÊ COMEÇA!' : 'O COMPUTADOR COMEÇA!';
+    this._falar(quem === 'crianca' ? 'voceComeca' : 'computadorComeca', quem === 'crianca' ? 'Você começa!' : 'O computador começa!', true);
+    Tween.de(this.relogio).esperar(1800).chamar(() => this._fimDoSorteio(quem));
+  }
+
+  _novoSorteio() {
+    if (this.fase !== 'sorteando' || this._fimResolvido) return;
+    this.faixa.texto = 'QUEM COMEÇA?';
+    this._prepararSorteio();
+  }
+
+  _fimDoSorteio(quem) {
+    if (this.fase !== 'sorteando' || this._fimResolvido) return;
+    this.dado.visible = true;
+    this.faixa.visible = true;
+    this.barra.visible = true;
+    this.tira.nomes = true;
+    this.moverPalco('jogo');
+    this.faixa.texto = null;
+    this.botaoDado.x = this._botaoNaBarra.x;
+    this.botaoDado.y = this._botaoNaBarra.y;
+    // O véu e os dados do sorteio somem suavemente enquanto a vez já começa.
+    for (const no of [this.sorteioFundo, this.sorteioNos]) {
+      Tween.removerDe(no);
+      Tween.de(no).entao({ alpha: 0 }, 300, Easing.suaveSaida).chamar(() => { no.visible = false; });
+    }
+    this._comecarVez(quem);
+  }
+
   /** Começa a vez de `quem`: a faixa muda e, se é da criança, o dedinho aponta o dado. */
   _comecarVez(quem) {
     if (this._fimResolvido) return;
@@ -723,7 +961,9 @@ export class GameScene extends Scene {
   }
 
   _tocarDado() {
-    if (this.pausada || this.fase !== 'dado') return;
+    if (this.pausada) return;
+    if (this.fase === 'sorteio') { this._sortear(); return; }
+    if (this.fase !== 'dado') return;
     this._rolar();
   }
 
@@ -949,13 +1189,16 @@ export class GameScene extends Scene {
       maiorPuxada: this.stats.maiorPuxada,
       jogadas: this.stats.jogadas,
       venceuCabo: vitoria,
+      quemComecou: this.quemComecou,
+      sorteios: this.sorteios,
     });
     this.irPara('resultado', { nivel: this.nivel, resultado });
   }
 
   /** O cão de guarda achou uma cadeia cortada: leva a partida a um ponto seguro, de onde ela parou. */
   _destravar() {
-    if (this.fase === 'chegou') this._terminar(this.vez.quem);
+    if (this.fase === 'sorteando') this._fimDoSorteio(this.quemComecou ?? 'crianca');
+    else if (this.fase === 'chegou') this._terminar(this.vez.quem);
     else if (this.fase === 'cpuEspera') this._rolar();
     else if (this.fase === 'rolando') {
       if (this.vez.dado != null && this.dado.rolando) this._dadoParou();

@@ -47,6 +47,7 @@
 - [x] **Tutorial** com 5 passos ilustrados com as peças da partida e puláveis; o 5º diz o desfecho (quem leva
       a ficha até a própria ponta ganha), com narração (10/11/2026)
 - [x] **Seleção de nível** (3 níveis; captura `02-niveis`)
+- [x] **Sorteio de quem começa** (dois dados, maior começa, empate sorteia de novo): fluxo, empate, criança e computador começando (teste de jogabilidade, 1b e 7e) e justiça de ~50% (teste de lógica)
 - [x] **Partida** com HUD legível: tira grande no centro, "FALTAM N" embaixo das pontas, barra de baixo (dado, vez, botão),
       pausa, ajuda, som
 - [x] **Pausa** com continuar / recomeçar / sair; congela a ficha andando (teste, item 6)
@@ -98,8 +99,9 @@
       JOGAR O DADO 244×112, CONTINUAR 300×64, dado 128×128).
       As bolinhas e a ficha não são alvos de toque.
 - [x] Espaço entre alvos: 30 px entre as respostas, 40 px entre CERTO e ERRADO
-- [ ] Contraste AA conferido em todos os elementos — texto escuro no CONTINUAR verde (como o PRONTO do
-      Dominó); o rótulo cinza "FALTAM" dos quadros não foi medido
+- [ ] Contraste AA conferido em todos os elementos — medido em 11/11/2026 (tools/teste-profundo): a partida e a carta
+      passam; **abaixo de 3:1** ficam as respostas recusadas da carta (2,8:1, apagadas de propósito) e, no motor, os
+      botões JOGAR (2,3:1) e COMO JOGAR (2,2:1) do menu
 - [x] Cor nunca é o único portador de significado: a faixa da vez tem texto, a resposta certa ganha
       borda e o retorno escrito, as pontas têm o nome embaixo
 - [ ] Nenhuma ação exige saber ler — a pergunta e o retorno são escritos e a **narração ainda não foi
@@ -120,9 +122,9 @@
 - [x] **Replay sem recarregar:** 2 partidas geram exatamente 2 mensagens
 - [x] **Sem duplicata** parado no resultado
 - [x] `tools/ava-teste.html`: a mensagem chega ao pai e passa em todas as regras
-- [ ] Testado em iframe pequeno, médio e grande — só o médio
+- [ ] Testado em iframe pequeno, médio e grande — janelas de 6 tamanhos testadas (teste-estresse); falta o iframe do AVA real
 - [ ] Testado com **toque** — só mouse sintético; falta celular em pé e tablet real
-- [ ] Testado após trocar de aba e voltar
+- [x] Testado após trocar de aba e voltar (teste-estresse, parte D: o dado rolando atravessa uma aba oculta)
 
 ## 8. Entrega
 
@@ -131,4 +133,4 @@
 - [x] `node tools/build.mjs` rodado depois da última mudança no motor (o tema `'cabo'`), em todos os jogos
 - [x] Versão do motor conferida (`engine/version.json` 1.3.6, igual à raiz)
 - [x] Pasta testada fora do projeto (`teste-entrega-avulsa.mjs`)
-- [ ] Zip gerado e aberto uma última vez — não gerado (o jogo ainda não vai para alunos)
+- [ ] Zip gerado e aberto uma última vez — não gerado. Atenção: o `Compress-Archive` do PowerShell 5.1 grava barra invertida nos caminhos (`engine\index.js`), o que quebra em servidor Linux; usar `tar -a -c -f x.zip .` (bsdtar)

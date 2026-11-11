@@ -289,6 +289,11 @@ try {
   const CONFERIR = (certo) => `c.painel.botoes.find((b) => b.estilo === '${certo ? 'sim' : 'nao'}')`;
   const CONTINUAR = "c.painel.botoes.find((b) => b.rotulo === 'CONTINUAR')";
   const RAPIDO = 'c.regras.rolarMs = 100; c.regras.passoMs = 60; c.regras.cpuEsperaMs = 80; c.regras.falaMaxMs = 0;';
+  const passarSorteio = async () => {
+    await jg('c.sorteioDeTeste = { crianca: 6, computador: 1 }; c.regras.rolarMs = 100; return 1;');
+    await tocarNo('c.botaoDado');
+    return esperarAte("c.fase === 'dado' && c.vez.quem === 'crianca'", 8000);
+  };
   const abrirPartida = async (id) => {
     await cdp.enviar('Page.navigate', { url: `${BASE}/` }, s);
     await esperar(1500);
@@ -298,7 +303,8 @@ try {
     if (!(await esperarAte("c.constructor.name === 'LevelSelectScreen'", 5000))) return false;
     await esperar(900);
     await tocarNo(`window.__achar(c, (n) => n.nivel && n.nivel.id === ${id})`);
-    return esperarAte("c.constructor.name === 'GameScene'", 6000);
+    if (!(await esperarAte("c.constructor.name === 'GameScene'", 6000))) return false;
+    return passarSorteio();
   };
 
   // =================================================================== T. TEXTO NA CARTA
@@ -435,6 +441,8 @@ try {
       await esperar(300);
       await tocarNo(BTN('/come.ar de novo/i'));
       await esperar(600);
+      await esperarAte("c.constructor.name === 'GameScene' && c.fase === 'sorteio'", 6000);
+      await passarSorteio();
       if (!(await esperarAte("c.constructor.name === 'GameScene' && c.fase === 'dado'", 6000))) { checar(`reinício ${i}: voltou ao dado`, false); break; }
       await jg(RAPIDO + ' return 1;');
       ultimo = await medir(); serie.push(ultimo);

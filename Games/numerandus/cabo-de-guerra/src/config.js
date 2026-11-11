@@ -92,13 +92,15 @@ export default {
   /**
    * Regras ajustáveis, conferidas no protótipo.
    *   rolarMs         quanto o dado rola antes de parar
+   *   sorteioDoComeco `true` (padrão): os dois jogam um dado e quem tira o maior começa; `false` volta ao
+   *                   "a criança sempre começa" (só para teste)
    *   passoMs         o tempo MÍNIMO de cada casa que o nó anda; o passo seguinte também espera a voz
    *                   terminar o número ("um", "dois"…)
    *   falaMaxMs       o teto dessa espera, se um áudio nunca avisar que acabou
    *   cpuEsperaMs     a pausa antes de o computador jogar o dado
    *   computadorErra  a chance de o computador errar a carta de propósito (1 em 4)
    */
-  regras: { rolarMs: 900, passoMs: 320, falaMaxMs: 2000, cpuEsperaMs: 900, computadorErra: 0.25 },
+  regras: { rolarMs: 900, passoMs: 320, falaMaxMs: 2000, cpuEsperaMs: 900, computadorErra: 0.25, sorteioDoComeco: true },
 
   // --------------------------------------------------------------- tutorial
   /**

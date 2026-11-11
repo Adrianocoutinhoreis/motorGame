@@ -349,7 +349,9 @@ try {
     for (const fim = Date.now() + 180000; Date.now() < fim;) {
       if (await esperarAte(`c.constructor.name === 'ResultScreen'`, 50)) return { ok: true, errou };
       const st = await jg(`return c.constructor.name === 'GameScene' ? { quem: c.vez.quem, fase: c.fase } : null;`);
-      if (st?.quem === 'crianca' && st.fase === 'dado') {
+      if (st?.fase === 'sorteio') {
+        await tocarNo('c.botaoDado');
+      } else if (st?.quem === 'crianca' && st.fase === 'dado') {
         const certo = crianca === 'acerta';
         const r = await vezDaCrianca(certo);
         if (r !== 'ok' && r !== 'fim') return { ok: false, em: r, errou };
@@ -364,7 +366,7 @@ try {
     return { ok: await esperarAte(`c.constructor.name === 'ResultScreen'`, 8000), errou };
   };
   /** Recarrega a página e abre uma partida do nível `id`, só com toques. */
-  const novaPartida = async (id) => {
+  const novaPartida = async (id, quemComeca = 'crianca') => {
     await cdp.enviar('Page.navigate', { url: JOGO_URL }, s);
     await esperar(1500);
     await esperarAte(`c && c.constructor.name === 'MenuScreen'`, 15000);
@@ -372,7 +374,11 @@ try {
     await tocarNo(BTN('/^jogar$/i'));
     await esperarAte(`c.constructor.name === 'LevelSelectScreen'`, 5000);
     await tocarNo(`${W}.__achar(c, (n) => n.nivel && n.nivel.id === ${id})`);
-    return esperarAte(`c.constructor.name === 'GameScene'`, 6000);
+    if (!(await esperarAte(`c.constructor.name === 'GameScene'`, 6000))) return false;
+    const dados = quemComeca === 'crianca' ? '{ crianca: 6, computador: 1 }' : '{ crianca: 1, computador: 6 }';
+    await jg(`c.sorteioDeTeste = ${dados}; c.regras.rolarMs = 100; return 1;`);
+    await tocarNo('c.botaoDado');
+    return esperarAte(`c.vez.quem === '${quemComeca}'`, 8000);
   };
 
   // --------------------------------------------------------- 1. abrir e navegar
@@ -393,6 +399,33 @@ try {
   checar('toque no cartão FÁCIL abre a partida',
     await tocarNo(`${W}.__achar(c, (n) => n.nivel && n.nivel.id === 1)`) && await esperarAte(`c.constructor.name === 'GameScene'`, 6000));
   await jg(RAPIDO);
+
+  // ------------------------------------------------------ 1b. o sorteio de quem começa
+  console.log('\n1b. O sorteio: os dois jogam um dado e o maior começa (empate sorteia de novo)');
+  const s0 = await jg(`return { fase: c.fase, dadoBarra: c.dado.visible, sorteio: c.sorteioNos.visible, faces: [c.sorteioNos.dadoC.face, c.sorteioNos.dadoP.face],
+    botao: c.botaoDado.habilitado, faixa: c.faixa.texto, vezNaTira: c.tira.vez, pos: c.pos, quemComecou: c.quemComecou };`);
+  checar('a partida abre no SORTEIO: dois dados em "?", o dado da barra escondido, o botão ligado, ninguém com a vez',
+    s0.fase === 'sorteio' && s0.dadoBarra === false && s0.sorteio === true && s0.faces.join() === '0,0' && s0.botao === true
+      && s0.faixa === 'QUEM COMEÇA?' && s0.vezNaTira === null && s0.pos === 7 && s0.quemComecou === null, JSON.stringify(s0));
+  await captura('03a-sorteio');
+  await jg(`c.sorteioDeTeste = [{ crianca: 3, computador: 3 }, { crianca: 5, computador: 2 }]; c.regras.rolarMs = 700; return 1;`);
+  await tocarNo('c.botaoDado');
+  checar('tocar JOGAR O DADO rola os DOIS dados juntos', await esperarAte(`c.fase === 'sorteando' && c.sorteioNos.dadoC.rolando && c.sorteioNos.dadoP.rolando`, 2000));
+  await tocarNo('c.botaoDado');
+  checar('um toque a mais durante a rolagem não sorteia de novo', await jg(`return c.fase === 'sorteando' && c.sorteios === 0;`));
+  checar('empate 3 × 3: a faixa diz "EMPATE! DE NOVO" e ninguém começa',
+    await esperarAte(`c.faixa.texto === 'EMPATE! DE NOVO'`, 4000) && await jg(`return c.quemComecou === null && c.sorteios === 1 && c.sorteioNos.dadoC.face === 3 && c.sorteioNos.dadoP.face === 3 && c.sorteioNos.vencedor === null && c.sorteioNos.dadoC.escalaBase === 1 && c.sorteioNos.dadoP.escalaBase === 1;`));
+  checar('depois do empate, o sorteio volta: dados em "?" e o botão ligado',
+    await esperarAte(`c.fase === 'sorteio' && c.sorteioNos.dadoC.face === 0 && c.botaoDado.habilitado`, 4000));
+  await jg(`c.regras.rolarMs = 100; return 1;`);
+  await tocarNo('c.sorteioNos.dadoC');
+  checar('o próprio dado da criança também sorteia (toque no dado)', await esperarAte(`c.fase === 'sorteando'`, 2000));
+  checar('5 × 2: "VOCÊ COMEÇA!" e a criança é quem começa', await esperarAte(`c.faixa.texto === 'VOCÊ COMEÇA!' && c.quemComecou === 'crianca' && c.sorteios === 2`, 4000));
+  checar('o dado MAIOR (o da criança, 5) ganha destaque (cresce) e o outro (2) encolhe e esmaece',
+    await esperarAte(`c.sorteioNos.vencedor === 'crianca' && c.sorteioNos.dadoC.escalaBase > 1.1 && c.sorteioNos.dadoP.escalaBase < 0.95 && c.sorteioNos.dadoP.alpha < 0.7`, 2000));
+  await captura('03b-sorteio-voce-comeca');
+  checar('o sorteio some e a vez da criança começa (dado da barra de volta, "SUA VEZ")',
+    await esperarAte(`c.fase === 'dado' && c.vez.quem === 'crianca' && c.sorteioNos.visible === false && c.dado.visible === true && c.faixa.texto === null`, 6000));
   const ini = await jg(`return { passos: c.passos, bolinhas: c.trilha.xs.length, tema: c.config.tema, total: c.placar.total, face: c.dado.face,
     pos: c.pos, fase: c.fase, quem: c.vez.quem, botao: c.botaoDado.habilitado, carta: c.painel.visible, noX: c.no.x, meioX: c.trilha.xs[c.passos] };`);
   checar('o Fácil: 7 passos, 15 bolinhas, meta 7, tema cabo',
@@ -571,6 +604,20 @@ try {
     await esperarAte(`c.constructor.name === 'ResultScreen'`, 6000)
       && await jg(`const r = window.__fim7d; return !!r && r.vitoria === false && r.acertos === 2 && r.extras?.casasPuxadas === 2 && r.erros === 1;`),
     JSON.stringify(await jg(`return window.__fim7d;`)));
+
+  // --------------------------------------------------- 7e. o computador começa
+  console.log('\n7e. O sorteio dá o computador na frente: ele joga primeiro e a criança confere');
+  await novaPartida(1, 'computador');
+  await jg(`${RAPIDO} c.regras.falaMaxMs = 0; return 1;`);
+  const e7 = await jg(`return { quemComecou: c.quemComecou, faixa: c.faixa.texto, vez: c.vez.quem, sorteios: c.sorteios, dados: [c.sorteioNos.dadoC.face, c.sorteioNos.dadoP.face], vencedor: c.sorteioNos.vencedor };`);
+  checar('1 × 6: o computador começa e a vez dele já está em andamento',
+    e7.quemComecou === 'computador' && e7.vez === 'computador' && e7.sorteios === 1 && e7.dados.join() === '1,6' && e7.vencedor === 'computador', JSON.stringify(e7));
+  checar('o computador joga o dado sozinho, responde, e a criança confere (a ficha ainda no centro)',
+    await esperarAte(`c.fase === 'conferir' && c.painel.alpha >= 1 && c.pos === 7`, 15000));
+  const r7e = await vezDoComputador(true);
+  checar('depois de conferir, a vez passa para a criança, que joga o dado normalmente',
+    await esperarAte(`c.vez.quem === 'crianca' && c.fase === 'dado' && c.dado.visible`, 12000), JSON.stringify({ r7e, e: await estado() }));
+  await captura('03c-computador-comecou');
 
   const guardaPagina = avisos.filter((x) => /watchdog|cão de guarda|travad|resgat/i.test(x));
   checar('nenhum erro de JavaScript na página', erros.length === 0, erros.slice(0, 4).join(' | '));

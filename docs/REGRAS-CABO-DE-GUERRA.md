@@ -100,7 +100,10 @@ errado não custa nada à criança** e não conta como erro na nota: é treino, 
 
 ### 4.3 Ordem e fim
 
-- A criança sempre começa. Nenhuma carta repete na partida (como no vídeo).
+- **Quem começa:** sorteio pelo dado (decisão de 11/11/2026). Os dois jogam um dado e quem tira o **maior**
+  começa; empate, sorteia de novo. Na tela: dois dados grandes no gramado ("VOCÊ" e "COMPUTADOR") e a faixa
+  "QUEM COMEÇA?" → "VOCÊ COMEÇA!" / "O COMPUTADOR COMEÇA!". A regra do vídeo era que a criança joga primeiro.
+  Nenhuma carta repete na partida (como no vídeo).
 - O nó **chegou a uma ponta**: vence quem o puxou, **na hora, sem carta**. Passar da ponta para nela.
 - Ponta da criança: vitória. Ponta do computador: derrota (registrada). Não há cronômetro.
 
@@ -250,7 +253,10 @@ Planejadas no artifact (09/11/2026). O humano mandou seguir as recomendadas.
 - **O erro de propósito do computador.** 1 em 4 é um palpite; se a criança passar a desconfiar de tudo,
   baixar para 1 em 5, ou só a partir do Médio.
 - **Narração das perguntas:** gravar cada pergunta inteira ou em pedaços, e até que número.
-- **Quem começa** tem uma vantagem pequena (a criança sempre começa); se pesar, alternar entre partidas.
+- **Quem começa:** resolvido em 11/11/2026 com o sorteio pelo dado. Simulação (40 000 partidas, computador
+  acertando 75%): criança acertando 75% vence 60% / 58% / 57% se começa sempre (Fácil / Médio / Difícil), 41% /
+  42% / 43% se o computador começa e **50% nos três níveis com o sorteio**. O AVA recebe `quemComecou` e
+  `sorteios` como extras.
 
 ---
 
