@@ -428,6 +428,7 @@ export class MenuScreen extends Scene {
       : config.tema === 'espaco' ? PlacaTituloLimpa
       : config.tema === 'mesa' ? PlacaTituloLimpa
       : config.tema === 'feltro' ? PlacaTituloLimpa
+      : config.tema === 'madeira' ? PlacaTituloLimpa
       : config.tema === 'cabo' ? PlacaTituloLimpa
       : config.tema === 'tabuleiro' ? PlacaTituloTabuleiro
       : PlacaTituloMadeira;

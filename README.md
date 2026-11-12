@@ -71,6 +71,7 @@ Especificação por jogo (mecânica e layout, com o porquê de cada número):
 | [`docs/PLANO-VISUAL-JOGO-DAS-CORES.md`](docs/PLANO-VISUAL-JOGO-DAS-CORES.md) | Jogo das Cores — layout medido, as oito texturas |
 | [`docs/REGRAS-CORRIDA-ESPACIAL.md`](docs/REGRAS-CORRIDA-ESPACIAL.md) | Corrida Espacial (Numerandus) — a jogada, níveis, pontuação, contrato |
 | [`docs/REGRAS-CORRIDA-MALUCA.md`](docs/REGRAS-CORRIDA-MALUCA.md) | Corrida Maluca (Numerandus) — a trilha, as cartas, a casa verde, a conferência, contrato |
+| [`docs/REGRAS-CUBRA-NOVE.md`](docs/REGRAS-CUBRA-NOVE.md) | Cubra Nove (Numerandus) — dados, soma e diferença, a ajuda em degraus, o computador que esquece, contrato |
 
 ---
 
@@ -93,6 +94,7 @@ Coleção **Numerandus** (`Games/numerandus/`) — ver [`docs/METODO-JOGOS-NUMER
 | [Jogo da Memória](Games/numerandus/jogo-da-memoria/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/jogo-da-memoria/README.md#pendências-conhecidas) |
 | [Corrida Espacial](Games/numerandus/corrida-espacial/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/corrida-espacial/README.md#pendências-conhecidas) |
 | [Corrida Maluca](Games/numerandus/corrida-maluca/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/corrida-maluca/README.md#pendências-conhecidas) |
+| [Cubra Nove](Games/numerandus/cubra-nove/) | — | 🚧 jogável, [pendências declaradas](Games/numerandus/cubra-nove/README.md#pendências-conhecidas) |
 
 ---
 

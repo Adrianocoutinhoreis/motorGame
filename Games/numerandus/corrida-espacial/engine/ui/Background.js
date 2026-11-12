@@ -13,28 +13,28 @@ import { cores } from '../theme/tokens.js';
  * o conteúdo pela atenção da criança.
  *
  * Temas disponíveis: 'campo' (padrão), 'construcao', 'formas', 'quadro',
- * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro', 'cabo'.
+ * 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro', 'cabo', 'madeira'.
  */
 
 /** Temas de INTERIOR: sem sol, sem nuvem de céu ensolarado, sem colinas. */
-const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro'];
+const TEMAS_INTERIOR = ['quadro', 'bingo', 'quarto', 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro', 'madeira'];
 
 export class Background extends Node {
   constructor(opcoes = {}) {
     super({ largura: opcoes.largura ?? 1280, altura: opcoes.altura ?? 720, ...opcoes });
 
-    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa' | 'feltro' | 'tabuleiro'
+    this.tema = opcoes.tema ?? 'campo'; // 'campo' | 'construcao' | 'formas' | 'quadro' | 'bingo' | 'quarto' | 'trilhas' | 'espaco' | 'mesa' | 'feltro' | 'tabuleiro' | 'cabo' | 'madeira'
     this.corCeuTopo = opcoes.corCeuTopo
-      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : this.tema === 'tabuleiro' ? '#1E2740' : this.tema === 'cabo' ? '#0E3A2D' : cores.ceuProfundo);
+      ?? (this.tema === 'construcao' ? '#38BDF8' : this.tema === 'quadro' ? '#0F3D2E' : this.tema === 'bingo' ? '#0F172A' : this.tema === 'quarto' ? '#123D2C' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#0B1030' : this.tema === 'mesa' ? '#1B212B' : this.tema === 'feltro' ? '#12322B' : this.tema === 'madeira' ? '#DDBB91' : this.tema === 'tabuleiro' ? '#1E2740' : this.tema === 'cabo' ? '#0E3A2D' : cores.ceuProfundo);
     this.corCeuBase = opcoes.corCeuBase
-      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : this.tema === 'tabuleiro' ? '#28334F' : this.tema === 'cabo' ? '#1A5A43' : cores.ceu);
+      ?? (this.tema === 'construcao' ? '#BAE6FD' : this.tema === 'quadro' ? '#1B5E44' : this.tema === 'bingo' ? '#1E1B4B' : this.tema === 'quarto' ? '#1E6B4A' : this.tema === 'trilhas' ? '#2E2150' : this.tema === 'espaco' ? '#1E1B4B' : this.tema === 'mesa' ? '#252D39' : this.tema === 'feltro' ? '#1C4539' : this.tema === 'madeira' ? '#D6B183' : this.tema === 'tabuleiro' ? '#28334F' : this.tema === 'cabo' ? '#1A5A43' : cores.ceu);
     this.corColina = opcoes.corColina ?? '#86EFAC';
     this.corColinaFundo = opcoes.corColinaFundo ?? '#BBF7D0';
     // Temas de interior ('quadro', 'bingo', 'quarto'): sem sol aberto nem
     // nuvem de céu ensolarado por padrão — não têm céu de verdade, têm
     // parede/tinta.
     this.mostrarSol = opcoes.mostrarSol ?? (!TEMAS_INTERIOR.includes(this.tema) && this.tema !== 'cabo');
-    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro' && this.tema !== 'tabuleiro' && this.tema !== 'cabo');
+    this.mostrarColinas = opcoes.mostrarColinas ?? (this.tema !== 'bingo' && this.tema !== 'quarto' && this.tema !== 'trilhas' && this.tema !== 'espaco' && this.tema !== 'mesa' && this.tema !== 'feltro' && this.tema !== 'madeira' && this.tema !== 'tabuleiro' && this.tema !== 'cabo');
     this.mostrarDecoracoes = opcoes.mostrarDecoracoes ?? true;
     /** Chão/piso/bandeja (a faixa na base da tela) — todo tema tem um por
      *  padrão. `false` deixa o céu/parede ir até o fim da tela, sem faixa
@@ -174,6 +174,10 @@ export class Background extends Node {
     if (this.mostrarDecoracoes && this.tema === 'feltro') {
       this._desenharDecoracoesFeltro(ctx, this.largura, this.altura, sx, sy);
     }
+    // Tema 'madeira': os dados e cubinhos apagados também continuam pelas barras.
+    if (this.mostrarDecoracoes && this.tema === 'madeira') {
+      this._desenharDecoracoesMadeira(ctx, this.largura, this.altura, sx, sy);
+    }
     // O pedaço do cenário que é da CENA e encosta na borda (ex.: o planeta de
     // destino da Corrida Espacial) continua pelas barras pelo mesmo princípio.
     if (this.desenharNaSangria) {
@@ -218,6 +222,11 @@ export class Background extends Node {
         ctx.fillStyle = halo;
         ctx.fillRect(px, py, pl, pa);
       }
+      return;
+    }
+
+    if (this.tema === 'madeira') {
+      this._desenharTampoMadeira(ctx, sx, sy);
       return;
     }
 
@@ -487,6 +496,7 @@ export class Background extends Node {
       if (this.tema === 'espaco') this._desenharDecoracoesEspaco(ctx, l, a);
       if (this.tema === 'mesa') this._desenharDecoracoesMesa(ctx, l, a);
       if (this.tema === 'feltro') this._desenharDecoracoesFeltro(ctx, l, a);
+      if (this.tema === 'madeira') this._desenharDecoracoesMadeira(ctx, l, a);
       if (this.tema === 'tabuleiro') this._desenharDecoracoesTabuleiro(ctx, l, a);
     }
     if (this.tema === 'cabo' && this.campoJogo) this._desenharCampoCabo(ctx, l, a);
@@ -605,6 +615,115 @@ export class Background extends Node {
             ctx.arc(lado * W / 4 + px * 8, py * 8, 3.2, 0, Math.PI * 2);
             ctx.fill();
           }
+        }
+        ctx.restore();
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Tema 'madeira' — o Cubra Nove: o TAMPO de uma mesa de madeira clara.
+   *
+   * Tábuas horizontais de 96 px em três tons de madeira quente, com a junta escura entre elas, as
+   * emendas desencontradas de uma tábua para a outra e veios finos e suaves. Combina com os cubinhos de
+   * madeira do jogo e deixa a prancha branca e as casas coloridas na frente (pedido do humano,
+   * 12/11/2026, no lugar da chita). Tudo ancorado na caixa LÓGICA: a sangria do letterbox desenha as
+   * mesmas tábuas, sem costura.
+   */
+  _desenharTampoMadeira(ctx, sx = 0, sy = 0) {
+    const l = this.largura;
+    const a = this.altura;
+    const ALTA = 96;
+    const tons = ['#DDBB91', '#D6B183', '#E1C29A'];
+    const hash = (i, k) => {
+      const v = Math.sin(i * 91.7 + k * 47.3) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    const x0 = -sx;
+    const x1 = l + sx;
+    for (let r = Math.floor(-sy / ALTA); r <= Math.ceil((a + sy) / ALTA); r++) {
+      const y = r * ALTA;
+      ctx.fillStyle = tons[((r % 3) + 3) % 3];
+      ctx.fillRect(x0, y, x1 - x0, ALTA);
+      // Veios: curvas finas ao longo da tábua, cada uma com a sua ondulação.
+      ctx.save();
+      ctx.strokeStyle = 'rgba(150, 105, 60, 0.16)';
+      ctx.lineWidth = 2;
+      for (let k = 0; k < 3; k++) {
+        const yy = y + ALTA * (0.25 + 0.25 * k) + (hash(r, k) - 0.5) * 10;
+        const amp = 3 + hash(r, k + 5) * 5;
+        const fase = hash(r, k + 9) * 10;
+        ctx.beginPath();
+        for (let x = Math.floor(x0 / 24) * 24; x <= x1 + 24; x += 24) {
+          const py = yy + Math.sin(x / 140 + fase) * amp;
+          if (x === Math.floor(x0 / 24) * 24) ctx.moveTo(x, py); else ctx.lineTo(x, py);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+      // A emenda entre duas tábuas na mesma fileira: desencontradas de uma fileira para a outra.
+      ctx.fillStyle = 'rgba(120, 80, 42, 0.35)';
+      const passo = 520;
+      const desloc = hash(r, 20) * passo;
+      for (let x = Math.floor((x0 - desloc) / passo) * passo + desloc; x <= x1; x += passo) ctx.fillRect(x, y, 3, ALTA);
+      // A junta entre as tábuas: uma linha escura e, logo abaixo, um fio de luz.
+      ctx.fillStyle = 'rgba(110, 72, 36, 0.45)';
+      ctx.fillRect(x0, y, x1 - x0, 3);
+      ctx.fillStyle = 'rgba(255, 245, 225, 0.35)';
+      ctx.fillRect(x0, y + 3, x1 - x0, 2);
+    }
+  }
+
+  /**
+   * Tema 'madeira', só nas telas de vitrine: dados brancos e cubinhos de madeira apagados (opacidade
+   * 0,16–0,24), parados e espalhados — nada pisca nem balança. A partida desliga: ali os dados e os
+   * cubinhos são o exercício. Determinístico numa grade de 230 px da caixa LÓGICA (sangria sem costura).
+   */
+  _desenharDecoracoesMadeira(ctx, l, a, sx = 0, sy = 0) {
+    const PASSO = 230;
+    const hash = (i, j, k) => {
+      const v = Math.sin(i * 63.1 + j * 211.7 + k * 39.3) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    const pontos = {
+      1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]],
+      4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]],
+      6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]],
+    };
+    ctx.save();
+    for (let i = Math.floor(-sx / PASSO); i <= Math.ceil((l + sx) / PASSO); i++) {
+      for (let j = Math.floor(-sy / PASSO); j <= Math.ceil((a + sy) / PASSO); j++) {
+        // Uma peça a cada duas células, em média: espalhado, nunca padronagem.
+        if (hash(i, j, 0) < 0.5) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.16 + hash(i, j, 1) * 0.08;
+        ctx.translate(i * PASSO + hash(i, j, 2) * PASSO, j * PASSO + hash(i, j, 3) * PASSO);
+        ctx.rotate((hash(i, j, 4) - 0.5) * 0.9);
+        if (hash(i, j, 5) < 0.5) {
+          // Um dado branco.
+          const s = 56;
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.roundRect(-s / 2, -s / 2, s, s, 11);
+          ctx.fill();
+          ctx.fillStyle = '#2A1A1C';
+          for (const [px, py] of pontos[1 + Math.floor(hash(i, j, 6) * 6)]) {
+            ctx.beginPath();
+            ctx.arc(px * 15, py * 15, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          // Um cubinho de madeira: a lateral escura e o topo claro.
+          const s = 38;
+          ctx.fillStyle = '#4B2F1B';
+          ctx.beginPath();
+          ctx.roundRect(-s / 2 + 3, -s / 2 + 5, s, s, 4);
+          ctx.fill();
+          ctx.fillStyle = '#E8CBA3';
+          ctx.beginPath();
+          ctx.roundRect(-s / 2, -s / 2, s, s, 4);
+          ctx.fill();
         }
         ctx.restore();
       }

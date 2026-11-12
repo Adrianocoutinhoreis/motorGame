@@ -27,6 +27,8 @@ export class Input extends Emitter {
     this.ponto = { x: 0, y: 0 };
     /** Nó onde o toque começou — usado para decidir o "click". */
     this.noPressionado = null;
+    /** `pointerId` do dedo que apertou: só ele move e solta enquanto estiver na tela. */
+    this.idPressionado = null;
     /** Nó sob o ponteiro no último movimento (para hover). */
     this.noSobrevoado = null;
     this.habilitado = true;
@@ -52,6 +54,23 @@ export class Input extends Emitter {
   _tratar(evento, tipo) {
     if (!this.habilitado) return;
 
+    // **Um dedo por vez.** Com um dedo apertado, os eventos de OUTRO ponteiro são
+    // ignorados: a palma encostando ou um segundo dedo não soltam a peça que está
+    // sendo arrastada nem disparam um toque no meio do gesto (a pendência do
+    // Quebra-Cabeça Dinossauro). A exceção é um toque novo PRIMÁRIO: o navegador
+    // só marca `isPrimary` quando nenhum outro dedo está na tela, então ele prova
+    // que o "soltar" do dedo antigo se perdeu — o gesto velho é cancelado e o novo
+    // vale, em vez de o jogo parar de responder. O mouse é sempre primário.
+    const id = evento.pointerId;
+    if (this.pressionado && id != null && this.idPressionado != null && id !== this.idPressionado) {
+      if (tipo !== 'apertar' || evento.isPrimary === false) return;
+      const pAntigo = this.ponto;
+      this.pressionado = false;
+      this.noPressionado = null;
+      this.idPressionado = null;
+      this.emit('cancelar', pAntigo, null);
+    }
+
     const p = this.stage.telaParaLogico(evento.clientX, evento.clientY);
     this.ponto = p;
     const no = this.stage.raiz.noSobPonto(p.x, p.y);
@@ -61,6 +80,7 @@ export class Input extends Emitter {
       if (!this.stage.dentroDaArea(p.x, p.y)) return;
       this.pressionado = true;
       this.noPressionado = no;
+      this.idPressionado = id ?? null;
       // Best-effort: falha (ex.: `NotFoundError`, ponteiro que o navegador não
       // reconhece como "ativo" — visto em toque sintético/assistivo) não pode
       // abortar o resto do toque. Sem o `catch`, essa exceção subia e o
@@ -94,6 +114,7 @@ export class Input extends Emitter {
     const noInicial = this.noPressionado;
     this.pressionado = false;
     this.noPressionado = null;
+    this.idPressionado = null;
 
     if (tipo === 'cancelar') {
       this.emit('cancelar', p, no);
