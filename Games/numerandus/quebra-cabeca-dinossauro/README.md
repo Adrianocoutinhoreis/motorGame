@@ -152,16 +152,11 @@ quando o desenho em si é menor — o visual não muda, só fica mais fácil de 
 - **Origem/licença de `soltar_peca.mp3` ainda a confirmar** — mesma pendência já registrada no
   Jogo da Ordenação e no Encaixe Certo (é o mesmo arquivo nos quatro jogos): fornecido pronto,
   sem procedência documentada. Confirmar antes de publicar para alunos.
-- **Segundo toque simultâneo pode soltar a peça sendo arrastada antes da hora** — o `Input.js` do
-  motor (`engine/core/Input.js`) só acompanha UM ponteiro de cada vez (um `pressionado`/
-  `noPressionado` só, não por `pointerId`). Se a criança já estiver arrastando uma peça com um
-  dedo e um SEGUNDO toque (outro dedo, a palma da mão encostando) descer e subir em qualquer
-  lugar do canvas, o evento global `soltar` do motor finaliza a peça que ainda está sendo
-  arrastada pelo primeiro dedo — ela assenta ou volta pra bandeja no meio do gesto, sem a criança
-  ter soltado de verdade. Isso não é específico deste jogo: o Encaixe Certo tem exatamente o
-  mesmo padrão de código e o mesmo risco. Corrigir de verdade significa o `Input.js` do motor
-  rastrear `pointerId`, o que afeta todos os jogos com arrasto — fora do escopo de uma correção
-  só neste jogo.
+- ~~**Segundo toque simultâneo pode soltar a peça sendo arrastada antes da hora**~~ — **resolvido no
+  motor 1.4.0 (12/11/2026)**: o `Input.js` agora segue um dedo por vez (pelo `pointerId`); um segundo
+  toque (outro dedo, a palma encostando) é ignorado até o primeiro soltar. Provado com dois dedos de
+  verdade (toque emulado via CDP) no `teste-jogabilidade-cubra-nove.mjs`, item 9, e em
+  `tools/testes.mjs`. Ainda não reconferido com dois dedos **neste** jogo.
 - **Testado só em navegador headless**, chamando os métodos de arrasto da cena diretamente
   (`_pegarPeca`/`_moverArrasto`/`_soltarArrasto`, mesma técnica usada no Material Dourado) —
   ainda não testado com toque de verdade em tablet, nem em iframe pequeno/médio/grande, nem o

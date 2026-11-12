@@ -1,0 +1,6 @@
+{
+  "nome": "Motor Educandus",
+  "versao": "1.4.0",
+  "data": "2026-11-12",
+  "notas": "Input.js: um dedo por vez. Com um dedo apertado, os eventos de OUTRO ponteiro sao ignorados: a palma encostando ou um segundo dedo nao soltam a peca arrastada nem disparam toque no meio do gesto (a pendencia do Quebra-Cabeca Dinossauro). Um toque novo PRIMARIO (isPrimary) prova que o soltar do dedo antigo se perdeu: o gesto velho e cancelado e o novo vale. Tema 'madeira' no Background (Cubra Nove): o tampo de uma mesa de madeira clara em tabuas com veios, continuando pela sangria; dados e cubinhos apagados so nas telas de vitrine; placa limpa no menu. Desde a 1.3.6 entraram tambem, sem subir a versao, os temas 'trilhas', 'espaco', 'mesa', 'feltro', 'tabuleiro' e 'cabo', o desenharNaSangria do Background, o corContorno do IconButton e a opcao mostrarPlacarTexto da tela final."
+}

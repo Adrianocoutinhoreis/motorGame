@@ -29,6 +29,7 @@ import { Loader } from '../engine/core/Loader.js';
 import { AvaBridge } from '../engine/ava/AvaBridge.js';
 import { AudioBus } from '../engine/audio/AudioBus.js';
 import { ESTADOS, transicaoValida } from '../engine/core/Estados.js';
+import { Input } from '../engine/core/Input.js';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -2105,6 +2106,52 @@ grupo('HelpScreen não narra sozinha ao nascer — só quando abrir()', () => {
     igual(chamadas.includes('falar:null'), true,
       `um pedido de ajuda de verdade tem de narrar o passo 1: ${JSON.stringify(chamadas)}`);
   });
+});
+
+grupo('Input: um dedo por vez (a palma ou um 2º dedo não soltam a peça)', () => {
+  // Sem navegador: um canvas e uma janela de mentira que só guardam os ouvintes, e um Stage que
+  // devolve sempre o mesmo nó. Os eventos levam `pointerId` e `isPrimary`, como os de verdade.
+  const ouvintes = {};
+  const canvas = { style: {}, addEventListener: (t, f) => { ouvintes[t] = f; }, removeEventListener() {} };
+  const janelaAntiga = globalThis.window;
+  globalThis.window = { addEventListener: (t, f) => { ouvintes[t] = f; }, removeEventListener() {} };
+  const no = new Node({ largura: 10, altura: 10, interativo: true });
+  const stage = { canvas, telaParaLogico: (x, y) => ({ x, y }), raiz: { noSobPonto: () => no }, dentroDaArea: () => true };
+  const input = new Input(stage);
+  const ev = (pointerId, isPrimary, x = 5, y = 5) => ({ clientX: x, clientY: y, pointerId, isPrimary, target: {} });
+  const log = [];
+  for (const t of ['apertar', 'arrastar', 'soltar', 'toque', 'cancelar']) input.on(t, () => log.push(t));
+
+  teste('o 2º dedo na tela não reinicia o gesto nem solta a peça', () => {
+    log.length = 0;
+    ouvintes.pointerdown(ev(1, true));
+    ouvintes.pointerdown(ev(2, false));
+    ouvintes.pointermove(ev(2, false, 9, 9));
+    ouvintes.pointerup(ev(2, false));
+    igual(JSON.stringify(log), JSON.stringify(['apertar']), 'só o apertar do 1º dedo conta');
+    igual(input.pressionado, true, 'o 1º dedo continua segurando');
+  });
+
+  teste('o dedo que apertou continua arrastando e soltando normalmente', () => {
+    log.length = 0;
+    ouvintes.pointermove(ev(1, true, 7, 7));
+    ouvintes.pointerup(ev(1, true));
+    igual(JSON.stringify(log), JSON.stringify(['arrastar', 'soltar', 'toque']));
+    igual(input.pressionado, false);
+  });
+
+  teste('um toque PRIMÁRIO novo, com o soltar do dedo antigo perdido, cancela o velho e vale', () => {
+    log.length = 0;
+    ouvintes.pointerdown(ev(3, true));
+    // O pointerup do 3 nunca chega. Um toque primário novo prova que não há dedo na tela.
+    ouvintes.pointerdown(ev(4, true));
+    igual(JSON.stringify(log), JSON.stringify(['apertar', 'cancelar', 'apertar']));
+    igual(input.idPressionado, 4);
+    ouvintes.pointerup(ev(4, true));
+  });
+
+  input.destruir();
+  if (janelaAntiga === undefined) delete globalThis.window; else globalThis.window = janelaAntiga;
 });
 
 // ------------------------------------------------------------------ resumo
