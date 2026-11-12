@@ -69,18 +69,19 @@ node tools/build.mjs numerandus/cabo-de-guerra                  # copia o motor 
 node tools/testes.mjs                                           # lógica do motor (154)
 node tools/verificar-independencia.mjs numerandus/cabo-de-guerra
 node tools/teste-entrega-avulsa.mjs numerandus/cabo-de-guerra
-node tools/teste-jogabilidade-cabo-de-guerra.mjs               # gesto real (86 verificações)
+node tools/teste-jogabilidade-cabo-de-guerra.mjs               # gesto real (98 verificações)
 node tools/teste-estresse-cabo-de-guerra.mjs                   # 6 tamanhos de janela, maratona, rajadas, troca de aba
 node tools/teste-profundo-cabo-de-guerra.mjs                   # cartas, simulação, contraste, texto, macaco, vazamento
 node tools/teste-logica-cabo-de-guerra.mjs                     # 180 partidas com monitor de invariantes (erros de lógica)
+node tools/teste-publicado.mjs                                 # o jogo JÁ NO AR (GitHub Pages): arquivos, caixa das letras, partida de verdade
 ```
 
 `teste-jogabilidade-cabo-de-guerra.mjs` só usa ponteiro (nada é chamado por dentro; os ganchos
-`dadoDeTeste` e `computadorErraDeTeste` só escolhem o próximo sorteio): as regras puras (60 000 cartas),
+`dadoDeTeste`, `computadorErraDeTeste` e `sorteioDeTeste` só escolhem o próximo sorteio): as regras puras (60 000 cartas),
 menu → níveis → partida, o dado e a carta com a ficha parada, a carta certa (a ficha puxando, a contagem em
 voz), a vez do computador e a conferência, a carta errada, o computador puxando, pausa no meio da ficha
 andando, ajuda por cima da carta, a chegada da criança e a do computador, e o AVA num iframe (vitória
-e derrota, os números batendo, sem duplicata). Rodado 3 vezes seguidas sem falha em 09/11/2026.
+e derrota, os números batendo, sem duplicata). Último passe completo em 11/11/2026: jogabilidade 98, estresse 35, lógica 6, profundo 28, publicado 14, motor 154.
 
 ## Registro no AVA
 
